@@ -328,6 +328,20 @@ def analyze():
 # Report Viewing
 # ============================================================================
 # ============================================================================
+# Campaign Landing Page — "Test the Strength of Your Account"
+# Public, no login required. Designed for paid ad traffic.
+# ============================================================================
+@ads_grader_bp.route("/strength-test", endpoint="strength_test")
+def strength_test():
+    """
+    Dedicated campaign landing page for the Google Ads grader.
+    Clean, conversion-focused page for paid/organic traffic campaigns.
+    No login required.
+    """
+    return render_template("ads_grader/strength_test.html")
+
+
+# ============================================================================
 # Public Demo Route
 # ============================================================================
 @ads_grader_bp.route("/demo")

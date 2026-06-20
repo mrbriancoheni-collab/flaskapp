@@ -104,8 +104,10 @@
       <div class="flex-shrink-0 flex items-center gap-2 flex-wrap">
         {% if not is_demo %}
         <button onclick="runAIAgents()" id="runAgentsBtn"
-                class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
-          <i class="fa-solid fa-robot"></i> Run AI Agents
+                class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition"
+                title="{% if not is_paid %}Upgrade to a paid plan to run AI agents{% endif %}">
+          {% if not is_paid %}<i class="fa-solid fa-crown text-yellow-300"></i>{% else %}<i class="fa-solid fa-robot"></i>{% endif %}
+          Run AI Agents
         </button>
         <a href="{{ url_for('agents_bp.approval_queue') }}"
            class="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition">
@@ -193,7 +195,8 @@
         </div>
         <button onclick="runAIAgents()" id="runAgentsBtnBanner"
                 class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
-          <i class="fa-solid fa-robot"></i> Run AI Agents
+          {% if not is_paid %}<i class="fa-solid fa-crown text-yellow-300"></i>{% else %}<i class="fa-solid fa-robot"></i>{% endif %}
+          {% if is_paid %}Run AI Agents{% else %}Upgrade to Run{% endif %}
         </button>
       </div>
     </div>
@@ -249,11 +252,15 @@
       </p>
       <button onclick="runAIAgents()" id="runAgentsBtnHero"
               class="inline-flex items-center gap-3 px-10 py-5 bg-white text-indigo-700 font-extrabold text-xl rounded-2xl hover:bg-indigo-50 transition shadow-2xl transform hover:scale-105">
+        {% if not is_paid %}<i class="fa-solid fa-crown text-yellow-500 mr-1"></i>{% endif %}
         <i class="fa-solid fa-rocket"></i>
-        Launch AI Agents Now
+        {% if is_paid %}Launch AI Agents Now{% else %}Upgrade to Launch AI Agents{% endif %}
         <i class="fa-solid fa-arrow-right"></i>
       </button>
-      <p class="text-indigo-300 text-xs mt-4">Takes about 30 seconds &nbsp;·&nbsp; No changes made without your review</p>
+      {% if not is_paid %}
+      <p class="text-indigo-200 text-xs mt-3">AI Agents are available on paid plans</p>
+      {% endif %}
+      <p class="text-indigo-300 text-xs mt-2">Takes about 30 seconds &nbsp;·&nbsp; No changes made without your review</p>
     </div>
   </div>
   {% endif %}
@@ -506,8 +513,8 @@
       <div class="flex-shrink-0 flex flex-col sm:flex-row items-center gap-3">
         <button onclick="runAIAgents()" id="runAgentsBtnCTA"
                 class="inline-flex items-center gap-2 px-8 py-4 bg-white text-indigo-700 font-extrabold text-base rounded-xl hover:bg-indigo-50 transition shadow-xl transform hover:scale-105 whitespace-nowrap">
-          <i class="fa-solid fa-rocket"></i>
-          Launch AI Agents
+          {% if not is_paid %}<i class="fa-solid fa-crown text-yellow-500 mr-1"></i>{% else %}<i class="fa-solid fa-rocket"></i>{% endif %}
+          {% if is_paid %}Launch AI Agents{% else %}Upgrade to Unlock{% endif %}
         </button>
         <a href="{{ url_for('agents_bp.approval_queue') }}"
            class="inline-flex items-center gap-2 px-5 py-4 border border-white/40 text-white text-sm font-medium rounded-xl hover:bg-white/10 transition whitespace-nowrap">
@@ -2071,8 +2078,20 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
+// Paid-account flag injected from server
+const _IS_PAID_ACCOUNT = {{ 'true' if is_paid else 'false' }};
+
 // Run AI Agents manually
 async function runAIAgents() {
+  // Non-paid users see the upgrade modal instead
+  if (!_IS_PAID_ACCOUNT) {
+    if (typeof openPricingModal === 'function') {
+      openPricingModal();
+    } else {
+      window.location.href = '{{ url_for("main_bp.pricing") }}';
+    }
+    return;
+  }
   const agentBtnIds = ['runAgentsBtn', 'runAgentsBtnBanner', 'runAgentsBtnHero', 'runAgentsBtnCTA'];
   const agentBtns = agentBtnIds.map(id => document.getElementById(id)).filter(Boolean);
   const originalContents = agentBtns.map(btn => btn.innerHTML);

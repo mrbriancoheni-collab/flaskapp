@@ -1,0 +1,369 @@
+{% extends "base_public.html" %}
+{% block title %}Test the Strength of Your Google Ads Account — Free{% endblock %}
+
+{% block head_extra %}
+<style>
+/* Strength meter gauge */
+.strength-gauge {
+  width: 220px;
+  height: 110px;
+  position: relative;
+  margin: 0 auto;
+}
+.strength-gauge svg {
+  width: 220px;
+  height: 110px;
+}
+.gauge-track {
+  fill: none;
+  stroke: #e5e7eb;
+  stroke-width: 20;
+  stroke-linecap: round;
+}
+.gauge-fill {
+  fill: none;
+  stroke-width: 20;
+  stroke-linecap: round;
+  stroke-dasharray: 345;
+  stroke-dashoffset: 345;
+  transform-origin: 50% 100%;
+  transition: stroke-dashoffset 1.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes gauge-reveal {
+  from { stroke-dashoffset: 345; }
+  to   { stroke-dashoffset: 138; } /* 60% of 345 — "typical" weak account */
+}
+.gauge-fill { animation: gauge-reveal 1.6s 0.4s cubic-bezier(0.4,0,0.2,1) forwards; }
+
+/* Pulsing CTA */
+@keyframes pulse-cta {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.4); }
+  50%       { box-shadow: 0 0 0 12px rgba(99,102,241,0); }
+}
+.cta-pulse { animation: pulse-cta 2.4s infinite; }
+
+/* Score item hover */
+.score-item { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.score-item:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+
+/* Hide default nav links on this campaign page for focus */
+.campaign-strip nav a:not(.brand-logo) { display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8">
+
+  <!-- ── HERO ── -->
+  <div class="text-center mb-10">
+
+    <!-- Badge -->
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-100 text-indigo-700 text-sm font-semibold mb-5">
+      <i class="fa-solid fa-flask-vial"></i>
+      Free Account Strength Test
+    </div>
+
+    <h1 class="text-4xl md:text-5xl font-black text-gray-900 leading-tight mb-4">
+      How Strong Is Your<br>
+      <span class="text-indigo-600">Google Ads Account?</span>
+    </h1>
+
+    <p class="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+      Most home service businesses are wasting 15–30% of their ad budget on clicks that will never convert.
+      Find out where yours stands — in 60 seconds, free.
+    </p>
+
+    <!-- Strength Gauge Visual -->
+    <div class="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 mb-8 max-w-md mx-auto">
+      <div class="strength-gauge mb-2">
+        <svg viewBox="0 0 220 110">
+          <!-- Track -->
+          <path d="M 20 105 A 90 90 0 0 1 200 105"
+                class="gauge-track"/>
+          <!-- Gradient fill — red→yellow→green across the arc -->
+          <defs>
+            <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%"   stop-color="#ef4444"/>
+              <stop offset="50%"  stop-color="#f59e0b"/>
+              <stop offset="100%" stop-color="#22c55e"/>
+            </linearGradient>
+          </defs>
+          <path d="M 20 105 A 90 90 0 0 1 200 105"
+                class="gauge-fill"
+                stroke="url(#gaugeGrad)"/>
+          <!-- Needle (points at ~40% — the typical weak-account position) -->
+          <g transform="translate(110,105)">
+            <line x1="0" y1="0" x2="0" y2="-72"
+                  stroke="#374151" stroke-width="3" stroke-linecap="round"
+                  transform="rotate(-36)"
+                  style="transform-origin:0 0;animation:needle-set 1.8s 0.4s forwards;"/>
+          </g>
+          <circle cx="110" cy="105" r="7" fill="#374151"/>
+        </svg>
+      </div>
+      <div class="flex justify-between text-xs font-semibold px-4 -mt-1">
+        <span class="text-red-500">WEAK</span>
+        <span class="text-yellow-500">AVERAGE</span>
+        <span class="text-green-600">STRONG</span>
+      </div>
+      <p class="text-sm text-gray-500 mt-4 text-center italic">
+        ← This is where the average home service account sits. Where are <em>you</em>?
+      </p>
+    </div>
+
+    <!-- Primary CTA -->
+    <a href="{{ url_for('ads_grader_bp.analyze') }}"
+       class="cta-pulse inline-flex items-center gap-3 px-10 py-5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xl rounded-2xl transition shadow-2xl transform hover:scale-105">
+      <i class="fa-brands fa-google text-2xl"></i>
+      Test My Account's Strength
+      <i class="fa-solid fa-arrow-right"></i>
+    </a>
+    <p class="text-sm text-gray-500 mt-3">
+      <i class="fa-solid fa-lock mr-1 text-gray-400"></i>Read-only access &nbsp;·&nbsp; No changes made &nbsp;·&nbsp; 100% free
+    </p>
+  </div>
+
+  <!-- ── WHAT WE TEST ── -->
+  <div class="bg-white rounded-2xl border border-gray-100 shadow-lg p-8 mb-8">
+    <h2 class="text-2xl font-bold text-center text-gray-900 mb-2">
+      8 Things We Check in Your Account
+    </h2>
+    <p class="text-center text-gray-500 text-sm mb-7">Every area is scored 0–100 and compared to home service industry benchmarks</p>
+
+    <div class="grid sm:grid-cols-2 gap-3">
+
+      <div class="score-item flex items-start gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50">
+        <div class="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
+          <i class="fa-solid fa-dollar-sign text-red-600"></i>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900 text-sm">Wasted Spend</div>
+          <div class="text-xs text-gray-500 mt-0.5">Are you paying for clicks that will never become customers?</div>
+        </div>
+      </div>
+
+      <div class="score-item flex items-start gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50">
+        <div class="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center flex-shrink-0">
+          <i class="fa-solid fa-star text-yellow-600"></i>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900 text-sm">Quality Score Health</div>
+          <div class="text-xs text-gray-500 mt-0.5">Low QS means you pay more per click than your competitors.</div>
+        </div>
+      </div>
+
+      <div class="score-item flex items-start gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50">
+        <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+          <i class="fa-solid fa-mouse-pointer text-blue-600"></i>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900 text-sm">Click-Through Rate</div>
+          <div class="text-xs text-gray-500 mt-0.5">Are prospects clicking your ads or your competitor's?</div>
+        </div>
+      </div>
+
+      <div class="score-item flex items-start gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50">
+        <div class="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+          <i class="fa-solid fa-rectangle-ad text-purple-600"></i>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900 text-sm">Ad Copy Strength</div>
+          <div class="text-xs text-gray-500 mt-0.5">Do your headlines stand out or blend in with everyone else?</div>
+        </div>
+      </div>
+
+      <div class="score-item flex items-start gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50">
+        <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+          <i class="fa-solid fa-mobile-screen text-green-600"></i>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900 text-sm">Mobile Performance</div>
+          <div class="text-xs text-gray-500 mt-0.5">70% of local service searches happen on mobile. Are you ready?</div>
+        </div>
+      </div>
+
+      <div class="score-item flex items-start gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50">
+        <div class="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
+          <i class="fa-solid fa-key text-indigo-600"></i>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900 text-sm">Keyword Coverage</div>
+          <div class="text-xs text-gray-500 mt-0.5">Are you missing the searches where your best customers are?</div>
+        </div>
+      </div>
+
+      <div class="score-item flex items-start gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50">
+        <div class="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
+          <i class="fa-solid fa-eye text-orange-600"></i>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900 text-sm">Impression Share</div>
+          <div class="text-xs text-gray-500 mt-0.5">How often does your ad show vs. how often it could?</div>
+        </div>
+      </div>
+
+      <div class="score-item flex items-start gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50">
+        <div class="w-10 h-10 rounded-lg bg-teal-100 flex items-center justify-center flex-shrink-0">
+          <i class="fa-solid fa-puzzle-piece text-teal-600"></i>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900 text-sm">Ad Extensions</div>
+          <div class="text-xs text-gray-500 mt-0.5">Free ways to take up more space on the page — are you using them?</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── SOCIAL PROOF ── -->
+  <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl border border-indigo-100 p-8 mb-8">
+    <h2 class="text-xl font-bold text-center text-gray-900 mb-6">What Home Service Businesses Found</h2>
+
+    <div class="grid md:grid-cols-3 gap-5 mb-6">
+      <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm text-center">
+        <div class="text-4xl font-black text-red-600 mb-1">$3,200</div>
+        <div class="text-sm font-semibold text-gray-700">/month wasted</div>
+        <div class="text-xs text-gray-500 mt-2 border-t pt-2">ABC Plumbing · 22% waste reduced to 8%</div>
+      </div>
+      <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm text-center">
+        <div class="text-4xl font-black text-blue-600 mb-1">+47</div>
+        <div class="text-sm font-semibold text-gray-700">leads/month</div>
+        <div class="text-xs text-gray-500 mt-2 border-t pt-2">XYZ HVAC · Same budget, 40% more leads</div>
+      </div>
+      <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm text-center">
+        <div class="text-4xl font-black text-green-600 mb-1">$5,800</div>
+        <div class="text-sm font-semibold text-gray-700">/month recovered</div>
+        <div class="text-xs text-gray-500 mt-2 border-t pt-2">Elite Electric · 2,900% ROI on service cost</div>
+      </div>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+      <div>
+        <div class="text-2xl font-black text-indigo-700">1,000+</div>
+        <div class="text-xs text-gray-500">accounts tested</div>
+      </div>
+      <div>
+        <div class="text-2xl font-black text-red-600">$2.4M+</div>
+        <div class="text-xs text-gray-500">wasted spend found</div>
+      </div>
+      <div>
+        <div class="text-2xl font-black text-yellow-600">22%</div>
+        <div class="text-xs text-gray-500">avg waste rate</div>
+      </div>
+      <div>
+        <div class="text-2xl font-black text-green-600">60s</div>
+        <div class="text-xs text-gray-500">to see results</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── HOW IT WORKS ── -->
+  <div class="bg-white rounded-2xl border border-gray-100 shadow-lg p-8 mb-8">
+    <h2 class="text-2xl font-bold text-center text-gray-900 mb-7">How the Strength Test Works</h2>
+    <div class="grid md:grid-cols-3 gap-6 text-center">
+      <div>
+        <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+          <i class="fa-brands fa-google text-indigo-600"></i>
+        </div>
+        <div class="font-bold text-gray-900 mb-2">1. Connect</div>
+        <p class="text-sm text-gray-600">Sign in with Google. We request read-only access — we can see your data but cannot make any changes.</p>
+      </div>
+      <div>
+        <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+          <i class="fa-solid fa-magnifying-glass-chart text-purple-600"></i>
+        </div>
+        <div class="font-bold text-gray-900 mb-2">2. Scan</div>
+        <p class="text-sm text-gray-600">Our AI reads your campaigns, keywords, search terms, and historical data — about 60 seconds.</p>
+      </div>
+      <div>
+        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+          <i class="fa-solid fa-chart-bar text-green-600"></i>
+        </div>
+        <div class="font-bold text-gray-900 mb-2">3. Your Score</div>
+        <p class="text-sm text-gray-600">See a full strength report with a score, grade, wasted spend amount, and specific items to fix.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CTA REPEAT ── -->
+  <div class="bg-gradient-to-br from-indigo-700 to-purple-800 rounded-2xl shadow-2xl p-10 text-center text-white mb-8">
+    <h2 class="text-3xl font-extrabold mb-3">Ready to See Your Score?</h2>
+    <p class="text-indigo-100 text-lg mb-7 max-w-xl mx-auto">
+      Takes 60 seconds. It's free. And if you're like most accounts we test, you'll find more waste than you expected.
+    </p>
+    <a href="{{ url_for('ads_grader_bp.analyze') }}"
+       class="inline-flex items-center gap-3 px-10 py-5 bg-white text-indigo-700 font-extrabold text-xl rounded-2xl hover:bg-indigo-50 transition shadow-2xl transform hover:scale-105">
+      <i class="fa-brands fa-google text-2xl"></i>
+      Test My Account's Strength
+      <i class="fa-solid fa-arrow-right"></i>
+    </a>
+    <p class="text-indigo-200 text-sm mt-4">
+      <i class="fa-solid fa-lock mr-1"></i>Read-only access &nbsp;·&nbsp; No changes made &nbsp;·&nbsp; Cancel anytime
+    </p>
+  </div>
+
+  <!-- ── TRUST / FAQ ── -->
+  <div class="bg-white rounded-2xl border border-gray-100 shadow p-8 mb-8">
+    <h2 class="text-xl font-bold text-center text-gray-900 mb-6">Common Questions</h2>
+    <div class="max-w-2xl mx-auto space-y-5">
+
+      <div class="border-b pb-5">
+        <div class="font-semibold text-gray-900 flex items-center gap-2 mb-1">
+          <i class="fa-solid fa-circle-question text-indigo-500"></i>
+          Why is this free?
+        </div>
+        <p class="text-sm text-gray-600 ml-6">
+          We offer the grader free because it shows you exactly what's wrong with your account.
+          If the results are bad enough, some business owners hire us to fix it. Either way, you leave with real data.
+        </p>
+      </div>
+
+      <div class="border-b pb-5">
+        <div class="font-semibold text-gray-900 flex items-center gap-2 mb-1">
+          <i class="fa-solid fa-circle-question text-indigo-500"></i>
+          Will you make changes to my account?
+        </div>
+        <p class="text-sm text-gray-600 ml-6">
+          No. We request read-only access through Google's official OAuth. We cannot make changes even if we wanted to.
+          You can revoke access from your Google Account settings at any time.
+        </p>
+      </div>
+
+      <div class="border-b pb-5">
+        <div class="font-semibold text-gray-900 flex items-center gap-2 mb-1">
+          <i class="fa-solid fa-circle-question text-indigo-500"></i>
+          What happens after the test?
+        </div>
+        <p class="text-sm text-gray-600 ml-6">
+          You get a full report with a score for every area, the estimated dollar amount you're wasting, and specific
+          things to fix. If you want the AI to fix them automatically, that's available on our paid plans.
+        </p>
+      </div>
+
+      <div>
+        <div class="font-semibold text-gray-900 flex items-center gap-2 mb-1">
+          <i class="fa-solid fa-circle-question text-indigo-500"></i>
+          What if my score is embarrassingly low?
+        </div>
+        <p class="text-sm text-gray-600 ml-6">
+          That's actually a good thing — it means there's more money to recover. Most accounts we test score between 40–60.
+          Anything under 60 is costing you real money every day.
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── FINAL MICRO CTA ── -->
+  <div class="text-center pb-4">
+    <p class="text-gray-500 text-sm mb-3">Still on the fence?</p>
+    <a href="{{ url_for('ads_grader_bp.demo') }}"
+       class="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-800 font-semibold text-sm underline">
+      <i class="fa-solid fa-play-circle"></i>
+      See a sample report first (no login needed)
+    </a>
+  </div>
+
+</div>
+{% endblock %}

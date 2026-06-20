@@ -528,10 +528,13 @@ def _create_real_report(customer_id: str, refresh_token: str) -> GoogleAdsGrader
         from app.ads_grader.ai_enhancer import enhance_report_with_ai, merge_ai_recommendations
         ai_analysis = enhance_report_with_ai(metrics, analysis_results)
         if ai_analysis:
-            analysis_results["recommendations"] = merge_ai_recommendations(
-                ai_analysis, analysis_results["recommendations"]
-            )
-            logger.info("AI enhancement applied to real report")
+            try:
+                analysis_results["recommendations"] = merge_ai_recommendations(
+                    ai_analysis, analysis_results["recommendations"]
+                )
+                logger.info("AI enhancement applied to real report")
+            except Exception as e:
+                logger.warning(f"AI merge failed, using rule-based recommendations: {e}")
         else:
             logger.info("Using rule-based recommendations (AI unavailable)")
 
@@ -906,23 +909,26 @@ def _create_demo_report(customer_id: str) -> GoogleAdsGraderReport:
     from app.ads_grader.ai_enhancer import enhance_report_with_ai, merge_ai_recommendations
     ai_analysis = enhance_report_with_ai(_demo_metrics, _demo_analysis)
     if ai_analysis:
-        report.recommendations = merge_ai_recommendations(
-            ai_analysis, report.recommendations
-        )
-        dm = dict(report.detailed_metrics or {})
-        dm["ai_analysis"] = {
-            "summary": ai_analysis.get("summary"),
-            "campaign_audit": ai_analysis.get("campaign_audit"),
-            "ad_copy_analysis": ai_analysis.get("ad_copy_analysis"),
-            "keyword_analysis": ai_analysis.get("keyword_analysis"),
-            "negative_keywords": ai_analysis.get("negative_keywords"),
-            "targeting_bidding": ai_analysis.get("targeting_bidding"),
-            "budget_allocation": ai_analysis.get("budget_allocation"),
-            "landing_pages": ai_analysis.get("landing_pages"),
-            "automation_tracking": ai_analysis.get("automation_tracking"),
-        }
-        report.detailed_metrics = dm
-        logger.info("AI enhancement applied to demo report")
+        try:
+            report.recommendations = merge_ai_recommendations(
+                ai_analysis, report.recommendations
+            )
+            dm = dict(report.detailed_metrics or {})
+            dm["ai_analysis"] = {
+                "summary": ai_analysis.get("summary"),
+                "campaign_audit": ai_analysis.get("campaign_audit"),
+                "ad_copy_analysis": ai_analysis.get("ad_copy_analysis"),
+                "keyword_analysis": ai_analysis.get("keyword_analysis"),
+                "negative_keywords": ai_analysis.get("negative_keywords"),
+                "targeting_bidding": ai_analysis.get("targeting_bidding"),
+                "budget_allocation": ai_analysis.get("budget_allocation"),
+                "landing_pages": ai_analysis.get("landing_pages"),
+                "automation_tracking": ai_analysis.get("automation_tracking"),
+            }
+            report.detailed_metrics = dm
+            logger.info("AI enhancement applied to demo report")
+        except Exception as e:
+            logger.warning(f"AI merge failed, using rule-based recommendations: {e}")
     else:
         logger.info("Demo report using rule-based recommendations (AI unavailable)")
     # ── end AI enhancement ────────────────────────────────────────────────────

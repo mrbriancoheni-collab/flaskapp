@@ -18,6 +18,29 @@
          class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm">
         <i class="fa-solid fa-download mr-2"></i>Download PDF
       </a>
+
+      {# ── Refresh button ── #}
+      {% if not report.account_id %}
+        {# Demo report: always refreshable — creates fresh synthetic data #}
+        <a href="{{ url_for('ads_grader_bp.demo', refresh=1) }}"
+           class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 text-sm">
+          <i class="fa-solid fa-rotate mr-2"></i>Refresh Demo
+        </a>
+      {% elif current_user.is_authenticated and report.account_id == current_user.account_id %}
+        {# Real account: show refresh or cooldown state #}
+        {% if can_refresh %}
+        <a href="{{ url_for('ads_grader_bp.analyze') }}"
+           class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 text-sm">
+          <i class="fa-solid fa-rotate mr-2"></i>Refresh Report
+        </a>
+        {% else %}
+        <span title="Upgrade to a paid plan for unlimited refreshes"
+              class="inline-flex items-center px-4 py-2 border border-gray-200 rounded-lg text-gray-400 text-sm cursor-not-allowed select-none">
+          <i class="fa-solid fa-rotate mr-2"></i>Refresh available {{ next_refresh_at.strftime('%b %d') if next_refresh_at else 'soon' }}
+        </span>
+        {% endif %}
+      {% endif %}
+
       {% if current_user.is_authenticated and report.account_id and report.account_id == current_user.account_id %}
       <button onclick="document.getElementById('sharePanel').classList.toggle('hidden')"
               class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 text-sm">

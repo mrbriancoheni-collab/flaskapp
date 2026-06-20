@@ -1826,6 +1826,16 @@ def create_app():
     except Exception as e:
         app.logger.warning(f"Failed to initialize scheduler: {e}")
 
+    # ---- Serve favicon from root so browsers find it without HTML parsing ----
+    from flask import send_from_directory
+    @app.route('/favicon.ico')
+    def favicon():
+        return send_from_directory(
+            _os.path.join(app.static_folder, 'brand'),
+            'favicon.ico',
+            mimetype='image/vnd.microsoft.icon',
+        )
+
     return app
 
 

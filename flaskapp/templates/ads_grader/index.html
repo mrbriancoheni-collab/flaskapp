@@ -379,10 +379,10 @@
 
     <div class="text-center">
       <div class="bg-white rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-3 text-2xl border-2 border-indigo-200">
-        4️⃣
+        🤖
       </div>
-      <div class="font-bold text-gray-900 mb-1">Fix Issues</div>
-      <div class="text-sm text-gray-600">AI implements approved changes</div>
+      <div class="font-bold text-gray-900 mb-1">AI Fixes It</div>
+      <div class="text-sm text-gray-600">8 AI agents apply fixes automatically, 24/7</div>
     </div>
   </div>
 
@@ -491,20 +491,31 @@
 </div>
 
 <!-- Final CTA -->
-<div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl p-8 md:p-12 text-center">
+<div class="bg-gradient-to-r from-indigo-600 to-purple-700 text-white rounded-2xl p-8 md:p-12 text-center">
   <h2 class="text-3xl md:text-4xl font-bold mb-4">
-    Ready to Optimize Your Google Ads?
+    Find Out What Your Account is Losing — in 60 Seconds
   </h2>
-  <p class="text-xl text-indigo-100 mb-8 max-w-2xl mx-auto">
-    Discover hidden opportunities, eliminate wasted spend, and boost your ROI in just 60 seconds.
+  <p class="text-xl text-indigo-100 mb-3 max-w-2xl mx-auto">
+    Get your free report, then let AI agents fix the issues automatically.
   </p>
-  <a href="{{ url_for('ads_grader_bp.analyze') }}"
-     class="inline-flex items-center px-8 py-4 bg-white text-indigo-700 font-bold text-lg rounded-xl hover:bg-blue-50 transition shadow-lg">
-    <i class="fa-brands fa-google mr-3 text-2xl"></i>
-    Start Analysis
-  </a>
+  <p class="text-sm text-indigo-200 mb-8 max-w-xl mx-auto">
+    No commitment. The grader is free. AI agents are available on paid plans.
+  </p>
+  <div class="flex flex-col sm:flex-row gap-4 justify-center">
+    <a href="{{ url_for('ads_grader_bp.analyze') }}"
+       class="inline-flex items-center gap-3 px-8 py-4 bg-white text-indigo-700 font-bold text-lg rounded-xl hover:bg-blue-50 transition shadow-lg">
+      <i class="fa-brands fa-google text-2xl"></i>
+      Grade My Account Free
+    </a>
+    <a href="{{ url_for('auth_bp.register') if not current_user.is_authenticated else url_for('google_bp.ads_opportunities') }}"
+       class="inline-flex items-center gap-2 px-6 py-4 border-2 border-white/40 text-white font-medium text-base rounded-xl hover:bg-white/10 transition">
+      <i class="fa-solid fa-robot"></i>
+      {{ 'Skip to AI Agents' if current_user.is_authenticated else 'Try AI Agents' }}
+      <i class="fa-solid fa-arrow-right ml-1"></i>
+    </a>
+  </div>
   <p class="mt-4 text-sm text-indigo-200">
-    Join thousands of businesses optimizing their Google Ads with FieldSprout
+    <i class="fa-solid fa-lock mr-1"></i> Read-only access · No spam · Cancel anytime
   </p>
 </div>
 {% endblock %}

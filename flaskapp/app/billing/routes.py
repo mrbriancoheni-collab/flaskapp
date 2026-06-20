@@ -85,3 +85,31 @@ def create_checkout_session():
         current_app.logger.error(f"Error creating checkout session: {e}", exc_info=True)
         return jsonify({"error": "Failed to create checkout session"}), 500
 
+
+@billing_bp.route("/lifetime-checkout/<tier>", methods=["POST"])
+@login_required
+def lifetime_checkout(tier):
+    """Create a one-time Stripe Checkout session for a lifetime deal."""
+    if tier not in ("499", "999"):
+        return jsonify({"error": "Invalid tier"}), 400
+
+    try:
+        from app.services.stripe_service import create_lifetime_checkout
+
+        checkout_url = create_lifetime_checkout(
+            user_id=str(current_user.id),
+            tier=tier,
+            email=current_user.email,
+            name=getattr(current_user, "name", None),
+        )
+        return jsonify({"checkout_url": checkout_url})
+    except ValueError as e:
+        current_app.logger.error(f"Lifetime checkout config error: {e}")
+        return jsonify({"error": str(e)}), 500
+    except stripe.error.StripeError as e:
+        current_app.logger.error(f"Stripe error: {e}")
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        current_app.logger.error(f"Lifetime checkout error: {e}", exc_info=True)
+        return jsonify({"error": "Failed to create checkout session"}), 500
+

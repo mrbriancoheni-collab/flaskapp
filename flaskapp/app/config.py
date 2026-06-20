@@ -39,6 +39,10 @@ class Config:
     STRIPE_MANAGED_MONTHLY_PRICE_ID = os.environ.get("STRIPE_MANAGED_MONTHLY_PRICE_ID", "")
     STRIPE_MANAGED_MONTHLY_LINK     = os.environ.get("STRIPE_MANAGED_MONTHLY_LINK", "")
 
+    # ── Lifetime Deal (one-time payments — limited time offers) ─────────────
+    STRIPE_LIFETIME_499_PRICE_ID = os.environ.get("STRIPE_LIFETIME_499_PRICE_ID", "")
+    STRIPE_LIFETIME_999_PRICE_ID = os.environ.get("STRIPE_LIFETIME_999_PRICE_ID", "")
+
     # ── Legacy price IDs (existing customers — do not remove) ───────────────
     # Old single-tier setup: monthly=$250, annual=$2,400/yr
     STRIPE_MONTHLY_PRICE_ID = (
@@ -95,7 +99,7 @@ class Config:
     LEAD_AUTOMATION_ENABLED = os.environ.get("LEAD_AUTOMATION_ENABLED", "True").lower() == "true"
 
     # Plan tier names recognised as paid (used by is_paid_account and plan_required)
-    PAID_PLANS = ('growth', 'pro', 'managed', 'active', 'trialing', 'basic', 'premium')
+    PAID_PLANS = ('growth', 'pro', 'managed', 'active', 'trialing', 'basic', 'premium', 'lifetime')
 
     # Optional
     BASE_URL = os.environ.get("BASE_URL", "")

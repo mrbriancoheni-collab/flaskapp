@@ -128,3 +128,11 @@ def industry_pool_service():
 @public_bp.route("/industries/solar", endpoint="industry_solar")
 def industry_solar():
     return render_template("industries/solar.html")
+
+
+@public_bp.route("/lifetime/<tier>", endpoint="lifetime_deal")
+def lifetime_deal(tier):
+    if tier not in ("499", "999"):
+        from flask import abort
+        abort(404)
+    return render_template("public/lifetime_deal.html", tier=tier)

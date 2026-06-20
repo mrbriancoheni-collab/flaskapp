@@ -188,7 +188,7 @@
   <header class="md:hidden bg-white border-b border-gray-200">
     <div class="h-14 px-4 flex items-center justify-between">
       <a href="{{ url_for(ep('home')) }}" class="flex items-center space-x-2 font-semibold">
-        <img src="{{ url_for('static', filename='img/FieldSprout.png') }}" alt="FieldSprout" style="height:40px;width:auto;">
+        <img src="{{ url_for('static', filename='brand/logos/fieldsprout-wordmark.svg') }}" alt="FieldSprout" style="height:40px;width:auto;">
       </a>
       <div class="flex items-center gap-2">
         {% if not is_paid and has_endpoint('pricing') %}
@@ -595,7 +595,7 @@
     <!-- SECONDARY SIDEBAR (contextual menu) -->
     <aside class="w-64 bg-white border-r px-3 py-4 overflow-y-auto flex flex-col">
       <a href="{{ url_for(ep('home')) }}" class="hidden lg:flex items-center gap-2 px-2 py-2 mb-2 hover:text-indigo-600">
-        <img src="{{ url_for('static', filename='img/FieldSprout.png') }}" alt="FieldSprout" style="height:32px;width:auto;">
+        <img src="{{ url_for('static', filename='brand/logos/fieldsprout-wordmark.svg') }}" alt="FieldSprout" style="height:32px;width:auto;">
       </a>
 
       {# Finish Setup Section - Commented out, will bring back later

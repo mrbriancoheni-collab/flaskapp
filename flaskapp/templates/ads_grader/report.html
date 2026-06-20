@@ -10,7 +10,7 @@
         <i class="fa-solid fa-arrow-left mr-1"></i> Back to Grader
       </a>
       <h1 class="text-3xl font-bold">Google Ads Performance Report</h1>
-      <p class="text-gray-600 mt-1">{{ report.google_ads_account_name }} • {{ report.created_at.strftime('%B %d, %Y') }}</p>
+      <p class="text-gray-600 mt-1">{{ report.google_ads_account_name }} • {{ report.created_at.strftime('%B %d, %Y') if report.created_at else '' }}</p>
     </div>
     <div class="flex items-center gap-2 flex-shrink-0">
       {% if not is_shared %}
@@ -863,7 +863,7 @@
       </div>
       <div>
         <span class="font-medium">Date Range:</span>
-        {{ report.date_range_start.strftime('%b %d, %Y') }} - {{ report.date_range_end.strftime('%b %d, %Y') }}
+        {{ report.date_range_start.strftime('%b %d, %Y') if report.date_range_start else 'N/A' }} - {{ report.date_range_end.strftime('%b %d, %Y') if report.date_range_end else 'N/A' }}
       </div>
       <div>
         <span class="font-medium">Views:</span> {{ report.view_count }}

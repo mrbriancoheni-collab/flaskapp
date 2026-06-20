@@ -307,6 +307,24 @@ def analyze():
         # Check if demo mode is requested
         use_demo = request.form.get("use_demo", "false") == "true"
 
+        # Enforce refresh cooldown for real (non-demo) reports
+        if not use_demo:
+            try:
+                from app.auth.utils import is_paid_account as _is_paid_check
+                is_paid = bool(_is_paid_check())
+            except Exception:
+                is_paid = False
+            can_refresh, next_at = _refresh_status(account_id, is_paid)
+            if not can_refresh:
+                next_str = next_at.strftime("%B %d") if next_at else "later"
+                flash(
+                    f"Free accounts can run one report every 30 days. "
+                    f"Your next refresh is available on {next_str}. "
+                    f"Upgrade to a paid plan for unlimited refreshes.",
+                    "info",
+                )
+                return redirect(url_for("ads_grader_bp.index"))
+
         # Create report
         if use_demo:
             # Demo mode - use mock data
@@ -351,6 +369,8 @@ def demo():
     Public lead-gen product — no authentication required.
     """
     try:
+        if request.args.get("refresh"):
+            session.pop("demo_report_id", None)
         # Reuse an existing demo report from this session if available
         existing_id = session.get("demo_report_id")
         if existing_id:
@@ -400,9 +420,24 @@ def report(report_id):
             flash("Please log in to view this report.", "info")
             return redirect(url_for("auth_bp.login", next=request.url))
 
+    # Compute refresh availability for the report owner
+    can_refresh = True
+    next_refresh_at = None
+    if (current_user.is_authenticated
+            and report.account_id
+            and report.account_id == current_user.account_id):
+        try:
+            from app.auth.utils import is_paid_account as _is_paid_check
+            is_paid = bool(_is_paid_check())
+        except Exception:
+            is_paid = False
+        can_refresh, next_refresh_at = _refresh_status(report.account_id, is_paid)
+
     return render_template(
         "ads_grader/report.html",
         report=report,
+        can_refresh=can_refresh,
+        next_refresh_at=next_refresh_at,
     )
 
 
@@ -434,7 +469,8 @@ def report_share(report_id):
 def report_shared(token):
     """Public report view accessed via shareable token."""
     rpt = GoogleAdsGraderReport.query.filter_by(shareable_token=token).first_or_404()
-    return render_template("ads_grader/report.html", report=rpt, is_shared=True)
+    return render_template("ads_grader/report.html", report=rpt, is_shared=True,
+                           can_refresh=True, next_refresh_at=None)
 
 
 # ============================================================================
@@ -522,6 +558,25 @@ def select_account():
 # ============================================================================
 # Helper Functions
 # ============================================================================
+def _refresh_status(account_id: int, is_paid: bool):
+    """
+    Return (can_refresh: bool, next_available_at: datetime | None).
+    Paid accounts: unlimited refreshes.
+    Free accounts: once every 30 days.
+    """
+    if is_paid:
+        return True, None
+    cutoff = datetime.utcnow() - timedelta(days=30)
+    last = (GoogleAdsGraderReport.query
+            .filter_by(account_id=account_id)
+            .filter(GoogleAdsGraderReport.created_at >= cutoff)
+            .order_by(GoogleAdsGraderReport.created_at.desc())
+            .first())
+    if last is None:
+        return True, None
+    return False, last.created_at + timedelta(days=30)
+
+
 def _create_real_report(customer_id: str, refresh_token: str) -> GoogleAdsGraderReport:
     """
     Create a report using real Google Ads API data.

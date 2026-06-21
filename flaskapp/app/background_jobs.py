@@ -389,6 +389,17 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
+    # Daily performance stats sync — 3:00 AM UTC (before structure sync)
+    scheduler.add_job(
+        func=sync_stats_all_accounts,
+        trigger='cron',
+        hour=3,
+        minute=0,
+        id='sync_stats_all_accounts',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
     # Full structure sync (all entities, no date filter) — daily at 4:00 AM UTC
     scheduler.add_job(
         func=sync_structure_all_accounts,
@@ -1743,6 +1754,40 @@ def send_weekly_digest_all_accounts(app: Flask):
 
         except Exception as e:
             current_app.logger.error(f"Error in weekly digest job: {e}", exc_info=True)
+
+
+def sync_stats_all_accounts(app: Flask):
+    """
+    Pull the last 30 days of campaign/ad group/keyword performance stats and
+    search terms for all connected Google Ads accounts.
+
+    Runs nightly at 3 AM UTC so the paid-dashboard health score and agent
+    context always reflect at most yesterday's data without requiring a
+    manual user-triggered sync.
+    """
+    with app.app_context():
+        try:
+            from app.models import GoogleAdsAuth
+            from app.services.google_ads_sync import sync_account, sync_search_terms
+            auths = GoogleAdsAuth.query.all()
+            for auth in auths:
+                try:
+                    stats = sync_account(auth.account_id, days=30)
+                    current_app.logger.info(
+                        "stats sync account %s: campaigns=%s kw=%s errors=%s",
+                        auth.account_id,
+                        stats.get("campaigns"), stats.get("keywords"),
+                        stats.get("errors"),
+                    )
+                except Exception as exc:
+                    current_app.logger.warning("stats sync failed account %s: %s", auth.account_id, exc)
+
+                try:
+                    sync_search_terms(auth.account_id)
+                except Exception as exc:
+                    current_app.logger.warning("search term sync failed account %s: %s", auth.account_id, exc)
+        except Exception as exc:
+            current_app.logger.error("sync_stats_all_accounts error: %s", exc, exc_info=True)
 
 
 def sync_structure_all_accounts(app: Flask):

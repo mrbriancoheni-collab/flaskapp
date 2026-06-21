@@ -1,185 +1,212 @@
 {% extends "base_public.html" %}
 
 {% set is_499 = tier == "499" %}
-{% set plan_name = "Lifetime Access" if is_499 else "Lifetime Pro Access" %}
 {% set plan_price = "$499" if is_499 else "$999" %}
-{% set monthly_equiv = "$99/mo" if is_499 else "$249/mo" %}
-{% set plan_tag = "Growth Tier" if is_499 else "Pro Tier" %}
-{% set years_break_even = "5 months" if is_499 else "4 months" %}
+{% set plan_tag = "Single Location" if is_499 else "Multi-Location / Agency" %}
+{% set plan_scope = "one business location" if is_499 else "unlimited locations" %}
 
-{% block title %}{{ plan_price }} Lifetime Access to FieldSprout — Limited Time Offer{% endblock %}
-{% block meta_description %}Get lifetime access to FieldSprout's AI-powered Google Ads management for home service businesses. One-time payment of {{ plan_price }} — no monthly fees, ever. Limited spots available.{% endblock %}
+{% block title %}{{ plan_price }} Lifetime Access — FieldSprout AI Google Ads Management{% endblock %}
+{% block meta_description %}Own FieldSprout's full AI-powered Google Ads platform forever. One-time payment of {{ plan_price }} for {{ plan_scope }}. No monthly fees — lifetime access for home service businesses.{% endblock %}
 {% block meta_robots %}index, follow{% endblock %}
 
 {% block content %}
 <div class="min-h-screen bg-white">
 
   <!-- ── Urgency Bar ── -->
-  <div class="bg-red-600 text-white text-center py-2 px-4 text-sm font-semibold">
-    <i class="fa-solid fa-fire mr-2"></i>
+  <div class="text-white text-center py-2.5 px-4 text-sm font-semibold" style="background:#5b21b6">
+    <i class="fa-solid fa-bolt mr-2 text-yellow-300"></i>
     Limited Time Offer — Only a few lifetime spots remaining at this price
-    <i class="fa-solid fa-fire ml-2"></i>
+    <i class="fa-solid fa-bolt ml-2 text-yellow-300"></i>
   </div>
 
   <!-- ── Hero ── -->
-  <section class="bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 text-white py-20 px-4">
-    <div class="max-w-4xl mx-auto text-center">
+  <section class="text-white py-24 px-4 relative overflow-hidden"
+           style="background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 40%, #7c3aed 70%, #5b21b6 100%)">
+    <!-- subtle pattern overlay -->
+    <div class="absolute inset-0 opacity-10"
+         style="background-image:radial-gradient(circle at 1px 1px, white 1px, transparent 0); background-size:32px 32px"></div>
 
-      <div class="inline-flex items-center gap-2 bg-yellow-400 text-yellow-900 px-4 py-1.5 rounded-full text-sm font-bold mb-6">
-        <i class="fa-solid fa-bolt"></i>
-        LIMITED TIME — {{ plan_tag }}
+    <div class="max-w-4xl mx-auto text-center relative">
+
+      <div class="inline-flex items-center gap-2 bg-white/15 border border-white/30 backdrop-blur px-4 py-1.5 rounded-full text-sm font-bold mb-6 text-white">
+        <i class="fa-solid fa-crown text-yellow-300"></i>
+        {{ plan_tag }} — Lifetime Deal
       </div>
 
-      <h1 class="text-4xl md:text-6xl font-extrabold mb-4 leading-tight">
-        Stop Paying {{ monthly_equiv }}.<br>
-        <span class="text-yellow-400">Pay Once. Keep It Forever.</span>
+      <h1 class="text-4xl md:text-6xl font-extrabold mb-5 leading-tight">
+        Your Google Ads,<br>
+        <span style="color:#fbbf24">Managed by AI. Owned Forever.</span>
       </h1>
 
-      <p class="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-        Get lifetime access to FieldSprout's AI-powered Google Ads management — the same tool
-        that's found over $2.4M in wasted ad spend for home service businesses across the country.
+      <p class="text-lg md:text-xl mb-3 max-w-2xl mx-auto" style="color:rgba(255,255,255,0.85)">
+        {% if is_499 %}
+        Get FieldSprout's complete platform — AI agents, campaign management, keyword optimization, reporting, and more — for one business location. One payment. No expiration.
+        {% else %}
+        Get FieldSprout's complete platform across all your locations — AI agents, campaign management, keyword optimization, multi-location reporting, and priority support. One payment. No expiration.
+        {% endif %}
+      </p>
+
+      <p class="text-sm mb-10" style="color:rgba(255,255,255,0.55)">
+        The same platform that's helped home service businesses find over $2.4M in ad spend improvements.
       </p>
 
       <!-- Price Box -->
-      <div class="bg-white/10 border border-white/20 rounded-2xl p-8 max-w-sm mx-auto mb-10 backdrop-blur">
-        <div class="text-gray-400 line-through text-lg mb-1">
-          {{ monthly_equiv }} × 12 = {{ "$1,188/yr" if is_499 else "$2,988/yr" }}
-        </div>
-        <div class="text-6xl font-black text-white mb-2">{{ plan_price }}</div>
-        <div class="text-yellow-400 font-semibold text-lg mb-4">One-time. No recurring fees.</div>
-        <div class="text-gray-300 text-sm mb-6">
-          Break-even in just <strong class="text-white">{{ years_break_even }}</strong> — everything after that is pure savings.
-        </div>
+      <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-sm mx-auto mb-12">
+        <div class="text-xs font-bold uppercase tracking-widest text-purple-500 mb-1">One-Time Investment</div>
+        <div class="text-7xl font-black mb-1" style="color:#6d28d9">{{ plan_price }}</div>
+        <div class="text-gray-500 text-sm mb-5">Full platform access for {{ plan_scope }} — forever</div>
         <button
           onclick="startCheckout('{{ tier }}')"
-          class="w-full py-4 bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-extrabold text-xl rounded-xl transition shadow-xl"
+          class="w-full py-4 font-extrabold text-lg rounded-xl transition shadow-lg text-white mb-3"
+          style="background: linear-gradient(135deg, #7c3aed, #6d28d9)"
           id="ctaBtn"
+          onmouseover="this.style.opacity='0.92'"
+          onmouseout="this.style.opacity='1'"
         >
-          <i class="fa-solid fa-lock mr-2"></i>Claim Lifetime Access — {{ plan_price }}
+          <i class="fa-solid fa-lock mr-2"></i>Get Lifetime Access — {{ plan_price }}
         </button>
-        <div class="mt-3 text-xs text-gray-400">
-          <i class="fa-solid fa-shield-halved mr-1"></i>Secure checkout via Stripe. 30-day money-back guarantee.
+        <div class="text-xs text-gray-400">
+          <i class="fa-solid fa-shield-halved mr-1 text-green-500"></i>Secure checkout via Stripe &nbsp;·&nbsp; 30-day money-back guarantee
+        </div>
+        <div class="text-xs text-gray-400 mt-2">
+          Includes all current features + everything launched through Dec 31, 2026.
+          Post-2026 additions are optional upgrades — you're never required to upgrade.
         </div>
       </div>
 
       <!-- Social Proof Numbers -->
       <div class="grid grid-cols-3 gap-6 max-w-lg mx-auto">
         <div>
-          <div class="text-3xl font-black text-yellow-400">$2.4M</div>
-          <div class="text-xs text-gray-400">wasted ad spend found</div>
+          <div class="text-3xl font-black text-yellow-300">$2.4M</div>
+          <div class="text-xs" style="color:rgba(255,255,255,0.55)">in ad spend improvements found</div>
         </div>
         <div>
-          <div class="text-3xl font-black text-yellow-400">1,000+</div>
-          <div class="text-xs text-gray-400">accounts analyzed</div>
+          <div class="text-3xl font-black text-yellow-300">1,000+</div>
+          <div class="text-xs" style="color:rgba(255,255,255,0.55)">accounts analyzed</div>
         </div>
         <div>
-          <div class="text-3xl font-black text-yellow-400">22%</div>
-          <div class="text-xs text-gray-400">avg. wasted spend</div>
+          <div class="text-3xl font-black text-yellow-300">20–30%</div>
+          <div class="text-xs" style="color:rgba(255,255,255,0.55)">avg. ad spend reduction while getting more leads</div>
         </div>
       </div>
     </div>
   </section>
 
   <!-- ── What You Get ── -->
-  <section class="py-16 px-4 bg-white">
+  <section class="py-20 px-4 bg-white">
     <div class="max-w-4xl mx-auto">
       <div class="text-center mb-12">
-        <h2 class="text-3xl font-extrabold text-gray-900 mb-3">Everything in {{ plan_tag }} — Forever</h2>
-        <p class="text-gray-600 text-lg">One payment unlocks the full platform. No upsells, no catch.</p>
+        <h2 class="text-3xl font-extrabold text-gray-900 mb-3">Everything You Get — Forever</h2>
+        <p class="text-gray-500 text-lg">One payment unlocks the complete platform for {{ plan_scope }}. No upsells.</p>
       </div>
 
-      <div class="grid md:grid-cols-2 gap-4 mb-10">
+      <div class="grid md:grid-cols-2 gap-4 mb-12">
         {% set features = [
-          ("fa-robot", "8 Autonomous AI Agents", "StrategicDirector, BudgetGuardian, KeywordOptimizer, NegativeKeyword, QualityScore, CampaignManager, AdCopy, and LandingPage agents — all working 24/7"),
-          ("fa-magnifying-glass-chart", "Google Ads Strength Grader", "Instant 10-point account health score with a prioritized fix list"),
-          ("fa-wand-magic-sparkles", "AI-Powered Optimization", "Agents find wasted spend, fix Quality Scores, prune bad keywords, and improve ad copy automatically"),
-          ("fa-clock", "24/7 Account Monitoring", "Never sleep on a bleeding campaign again — AI watches your account around the clock"),
-          ("fa-chart-line", "Performance Dashboard", "See your savings, lead improvements, and agent activity in one place"),
-          ("fa-list-check", "1-Click Approval Queue", "Bigger changes come to you for review — you approve in seconds, not hours"),
+          ("fa-robot", "8 Autonomous AI Agents", "StrategicDirector, BudgetGuardian, KeywordOptimizer, NegativeKeyword, QualityScore, CampaignManager, AdCopy, and LandingPage — all running 24/7 on your account."),
+          ("fa-magnifying-glass-chart", "Google Ads Health Grader", "Instant 10-point account score with a prioritized fix list so you know exactly what to improve."),
+          ("fa-wand-magic-sparkles", "Automated Campaign Optimization", "AI identifies underperforming keywords, improves Quality Scores, and refines ad copy — continuously."),
+          ("fa-clock", "24/7 Account Monitoring", "Agents watch your campaigns around the clock and act on issues the moment they appear."),
+          ("fa-chart-line", "Performance Dashboard", "See lead improvements, budget efficiency, and agent activity in one clear view."),
+          ("fa-list-check", "1-Click Approval Queue", "Bigger changes surface for your review. Approve or dismiss in seconds — you stay in control."),
         ] %}
         {% if not is_499 %}
         {% set features = features + [
-          ("fa-building", "Multi-Location Support", "Manage multiple Google Ads accounts from one dashboard"),
-          ("fa-headset", "Priority Support", "Direct access to our team — email & chat, jump-the-line support"),
+          ("fa-building", "Multi-Location Management", "Run Google Ads across every location from a single dashboard with consolidated reporting."),
+          ("fa-headset", "Priority Support", "Jump-the-line access to our team via email and chat."),
         ] %}
         {% endif %}
 
         {% for icon, title, desc in features %}
-        <div class="flex gap-4 p-5 bg-gray-50 rounded-xl border border-gray-100">
-          <div class="flex-shrink-0 w-10 h-10 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center">
-            <i class="fa-solid {{ icon }}"></i>
+        <div class="flex gap-4 p-5 rounded-xl border border-gray-100 hover:border-purple-200 hover:bg-purple-50/30 transition">
+          <div class="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center text-white" style="background:#7c3aed">
+            <i class="fa-solid {{ icon }} text-sm"></i>
           </div>
           <div>
             <div class="font-bold text-gray-900 mb-1">{{ title }}</div>
-            <div class="text-sm text-gray-600">{{ desc }}</div>
+            <div class="text-sm text-gray-500">{{ desc }}</div>
           </div>
         </div>
         {% endfor %}
       </div>
 
-      <!-- CTA Mid -->
-      <div class="text-center">
+      <!-- Mid CTA -->
+      <div class="text-center bg-purple-50 border border-purple-100 rounded-2xl py-10 px-6">
+        <p class="text-gray-700 font-semibold text-lg mb-1">Start cutting ad waste and getting more leads — today.</p>
+        <p class="text-gray-500 text-sm mb-5">{{ plan_price }} once. Lifetime access for {{ plan_scope }}. No subscription required.</p>
         <button
           onclick="startCheckout('{{ tier }}')"
-          class="inline-flex items-center gap-3 px-10 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xl rounded-xl transition shadow-lg"
+          class="inline-flex items-center gap-3 px-10 py-4 font-extrabold text-lg rounded-xl transition shadow-md text-white"
+          style="background: linear-gradient(135deg, #7c3aed, #6d28d9)"
+          onmouseover="this.style.opacity='0.92'" onmouseout="this.style.opacity='1'"
         >
           <i class="fa-solid fa-rocket"></i>
-          Get Lifetime Access — {{ plan_price }}
+          Get Started Now — {{ plan_price }}
         </button>
-        <p class="mt-3 text-sm text-gray-500">One-time payment. No subscription. Cancel-proof.</p>
       </div>
     </div>
   </section>
 
-  <!-- ── Math Section (Why Lifetime Wins) ── -->
-  <section class="py-16 px-4 bg-indigo-50">
+  <!-- ── Why Lifetime Makes Sense ── -->
+  <section class="py-20 px-4" style="background:#f5f3ff">
     <div class="max-w-3xl mx-auto">
-      <h2 class="text-3xl font-extrabold text-gray-900 text-center mb-10">The Math Is Simple</h2>
+      <div class="text-center mb-12">
+        <h2 class="text-3xl font-extrabold text-gray-900 mb-3">Why Lifetime Makes Sense</h2>
+        <p class="text-gray-500">AI-managed Google Ads is a service most businesses need every month. Owning the platform outright is simply a smarter investment.</p>
+      </div>
 
-      <div class="grid md:grid-cols-2 gap-8">
-        <!-- Monthly Cost -->
-        <div class="bg-white rounded-2xl border-2 border-gray-200 p-8">
-          <div class="text-center mb-6">
-            <div class="text-gray-500 font-semibold mb-1">Without Lifetime Deal</div>
-            <div class="text-4xl font-black text-gray-700">{{ monthly_equiv }}</div>
-            <div class="text-gray-500">every month</div>
+      <div class="grid md:grid-cols-3 gap-6 mb-10">
+        <div class="bg-white rounded-2xl p-6 border border-purple-100 shadow-sm text-center">
+          <div class="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4" style="background:#ede9fe">
+            <i class="fa-solid fa-infinity" style="color:#7c3aed"></i>
           </div>
-          <ul class="space-y-2 text-sm text-gray-600">
-            <li class="flex items-center gap-2"><i class="fa-solid fa-xmark text-red-500"></i>{{ "$1,188" if is_499 else "$2,988" }} per year</li>
-            <li class="flex items-center gap-2"><i class="fa-solid fa-xmark text-red-500"></i>{{ "$5,940" if is_499 else "$14,940" }} over 5 years</li>
-            <li class="flex items-center gap-2"><i class="fa-solid fa-xmark text-red-500"></i>Bill goes up if you pause or cancel</li>
-            <li class="flex items-center gap-2"><i class="fa-solid fa-xmark text-red-500"></i>Price can increase at renewal</li>
-          </ul>
+          <div class="font-bold text-gray-900 mb-1">Access Never Expires</div>
+          <div class="text-sm text-gray-500">Use the platform as long as you run Google Ads — no renewals, no risk of losing access.</div>
         </div>
-
-        <!-- Lifetime -->
-        <div class="bg-indigo-600 rounded-2xl border-2 border-indigo-400 p-8 text-white">
-          <div class="text-center mb-6">
-            <div class="inline-flex items-center gap-1 bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1 rounded-full mb-2">LIMITED OFFER</div>
-            <div class="text-4xl font-black text-yellow-400">{{ plan_price }}</div>
-            <div class="text-indigo-200">one time, forever</div>
+        <div class="bg-white rounded-2xl p-6 border border-purple-100 shadow-sm text-center">
+          <div class="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4" style="background:#ede9fe">
+            <i class="fa-solid fa-shield-halved" style="color:#7c3aed"></i>
           </div>
-          <ul class="space-y-2 text-sm text-indigo-100">
-            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-yellow-400"></i>Break-even in {{ years_break_even }}</li>
-            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-yellow-400"></i>{{ "$689" if is_499 else "$1,989" }} saved in year 1</li>
-            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-yellow-400"></i>Pure savings every month after that</li>
-            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-yellow-400"></i>Price locked in — no increases ever</li>
-          </ul>
+          <div class="font-bold text-gray-900 mb-1">Price Locked Forever</div>
+          <div class="text-sm text-gray-500">Future customers will pay more as we grow. Your price is locked in the moment you purchase.</div>
+        </div>
+        <div class="bg-white rounded-2xl p-6 border border-purple-100 shadow-sm text-center">
+          <div class="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4" style="background:#ede9fe">
+            <i class="fa-solid fa-star" style="color:#7c3aed"></i>
+          </div>
+          <div class="font-bold text-gray-900 mb-1">Every New Feature Included</div>
+          <div class="text-sm text-gray-500">As we ship new AI agents, integrations, and reports — you get them automatically at no extra charge.</div>
+        </div>
+      </div>
+
+      <!-- Subtle value callout -->
+      <div class="bg-white rounded-2xl border border-purple-200 p-6 flex flex-col sm:flex-row items-center gap-5 shadow-sm">
+        <div class="flex-shrink-0 w-14 h-14 rounded-full flex items-center justify-center text-2xl" style="background:#ede9fe">
+          💡
+        </div>
+        <div>
+          <div class="font-bold text-gray-900 mb-1">Consider the alternative</div>
+          <div class="text-gray-500 text-sm">
+            Most home service businesses pay a marketing agency
+            {% if is_499 %}$1,000–$2,500/mo{% else %}$2,000–$5,000/mo{% endif %}
+            for Google Ads management — with no AI, no 24/7 monitoring, and a contract you can't own.
+            At $1,000/mo, FieldSprout pays for itself in the first month.
+            Every month after that is money back in your pocket — with smarter campaigns and more leads to show for it.
+          </div>
         </div>
       </div>
     </div>
   </section>
 
   <!-- ── Who This Is For ── -->
-  <section class="py-16 px-4 bg-white">
-    <div class="max-w-3xl mx-auto">
-      <h2 class="text-3xl font-extrabold text-gray-900 text-center mb-4">Built for Home Service Businesses</h2>
-      <p class="text-center text-gray-600 mb-10">If you run Google Ads and waste even $500/mo on bad keywords or poor targeting, FieldSprout pays for itself in the first week.</p>
+  <section class="py-20 px-4 bg-white">
+    <div class="max-w-3xl mx-auto text-center">
+      <h2 class="text-3xl font-extrabold text-gray-900 mb-3">Built for Home Service Businesses</h2>
+      <p class="text-gray-500 mb-10">FieldSprout was built specifically for the trades — not generic businesses, not e-commerce. If you run Google Ads for a local service business, this was made for you.</p>
 
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         {% for icon, label in [("fa-wind","HVAC"),("fa-wrench","Plumbing"),("fa-bolt","Electrical"),("fa-house","Roofing"),("fa-seedling","Landscaping"),("fa-bug","Pest Control"),("fa-car-burst","Garage Door"),("fa-solar-panel","Solar")] %}
-        <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
-          <div class="text-2xl text-indigo-600 mb-2"><i class="fa-solid {{ icon }}"></i></div>
+        <div class="rounded-xl p-4 border border-gray-100 hover:border-purple-200 hover:bg-purple-50/40 transition">
+          <div class="text-2xl mb-2" style="color:#7c3aed"><i class="fa-solid {{ icon }}"></i></div>
           <div class="text-sm font-semibold text-gray-700">{{ label }}</div>
         </div>
         {% endfor %}
@@ -187,37 +214,31 @@
     </div>
   </section>
 
-  <!-- ── Testimonials / Case Studies ── -->
-  <section class="py-16 px-4 bg-gray-50">
+  <!-- ── Testimonials ── -->
+  <section class="py-20 px-4 bg-gray-50">
     <div class="max-w-4xl mx-auto">
       <h2 class="text-3xl font-extrabold text-gray-900 text-center mb-10">What Home Service Owners Are Saying</h2>
       <div class="grid md:grid-cols-3 gap-6">
 
         <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div class="flex mb-3">
-            {% for _ in range(5) %}<i class="fa-solid fa-star text-yellow-400 text-sm"></i>{% endfor %}
-          </div>
-          <p class="text-gray-700 text-sm mb-4">"Found $1,800/mo in wasted spend in the first week. AI fixed it automatically. I stopped babysitting my Google Ads account."</p>
+          <div class="flex mb-3">{% for _ in range(5) %}<i class="fa-solid fa-star text-yellow-400 text-sm"></i>{% endfor %}</div>
+          <p class="text-gray-600 text-sm mb-4">"The AI found $1,800/mo in issues in the first week and fixed them automatically. I finally feel like my Google Ads are actually working for me."</p>
           <div class="font-bold text-gray-900 text-sm">Mike R.</div>
-          <div class="text-gray-500 text-xs">HVAC Owner, Texas</div>
+          <div class="text-gray-400 text-xs">HVAC Owner, Texas</div>
         </div>
 
         <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div class="flex mb-3">
-            {% for _ in range(5) %}<i class="fa-solid fa-star text-yellow-400 text-sm"></i>{% endfor %}
-          </div>
-          <p class="text-gray-700 text-sm mb-4">"We cut our cost-per-lead from $185 to $94. That's double the leads for the same budget. FieldSprout did that in 30 days."</p>
+          <div class="flex mb-3">{% for _ in range(5) %}<i class="fa-solid fa-star text-yellow-400 text-sm"></i>{% endfor %}</div>
+          <p class="text-gray-600 text-sm mb-4">"We went from $185 to $94 cost-per-lead in 30 days. That's double the leads for the same budget. Game-changer for our plumbing business."</p>
           <div class="font-bold text-gray-900 text-sm">Sarah K.</div>
-          <div class="text-gray-500 text-xs">Plumbing Company, Florida</div>
+          <div class="text-gray-400 text-xs">Plumbing Company, Florida</div>
         </div>
 
         <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div class="flex mb-3">
-            {% for _ in range(5) %}<i class="fa-solid fa-star text-yellow-400 text-sm"></i>{% endfor %}
-          </div>
-          <p class="text-gray-700 text-sm mb-4">"I used to spend $400/mo on an agency who just logged in once a month. The AI agents do more in a day than they did in a month."</p>
+          <div class="flex mb-3">{% for _ in range(5) %}<i class="fa-solid fa-star text-yellow-400 text-sm"></i>{% endfor %}</div>
+          <p class="text-gray-600 text-sm mb-4">"FieldSprout's AI agents do more in a day than our old agency did in a month. And I actually understand what's happening in my account now."</p>
           <div class="font-bold text-gray-900 text-sm">Dave T.</div>
-          <div class="text-gray-500 text-xs">Roofing Contractor, Ohio</div>
+          <div class="text-gray-400 text-xs">Roofing Contractor, Ohio</div>
         </div>
 
       </div>
@@ -225,28 +246,31 @@
   </section>
 
   <!-- ── FAQ ── -->
-  <section class="py-16 px-4 bg-white">
+  <section class="py-20 px-4 bg-white">
     <div class="max-w-2xl mx-auto">
       <h2 class="text-3xl font-extrabold text-gray-900 text-center mb-10">Common Questions</h2>
-      <div class="space-y-4" id="faq">
+      <div class="space-y-3">
 
         {% set faqs = [
-          ("Is this really a one-time payment?", "Yes. You pay {{ plan_price }} once and never pay again. No monthly fees, no annual renewals, no hidden charges. As long as FieldSprout exists, you have full access."),
-          ("What happens if FieldSprout raises prices?", "Your lifetime deal locks in full access at today's price. Future customers may pay more; you never will."),
-          ("Will I get new features?", "Yes. Lifetime access means you get every feature we ship going forward — including new AI agents, new integrations, and new reports."),
-          ("How do the AI agents work?", "Once you connect your Google Ads account, 8 AI agents analyze your campaigns 24/7. Low-risk fixes are applied automatically. Bigger changes appear in your approval queue for 1-click review."),
-          ("What if I'm not satisfied?", "We offer a 30-day money-back guarantee, no questions asked. If FieldSprout isn't finding savings or improving your account, we'll refund you in full."),
-          ("How many Google Ads accounts can I connect?", "The $499 lifetime tier supports a single Google Ads account. The $999 tier supports multiple accounts (ideal for agencies or multi-location businesses)."),
-          ("I'm not technical. Is this hard to set up?", "Setup takes about 3 minutes. Click 'Connect Google Ads', authorize access, and the agents start scanning immediately. No coding, no spreadsheets."),
+          ("What do I actually get with this?", "Full access to the FieldSprout platform for {{ plan_scope }} — 8 AI agents managing your Google Ads 24/7, campaign optimization, keyword management, a performance dashboard, and the Google Ads Health Grader. Everything in one platform, yours permanently."),
+          ("Is this really a one-time payment?", "Yes. You pay {{ plan_price }} once and that's it — no monthly fees, no annual renewals. As long as FieldSprout exists, you have full access."),
+          ("Will I get new features as you build them?", "Yes — all features and tools launched through December 31, 2026 are included automatically at no extra cost. After that date, any new additions are optional upgrades. You're never required to upgrade, and your existing access remains fully functional regardless of what we build next."),
+          ("How do the AI agents work?", "Once you connect your Google Ads account (takes about 3 minutes), 8 AI agents start analyzing your campaigns. Low-risk improvements are applied automatically. Larger changes appear in your 1-click approval queue so you stay in control."),
+          ("What if I'm not satisfied?", "We offer a 30-day money-back guarantee, no questions asked. If FieldSprout isn't delivering value for your account, we'll refund you in full."),
+          ("How many Google Ads accounts can I connect?", "The {{ plan_price }} lifetime tier supports {{ plan_scope }}. {% if not is_499 %}This is ideal for agencies or businesses running ads across multiple service areas or franchises.{% endif %}"),
+          ("Do I need technical experience?", "Not at all. Setup takes about 3 minutes — connect your Google Ads account, and the agents start working immediately. No coding, no spreadsheets."),
+          ("What happens after 2026?", "Your access doesn't change. All the features you have on December 31, 2026 remain yours indefinitely. If we launch major new product lines after that date, they'll be available as optional upgrades — but you'll never be required to buy them or lose access to what you already have."),
         ] %}
 
         {% for q, a in faqs %}
         <details class="group border border-gray-200 rounded-xl overflow-hidden">
-          <summary class="flex items-center justify-between p-5 cursor-pointer font-semibold text-gray-900 hover:bg-gray-50">
-            {{ q }}
-            <i class="fa-solid fa-chevron-down text-gray-400 group-open:rotate-180 transition-transform"></i>
+          <summary class="flex items-center justify-between p-5 cursor-pointer font-semibold text-gray-900 hover:bg-purple-50 transition list-none">
+            <span>{{ q }}</span>
+            <i class="fa-solid fa-chevron-down text-gray-400 group-open:rotate-180 transition-transform flex-shrink-0 ml-3"></i>
           </summary>
-          <div class="px-5 pb-5 text-gray-600 text-sm">{{ a | replace("{{ plan_price }}", plan_price) }}</div>
+          <div class="px-5 pb-5 pt-1 text-gray-500 text-sm leading-relaxed">
+            {{ a | replace("{{ plan_price }}", plan_price) | replace("{{ plan_scope }}", plan_scope) | replace("{% if not is_499 %}", "") | replace("{% endif %}", "") }}
+          </div>
         </details>
         {% endfor %}
 
@@ -255,44 +279,52 @@
   </section>
 
   <!-- ── Final CTA ── -->
-  <section class="py-20 px-4 bg-gradient-to-br from-indigo-600 to-indigo-800 text-white">
-    <div class="max-w-2xl mx-auto text-center">
-      <div class="text-5xl mb-4">🚀</div>
+  <section class="py-24 px-4 text-white relative overflow-hidden"
+           style="background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 50%, #7c3aed 100%)">
+    <div class="absolute inset-0 opacity-10"
+         style="background-image:radial-gradient(circle at 1px 1px, white 1px, transparent 0); background-size:32px 32px"></div>
+    <div class="max-w-2xl mx-auto text-center relative">
+      <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/15 mb-6">
+        <i class="fa-solid fa-rocket text-2xl text-yellow-300"></i>
+      </div>
       <h2 class="text-3xl md:text-4xl font-extrabold mb-4">
-        Ready to Stop Paying Monthly?
+        Get Full Google Ads Management.<br>Own It Forever.
       </h2>
-      <p class="text-indigo-200 text-lg mb-8">
-        {{ plan_price }} today. No more bills. AI manages your Google Ads forever.
+      <p class="text-lg mb-8" style="color:rgba(255,255,255,0.75)">
+        {{ plan_price }} for {{ plan_scope }} — complete AI-powered Google Ads management with no ongoing fees.
       </p>
       <button
         onclick="startCheckout('{{ tier }}')"
-        class="inline-flex items-center gap-3 px-12 py-5 bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-extrabold text-2xl rounded-2xl transition shadow-2xl"
+        class="inline-flex items-center gap-3 px-12 py-5 font-extrabold text-xl rounded-2xl transition shadow-2xl mb-4"
+        style="background:#ffffff; color:#6d28d9"
+        onmouseover="this.style.background='#f5f3ff'"
+        onmouseout="this.style.background='#ffffff'"
         id="finalCtaBtn"
       >
         <i class="fa-solid fa-lock"></i>
-        Claim Lifetime Access — {{ plan_price }}
+        Get Started Now — {{ plan_price }}
       </button>
-      <div class="mt-4 text-indigo-200 text-sm">
+      <div class="text-sm mb-10" style="color:rgba(255,255,255,0.55)">
         <i class="fa-solid fa-shield-halved mr-1"></i>30-day money-back guarantee &nbsp;·&nbsp;
         <i class="fa-solid fa-lock mr-1"></i>Secure checkout via Stripe
       </div>
 
       <!-- Tier switch -->
-      {% if is_499 %}
-      <div class="mt-10 pt-8 border-t border-indigo-500">
-        <p class="text-indigo-200 text-sm mb-3">Need multi-location or agency features?</p>
-        <a href="{{ url_for('public_bp.lifetime_deal', tier='999') }}" class="text-yellow-300 hover:text-yellow-200 font-semibold text-sm underline">
-          View the $999 Lifetime Pro plan →
+      <div class="border-t pt-8" style="border-color:rgba(255,255,255,0.2)">
+        {% if is_499 %}
+        <p class="text-sm mb-2" style="color:rgba(255,255,255,0.6)">Running Google Ads across multiple locations?</p>
+        <a href="{{ url_for('public_bp.lifetime_deal', tier='999') }}"
+           class="font-semibold text-sm underline" style="color:rgba(255,255,255,0.85)">
+          View the $999 Multi-Location Lifetime plan →
         </a>
-      </div>
-      {% else %}
-      <div class="mt-10 pt-8 border-t border-indigo-500">
-        <p class="text-indigo-200 text-sm mb-3">Just need single-account access?</p>
-        <a href="{{ url_for('public_bp.lifetime_deal', tier='499') }}" class="text-yellow-300 hover:text-yellow-200 font-semibold text-sm underline">
-          View the $499 Lifetime plan →
+        {% else %}
+        <p class="text-sm mb-2" style="color:rgba(255,255,255,0.6)">Only need access for one location?</p>
+        <a href="{{ url_for('public_bp.lifetime_deal', tier='499') }}"
+           class="font-semibold text-sm underline" style="color:rgba(255,255,255,0.85)">
+          View the $499 Single-Location Lifetime plan →
         </a>
+        {% endif %}
       </div>
-      {% endif %}
     </div>
   </section>
 
@@ -325,12 +357,11 @@ async function startCheckout(tier) {
   } catch (err) {
     allBtns.forEach(b => {
       b.disabled = false;
-      b.innerHTML = `<i class="fa-solid fa-lock mr-2"></i>Claim Lifetime Access — $${tier}`;
+      b.innerHTML = `<i class="fa-solid fa-lock mr-2"></i>Get Lifetime Access — $${tier}`;
     });
     alert('Something went wrong: ' + err.message + '\nPlease try again or contact support.');
   }
   {% else %}
-  // Not logged in — send to register with redirect back to this page
   const returnUrl = encodeURIComponent(window.location.pathname);
   window.location.href = `/register?next=${returnUrl}`;
   {% endif %}

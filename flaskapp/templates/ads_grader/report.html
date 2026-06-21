@@ -3,6 +3,25 @@
 
 {% block content %}
 <div class="max-w-5xl mx-auto">
+
+  {% if is_public_grader_report %}
+  <!-- Save-results banner for anonymous public grader users -->
+  <div class="mb-6 rounded-2xl overflow-hidden shadow-lg"
+       style="background:linear-gradient(135deg,#4c1d95 0%,#6d28d9 50%,#7c3aed 100%);">
+    <div class="px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="text-white">
+        <p class="font-bold text-lg leading-tight">Save your results &amp; unlock full recommendations</p>
+        <p class="text-purple-200 text-sm mt-0.5">Create a free account — your report stays attached, no re-connecting required.</p>
+      </div>
+      <a href="{{ url_for('auth_bp.register', email=grader_public_email) }}"
+         class="flex-shrink-0 inline-flex items-center gap-2 px-6 py-3 bg-white font-bold text-purple-700 rounded-xl hover:bg-purple-50 transition shadow text-sm whitespace-nowrap">
+        <i class="fa-solid fa-user-plus"></i>
+        Save My Report — It's Free
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Header -->
   <div class="flex items-center justify-between mb-6">
     <div>

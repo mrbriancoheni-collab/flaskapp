@@ -398,6 +398,94 @@ def demo():
             return redirect(url_for("ads_grader_bp.index"))
 
 
+# ============================================================================
+# Public (anonymous) Google Ads grader flow — no account required
+# ============================================================================
+@ads_grader_bp.route("/public-connect")
+def public_connect():
+    """
+    Start Google Ads OAuth for an anonymous visitor.
+    On success, Google redirects to /account/google/callback with
+    state=ads_grader_public, which stores tokens in session and redirects
+    here to /ads-grader/public-analyze.
+    """
+    from app.google import _client_info, _redirect_uri, SCOPES, GOOGLE_AUTH_URL
+    client_id, _ = _client_info("ads")
+    if not client_id:
+        flash("Google connection is not available at this time.", "error")
+        return redirect(url_for("ads_grader_bp.strength_test"))
+    params = {
+        "response_type": "code",
+        "client_id": client_id,
+        "redirect_uri": _redirect_uri(),
+        "scope": " ".join(SCOPES["ads"]),
+        "access_type": "offline",
+        "prompt": "consent select_account",
+        "state": "ads_grader_public",
+    }
+    return redirect(f"{GOOGLE_AUTH_URL}?{urlencode(params)}")
+
+
+@ads_grader_bp.route("/public-analyze")
+def public_analyze():
+    """
+    Run a real Google Ads analysis using the token stored in session from
+    the anonymous OAuth flow.  No FieldSprout account required.
+    Reports are saved with account_id=None and are accessible via session key.
+    """
+    from urllib.parse import urlencode as _ue
+    token_json = session.get("grader_public_token")
+    if not token_json:
+        flash("Please connect your Google Ads account to get started.", "info")
+        return redirect(url_for("ads_grader_bp.strength_test"))
+
+    refresh_token = token_json.get("refresh_token")
+    access_token = token_json.get("access_token")
+
+    if not refresh_token:
+        flash("Authorization incomplete — please connect again.", "error")
+        session.pop("grader_public_token", None)
+        return redirect(url_for("ads_grader_bp.strength_test"))
+
+    # Fetch accessible Google Ads accounts
+    accessible_customers = []
+    try:
+        from app.google.utils_ads import list_accessible_customers
+        accessible_customers = list_accessible_customers(access_token)
+    except Exception as e:
+        logger.warning(f"Public grader: could not list customers: {e}")
+
+    if not accessible_customers:
+        flash(
+            "No Google Ads accounts were found for this Google login. "
+            "Please make sure you have access to a Google Ads account and try again.",
+            "warning",
+        )
+        session.pop("grader_public_token", None)
+        return redirect(url_for("ads_grader_bp.strength_test"))
+
+    # If a specific customer was selected from the picker, run analysis
+    customer_id = request.args.get("customer_id")
+    if customer_id or len(accessible_customers) == 1:
+        customer_id = customer_id or accessible_customers[0]
+        try:
+            report = _create_real_report(customer_id, refresh_token)
+            session["last_grader_report_id"] = report.id
+            return redirect(url_for("ads_grader_bp.report", report_id=report.id))
+        except Exception as e:
+            logger.error(f"Public grader analysis failed: {e}", exc_info=True)
+            flash(f"Analysis failed: {str(e)}", "error")
+            return redirect(url_for("ads_grader_bp.strength_test"))
+
+    # Multiple accounts — show a simple account picker
+    email = session.get("grader_public_email", "")
+    return render_template(
+        "ads_grader/public_account_picker.html",
+        accessible_customers=accessible_customers,
+        email=email,
+    )
+
+
 @ads_grader_bp.route("/report/<int:report_id>")
 def report(report_id):
     """
@@ -433,11 +521,23 @@ def report(report_id):
             is_paid = False
         can_refresh, next_refresh_at = _refresh_status(report.account_id, is_paid)
 
+    # For public grader reports viewed anonymously, surface the signup CTA
+    grader_public_email = ""
+    is_public_grader_report = (
+        report.account_id is None
+        and not current_user.is_authenticated
+        and session.get("last_grader_report_id") == report_id
+    )
+    if is_public_grader_report:
+        grader_public_email = session.get("grader_public_email", "")
+
     return render_template(
         "ads_grader/report.html",
         report=report,
         can_refresh=can_refresh,
         next_refresh_at=next_refresh_at,
+        is_public_grader_report=is_public_grader_report,
+        grader_public_email=grader_public_email,
     )
 
 

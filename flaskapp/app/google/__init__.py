@@ -11503,15 +11503,64 @@ def start():
     return redirect(f"{GOOGLE_AUTH_URL}?{urlencode(params)}")
 
 @google_bp.route("/callback", methods=["GET"], endpoint="oauth_callback")
-@login_required
 def oauth_callback():
     err = request.args.get("error")
+    state_raw = request.args.get("state") or ""
+
+    # ── Public grader flow — no login required ────────────────────────────────
+    # Anonymous users can connect Google Ads to run the free Health Grader
+    # without creating a FieldSprout account. Tokens are stored in session only.
+    if state_raw == "ads_grader_public":
+        if err:
+            flash(f"Google authorization failed: {err}", "error")
+            return redirect(url_for("ads_grader_bp.strength_test"))
+        code = request.args.get("code")
+        if not code:
+            flash("Invalid Google callback.", "error")
+            return redirect(url_for("ads_grader_bp.strength_test"))
+        client_id, client_secret = _client_info("ads")
+        if not client_id or not client_secret:
+            flash("Google OAuth is not configured.", "error")
+            return redirect(url_for("ads_grader_bp.strength_test"))
+        try:
+            resp = requests.post(GOOGLE_TOKEN_URL, data={
+                "code": code,
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "redirect_uri": _redirect_uri(),
+                "grant_type": "authorization_code",
+            }, timeout=10)
+            resp.raise_for_status()
+            token_json = resp.json()
+        except Exception as e:
+            current_app.logger.exception("Public grader token exchange failed")
+            flash(f"Could not complete Google sign-in: {e}", "error")
+            return redirect(url_for("ads_grader_bp.strength_test"))
+        session["grader_public_token"] = token_json
+        session.permanent = True
+        try:
+            info_resp = requests.get(
+                "https://www.googleapis.com/oauth2/v3/userinfo",
+                headers={"Authorization": f"Bearer {token_json.get('access_token')}"},
+                timeout=5,
+            )
+            if info_resp.ok:
+                session["grader_public_email"] = info_resp.json().get("email", "")
+        except Exception:
+            pass
+        return redirect(url_for("ads_grader_bp.public_analyze"))
+    # ── End public grader flow ────────────────────────────────────────────────
+
+    # All other flows require a logged-in FieldSprout account
+    if not current_user.is_authenticated:
+        return redirect(url_for("auth_bp.login", next=request.url))
+
     if err:
         flash(f"Google authorization failed: {err}", "error")
         return redirect(url_for("google_bp.index"))
 
     code = request.args.get("code")
-    product = _normalize_product(request.args.get("state") or session.get("google_oauth_product") or "")
+    product = _normalize_product(state_raw or session.get("google_oauth_product") or "")
     if not code or product not in SCOPES:
         flash("Invalid Google callback.", "error")
         return redirect(url_for("google_bp.index"))

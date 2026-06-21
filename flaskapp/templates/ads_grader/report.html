@@ -453,10 +453,9 @@
         {{ score_bar("Account Activity", report.account_activity_score or 0, "fa-solid fa-clock") }}
       </div>
       <div>
-        {{ score_bar("Expanded Text Ads", report.expanded_text_ads_score or 0, "fa-solid fa-file-lines") }}
         {{ score_bar("Long-Tail Keywords", report.long_tail_keywords_score or 0, "fa-solid fa-key") }}
-        {{ score_bar("Impression Share", report.impression_share_score or 0, "fa-solid fa-eye") }}
-        {{ score_bar("Landing Page Optimization", report.landing_page_score or 0, "fa-solid fa-link") }}
+        {{ score_bar("Impression Share (Rank)", report.impression_share_score or 0, "fa-solid fa-eye") }}
+        {{ score_bar("Landing Page Experience", report.landing_page_score or 0, "fa-solid fa-link") }}
         {{ score_bar("Mobile Advertising", report.mobile_advertising_score or 0, "fa-solid fa-mobile-screen") }}
       </div>
     </div>
@@ -476,15 +475,44 @@
 
     <div id="bestPracticesContent" class="hidden">
     <div class="grid md:grid-cols-2 gap-4">
+      {% set bp_labels = {
+        'multiple_ads_per_group': '2+ Ads Per Ad Group',
+        'modified_broad_match': 'Broad Match Keywords',
+        'ad_extensions': 'Ad Extensions / Assets Active',
+        'conversion_tracking': 'Conversion Tracking Enabled',
+        'negative_keywords': 'Negative Keywords in Use',
+        'mobile_bid_adjustments': 'Mobile Bid Adjustments Set',
+      } %}
       {% for key, value in report.best_practices.items() %}
-        <div class="flex items-center p-3 rounded-lg border {% if value %}bg-green-50 border-green-200{% else %}bg-red-50 border-red-200{% endif %}">
-          <i class="fa-solid {% if value %}fa-check-circle text-green-600{% else %}fa-times-circle text-red-600{% endif %} text-2xl mr-3"></i>
-          <span class="{% if value %}text-green-800{% else %}text-red-800{% endif %}">
-            {{ key.replace('_', ' ')|title }}
-          </span>
-        </div>
+        {% if key == 'legacy_eta_ads' %}
+          {% if value %}
+          <div class="flex items-center p-3 rounded-lg border bg-amber-50 border-amber-200">
+            <i class="fa-solid fa-triangle-exclamation text-amber-500 text-2xl mr-3"></i>
+            <span class="text-amber-800 text-sm">Legacy Text Ads (ETAs) still active — Google stopped allowing new ETAs in Jun 2022. Migrate to RSAs.</span>
+          </div>
+          {% endif %}
+        {% else %}
+          <div class="flex items-center p-3 rounded-lg border {% if value %}bg-green-50 border-green-200{% else %}bg-red-50 border-red-200{% endif %}">
+            <i class="fa-solid {% if value %}fa-check-circle text-green-600{% else %}fa-times-circle text-red-600{% endif %} text-2xl mr-3"></i>
+            <span class="{% if value %}text-green-800{% else %}text-red-800{% endif %}">
+              {{ bp_labels.get(key, key.replace('_', ' ')|title) }}
+            </span>
+          </div>
+        {% endif %}
       {% endfor %}
     </div>
+
+    {# Budget-lost impression share — informational, not scored #}
+    {% set imp = report.detailed_metrics.get('impression_share', {}) if report.detailed_metrics else {} %}
+    {% if imp.get('budget_lost_share', 0) > 0.1 %}
+    <div class="mt-4 p-3 rounded-lg bg-blue-50 border border-blue-200 flex items-start gap-3">
+      <i class="fa-solid fa-circle-info text-blue-500 mt-0.5"></i>
+      <p class="text-sm text-blue-800">
+        <strong>Budget note:</strong> You're losing {{ (imp.get('budget_lost_share', 0) * 100)|round|int }}% of potential impressions due to daily budget limits.
+        This isn't scored — it may be intentional — but increasing budget would capture those searches.
+      </p>
+    </div>
+    {% endif %}
     </div>
   </div>
   {% endif %}

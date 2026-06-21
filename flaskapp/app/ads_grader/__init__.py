@@ -813,37 +813,36 @@ def _create_demo_report(customer_id: str) -> GoogleAdsGraderReport:
     # - Quality Score: 5.5 (below 7.0 target)
     # - CTR: 3.2% (decent but improvable)
 
-    # Section scores (out of 100)
-    wasted_spend_score = 81.0  # 81% efficiency = 19% waste
-    quality_score_score = 55.0  # Below target, room for improvement
-    ctr_score = 64.0  # Decent but not great
-    text_ad_score = 58.0  # Needs optimization
-    account_activity_score = 75.0  # Reasonably active
-    long_tail_score = 45.0  # Not enough long-tail keywords
-    impression_share_score = 52.0  # Missing visibility
-    landing_page_score = 68.0  # Okay but could be better
-    mobile_score = 61.0  # Mobile could use work
-    expanded_text_ads_score = 85.0  # Good modern ad adoption
+    # Section scores (out of 100) — aligned with updated scoring methodology
+    wasted_spend_score = 55.0   # ~18% waste terms found in search terms
+    quality_score_score = 55.0  # QS avg 5.5 — below 7.0 target
+    ctr_score = 64.0            # 3.2% — decent but improvable
+    text_ad_score = 58.0        # Mix of AVERAGE/POOR RSA strength
+    account_activity_score = 72.0  # 2.2 ads/group, OK keyword tightness, no extensions
+    long_tail_score = 45.0      # Only 23% long-tail (target 50%)
+    impression_share_score = 45.0  # ~30% rank-lost
+    landing_page_score = 62.0   # Mix of AVERAGE/BELOW_AVERAGE post-click QS
+    mobile_score = 55.0         # No device bid adjustments set
+    expanded_text_ads_score = 85.0  # kept for DB compat, weight=0
 
-    # Calculate overall score with penalty
-    # Base weighted sum
+    # Calculate overall score (new weights, ETA weight=0)
     base_score = (
         wasted_spend_score * 0.25 +
         quality_score_score * 0.15 +
+        landing_page_score * 0.10 +
         ctr_score * 0.12 +
         text_ad_score * 0.10 +
-        account_activity_score * 0.08 +
+        account_activity_score * 0.10 +
         long_tail_score * 0.08 +
-        impression_share_score * 0.08 +
-        landing_page_score * 0.07 +
+        impression_share_score * 0.05 +
         mobile_score * 0.05 +
-        expanded_text_ads_score * 0.02
+        expanded_text_ads_score * 0.00
     )
 
-    # Apply waste penalty (19% waste = 9% over threshold, penalty = 18 points)
-    waste_percentage = 100 - wasted_spend_score
-    if waste_percentage > 10:
-        penalty = (waste_percentage - 10) * 2.0
+    # Waste penalty: score=55 → waste_pct = (100-55)/2.5 = 18%
+    waste_pct = (100 - wasted_spend_score) / 2.5
+    if waste_pct > 10:
+        penalty = (waste_pct - 10) * 2.0
         overall_score = max(0, base_score - penalty)
     else:
         overall_score = base_score
@@ -889,45 +888,92 @@ def _create_demo_report(customer_id: str) -> GoogleAdsGraderReport:
         # Detailed data (realistic distributions)
         detailed_metrics={
             "quality_score_distribution": {
-                "1-3": 18,  # Poor quality ads
-                "4-6": 52,  # Most ads here
-                "7-8": 24,  # Some good ads
-                "9-10": 6,   # Few excellent ads
+                "1-3": 18,
+                "4-6": 52,
+                "7-8": 24,
+                "9-10": 6,
+            },
+            "quality_scores": {
+                "post_click_distribution": {
+                    "ABOVE_AVERAGE": 28,
+                    "AVERAGE": 45,
+                    "BELOW_AVERAGE": 22,
+                    "UNKNOWN": 5,
+                },
+                "creative_distribution": {
+                    "ABOVE_AVERAGE": 20,
+                    "AVERAGE": 55,
+                    "BELOW_AVERAGE": 20,
+                    "UNKNOWN": 5,
+                },
             },
             "ctr_by_device": {
-                "mobile": 2.9,    # Slightly lower on mobile
-                "desktop": 3.5,   # Best performance
-                "tablet": 2.4,    # Lowest
+                "mobile": 2.9,
+                "desktop": 3.5,
+                "tablet": 2.4,
             },
             "keywords": {
                 "word_count_distribution": {
-                    "1-word": 35,  # Too many short keywords
-                    "2-word": 42,  # Decent
-                    "3+-word": 23,  # Not enough long-tail
+                    "1-word": 35,
+                    "2-word": 42,
+                    "3+-word": 23,
+                }
+            },
+            "impression_share": {
+                "impression_share": 0.52,
+                "budget_lost_share": 0.12,
+                "rank_lost_share": 0.28,
+            },
+            "search_terms": {
+                "waste_term_count": 14,
+                "waste_spend": 1840.0,
+                "total_spend": 10200.0,
+                "waste_terms": [
+                    {"term": "how to fix ac unit", "cost": 320.0, "clicks": 48, "conversions": 0},
+                    {"term": "diy hvac repair", "cost": 285.0, "clicks": 41, "conversions": 0},
+                    {"term": "hvac technician jobs", "cost": 198.0, "clicks": 29, "conversions": 0},
+                    {"term": "how to replace furnace filter", "cost": 176.0, "clicks": 25, "conversions": 0},
+                    {"term": "hvac apprenticeship programs", "cost": 142.0, "clicks": 21, "conversions": 0},
+                ],
+            },
+            "device_bid_adjustments": {
+                "has_adjustments": False,
+                "mobile": 1.0,
+                "desktop": 1.0,
+                "tablet": 1.0,
+            },
+            "ads": {
+                "ad_strength_distribution": {
+                    "EXCELLENT": 2,
+                    "GOOD": 8,
+                    "AVERAGE": 28,
+                    "POOR": 14,
+                    "OTHER": 0,
                 }
             },
         },
 
         best_practices={
-            "mobile_bid_adjustments": True,
             "multiple_ads_per_group": True,
-            "modified_broad_match": False,  # Missing
-            "ad_extensions": False,  # Missing - opportunity
+            "modified_broad_match": False,
+            "ad_extensions": False,
             "conversion_tracking": True,
-            "negative_keywords": False,  # Missing - causing waste
+            "negative_keywords": False,
+            "mobile_bid_adjustments": False,
+            "legacy_eta_ads": True,
         },
 
         recommendations=[
             {
-                'title': "Add Negative Keywords to Stop Wasting Money",
-                'description': "You're spending money on wrong searches. Adding negative keywords will block irrelevant clicks and save you money every month.",
-                'layman_summary': "Think of negative keywords as a 'block list' for your ads. When someone searches for something you DON'T do, negative keywords prevent your ad from showing up.",
+                'title': "Block 14 Irrelevant Search Terms Draining Your Budget",
+                'description': "We found 14 search terms with DIY, job-seeking, or informational intent costing $1,840/yr with zero conversions.",
+                'layman_summary': 'People are finding your ad by searching "how to fix ac unit", "diy hvac repair", "hvac technician jobs" — they\'re not looking to hire you. Adding these as negative keywords stops your ad from showing for these searches, saving real money immediately.',
                 'category': 'wasted_spend',
                 'severity': 1,
                 'roi': {
                     'monthly_savings': 739,
                     'annual_savings': 8868,
-                    'percentage': 15
+                    'percentage': 18
                 },
                 'effort': {
                     'time_estimate': '30-45 min',
@@ -935,10 +981,10 @@ def _create_demo_report(customer_id: str) -> GoogleAdsGraderReport:
                     'priority': 'High'
                 },
                 'action_steps': [
-                    "1. Open your Google Ads Search Terms report",
-                    "2. Find searches that aren't relevant to your business",
-                    "3. Add 50 negative keywords this week",
-                    "4. Check back next week to add more"
+                    "1. Go to Keywords → Search Terms in Google Ads",
+                    "2. Find and select the 14 irrelevant queries we identified",
+                    "3. Click 'Add as negative keyword' at the campaign or account level",
+                    "4. Review the Search Terms report weekly to catch new waste"
                 ],
             },
             {

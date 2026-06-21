@@ -11,11 +11,10 @@ from app.services.roi_calculator import ROICalculator
 logger = logging.getLogger(__name__)
 
 
-# Industry benchmarks (based on WordStream data)
+# Industry benchmarks
 BENCHMARKS = {
     "quality_score_target": 7.0,
     "negative_keywords_avg": 135,
-    "landing_pages_avg": 15,
     "ctr_by_position": {
         1: 7.94,
         2: 4.95,
@@ -24,7 +23,6 @@ BENCHMARKS = {
         5: 2.04,
     },
     "long_tail_target": 0.50,  # 50%+ should be 3+ words
-    "impression_share_target": 0.70,  # 70%+
 }
 
 
@@ -79,12 +77,21 @@ class GoogleAdsAnalyzer:
         quality_score_avg = self.metrics.get("quality_scores", {}).get("average", 0)
         ctr_avg = self.metrics.get("performance", {}).get("ctr", 0)
 
-        # Calculate waste percentage (inverse of efficiency score)
-        # If efficiency is 81%, waste is 19%
-        waste_percentage = 100 - self.scores["wasted_spend"]
+        # Waste percentage from score: score=100→0% waste, score=0→40% waste
+        # Inverse: waste_pct = (100 - score) / 2.5
+        waste_percentage = (100 - self.scores["wasted_spend"]) / 2.5
 
-        # Calculate wasted spend in dollars using the waste percentage
-        wasted_spend_90d, projected_waste_12m = self._calculate_wasted_spend_dollars(waste_percentage)
+        # Dollar estimates from actual search term spend when available
+        search_terms = self.metrics.get("search_terms", {})
+        st_waste_spend = search_terms.get("waste_spend", 0)
+        st_total_spend = search_terms.get("total_spend", 0)
+
+        if st_total_spend > 0 and st_waste_spend > 0:
+            # Annualise the search term window (365 days / days sampled ≈ 1)
+            wasted_spend_90d = st_waste_spend / 4      # ~90-day slice
+            projected_waste_12m = st_waste_spend
+        else:
+            wasted_spend_90d, projected_waste_12m = self._calculate_wasted_spend_dollars(waste_percentage)
 
         return {
             "overall_score": overall_score,
@@ -97,6 +104,12 @@ class GoogleAdsAnalyzer:
                 "wasted_spend_90d": wasted_spend_90d,
                 "projected_waste_12m": projected_waste_12m,
                 "waste_percentage": waste_percentage,
+                "waste_term_count": search_terms.get("waste_term_count", 0),
+                "top_waste_terms": sorted(
+                    search_terms.get("waste_terms", []),
+                    key=lambda x: x.get("cost", 0),
+                    reverse=True
+                )[:5],
             },
             "account_diagnostics": self._get_account_diagnostics(),
             "best_practices": self._check_best_practices(),
@@ -105,22 +118,45 @@ class GoogleAdsAnalyzer:
 
     def _score_wasted_spend(self) -> float:
         """
-        Score based on negative keywords usage.
-        More negative keywords = less wasted spend = higher score.
-
-        NOTE: This returns an EFFICIENCY score (higher = better).
-        The waste percentage is calculated separately in _calculate_wasted_spend().
+        Score based on actual waste signals:
+          1. Search terms matching DIY/job-seeker/informational patterns (primary)
+          2. Keywords with significant spend and zero conversions (secondary, if tracking on)
+        Falls back to negative keyword count ratio when no search term data exists.
         """
-        negative_keywords = self.metrics.get("negative_keywords", 0)
-        benchmark = BENCHMARKS["negative_keywords_avg"]
+        search_terms = self.metrics.get("search_terms", {})
+        total_st_spend = search_terms.get("total_spend", 0)
+        waste_spend = search_terms.get("waste_spend", 0)
 
-        # Score: 100% if at or above benchmark, scale down if below
-        if negative_keywords >= benchmark:
-            score = 100.0
+        if total_st_spend > 0:
+            waste_pct = (waste_spend / total_st_spend) * 100
+
+            # Secondary signal: non-converting keywords
+            performance = self.metrics.get("performance", {})
+            has_conversion_tracking = performance.get("conversions", 0) > 0
+            if has_conversion_tracking:
+                avg_cpa = performance.get("avg_cpa", 0)
+                threshold = max(30.0, avg_cpa * 2.0) if avg_cpa > 0 else 50.0
+                kw_list = self.metrics.get("keywords", {}).get("keywords", [])
+                nc_spend = sum(
+                    kw["cost"] for kw in kw_list
+                    if kw.get("cost", 0) > threshold and kw.get("conversions", 0) == 0
+                )
+                total_kw_spend = sum(kw["cost"] for kw in kw_list) or 1
+                nc_pct = (nc_spend / total_kw_spend) * 100
+                # Blend: 70% search term signal, 30% non-converting keyword signal
+                waste_pct = waste_pct * 0.70 + nc_pct * 0.30
+
         else:
-            score = (negative_keywords / benchmark) * 100
+            # No search term data — fall back to negative keyword coverage proxy
+            negative_keywords = self.metrics.get("negative_keywords", 0)
+            benchmark = BENCHMARKS["negative_keywords_avg"]
+            coverage = min(1.0, negative_keywords / benchmark)
+            # Assume 0% coverage = ~25% waste, 100% coverage = ~5% waste
+            waste_pct = 25 * (1 - coverage) + 5
 
-        return min(100, max(0, score))
+        # score = 100 - 2.5 * waste_pct  → 0% waste=100, 10%=75, 20%=50, 40%=0
+        score = max(0.0, 100.0 - waste_pct * 2.5)
+        return round(score, 1)
 
     def _score_expanded_text_ads(self) -> float:
         """
@@ -141,31 +177,39 @@ class GoogleAdsAnalyzer:
 
     def _score_text_ad_optimization(self) -> float:
         """
-        Score based on ad performance variance and CTR.
+        Score based on RSA ad strength distribution (Google's own creative quality signal)
+        combined with overall CTR performance.
         """
         ads = self.metrics.get("ads", {})
+        strength_dist = ads.get("ad_strength_distribution", {})
         avg_ctr = ads.get("avg_ctr", 0)
-        best_ad = ads.get("best_ad", {})
-        worst_ad = ads.get("worst_ad", {})
 
-        if not best_ad or not worst_ad:
-            return 50.0
-
-        # Check CTR variance
-        best_ctr = best_ad.get("ctr", 0)
-        worst_ctr = worst_ad.get("ctr", 0)
-
-        # Lower variance = more consistent optimization = higher score
-        if best_ctr > 0:
-            variance = (best_ctr - worst_ctr) / best_ctr
-            consistency_score = (1 - variance) * 50
+        # RSA ad strength score (60% of total)
+        strength_total = sum(strength_dist.values())
+        if strength_total > 0:
+            strength_score = (
+                strength_dist.get("EXCELLENT", 0) * 100 +
+                strength_dist.get("GOOD", 0) * 78 +
+                strength_dist.get("AVERAGE", 0) * 55 +
+                strength_dist.get("POOR", 0) * 20 +
+                strength_dist.get("OTHER", 0) * 50
+            ) / strength_total
         else:
-            consistency_score = 25
+            # Fall back to CTR variance as a weaker signal
+            best_ad = ads.get("best_ad") or {}
+            worst_ad = ads.get("worst_ad") or {}
+            best_ctr = best_ad.get("ctr", 0)
+            worst_ctr = worst_ad.get("ctr", 0)
+            if best_ctr > 0:
+                variance = (best_ctr - worst_ctr) / best_ctr
+                strength_score = (1 - variance) * 100
+            else:
+                strength_score = 50.0
 
-        # CTR performance score (assume 3% is good)
-        ctr_score = min(50, (avg_ctr / 3.0) * 50)
+        # Overall CTR component (40% of total) — 4%+ is strong for home services
+        ctr_score = min(100.0, (avg_ctr / 4.0) * 100)
 
-        return min(100, consistency_score + ctr_score)
+        return round(strength_score * 0.60 + ctr_score * 0.40, 1)
 
     def _score_quality_score(self) -> float:
         """
@@ -215,45 +259,54 @@ class GoogleAdsAnalyzer:
 
     def _score_account_activity(self) -> float:
         """
-        Score based on account structure and activity.
-        Active management = higher score.
+        Score based on signals of active, quality management:
+          - Ads per ad group (Google recommends ≥3 RSAs)
+          - Keywords per ad group (tight grouping = better relevance)
+          - Active extensions / assets
+          - Conversion tracking in place
+        Size of account (campaign count, keyword count) is NOT scored —
+        a lean, focused account is just as valid as a large one.
         """
-        structure = self.metrics.get("campaigns", {})
-        campaign_count = structure.get("campaign_count", 0)
-        ad_group_count = structure.get("ad_group_count", 0)
-
+        ads = self.metrics.get("ads", {})
         keywords = self.metrics.get("keywords", {})
+        structure = self.metrics.get("campaigns", {})
+        extensions = self.metrics.get("extensions", {})
+        performance = self.metrics.get("performance", {})
+
+        ad_count = ads.get("total_ads", 0)
+        ad_group_count = structure.get("ad_group_count", 0)
         keyword_count = keywords.get("total_keywords", 0)
 
-        ads = self.metrics.get("ads", {})
-        ad_count = ads.get("total_ads", 0)
-
-        # Score based on reasonable structure
         score = 0
 
-        # Campaigns (3-10 is ideal)
-        if 3 <= campaign_count <= 10:
-            score += 25
-        elif campaign_count > 0:
-            score += 15
-
-        # Ad groups (10-50 is ideal)
-        if 10 <= ad_group_count <= 50:
-            score += 25
-        elif ad_group_count > 0:
-            score += 15
-
-        # Keywords (100-1000 is ideal)
-        if 100 <= keyword_count <= 1000:
-            score += 25
-        elif keyword_count > 0:
-            score += 15
-
-        # Ads (2+ per ad group is ideal)
+        # Ads per ad group — most actionable signal of creative testing
         avg_ads_per_group = (ad_count / ad_group_count) if ad_group_count > 0 else 0
-        if avg_ads_per_group >= 2:
-            score += 25
+        if avg_ads_per_group >= 3:
+            score += 35
+        elif avg_ads_per_group >= 2:
+            score += 22
         elif avg_ads_per_group >= 1:
+            score += 10
+
+        # Keywords per ad group — tighter groups = better ad/keyword relevance
+        avg_kw_per_group = (keyword_count / ad_group_count) if ad_group_count > 0 else 0
+        if 5 <= avg_kw_per_group <= 20:
+            score += 30   # Ideal: focused themes
+        elif 1 <= avg_kw_per_group < 5:
+            score += 20   # Tight but might be missing coverage
+        elif 21 <= avg_kw_per_group <= 50:
+            score += 15   # Getting broad
+        elif avg_kw_per_group > 50:
+            score += 5    # Very broad grouping, relevance at risk
+        elif avg_kw_per_group > 0:
+            score += 10
+
+        # Ad extensions / assets in use
+        if any(extensions.values()):
+            score += 20
+
+        # Conversion tracking
+        if performance.get("conversions", 0) > 0:
             score += 15
 
         return min(100, score)
@@ -279,71 +332,107 @@ class GoogleAdsAnalyzer:
 
     def _score_impression_share(self) -> float:
         """
-        Score based on search impression share.
-        Higher impression share = better visibility = higher score.
+        Score only on impression share LOST TO RANK (a quality/bid problem you can fix).
+        Budget-lost share is reported separately as an informational metric — losing to
+        budget is often a business decision and shouldn't penalise the score.
         """
         imp_share_data = self.metrics.get("impression_share", {})
-        impression_share = imp_share_data.get("impression_share", 0)
+        rank_lost = imp_share_data.get("rank_lost_share", 0)  # decimal, e.g. 0.25 = 25%
 
-        target = BENCHMARKS["impression_share_target"]
+        # No data at all
+        if rank_lost == 0 and imp_share_data.get("impression_share", 0) == 0:
+            return 50.0
 
-        # Score scales with impression share
-        score = (impression_share / target) * 100
+        rank_lost_pct = rank_lost * 100
 
-        return min(100, max(0, score))
+        if rank_lost_pct < 5:
+            return 95.0
+        elif rank_lost_pct < 10:
+            return 80.0
+        elif rank_lost_pct < 20:
+            return 62.0
+        elif rank_lost_pct < 30:
+            return 45.0
+        elif rank_lost_pct < 40:
+            return 28.0
+        else:
+            return 10.0
 
     def _score_landing_pages(self) -> float:
         """
-        Score based on number of unique landing pages.
-        More landing pages = better targeting = higher score.
+        Score based on Google's own landing page experience signal (post_click_quality_score),
+        which already incorporates keyword/ad/landing page relevance and page speed.
         """
-        landing_page_count = self.metrics.get("landing_pages", 0)
-        benchmark = BENCHMARKS["landing_pages_avg"]
+        qs_data = self.metrics.get("quality_scores", {})
+        dist = qs_data.get("post_click_distribution", {})
 
-        if landing_page_count >= benchmark:
-            score = 100.0
-        else:
-            score = (landing_page_count / benchmark) * 100
+        total = sum(dist.values())
+        if total == 0:
+            return 50.0
 
-        return min(100, max(0, score))
+        # Weight each bucket
+        score = (
+            dist.get("ABOVE_AVERAGE", 0) * 100 +
+            dist.get("AVERAGE", 0) * 65 +
+            dist.get("BELOW_AVERAGE", 0) * 20 +
+            dist.get("UNKNOWN", 0) * 50
+        ) / total
+
+        return round(score, 1)
 
     def _score_mobile_advertising(self) -> float:
         """
-        Score based on mobile performance and optimization.
+        Score based on:
+          - Whether device bid adjustments are actually set (not hardcoded assumed)
+          - Whether the adjustment direction aligns with relative mobile performance
+          - Mobile traffic share (home service users skew 55-70% mobile)
         """
         device_performance = self.metrics.get("device_performance", {})
+        bid_adj = self.metrics.get("device_bid_adjustments", {})
+
         mobile = device_performance.get("mobile", {})
         desktop = device_performance.get("desktop", {})
 
-        score = 50.0  # Base score
-
-        # Check if mobile has reasonable traffic
+        mobile_ctr = mobile.get("ctr", 0)
+        desktop_ctr = desktop.get("ctr", 0)
         mobile_clicks = mobile.get("clicks", 0)
         desktop_clicks = desktop.get("clicks", 0)
         total_clicks = mobile_clicks + desktop_clicks
 
+        score = 35.0  # Base
+
+        # Mobile traffic share — home service searches are majority mobile
         if total_clicks > 0:
-            mobile_percentage = mobile_clicks / total_clicks
+            mobile_share = mobile_clicks / total_clicks
+            if mobile_share >= 0.45:
+                score += 20
+            elif mobile_share >= 0.25:
+                score += 12
+            elif mobile_share > 0:
+                score += 5
 
-            # Mobile should be 30-70% of traffic
-            if 0.3 <= mobile_percentage <= 0.7:
-                score += 25
-            elif mobile_percentage > 0:
-                score += 10
+        # Bid adjustments exist (shows device-level awareness)
+        has_adj = bid_adj.get("has_adjustments", False)
+        mobile_modifier = bid_adj.get("mobile", 1.0)
 
-        # Compare mobile vs desktop CTR
-        mobile_ctr = mobile.get("ctr", 0)
-        desktop_ctr = desktop.get("ctr", 0)
+        if has_adj:
+            score += 25
+            # Bonus: modifier direction matches CTR performance
+            if mobile_ctr > 0 and desktop_ctr > 0:
+                if mobile_ctr >= desktop_ctr * 0.9 and mobile_modifier >= 1.0:
+                    score += 20  # Mobile performs well AND bid is up
+                elif mobile_ctr < desktop_ctr * 0.8 and mobile_modifier < 1.0:
+                    score += 20  # Mobile underperforms AND bid is appropriately lower
+                else:
+                    score += 8   # Adjustments set but direction is inconsistent
+        else:
+            # No bid adjustments — minor bonus if performance is close enough
+            if mobile_ctr > 0 and desktop_ctr > 0:
+                ctr_ratio = mobile_ctr / desktop_ctr
+                if 0.85 <= ctr_ratio <= 1.15:
+                    score += 10  # Close enough that missing adjustment is low urgency
 
-        if mobile_ctr > 0 and desktop_ctr > 0:
-            # If mobile CTR is within 20% of desktop, add points
-            ctr_ratio = mobile_ctr / desktop_ctr
-            if 0.8 <= ctr_ratio <= 1.2:
-                score += 25
-            elif ctr_ratio > 0.5:
-                score += 10
-
-        return min(100, score)
+        return min(100.0, score)
 
     def _calculate_overall_score(self) -> float:
         """
@@ -351,16 +440,16 @@ class GoogleAdsAnalyzer:
         Applies additional penalty for high wasted spend since that's a critical issue.
         """
         weights = {
-            "wasted_spend": 0.25,  # Increased from 15% - wasted spend is critical
-            "quality_score": 0.15,
-            "ctr_optimization": 0.12,
-            "text_ad_optimization": 0.10,
-            "account_activity": 0.08,
-            "long_tail_keywords": 0.08,
-            "impression_share": 0.08,
-            "landing_pages": 0.07,
-            "mobile_advertising": 0.05,
-            "expanded_text_ads": 0.02,
+            "wasted_spend": 0.25,        # Search term waste + non-converting keywords
+            "quality_score": 0.15,       # Overall QS avg
+            "landing_pages": 0.10,       # Landing page experience via QS post_click_quality_score
+            "ctr_optimization": 0.12,    # CTR by device
+            "text_ad_optimization": 0.10, # RSA ad strength + CTR
+            "account_activity": 0.10,    # Ads/group, KW tightness, extensions, conversion tracking
+            "long_tail_keywords": 0.08,  # Long-tail keyword coverage
+            "impression_share": 0.05,    # Rank-lost share only
+            "mobile_advertising": 0.05,  # Bid adjustments + mobile traffic share
+            "expanded_text_ads": 0.00,   # Informational only — ETAs sunset by Google Jun 2022
         }
 
         weighted_sum = sum(
@@ -501,13 +590,19 @@ class GoogleAdsAnalyzer:
         keyword_list = keywords.get("keywords", [])
         has_broad_match = any(kw.get("match_type") == "BROAD" for kw in keyword_list)
 
+        bid_adj = self.metrics.get("device_bid_adjustments", {})
         return {
             "multiple_ads_per_group": avg_ads_per_group >= 2,
             "modified_broad_match": has_broad_match,
             "ad_extensions": any(extensions.values()),
             "conversion_tracking": self.metrics.get("performance", {}).get("conversions", 0) > 0,
             "negative_keywords": self.metrics.get("negative_keywords", 0) > 0,
-            "mobile_bid_adjustments": True,  # Assume true for now, requires more complex check
+            "mobile_bid_adjustments": bid_adj.get("has_adjustments", False),
+            "legacy_eta_ads": bool(
+                self.metrics.get("ads", {})
+                .get("ad_type_counts", {})
+                .get("EXPANDED_TEXT_AD", 0)
+            ),
         }
 
     def _generate_recommendations(self) -> None:
@@ -534,9 +629,10 @@ class GoogleAdsAnalyzer:
 
         # Wasted spend recommendations
         if self.scores["wasted_spend"] < 70:
-            negative_keywords = self.metrics.get("negative_keywords", 0)
-            benchmark = BENCHMARKS["negative_keywords_avg"]
-            gap = max(0, benchmark - negative_keywords)
+            search_terms_data = self.metrics.get("search_terms", {})
+            waste_terms = search_terms_data.get("waste_terms", [])
+            waste_term_count = search_terms_data.get("waste_term_count", 0)
+            top_waste = sorted(waste_terms, key=lambda x: x.get("cost", 0), reverse=True)[:3]
 
             severity = get_severity(self.scores["wasted_spend"])
             roi = ROICalculator.calculate_spend_savings(
@@ -547,10 +643,45 @@ class GoogleAdsAnalyzer:
             )
             effort = ROICalculator.estimate_implementation_effort('negative_keywords', severity)
 
+            if waste_term_count > 0:
+                title = f"Block {waste_term_count} Irrelevant Search Terms Draining Your Budget"
+                description = (
+                    f"We found {waste_term_count} search terms with DIY, job-seeking, or "
+                    f"informational intent that are costing you money with no intent to hire."
+                )
+                examples = ", ".join(f'"{t["term"]}"' for t in top_waste) if top_waste else ""
+                layman_summary = (
+                    f"People are finding your ad by searching things like {examples} — "
+                    f"they're not looking to hire you. Adding these as negative keywords stops "
+                    f"your ad from showing for these searches, saving real money immediately."
+                )
+                action_steps = [
+                    "1. Go to Keywords → Search Terms in Google Ads",
+                    f"2. Find and select the {waste_term_count} irrelevant queries we identified",
+                    "3. Click 'Add as negative keyword' at the campaign or account level",
+                    "4. Review the Search Terms report weekly to catch new waste"
+                ]
+            else:
+                negative_keywords = self.metrics.get("negative_keywords", 0)
+                gap = max(0, BENCHMARKS["negative_keywords_avg"] - negative_keywords)
+                title = f"Add Negative Keywords to Prevent Ad Spend Waste"
+                description = "Your negative keyword list is thin. Gaps allow irrelevant searches to trigger your ads and consume budget."
+                layman_summary = (
+                    "Negative keywords are a block list — they stop your ad from showing when "
+                    "someone searches for something you don't do (like DIY tutorials, job listings, "
+                    "or unrelated services). More negatives = less wasted money."
+                )
+                action_steps = [
+                    "1. Open your Google Ads Search Terms report",
+                    "2. Look for searches with 'how to', 'diy', 'jobs', or unrelated services",
+                    f"3. Add {min(gap, 50)} negative keywords this week",
+                    "4. Repeat weekly — it's an ongoing process"
+                ]
+
             recommendations.append({
-                'title': f"Add {gap} Negative Keywords to Stop Wasting Money",
-                'description': f"You're spending money on wrong searches. Adding negative keywords will block irrelevant clicks and save you money every month.",
-                'layman_summary': f"Think of negative keywords as a 'block list' for your ads. When someone searches for something you DON'T do, negative keywords prevent your ad from showing up. This stops you from paying for clicks that never turn into customers.",
+                'title': title,
+                'description': description,
+                'layman_summary': layman_summary,
                 'category': 'wasted_spend',
                 'severity': severity,
                 'roi': {
@@ -559,12 +690,7 @@ class GoogleAdsAnalyzer:
                     'percentage': roi['percentage_reduction']
                 },
                 'effort': effort,
-                'action_steps': [
-                    "1. Open your Google Ads Search Terms report",
-                    "2. Find searches that aren't relevant to your business",
-                    f"3. Add {min(gap, 50)} negative keywords this week",
-                    "4. Check back next week to add more"
-                ],
+                'action_steps': action_steps,
                 'summary': f"💰 Save ${roi['monthly_savings']:,.0f}/month • {effort['time_estimate']} • {effort['difficulty']}"
             })
 
@@ -727,8 +853,14 @@ class GoogleAdsAnalyzer:
                 'summary': f"📱 +{roi['leads']['monthly_new_leads']:.0f} leads/month • {effort['time_estimate']} • {effort['difficulty']}"
             })
 
-        # Landing page recommendations
+        # Landing page experience recommendations (based on QS post_click_quality_score)
         if self.scores["landing_pages"] < 70:
+            qs_data = self.metrics.get("quality_scores", {})
+            post_click_dist = qs_data.get("post_click_distribution", {})
+            below_avg = post_click_dist.get("BELOW_AVERAGE", 0)
+            total_kw = sum(post_click_dist.values()) or 1
+            below_avg_pct = round(below_avg / total_kw * 100)
+
             severity = get_severity(self.scores["landing_pages"])
             roi = ROICalculator.calculate_combined_roi(
                 current_spend,
@@ -740,10 +872,24 @@ class GoogleAdsAnalyzer:
             )
             effort = ROICalculator.estimate_implementation_effort('landing_pages', severity)
 
+            if below_avg_pct > 20:
+                title = f"Fix Landing Pages — Google Rates {below_avg_pct}% as Below Average"
+                description = (
+                    f"Google's own Landing Page Experience score shows {below_avg_pct}% of your keywords "
+                    f"point to pages that don't match what people searched for."
+                )
+            else:
+                title = "Improve Landing Page Relevance to Lower Your Cost Per Lead"
+                description = "Your landing page experience score has room to improve. Better-matched pages reduce your cost-per-click and improve conversions."
+
             recommendations.append({
-                'title': "Create Better Landing Pages to Convert More Visitors",
-                'description': f"Your landing pages aren't converting well. Better pages could get you {roi['leads']['monthly_new_leads']:.0f} more customers per month.",
-                'layman_summary': "A landing page is where people go after clicking your ad. Think of it as your digital storefront. If it's confusing or slow, people leave without calling. A good landing page makes it dead simple to contact you - big phone number, clear offer, trust signals (reviews), and fast loading.",
+                'title': title,
+                'description': description,
+                'layman_summary': (
+                    "Google scores how relevant your landing page is to each keyword (1 of 3 factors in Quality Score). "
+                    "A 'Below Average' rating means your page content doesn't closely match the ad and keyword. "
+                    "Fixing this lowers your cost per click AND gets you more conversions — double benefit."
+                ),
                 'category': 'landing_pages',
                 'severity': severity,
                 'roi': {
@@ -753,19 +899,20 @@ class GoogleAdsAnalyzer:
                 },
                 'effort': effort,
                 'action_steps': [
-                    "1. Create one landing page per main service",
-                    "2. Match your page headline to your ad headline",
-                    "3. Add a big phone number and contact form at the top",
-                    "4. Include customer reviews and photos of your work"
+                    "1. In Google Ads, open Keywords and add the 'Landing page exp.' column",
+                    "2. Find keywords marked 'Below average'",
+                    "3. Check: does the page headline match what the keyword promises?",
+                    "4. Match page headline, H1, and copy to the specific service in the ad"
                 ],
                 'summary': f"📈 +{roi['leads']['monthly_new_leads']:.0f} leads/month • {effort['time_estimate']} • {effort['difficulty']}"
             })
 
-        # Impression share recommendations
+        # Impression share — only recommend when rank-lost is significant (quality/bid problem)
         if self.scores["impression_share"] < 60:
             imp_share_data = self.metrics.get("impression_share", {})
-            budget_lost = imp_share_data.get("budget_lost_share", 0)
             rank_lost = imp_share_data.get("rank_lost_share", 0)
+            budget_lost = imp_share_data.get("budget_lost_share", 0)
+            rank_lost_pct = round(rank_lost * 100)
 
             severity = get_severity(self.scores["impression_share"])
             roi = ROICalculator.calculate_combined_roi(
@@ -778,35 +925,17 @@ class GoogleAdsAnalyzer:
             )
             effort = ROICalculator.estimate_implementation_effort('impression_share', severity)
 
-            if budget_lost > rank_lost:
-                title = "Increase Your Daily Budget to Show Ads More Often"
-                description = "Your ads stop showing because you run out of money each day. Increase budget to capture more customers."
-                steps = [
-                    "1. Check what time your budget runs out each day",
-                    "2. Increase daily budget by $20-50",
-                    "3. Monitor performance for 1 week",
-                    "4. Adjust based on results"
-                ]
-            else:
-                title = "Improve Your Ad Quality to Show Up More Often"
-                description = "Your competitors' ads show up instead of yours. Improve quality and bids to win more auctions."
-                steps = [
-                    "1. Improve Quality Score (see recommendation above)",
-                    "2. Review your bids vs. competitors",
-                    "3. Increase bids by 10-15% on top keywords",
-                    "4. Watch your impression share improve"
-                ]
-
-            # Add layman summary based on scenario
-            if budget_lost > rank_lost:
-                layman_summary = "Impression share is how often your ads show up when people search. Low impression share means you're missing out on potential customers. If you're running out of budget, you're literally turning away customers because your ads stop showing mid-day."
-            else:
-                layman_summary = "Your ads aren't showing up enough because competitors are outbidding you or have better Quality Scores. Think of it like a crowded marketplace - you need to speak louder (higher bids) or be more interesting (better quality) to get attention."
-
             recommendations.append({
-                'title': title,
-                'description': description,
-                'layman_summary': layman_summary,
+                'title': f"Win More Auctions — You're Losing {rank_lost_pct}% of Searches to Competitors",
+                'description': (
+                    f"Your ads aren't showing for {rank_lost_pct}% of eligible searches because "
+                    f"competitors have higher Quality Scores or bids. This is a fixable problem."
+                ),
+                'layman_summary': (
+                    "Every time someone in your area searches for your service, Google runs an instant auction. "
+                    f"You're losing {rank_lost_pct}% of those auctions — not because of budget, but because of ad quality or bid. "
+                    "Improving Quality Score is the best lever: it lowers what you pay AND wins more auctions."
+                ),
                 'category': 'impression_share',
                 'severity': severity,
                 'roi': {
@@ -815,7 +944,12 @@ class GoogleAdsAnalyzer:
                     'percentage': roi['leads']['percentage_increase']
                 },
                 'effort': effort,
-                'action_steps': steps,
+                'action_steps': [
+                    "1. Focus first on improving Quality Score (see that recommendation)",
+                    "2. Check Auction Insights to see which competitors are beating you",
+                    "3. Increase bids on your top 5 highest-converting keywords by 10-15%",
+                    "4. Review Ad Rank after 2 weeks — rank-lost share should decrease"
+                ],
                 'summary': f"📈 +{roi['leads']['monthly_new_leads']:.0f} leads/month • {effort['time_estimate']} • {effort['difficulty']}"
             })
 

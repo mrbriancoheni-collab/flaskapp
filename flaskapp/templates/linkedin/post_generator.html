@@ -27,7 +27,7 @@
           <p>Posts are written by Claude AI to sound like you and reflect your experience.</p>
         {% else %}
           <p class="font-semibold">AI Configuration Required</p>
-          <p>Add ANTHROPIC_API_KEY to your environment to enable AI post generation.</p>
+          <p>Add OPENAI_API_KEY to your environment to enable AI post generation.</p>
         {% endif %}
       </div>
     </div>
@@ -63,7 +63,14 @@
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="">-- Type your own (no topic saved) --</option>
-            <!-- Categories will be loaded via JavaScript -->
+            {% for cat in (categories or []) %}
+              <option value="{{ cat.id }}"
+                data-expertise="{{ cat.unique_expertise or '' }}"
+                data-pov="{{ cat.pov_statement or '' }}"
+                {{ 'selected' if prefill and prefill.category_id == cat.id|string else '' }}>
+                {{ cat.name }}
+              </option>
+            {% endfor %}
           </select>
           <p class="text-xs text-gray-500 mt-1">
             Pick a saved topic to auto-fill your expertise, or just type it in below
@@ -401,40 +408,13 @@ function showToast(msg, kind) {
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 4000);
 }
-// Load categories on page load
-async function loadCategories() {
-  try {
-    const response = await fetch('{{ url_for("linkedin_bp.categories") }}', {
-      credentials: 'same-origin'
-    });
-
-    if (!response.ok) {
-      console.error('Failed to load categories');
-      return;
-    }
-
-    // Parse HTML response to extract categories (alternative: create JSON endpoint)
-    // For now, we'll skip this and just note that categories can be managed separately
-    // A proper implementation would have a JSON endpoint
-
-  } catch (error) {
-    console.error('Error loading categories:', error);
-  }
-}
-
-// Handle category selection
-let categoriesData = {};
 
 document.getElementById('category')?.addEventListener('change', function() {
-  const categoryId = this.value;
-
-  if (!categoryId) {
-    // Clear fields when no category selected
-    return;
+  const selected = this.options[this.selectedIndex];
+  const expertise = selected.dataset.expertise || '';
+  if (expertise) {
+    document.getElementById('expertise').value = expertise;
   }
-
-  // In a full implementation, this would fetch category data via AJAX
-  // For now, users will manually enter expertise or navigate to categories page
 });
 
 // Handle form submission

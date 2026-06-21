@@ -106,6 +106,52 @@ class StrategicDirectorAgent(BaseAgent):
         total_budget = context.get('total_budget', 0)
         business_goals = context.get('business_goals', {})
 
+        # Surface grader health score as strategic context so the director
+        # can prioritise quality fixes alongside performance optimisations.
+        grader_ctx = context.get('grader_context', {})
+        if grader_ctx:
+            overall_score = grader_ctx.get('overall_score', 0)
+            section_scores = grader_ctx.get('section_scores', {})
+
+            # Flag accounts with poor overall health
+            if overall_score > 0 and overall_score < 60:
+                opportunities.append({
+                    'type': 'account_quality_alert',
+                    'severity': 'high' if overall_score < 40 else 'medium',
+                    'overall_score': overall_score,
+                    'overall_grade': grader_ctx.get('overall_grade', ''),
+                    'message': (
+                        f"Account health score is {overall_score:.0f}/100 ({grader_ctx.get('overall_grade', '')}) "
+                        f"— quality issues are limiting performance and raising CPL."
+                    ),
+                })
+
+            # Flag the weakest quality dimension (below 50) to the director
+            _dim_labels = {
+                'wasted_spend': 'Wasted Spend',
+                'quality_score': 'Quality Score',
+                'landing_pages': 'Landing Pages',
+                'ctr_optimization': 'CTR',
+                'text_ad_optimization': 'Ad Optimization',
+                'account_activity': 'Account Activity',
+                'long_tail_keywords': 'Long-Tail Keywords',
+                'impression_share': 'Impression Share',
+                'mobile_advertising': 'Mobile Advertising',
+            }
+            for dim_key, dim_score in (section_scores or {}).items():
+                if dim_score is not None and float(dim_score) < 50:
+                    opportunities.append({
+                        'type': 'quality_dimension_weak',
+                        'severity': 'high' if float(dim_score) < 30 else 'medium',
+                        'dimension': dim_key,
+                        'dimension_label': _dim_labels.get(dim_key, dim_key),
+                        'score': float(dim_score),
+                        'message': (
+                            f"{_dim_labels.get(dim_key, dim_key)} score is {dim_score:.0f}/100 "
+                            f"— tactical agents should prioritise this dimension."
+                        ),
+                    })
+
         # Check whether conversion tracking is active. If total conversions across
         # all campaigns is 0, every ROAS-based metric will be 0 — not a signal of
         # poor performance. Skip all ROAS-dependent analysis in that case to avoid
@@ -225,6 +271,50 @@ class StrategicDirectorAgent(BaseAgent):
 
         for opp in opportunities:
             opp_type = opp['type']
+
+            if opp_type == 'account_quality_alert':
+                decision = AgentDecision(
+                    agent_id=self.agent_id,
+                    agent_type=self.agent_type,
+                    decision_type='review_account_quality',
+                    title=f"Account health score {opp['overall_score']:.0f}/100 ({opp['overall_grade']}) needs attention",
+                    description=opp['message'],
+                    reasoning=(
+                        "A low health score indicates structural quality issues "
+                        "(wasted spend, low QS, poor ad relevance) that raise CPL and "
+                        "reduce impression share even when budgets are adequate."
+                    ),
+                    account_id=self.account_id or 0,
+                    customer_id='',
+                    action_data={'overall_score': opp['overall_score'], 'overall_grade': opp['overall_grade']},
+                    risk_level=DecisionRiskLevel.LOW,
+                    requires_approval=True,
+                    confidence=0.90,
+                )
+                decisions.append(decision)
+                continue
+
+            if opp_type == 'quality_dimension_weak':
+                decision = AgentDecision(
+                    agent_id=self.agent_id,
+                    agent_type=self.agent_type,
+                    decision_type='improve_quality_dimension',
+                    title=f"Fix {opp['dimension_label']} (score {opp['score']:.0f}/100)",
+                    description=opp['message'],
+                    reasoning=(
+                        f"The {opp['dimension_label']} dimension is scoring below 50/100. "
+                        "Tactical agents should focus cycles on this area to lift the "
+                        "overall account health score and reduce CPL."
+                    ),
+                    account_id=self.account_id or 0,
+                    customer_id='',
+                    action_data={'dimension': opp['dimension'], 'score': opp['score']},
+                    risk_level=DecisionRiskLevel.LOW,
+                    requires_approval=True,
+                    confidence=0.88,
+                )
+                decisions.append(decision)
+                continue
 
             if opp_type == 'account_structure_issue':
                 # Delegate structure decisions to AccountStructureAgent

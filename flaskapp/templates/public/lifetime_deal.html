@@ -68,6 +68,10 @@
         <div class="text-xs text-gray-400">
           <i class="fa-solid fa-shield-halved mr-1 text-green-500"></i>Secure checkout via Stripe &nbsp;·&nbsp; 30-day money-back guarantee
         </div>
+        <div class="text-xs text-gray-400 mt-2">
+          Includes all current features + everything launched through Dec 31, 2026.
+          Post-2026 additions are optional upgrades — you're never required to upgrade.
+        </div>
       </div>
 
       <!-- Social Proof Numbers -->
@@ -250,11 +254,12 @@
         {% set faqs = [
           ("What do I actually get with this?", "Full access to the FieldSprout platform for {{ plan_scope }} — 8 AI agents managing your Google Ads 24/7, campaign optimization, keyword management, a performance dashboard, and the Google Ads Health Grader. Everything in one platform, yours permanently."),
           ("Is this really a one-time payment?", "Yes. You pay {{ plan_price }} once and that's it — no monthly fees, no annual renewals. As long as FieldSprout exists, you have full access."),
-          ("Will I get new features as you build them?", "Yes. Lifetime access means every feature we ship going forward is included — new AI agents, integrations, and reports — automatically, at no extra cost."),
+          ("Will I get new features as you build them?", "Yes — all features and tools launched through December 31, 2026 are included automatically at no extra cost. After that date, any new additions are optional upgrades. You're never required to upgrade, and your existing access remains fully functional regardless of what we build next."),
           ("How do the AI agents work?", "Once you connect your Google Ads account (takes about 3 minutes), 8 AI agents start analyzing your campaigns. Low-risk improvements are applied automatically. Larger changes appear in your 1-click approval queue so you stay in control."),
           ("What if I'm not satisfied?", "We offer a 30-day money-back guarantee, no questions asked. If FieldSprout isn't delivering value for your account, we'll refund you in full."),
           ("How many Google Ads accounts can I connect?", "The {{ plan_price }} lifetime tier supports {{ plan_scope }}. {% if not is_499 %}This is ideal for agencies or businesses running ads across multiple service areas or franchises.{% endif %}"),
           ("Do I need technical experience?", "Not at all. Setup takes about 3 minutes — connect your Google Ads account, and the agents start working immediately. No coding, no spreadsheets."),
+          ("What happens after 2026?", "Your access doesn't change. All the features you have on December 31, 2026 remain yours indefinitely. If we launch major new product lines after that date, they'll be available as optional upgrades — but you'll never be required to buy them or lose access to what you already have."),
         ] %}
 
         {% for q, a in faqs %}

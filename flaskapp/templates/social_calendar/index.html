@@ -129,8 +129,8 @@
               {% set day_posts = posts_by_day.get(day_num, []) %}
 
               {% for post in day_posts[:3] %}
-                <div class="mb-0.5 px-1.5 py-0.5 rounded text-xs font-medium text-white truncate"
-                     onclick="event.stopPropagation(); openEditModal({{ post | tojson | e }})"
+                <div class="sc-chip mb-0.5 px-1.5 py-0.5 rounded text-xs font-medium text-white truncate"
+                     data-post="{{ post | tojson | e }}"
                      style="cursor:pointer;
                        {% if post.platform == 'facebook' %}background:#1877F2
                        {% elif post.platform == 'instagram' %}background:linear-gradient(135deg,#7c3aed,#ec4899)
@@ -216,14 +216,14 @@
                 <td class="py-3 px-4 text-right">
                   <div class="flex items-center justify-end gap-2">
                     <button
-                      onclick="openEditModal({{ post.to_dict() | tojson | e }})"
-                      class="p-1.5 text-gray-400 hover:text-blue-600 rounded hover:bg-blue-50 transition"
+                      class="sc-edit-btn p-1.5 text-gray-400 hover:text-blue-600 rounded hover:bg-blue-50 transition"
+                      data-post="{{ post.to_dict() | tojson | e }}"
                       title="Edit">
                       <i class="fa-solid fa-pen text-xs"></i>
                     </button>
                     <button
-                      onclick="deletePost({{ post.id }})"
-                      class="p-1.5 text-gray-400 hover:text-red-600 rounded hover:bg-red-50 transition"
+                      class="sc-delete-btn p-1.5 text-gray-400 hover:text-red-600 rounded hover:bg-red-50 transition"
+                      data-post-id="{{ post.id }}"
                       title="Delete">
                       <i class="fa-solid fa-trash text-xs"></i>
                     </button>
@@ -618,11 +618,35 @@
     });
   };
 
-  // ── Close overlay on backdrop click ───────────────────────────────────────
+  // ── Wire up data-attribute buttons via event delegation ──────────────────
   document.addEventListener('DOMContentLoaded', function () {
+    // Close overlay on backdrop click
     getOverlay().addEventListener('click', function (e) {
       if (e.target === getOverlay()) window.scCloseModal();
     });
+
+    // Calendar chips → edit modal
+    document.addEventListener('click', function (e) {
+      var chip = e.target.closest('.sc-chip');
+      if (chip) {
+        e.stopPropagation();
+        try { window.openEditModal(JSON.parse(chip.dataset.post)); } catch (_) {}
+        return;
+      }
+      var editBtn = e.target.closest('.sc-edit-btn');
+      if (editBtn) {
+        e.stopPropagation();
+        try { window.openEditModal(JSON.parse(editBtn.dataset.post)); } catch (_) {}
+        return;
+      }
+      var delBtn = e.target.closest('.sc-delete-btn');
+      if (delBtn) {
+        e.stopPropagation();
+        window.deletePost(delBtn.dataset.postId);
+        return;
+      }
+    });
+
     // Initial platform highlight
     scSelectPlatform('facebook');
   });

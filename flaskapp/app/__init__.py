@@ -1097,6 +1097,14 @@ def create_app():
     except Exception:
         app.logger.exception("Failed to register reputation_bp")
 
+    # --- Social Media Calendar -----------------------------------------------
+    try:
+        from app.social_calendar import social_calendar_bp
+        app.register_blueprint(social_calendar_bp)
+        app.logger.info("social_calendar_bp registered at /account/social-calendar")
+    except Exception:
+        app.logger.exception("Failed to register social_calendar_bp")
+
     # ---- Apply CSRF exemptions AFTER blueprints are registered -------------
     try:
         for ep in (
@@ -1111,6 +1119,10 @@ def create_app():
             # External webhooks — no browser session, no CSRF token
             "lead_intake_bp.networx_webhook",
             "lead_intake_bp.elocal_webhook",
+            # Social calendar JSON endpoints (send X-CSRFToken header)
+            "social_calendar_bp.post_add",
+            "social_calendar_bp.post_update",
+            "social_calendar_bp.post_delete",
         ):
             fn = app.view_functions.get(ep)
             if fn:
@@ -1817,13 +1829,6 @@ def create_app():
         app.logger.info("CLI commands registered (run-agents)")
     except Exception as e:
         app.logger.warning(f"Failed to register CLI commands: {e}")
-
-    try:
-        from app.social_calendar import social_calendar_bp
-        app.register_blueprint(social_calendar_bp)
-        app.logger.info("social_calendar_bp registered at /account/social-calendar")
-    except Exception:
-        app.logger.exception("Failed to register social_calendar_bp")
 
     # ---- Initialize Background Scheduler -----------------------------------
     try:

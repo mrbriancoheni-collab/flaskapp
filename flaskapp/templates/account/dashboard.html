@@ -8,6 +8,22 @@
 
 <div class="max-w-5xl mx-auto space-y-6">
 
+  {# ── Lifetime purchase success banner ────────────────────────────────────── #}
+  {% if request.args.get('payment') == 'success' and request.args.get('plan') == 'lifetime' %}
+  <div class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-300 rounded-xl px-6 py-5 flex items-start gap-4 shadow-sm">
+    <div class="flex-shrink-0 w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+      <i class="fa-solid fa-crown text-white text-xl"></i>
+    </div>
+    <div>
+      <h3 class="font-bold text-green-800 text-lg">Welcome to FieldSprout Lifetime Access!</h3>
+      <p class="text-green-700 text-sm mt-1">Your account has been upgraded. No more monthly bills — you're locked in forever. Connect your Google Ads account below to get started.</p>
+    </div>
+    <button onclick="this.closest('div.bg-gradient-to-r').remove()" class="ml-auto flex-shrink-0 text-green-400 hover:text-green-600 transition p-1">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  </div>
+  {% endif %}
+
   {# ── Page heading ─────────────────────────────────────────────────────────── #}
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>

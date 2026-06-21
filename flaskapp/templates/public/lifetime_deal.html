@@ -332,7 +332,7 @@ async function startCheckout(tier) {
   {% else %}
   // Not logged in — send to register with redirect back to this page
   const returnUrl = encodeURIComponent(window.location.pathname);
-  window.location.href = `/auth/register?next=${returnUrl}`;
+  window.location.href = `/register?next=${returnUrl}`;
   {% endif %}
 }
 </script>

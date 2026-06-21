@@ -458,8 +458,8 @@ class GoogleAdsAnalyzer:
         )
 
         # Apply penalty for high wasted spend (waste > 10%)
-        # Wasting money is a critical issue that should heavily impact overall score
-        waste_percentage = 100 - self.scores.get("wasted_spend", 100)
+        # Derive actual waste % from score: score = 100 - 2.5 * waste_pct → waste_pct = (100 - score) / 2.5
+        waste_percentage = (100 - self.scores.get("wasted_spend", 100)) / 2.5
         if waste_percentage > 10:
             # Harsh penalty: -2 points for each % over 10%
             # Example: 19% waste = (19-10) * 2 = -18 points

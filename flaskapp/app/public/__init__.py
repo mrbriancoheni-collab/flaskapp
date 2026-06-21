@@ -130,6 +130,11 @@ def industry_solar():
     return render_template("industries/solar.html")
 
 
+@public_bp.route("/sitemap.html", endpoint="sitemap")
+def sitemap():
+    return render_template("public/sitemap.html")
+
+
 @public_bp.route("/lifetime/<tier>", endpoint="lifetime_deal")
 def lifetime_deal(tier):
     if tier not in ("499", "999"):

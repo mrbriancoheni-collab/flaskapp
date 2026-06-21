@@ -1818,6 +1818,13 @@ def create_app():
     except Exception as e:
         app.logger.warning(f"Failed to register CLI commands: {e}")
 
+    try:
+        from app.social_calendar import social_calendar_bp
+        app.register_blueprint(social_calendar_bp)
+        app.logger.info("social_calendar_bp registered at /account/social-calendar")
+    except Exception:
+        app.logger.exception("Failed to register social_calendar_bp")
+
     # ---- Initialize Background Scheduler -----------------------------------
     try:
         from app.background_jobs import init_scheduler

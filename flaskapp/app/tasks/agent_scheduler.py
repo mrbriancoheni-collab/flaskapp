@@ -709,6 +709,15 @@ def run_agents_for_account(
             context['seasonal_memory'] = {"available": False}
             context['geo_performance'] = []
 
+        # Enrich context with grader health score signals so agents and the
+        # paid dashboard use the same quality signals.
+        try:
+            from app.services.google_ads_health_score import get_grader_context_for_agents
+            context['grader_context'] = get_grader_context_for_agents(account_id)
+        except Exception as _grader_exc:
+            current_app.logger.debug("Grader context unavailable: %s", _grader_exc)
+            context['grader_context'] = {}
+
     except Exception as e:
         current_app.logger.error(f"Failed to fetch Google Ads data for account {account_id}: {e}")
         import traceback

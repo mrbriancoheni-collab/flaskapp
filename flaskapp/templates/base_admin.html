@@ -167,6 +167,18 @@
         <i class="fa-solid fa-route"></i><span>User Flow</span>
       </a>
 
+      {% if has_endpoint('admin_bp.ads_grader_scoring') %}
+      <div class="sidebar-label mt-4"><i class="fa-solid fa-magnifying-glass-chart"></i>Grader</div>
+      <a class="secondary-link {% if request.endpoint=='admin_bp.ads_grader_scoring' %}active{% endif %}" href="{{ url_for('admin_bp.ads_grader_scoring') }}">
+        <i class="fa-solid fa-sliders"></i><span>Scoring Reference</span>
+      </a>
+      {% if has_endpoint('admin_bp.google_ads_settings') %}
+      <a class="secondary-link {% if request.endpoint=='admin_bp.google_ads_settings' %}active{% endif %}" href="{{ url_for('admin_bp.google_ads_settings') }}">
+        <i class="fa-solid fa-gear"></i><span>Grader Settings</span>
+      </a>
+      {% endif %}
+      {% endif %}
+
       <div class="sidebar-label mt-4"><i class="fa-solid fa-cog"></i>System</div>
 
       <a class="secondary-link {% if request.endpoint in ['admin_bp.ai_prompts','admin_bp.ai_prompt_edit'] %}active{% endif %}" href="{{ url_for('admin_bp.ai_prompts') }}">

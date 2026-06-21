@@ -342,10 +342,15 @@ async function startCheckout(tier) {
     b.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...';
   });
 
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
   try {
     const resp = await fetch(`/billing/lifetime-checkout/${tier}`, {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
+      },
       credentials: 'same-origin',
     });
     const data = await resp.json();

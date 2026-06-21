@@ -81,8 +81,8 @@
           <div class="text-xs" style="color:rgba(255,255,255,0.55)">accounts analyzed</div>
         </div>
         <div>
-          <div class="text-3xl font-black text-yellow-300">8</div>
-          <div class="text-xs" style="color:rgba(255,255,255,0.55)">AI agents working 24/7</div>
+          <div class="text-3xl font-black text-yellow-300">20–30%</div>
+          <div class="text-xs" style="color:rgba(255,255,255,0.55)">avg. ad spend reduction while getting more leads</div>
         </div>
       </div>
     </div>
@@ -127,8 +127,8 @@
 
       <!-- Mid CTA -->
       <div class="text-center bg-purple-50 border border-purple-100 rounded-2xl py-10 px-6">
-        <p class="text-gray-700 font-semibold text-lg mb-1">Ready to get started?</p>
-        <p class="text-gray-500 text-sm mb-5">{{ plan_price }} — lifetime access for {{ plan_scope }}. No subscription required.</p>
+        <p class="text-gray-700 font-semibold text-lg mb-1">Start cutting ad waste and getting more leads — today.</p>
+        <p class="text-gray-500 text-sm mb-5">{{ plan_price }} once. Lifetime access for {{ plan_scope }}. No subscription required.</p>
         <button
           onclick="startCheckout('{{ tier }}')"
           class="inline-flex items-center gap-3 px-10 py-4 font-extrabold text-lg rounded-xl transition shadow-md text-white"
@@ -136,7 +136,7 @@
           onmouseover="this.style.opacity='0.92'" onmouseout="this.style.opacity='1'"
         >
           <i class="fa-solid fa-rocket"></i>
-          Get Lifetime Access — {{ plan_price }}
+          Get Started Now — {{ plan_price }}
         </button>
       </div>
     </div>
@@ -185,7 +185,8 @@
             Most home service businesses pay a marketing agency
             {% if is_499 %}$1,000–$2,500/mo{% else %}$2,000–$5,000/mo{% endif %}
             for Google Ads management — with no AI, no 24/7 monitoring, and a contract you can't own.
-            FieldSprout gives you the tools to run it yourself, smarter, for a one-time investment of {{ plan_price }}.
+            At $1,000/mo, FieldSprout pays for itself in the first month.
+            Every month after that is money back in your pocket — with smarter campaigns and more leads to show for it.
           </div>
         </div>
       </div>
@@ -289,14 +290,14 @@
       </p>
       <button
         onclick="startCheckout('{{ tier }}')"
-        class="inline-flex items-center gap-3 px-12 py-5 font-extrabold text-xl rounded-2xl transition shadow-2xl text-white mb-4"
-        style="background:rgba(255,255,255,0.15); border:2px solid rgba(255,255,255,0.4)"
-        onmouseover="this.style.background='rgba(255,255,255,0.25)'"
-        onmouseout="this.style.background='rgba(255,255,255,0.15)'"
+        class="inline-flex items-center gap-3 px-12 py-5 font-extrabold text-xl rounded-2xl transition shadow-2xl mb-4"
+        style="background:#ffffff; color:#6d28d9"
+        onmouseover="this.style.background='#f5f3ff'"
+        onmouseout="this.style.background='#ffffff'"
         id="finalCtaBtn"
       >
         <i class="fa-solid fa-lock"></i>
-        Get Lifetime Access — {{ plan_price }}
+        Get Started Now — {{ plan_price }}
       </button>
       <div class="text-sm mb-10" style="color:rgba(255,255,255,0.55)">
         <i class="fa-solid fa-shield-halved mr-1"></i>30-day money-back guarantee &nbsp;·&nbsp;

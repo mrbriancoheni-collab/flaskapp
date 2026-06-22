@@ -8,6 +8,16 @@
 # ---- CRITICAL: prevent LiteSpeed from rewriting / to /index.php ------
 DirectoryIndex disabled
 
+# ---- Custom error pages (served directly as static files) --------------
+ErrorDocument 400 /400.shtml
+ErrorDocument 403 /400.shtml
+ErrorDocument 404 /404.shtml
+ErrorDocument 408 /400.shtml
+ErrorDocument 500 /500.shtml
+ErrorDocument 502 /500.shtml
+ErrorDocument 503 /500.shtml
+ErrorDocument 504 /500.shtml
+
 # ---- Disable directory listing -----------------------------------------
 Options -Indexes
 

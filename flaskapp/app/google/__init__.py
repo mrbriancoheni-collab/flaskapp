@@ -3752,25 +3752,27 @@ def ads_performance():
     daypart_data = []
     try:
         if connected:
-            from app.google.utils_ads import google_ads_search
-            creds_row = db.session.execute(text(
-                "SELECT customer_id, refresh_token, credentials_json FROM google_oauth_tokens "
-                "WHERE account_id=:aid AND LOWER(product) IN ('ads','lsa') "
-                "ORDER BY updated_at DESC LIMIT 1"
-            ), {"aid": aid}).mappings().one_or_none()
-            if creds_row:
-                import json as _jj
-                rt = creds_row.get("refresh_token") or (_jj.loads(creds_row.get("credentials_json") or "{}").get("refresh_token"))
-                cid = creds_row.get("customer_id")
-                if rt and cid:
+            from app.google.utils_ads import google_ads_search, resolve_ads_context
+            from app.google.token_utils import ensure_access_token
+            _seg_tok, _seg_prod = ensure_access_token(aid, ("ads", "lsa"))
+            if _seg_tok:
+                _seg_ctx = resolve_ads_context(aid)
+                cid = _seg_ctx.get("customer_id")
+                login_cid = _seg_ctx.get("login_customer_id")
+                if cid:
                     # Device performance
-                    dev_rows = google_ads_search(str(cid), rt, """
+                    dev_rows = google_ads_search(
+                        access_token=_seg_tok,
+                        customer_id=cid,
+                        query="""
                         SELECT segments.device,
                                metrics.impressions, metrics.clicks,
                                metrics.cost_micros, metrics.conversions
                         FROM campaign
                         WHERE segments.date DURING LAST_30_DAYS
-                    """) or []
+                    """,
+                        login_customer_id=login_cid,
+                    ) or []
                     dev_agg = {}
                     for r in dev_rows:
                         dev = r.get("segments.device", "UNKNOWN")
@@ -3786,13 +3788,18 @@ def ads_performance():
                     device_data = sorted(dev_agg.values(), key=lambda x: x["cost"], reverse=True)
 
                     # Daypart (by hour) performance
-                    hour_rows = google_ads_search(str(cid), rt, """
+                    hour_rows = google_ads_search(
+                        access_token=_seg_tok,
+                        customer_id=cid,
+                        query="""
                         SELECT segments.hour, segments.day_of_week,
                                metrics.impressions, metrics.clicks,
                                metrics.cost_micros, metrics.conversions
                         FROM campaign
                         WHERE segments.date DURING LAST_30_DAYS
-                    """) or []
+                    """,
+                        login_customer_id=login_cid,
+                    ) or []
                     hour_agg = {}
                     dow_agg = {}
                     for r in hour_rows:

@@ -665,21 +665,32 @@ class LeadAutomationService:
         logger.info(f"Creating default email sequence for campaign '{campaign.name}'")
 
         # Default template for home services
-        default_subject = "Quick question about {{company_name}}'s {{service_type}} services"
-        default_body = """Hi {{decision_maker_name}},
+        default_subject = "Are your Google Ads actually booking jobs in {{location}}?"
+        default_body = """Hi there,
 
-I came across {{company_name}} while searching for {{service_type}} services in {{location}}.
+I came across {{company_name}} while looking at {{service_type}} businesses running Google Ads in {{location}}.
 
-I help local service businesses like yours get more customers through Google Ads and SEO. I noticed a few opportunities that could help you show up higher in search results and get more leads.
+Most {{service_type}} companies I talk to are spending $1,500–$5,000/month on Google Ads without a clear picture of which campaigns are actually booking jobs — versus burning money on clicks that never convert.
 
-Would you be interested in a quick 10-minute call to discuss how we could help grow your business?
+FieldSprout connects directly to your Google Ads account and shows you:
 
-Best regards,
-FieldSprout Team
+- Which campaigns and keywords are generating real calls and booked jobs
+- Where your budget is being wasted on irrelevant searches
+- Your cost per booked job — updated daily
+
+We have a lifetime deal running right now: $499 one-time for a single location, no monthly fees. Most clients recover that in wasted ad spend within the first 30 days.
+
+See the deal and connect your account here:
+https://fieldsprout.io/lifetime/499
+
+Worth seeing if it pays for itself in your first month?
+
+Brian
+FieldSprout
 https://fieldsprout.io
 
 ---
-If you'd prefer not to receive these emails, please reply with "unsubscribe" and I'll remove you from my list.
+Reply "unsubscribe" to opt out.
 """
 
         sequence = EmailSequence(

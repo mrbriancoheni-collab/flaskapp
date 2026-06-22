@@ -3724,6 +3724,7 @@ def ads_performance():
             campaigns_data = ads_state.get('campaigns', []) or []
     except Exception:
         pass
+    current_app.logger.info(f"[ads_performance] campaigns_data loaded ({len(campaigns_data)} campaigns)")
 
     # Target CPL from account settings
     target_cpl = 80.0
@@ -3838,6 +3839,7 @@ def ads_performance():
     except Exception:
         current_app.logger.debug("Device/daypart GAQL query skipped")
 
+    current_app.logger.info(f"[ads_performance] reaching render_template")
     try:
         return render_template(
             "google/performance_dashboard.html",

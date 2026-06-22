@@ -1496,9 +1496,49 @@ def create_app():
 </html>
         """, app_name=app.config.get('APP_NAME', 'FieldSprout')), 400
 
+    _SHTML_500 = """<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>500 — Something went wrong · FieldSprout</title>
+<style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}.card{background:#fff;border-radius:16px;box-shadow:0 25px 50px -12px rgba(0,0,0,.35);padding:3rem 2.5rem;max-width:540px;width:100%;text-align:center}.wordmark{font-size:1.5rem;font-weight:800;background:linear-gradient(135deg,#4f46e5,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:2rem}.code{font-size:5rem;font-weight:800;line-height:1;color:#ef4444;margin-bottom:.5rem}h1{font-size:1.5rem;font-weight:700;color:#111827;margin-bottom:.75rem}.sub{color:#6b7280;font-size:1rem;line-height:1.6;margin-bottom:2rem}.actions{display:flex;flex-wrap:wrap;gap:.75rem;justify-content:center;margin-bottom:2rem}.btn{display:inline-flex;align-items:center;padding:.75rem 1.5rem;border-radius:8px;font-weight:600;font-size:.95rem;text-decoration:none}.btn-primary{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff}.btn-ghost{background:#fff;color:#4f46e5;border:2px solid #e0e7ff}.footer-note{font-size:.8rem;color:#9ca3af;padding-top:1.5rem;border-top:1px solid #f3f4f6}.footer-note a{color:#4f46e5;text-decoration:none;font-weight:600}</style>
+</head><body><div class="card"><div class="wordmark">FieldSprout</div><div class="code">500</div>
+<h1>Something went wrong on our end</h1>
+<p class="sub">We hit an unexpected error. Our team has been notified automatically.<br>Your data is safe — this is a temporary hiccup.</p>
+<div class="actions"><a href="/account/dashboard" class="btn btn-primary">Go to Dashboard</a><a href="javascript:history.back()" class="btn btn-ghost">Go Back</a><a href="javascript:location.reload()" class="btn btn-ghost">Try Again</a></div>
+<div class="footer-note">If this keeps happening, <a href="mailto:support@fieldsprout.io">contact support</a>.</div>
+</div></body></html>"""
+
+    _SHTML_400 = """<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>400 — Request Error · FieldSprout</title>
+<style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#d97706 0%,#b45309 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}.card{background:#fff;border-radius:16px;box-shadow:0 25px 50px -12px rgba(0,0,0,.35);padding:3rem 2.5rem;max-width:540px;width:100%;text-align:center}.wordmark{font-size:1.5rem;font-weight:800;background:linear-gradient(135deg,#d97706,#b45309);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:2rem}.code{font-size:5rem;font-weight:800;line-height:1;color:#d97706;margin-bottom:.5rem}h1{font-size:1.5rem;font-weight:700;color:#111827;margin-bottom:.75rem}.sub{color:#6b7280;font-size:1rem;line-height:1.6;margin-bottom:2rem}.actions{display:flex;flex-wrap:wrap;gap:.75rem;justify-content:center;margin-bottom:2rem}.btn{display:inline-flex;align-items:center;padding:.75rem 1.5rem;border-radius:8px;font-weight:600;font-size:.95rem;text-decoration:none}.btn-primary{background:linear-gradient(135deg,#d97706,#b45309);color:#fff}.btn-ghost{background:#fff;color:#d97706;border:2px solid #fde68a}.footer-note{font-size:.8rem;color:#9ca3af;padding-top:1.5rem;border-top:1px solid #f3f4f6}.footer-note a{color:#d97706;text-decoration:none;font-weight:600}</style>
+</head><body><div class="card"><div class="wordmark">FieldSprout</div><div class="code">400</div>
+<h1>Request timed out or was invalid</h1>
+<p class="sub">The request couldn't be completed — it may have timed out or contained invalid data. Try again or head back to the dashboard.</p>
+<div class="actions"><a href="/account/dashboard" class="btn btn-primary">Go to Dashboard</a><a href="javascript:history.back()" class="btn btn-ghost">Go Back</a></div>
+<div class="footer-note">If this keeps happening, <a href="mailto:support@fieldsprout.io">contact support</a>.</div>
+</div></body></html>"""
+
+    _SHTML_404 = """<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>404 — Page Not Found · FieldSprout</title>
+<style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}.card{background:#fff;border-radius:16px;box-shadow:0 25px 50px -12px rgba(0,0,0,.35);padding:3rem 2.5rem;max-width:540px;width:100%;text-align:center}.wordmark{font-size:1.5rem;font-weight:800;background:linear-gradient(135deg,#4f46e5,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:2rem}.code{font-size:5rem;font-weight:800;line-height:1;color:#6b7280;margin-bottom:.5rem}h1{font-size:1.5rem;font-weight:700;color:#111827;margin-bottom:.75rem}.sub{color:#6b7280;font-size:1rem;line-height:1.6;margin-bottom:2rem}.actions{display:flex;flex-wrap:wrap;gap:.75rem;justify-content:center;margin-bottom:2rem}.btn{display:inline-flex;align-items:center;padding:.75rem 1.5rem;border-radius:8px;font-weight:600;font-size:.95rem;text-decoration:none}.btn-primary{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff}.btn-ghost{background:#fff;color:#4f46e5;border:2px solid #e0e7ff}.footer-note{font-size:.8rem;color:#9ca3af;padding-top:1.5rem;border-top:1px solid #f3f4f6}.footer-note a{color:#4f46e5;text-decoration:none;font-weight:600}</style>
+</head><body><div class="card"><div class="wordmark">FieldSprout</div><div class="code">404</div>
+<h1>Page not found</h1>
+<p class="sub">The page you're looking for doesn't exist or may have been moved. Head back to the dashboard to pick up where you left off.</p>
+<div class="actions"><a href="/account/dashboard" class="btn btn-primary">Go to Dashboard</a><a href="javascript:history.back()" class="btn btn-ghost">Go Back</a></div>
+<div class="footer-note">If you followed a link that should work, <a href="mailto:support@fieldsprout.io">let us know</a>.</div>
+</div></body></html>"""
+
     @app.errorhandler(404)
     def _404(err):
         """Handle 404 Not Found errors with clean HTML page"""
+        # LiteSpeed ErrorDocument subrequests: serve branded page directly
+        if request.path == '/500.shtml':
+            return _SHTML_500, 200, {'Content-Type': 'text/html; charset=utf-8'}
+        if request.path == '/400.shtml':
+            return _SHTML_400, 200, {'Content-Type': 'text/html; charset=utf-8'}
+        if request.path == '/404.shtml':
+            return _SHTML_404, 200, {'Content-Type': 'text/html; charset=utf-8'}
         app.logger.warning(
             "[404 ERROR] URL: %s, Method: %s, PATH_INFO: %r, SCRIPT_NAME: %r, "
             "registered_routes: %s",

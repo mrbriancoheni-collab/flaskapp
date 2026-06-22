@@ -1703,22 +1703,29 @@ def _fetch_ads_live(aid: int) -> dict | None:
         return None
 
 def _get_ads_state(aid: int) -> dict:
-    sess_key = f"ads_state_{aid}"
     connected = _is_connected(aid, "ads")
-    state = session.get(sess_key)
+    _cache_entry = _ads_perf_cache.get(aid, {})
+    _state = _cache_entry.get('ads_state')
+    _state_age = _time.time() - _cache_entry.get('ads_state_ts', 0)
     if connected:
-        if state and state.get("__source") == "live":
-            return state
+        if _state and _state.get("__source") == "live" and _state_age < 300:
+            return _state
         live = _fetch_ads_live(aid)
         if live:
-            session[sess_key] = live
+            if aid not in _ads_perf_cache:
+                _ads_perf_cache[aid] = {}
+            _ads_perf_cache[aid]['ads_state'] = live
+            _ads_perf_cache[aid]['ads_state_ts'] = _time.time()
             return live
-        return state or {"account_name": "Google Ads Account", "campaigns": [], "ad_groups": [],
+        return _state or {"account_name": "Google Ads Account", "campaigns": [], "ad_groups": [],
                          "keywords": [], "negatives": [], "ads": [], "extensions": [], "landing_pages": []}
-    if not state:
-        state = json.loads(json.dumps(_sample_ads()))
-        session[sess_key] = state
-    return state
+    if not _state:
+        _state = json.loads(json.dumps(_sample_ads()))
+        if aid not in _ads_perf_cache:
+            _ads_perf_cache[aid] = {}
+        _ads_perf_cache[aid]['ads_state'] = _state
+        _ads_perf_cache[aid]['ads_state_ts'] = _time.time()
+    return _state
 
 # ------------------------- Ads AI summary (placeholder JSON) -------------------------
 
@@ -4229,7 +4236,7 @@ def get_ai_actions_summary():
     """
     try:
         from app.models_ai_actions import AIAction
-        from sqlalchemy import func
+        from sqlalchemy import func, desc
         from datetime import datetime, timedelta
 
         aid = current_account_id()

@@ -1297,7 +1297,10 @@ def _sample_ads() -> dict:
     return _SAMPLE_ADS
 
 def _save_ads_state(aid: int, data: dict):
-    session[f"ads_state_{aid}"] = data
+    if aid not in _ads_perf_cache:
+        _ads_perf_cache[aid] = {}
+    _ads_perf_cache[aid]['ads_state'] = data
+    _ads_perf_cache[aid]['ads_state_ts'] = _time.time()
 
 def _own_hostnames() -> set[str]:
     """Get hostnames we should treat as 'self', from EXTERNAL_BASE_URL and GA_EXCLUDE_HOSTS."""
@@ -4644,7 +4647,7 @@ def ads_opportunities():
     }
     try:
         from datetime import timedelta
-        from sqlalchemy import func
+        from sqlalchemy import func, text
 
         # Get last execution time from agent_execution_log
         last_run_query = text("""

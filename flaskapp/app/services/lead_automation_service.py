@@ -665,21 +665,32 @@ class LeadAutomationService:
         logger.info(f"Creating default email sequence for campaign '{campaign.name}'")
 
         # Default template for home services
-        default_subject = "Quick question about {{company_name}}'s {{service_type}} services"
+        default_subject = "Are your Google Ads actually bringing in jobs, {{decision_maker_name}}?"
         default_body = """Hi {{decision_maker_name}},
 
-I came across {{company_name}} while searching for {{service_type}} services in {{location}}.
+I noticed {{company_name}} is running Google Ads for {{service_type}} in {{location}} — which means you're already investing in paid search. The question is whether you know exactly which campaigns are booking jobs versus burning money.
 
-I help local service businesses like yours get more customers through Google Ads and SEO. I noticed a few opportunities that could help you show up higher in search results and get more leads.
+Most {{service_type}} businesses I talk to are spending $1,500–$5,000/month on Google Ads without a clear picture of their cost per booked job or which keywords are actually converting.
 
-Would you be interested in a quick 10-minute call to discuss how we could help grow your business?
+FieldSprout fixes that. It connects directly to your Google Ads account and shows you:
 
-Best regards,
-FieldSprout Team
+- Which campaigns and keywords are generating real calls and booked jobs
+- Where your budget is being wasted on irrelevant searches
+- Your blended cost per lead and cost per booked job — updated daily
+
+We're running a lifetime deal right now: $499 one-time for a single location, no monthly fees ever. Most clients save more than that in wasted ad spend within the first 30 days.
+
+You can connect your Google Ads account and see your first report in about 5 minutes:
+https://fieldsprout.io/signup
+
+Worth a look?
+
+Brian
+FieldSprout
 https://fieldsprout.io
 
 ---
-If you'd prefer not to receive these emails, please reply with "unsubscribe" and I'll remove you from my list.
+If you'd prefer not to receive these emails, please reply with "unsubscribe".
 """
 
         sequence = EmailSequence(

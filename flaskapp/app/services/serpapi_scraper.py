@@ -17,6 +17,10 @@ import requests
 logger = logging.getLogger(__name__)
 
 
+class SerpAPIQuotaExhaustedError(Exception):
+    """Raised when the SerpAPI account has no searches remaining (non-retryable)."""
+
+
 def should_exclude_domain(url_or_domain: str) -> bool:
     """
     Check if a domain should be excluded from scraping/enrichment.
@@ -173,6 +177,18 @@ class SerpAPIScraperService:
 
                     # Check for rate limiting
                     if response.status_code == 429:
+                        try:
+                            error_data = response.json()
+                            actual_error = error_data.get('error', '')
+                            # Quota exhausted is non-retryable — stop immediately
+                            if 'run out of searches' in actual_error.lower():
+                                logger.error(f"SerpAPI quota exhausted: {actual_error}")
+                                raise SerpAPIQuotaExhaustedError(f"SerpAPI error: {actual_error}")
+                        except (ValueError, SerpAPIQuotaExhaustedError):
+                            raise
+                        except Exception:
+                            pass
+
                         if attempt < max_retries - 1:
                             wait_time = retry_delay * (2 ** attempt)  # Exponential backoff
                             logger.warning(f"SerpAPI rate limit hit. Waiting {wait_time}s before retry {attempt + 1}/{max_retries}")
@@ -185,7 +201,9 @@ class SerpAPIScraperService:
                                 logger.error(f"SerpAPI 429 response: {error_data}")
                                 actual_error = error_data.get('error', 'Rate limit exceeded')
                                 raise requests.RequestException(f"SerpAPI error: {actual_error}")
-                            except ValueError:
+                            except (ValueError, requests.RequestException):
+                                raise
+                            except Exception:
                                 logger.error(f"SerpAPI 429 response body: {response.text[:500]}")
                                 raise requests.RequestException(
                                     "SerpAPI rate limit exceeded. Please wait a few minutes before trying again."

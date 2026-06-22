@@ -27,7 +27,7 @@ from app.configs.lead_automation_config import (
     AUTOMATION_CONFIG,
     HOME_SERVICE_CATEGORIES
 )
-from app.services.serpapi_scraper import SerpAPIScraperService
+from app.services.serpapi_scraper import SerpAPIScraperService, SerpAPIQuotaExhaustedError
 from app.services.lead_enrichment import LeadEnrichmentService
 from app.services.domain_crawler import DomainCrawler
 from app.services.brevo_outreach import BrevoOutreachService
@@ -513,6 +513,9 @@ class LeadAutomationService:
                         city_pages[city] = 0 if next_start >= 100 else next_start
                         logger.info(f"  - City '{city}' (start={start}): found {city_leads_count} new leads")
 
+                    except SerpAPIQuotaExhaustedError as e:
+                        logger.warning(f"SerpAPI quota exhausted — stopping all scraping: {e}")
+                        return scraped_count
                     except Exception as e:
                         logger.error(f"Error scraping '{keyword}' in {city}: {e}")
                         continue

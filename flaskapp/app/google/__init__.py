@@ -3272,6 +3272,7 @@ def ads_performance():
     from datetime import datetime, timedelta
 
     aid = current_account_id()
+    current_app.logger.info(f"[ads_performance] route entered for account_id={aid}")
 
     # Check connection status
     connected = False
@@ -3664,48 +3665,56 @@ def ads_performance():
 
     # Transform actions into timeline format
     recent_changes = []
-    for action in recent_actions:
-        # Determine icon and color based on action type
-        if action.action_type == 'negative_keyword_added':
-            icon = 'fa-ban'
-            color = 'red'
-        elif action.action_type in ['bid_adjusted', 'budget_reallocated']:
-            icon = 'fa-arrows-rotate'
-            color = 'green'
-        elif action.action_type in ['keyword_paused', 'ad_paused']:
-            icon = 'fa-pause-circle'
-            color = 'yellow'
-        else:
-            icon = 'fa-robot'
-            color = 'blue'
-
-        # Format time — include date for older items
-        action_dt = action.executed_at
-        if action_dt:
-            now = datetime.utcnow()
-            if action_dt.date() == now.date():
-                time_str = action_dt.strftime('%-I:%M %p')
+    try:
+        for action in recent_actions:
+            # Determine icon and color based on action type
+            if action.action_type == 'negative_keyword_added':
+                icon = 'fa-ban'
+                color = 'red'
+            elif action.action_type in ['bid_adjusted', 'budget_reallocated']:
+                icon = 'fa-arrows-rotate'
+                color = 'green'
+            elif action.action_type in ['keyword_paused', 'ad_paused']:
+                icon = 'fa-pause-circle'
+                color = 'yellow'
             else:
-                time_str = action_dt.strftime('%b %-d, %-I:%M %p')
-        else:
-            time_str = 'Unknown'
+                icon = 'fa-robot'
+                color = 'blue'
 
-        action_status = getattr(action, 'status', 'pending')
+            # Format time — include date for older items
+            action_dt = action.executed_at
+            if action_dt:
+                now = datetime.utcnow()
+                if action_dt.date() == now.date():
+                    time_str = action_dt.strftime('%-I:%M %p')
+                else:
+                    time_str = action_dt.strftime('%b %-d, %-I:%M %p')
+            else:
+                time_str = 'Unknown'
 
-        recent_changes.append({
-            'type': action.action_type,
-            'icon': icon,
-            'color': color,
-            'title': action.title,
-            'time': time_str,
-            'description': action.description,
-            'reasoning': action.reasoning,
-            'saved': action.estimated_monthly_savings or 0,
-            'confidence': action.confidence_score,
-            'can_undo': action.is_undoable,
-            'action_id': action.id,
-            'status': action_status,
-        })
+            action_status = getattr(action, 'status', 'pending')
+            saved_val = action.estimated_monthly_savings
+            saved_val = float(saved_val) if saved_val is not None else 0
+
+            recent_changes.append({
+                'type': action.action_type,
+                'icon': icon,
+                'color': color,
+                'title': action.title,
+                'time': time_str,
+                'description': action.description,
+                'reasoning': action.reasoning,
+                'saved': saved_val,
+                'confidence': action.confidence_score,
+                'can_undo': action.is_undoable,
+                'action_id': action.id,
+                'status': action_status,
+            })
+    except Exception as e:
+        current_app.logger.error(f"Error building recent_changes timeline: {e}")
+        import traceback as _tb
+        current_app.logger.error(_tb.format_exc())
+        recent_changes = []
 
     # Campaigns data for the performance table
     campaigns_data = []
@@ -3775,12 +3784,14 @@ def ads_performance():
                     ) or []
                     dev_agg = {}
                     for r in dev_rows:
-                        dev = r.get("segments.device", "UNKNOWN")
+                        seg = r.get("segments", {})
+                        m = r.get("metrics", {})
+                        dev = seg.get("device", "UNKNOWN")
                         dev_agg.setdefault(dev, {"device": dev, "impressions": 0, "clicks": 0, "cost": 0.0, "conversions": 0.0})
-                        dev_agg[dev]["impressions"] += int(r.get("metrics.impressions", 0))
-                        dev_agg[dev]["clicks"] += int(r.get("metrics.clicks", 0))
-                        dev_agg[dev]["cost"] += int(r.get("metrics.cost_micros", 0)) / 1e6
-                        dev_agg[dev]["conversions"] += float(r.get("metrics.conversions", 0))
+                        dev_agg[dev]["impressions"] += int(m.get("impressions", 0) or 0)
+                        dev_agg[dev]["clicks"] += int(m.get("clicks", 0) or 0)
+                        dev_agg[dev]["cost"] += int(m.get("costMicros", 0) or 0) / 1e6
+                        dev_agg[dev]["conversions"] += float(m.get("conversions", 0) or 0)
                     for v in dev_agg.values():
                         v["ctr"] = round(v["clicks"] / v["impressions"] * 100, 2) if v["impressions"] else 0
                         v["cpa"] = round(v["cost"] / v["conversions"], 2) if v["conversions"] else None
@@ -3803,12 +3814,14 @@ def ads_performance():
                     hour_agg = {}
                     dow_agg = {}
                     for r in hour_rows:
-                        h = int(r.get("segments.hour", 0))
-                        dow = r.get("segments.day_of_week", "UNKNOWN")
-                        impr = int(r.get("metrics.impressions", 0))
-                        clks = int(r.get("metrics.clicks", 0))
-                        cost = int(r.get("metrics.cost_micros", 0)) / 1e6
-                        conv = float(r.get("metrics.conversions", 0))
+                        seg = r.get("segments", {})
+                        m = r.get("metrics", {})
+                        h = int(seg.get("hour", 0) or 0)
+                        dow = seg.get("dayOfWeek", "UNKNOWN")
+                        impr = int(m.get("impressions", 0) or 0)
+                        clks = int(m.get("clicks", 0) or 0)
+                        cost = int(m.get("costMicros", 0) or 0) / 1e6
+                        conv = float(m.get("conversions", 0) or 0)
                         hour_agg.setdefault(h, {"hour": h, "impressions": 0, "clicks": 0, "cost": 0.0, "conversions": 0.0})
                         hour_agg[h]["impressions"] += impr; hour_agg[h]["clicks"] += clks
                         hour_agg[h]["cost"] += cost; hour_agg[h]["conversions"] += conv
@@ -3825,39 +3838,46 @@ def ads_performance():
     except Exception:
         current_app.logger.debug("Device/daypart GAQL query skipped")
 
-    return render_template(
-        "google/performance_dashboard.html",
-        device_data=device_data,
-        daypart_data=daypart_data,
-        connected=connected,
-        status=status,
-        wasted_spend_prevented=round(wasted_spend_prevented, 2),
-        calls_generated=calls_generated,
-        qualified_leads=qualified_leads,
-        booked_jobs=booked_jobs,
-        ai_actions_taken=ai_actions_taken,
-        blocked_searches_count=blocked_searches_count,
-        budget_reallocations=budget_reallocations,
-        bids_optimized=bids_optimized,
-        irrelevant_blocked_count=irrelevant_count,
-        job_blocked_count=job_count,
-        low_quality_count=low_quality_count,
-        lsa_missed_calls=lsa_missed_calls,
-        recent_changes=recent_changes,
-        historical_improvement=historical_improvement,
-        account_performance=account_performance,
-        daily_performance=daily_performance,
-        daily_performance_error=daily_performance_error,
-        auth_error=auth_error,
-        epn=request.endpoint,
-        pending_decisions_count=pending_decisions_count,
-        pending_savings=round(pending_savings, 2),
-        savings_are_pending=savings_are_pending,
-        campaigns_data=campaigns_data,
-        target_cpl=target_cpl,
-        has_conversion_tracking=has_conversion_tracking,
-        unreviewed_search_terms_count=unreviewed_search_terms_count,
-    )
+    try:
+        return render_template(
+            "google/performance_dashboard.html",
+            device_data=device_data,
+            daypart_data=daypart_data,
+            connected=connected,
+            status=status,
+            wasted_spend_prevented=round(wasted_spend_prevented, 2),
+            calls_generated=calls_generated,
+            qualified_leads=qualified_leads,
+            booked_jobs=booked_jobs,
+            ai_actions_taken=ai_actions_taken,
+            blocked_searches_count=blocked_searches_count,
+            budget_reallocations=budget_reallocations,
+            bids_optimized=bids_optimized,
+            irrelevant_blocked_count=irrelevant_count,
+            job_blocked_count=job_count,
+            low_quality_count=low_quality_count,
+            lsa_missed_calls=lsa_missed_calls,
+            recent_changes=recent_changes,
+            historical_improvement=historical_improvement,
+            account_performance=account_performance,
+            daily_performance=daily_performance,
+            daily_performance_error=daily_performance_error,
+            auth_error=auth_error,
+            epn=request.endpoint,
+            pending_decisions_count=pending_decisions_count,
+            pending_savings=round(pending_savings, 2),
+            savings_are_pending=savings_are_pending,
+            campaigns_data=campaigns_data,
+            target_cpl=target_cpl,
+            has_conversion_tracking=has_conversion_tracking,
+            unreviewed_search_terms_count=unreviewed_search_terms_count,
+        )
+    except Exception as _render_err:
+        import traceback as _tb
+        current_app.logger.error(
+            f"ads_performance render_template FAILED: {_render_err}\n{_tb.format_exc()}"
+        )
+        raise
 
 
 @google_bp.route("/ads/ai-change-log", methods=["GET"], endpoint="ai_change_log")

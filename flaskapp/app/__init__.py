@@ -1810,6 +1810,23 @@ def create_app():
         # Otherwise, return 500
         return _500(err)
 
+    @app.route('/400.shtml')
+    @app.route('/404.shtml')
+    @app.route('/500.shtml')
+    def _serve_shtml_error_page():
+        """Serve static error pages for LiteSpeed ErrorDocument redirects.
+        LiteSpeed treats .shtml as SSI and proxies to Flask instead of serving
+        the file directly, so we handle these URLs explicitly."""
+        import os as _os
+        webroot = _os.path.dirname(_os.path.dirname(_os.path.dirname(__file__)))
+        fname = request.path.lstrip('/')
+        fpath = _os.path.join(webroot, fname)
+        try:
+            with open(fpath) as _f:
+                return _f.read(), 200, {'Content-Type': 'text/html; charset=utf-8'}
+        except OSError:
+            return '', 204
+
     @app.context_processor
     def inject_app_and_config():
         from flask import current_app

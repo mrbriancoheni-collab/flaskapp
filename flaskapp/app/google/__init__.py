@@ -32,6 +32,9 @@ from enum import Enum
 
 google_bp = Blueprint("google_bp", __name__, url_prefix="/account/google")
 
+import time as _time
+_ads_perf_cache: dict = {}  # in-process TTL cache keyed by account_id
+
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 
 class EnumEncoder(json.JSONEncoder):
@@ -3485,32 +3488,33 @@ def ads_performance():
     account_performance = None
     prior_performance = None
     auth_error = False
-    import time as _time
-    _perf_cache_key = f"perf30_{aid}"
-    _perf_prior_cache_key = f"perf60_{aid}"
-    _perf_cache_ts_key = f"perf_ts_{aid}"
-    _perf_cache_age = _time.time() - session.get(_perf_cache_ts_key, 0)
+    _perf_cache_entry = _ads_perf_cache.get(aid, {})
+    _perf_cache_age = _time.time() - _perf_cache_entry.get('perf_ts', 0)
     if connected:
         from app.google.utils_ads import fetch_account_performance_stats
         try:
-            # Use session cache (5-min TTL) to avoid slow API call on every page load
-            if _perf_cache_age < 300 and session.get(_perf_cache_key):
-                account_performance = session[_perf_cache_key]
-                prior_performance = session.get(_perf_prior_cache_key)
+            # Use in-process cache (5-min TTL) to avoid slow API call on every page load
+            if _perf_cache_age < 300 and _perf_cache_entry.get('perf30'):
+                account_performance = _perf_cache_entry['perf30']
+                prior_performance = _perf_cache_entry.get('perf60')
                 current_app.logger.info(f"[DECISION] Account performance from cache: has_data={account_performance.get('has_data') if account_performance else 'None'}")
             else:
                 current_app.logger.info(f"Fetching account performance stats for account {aid}")
                 account_performance = fetch_account_performance_stats(aid, days=30)
                 current_app.logger.info(f"[DECISION] Account performance fetched: has_data={account_performance.get('has_data') if account_performance else 'None'}")
-                session[_perf_cache_key] = account_performance
-                session[_perf_cache_ts_key] = _time.time()
+                if aid not in _ads_perf_cache:
+                    _ads_perf_cache[aid] = {}
+                _ads_perf_cache[aid]['perf30'] = account_performance
+                _ads_perf_cache[aid]['perf_ts'] = _time.time()
 
             # Also fetch prior 30 days (days 31-60) for comparison — only on fresh fetch
-            if _perf_cache_age >= 300 or not session.get(_perf_prior_cache_key):
+            if _perf_cache_age >= 300 or not _perf_cache_entry.get('perf60'):
                 prior_performance = fetch_account_performance_stats(aid, days=60)
-                session[_perf_prior_cache_key] = prior_performance
+                if aid not in _ads_perf_cache:
+                    _ads_perf_cache[aid] = {}
+                _ads_perf_cache[aid]['perf60'] = prior_performance
             else:
-                prior_performance = session.get(_perf_prior_cache_key)
+                prior_performance = _perf_cache_entry.get('perf60')
             if prior_performance and prior_performance.get('has_data') and account_performance and account_performance.get('has_data'):
                 # Subtract current period from 60-day totals to get prior period
                 prior_impressions = max(0, (prior_performance.get('impressions', 0) or 0) - (account_performance.get('impressions', 0) or 0))
@@ -3605,11 +3609,9 @@ def ads_performance():
     daily_performance = []
     daily_performance_error = None
 
-    _dp_cache_key = f"daily_perf_{aid}"
-    _dp_cache_ts_key = f"daily_perf_ts_{aid}"
-    _dp_cache_age = _time.time() - session.get(_dp_cache_ts_key, 0)
-    if connected and _dp_cache_age < 600 and session.get(_dp_cache_key):
-        daily_performance = session[_dp_cache_key]
+    _dp_cache_age = _time.time() - _ads_perf_cache.get(aid, {}).get('daily_ts', 0)
+    if connected and _dp_cache_age < 600 and _ads_perf_cache.get(aid, {}).get('daily'):
+        daily_performance = _ads_perf_cache[aid]['daily']
         current_app.logger.info(f"[ads_performance] daily_performance from cache ({len(daily_performance)} rows)")
     elif connected:
         try:
@@ -3651,8 +3653,10 @@ def ads_performance():
                             "impressions": int(m.get("impressions", 0)),
                         })
                     if daily_performance:
-                        session[_dp_cache_key] = daily_performance
-                        session[_dp_cache_ts_key] = _time.time()
+                        if aid not in _ads_perf_cache:
+                            _ads_perf_cache[aid] = {}
+                        _ads_perf_cache[aid]['daily'] = daily_performance
+                        _ads_perf_cache[aid]['daily_ts'] = _time.time()
         except Exception as e:
             current_app.logger.warning(f"Could not fetch daily performance from API: {e}")
             daily_performance_error = "Live data unavailable — showing cached data"

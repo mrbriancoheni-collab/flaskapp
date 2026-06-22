@@ -665,32 +665,32 @@ class LeadAutomationService:
         logger.info(f"Creating default email sequence for campaign '{campaign.name}'")
 
         # Default template for home services
-        default_subject = "Are your Google Ads actually bringing in jobs, {{decision_maker_name}}?"
-        default_body = """Hi {{decision_maker_name}},
+        default_subject = "Are your Google Ads actually booking jobs in {{location}}?"
+        default_body = """Hi there,
 
-I noticed {{company_name}} is running Google Ads for {{service_type}} in {{location}} — which means you're already investing in paid search. The question is whether you know exactly which campaigns are booking jobs versus burning money.
+I came across {{company_name}} while looking at {{service_type}} businesses running Google Ads in {{location}}.
 
-Most {{service_type}} businesses I talk to are spending $1,500–$5,000/month on Google Ads without a clear picture of their cost per booked job or which keywords are actually converting.
+Most {{service_type}} companies I talk to are spending $1,500–$5,000/month on Google Ads without a clear picture of which campaigns are actually booking jobs — versus burning money on clicks that never convert.
 
-FieldSprout fixes that. It connects directly to your Google Ads account and shows you:
+FieldSprout connects directly to your Google Ads account and shows you:
 
 - Which campaigns and keywords are generating real calls and booked jobs
 - Where your budget is being wasted on irrelevant searches
-- Your blended cost per lead and cost per booked job — updated daily
+- Your cost per booked job — updated daily
 
-We're running a lifetime deal right now: $499 one-time for a single location, no monthly fees ever. Most clients save more than that in wasted ad spend within the first 30 days.
+We have a lifetime deal running right now: $499 one-time for a single location, no monthly fees. Most clients recover that in wasted ad spend within the first 30 days.
 
-You can connect your Google Ads account and see your first report in about 5 minutes:
-https://fieldsprout.io/signup
+See the deal and connect your account here:
+https://fieldsprout.io/lifetime/499
 
-Worth a look?
+Worth seeing if it pays for itself in your first month?
 
 Brian
 FieldSprout
 https://fieldsprout.io
 
 ---
-If you'd prefer not to receive these emails, please reply with "unsubscribe".
+Reply "unsubscribe" to opt out.
 """
 
         sequence = EmailSequence(

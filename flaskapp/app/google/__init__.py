@@ -3485,15 +3485,32 @@ def ads_performance():
     account_performance = None
     prior_performance = None
     auth_error = False
+    import time as _time
+    _perf_cache_key = f"perf30_{aid}"
+    _perf_prior_cache_key = f"perf60_{aid}"
+    _perf_cache_ts_key = f"perf_ts_{aid}"
+    _perf_cache_age = _time.time() - session.get(_perf_cache_ts_key, 0)
     if connected:
         from app.google.utils_ads import fetch_account_performance_stats
         try:
-            current_app.logger.info(f"Fetching account performance stats for account {aid}")
-            account_performance = fetch_account_performance_stats(aid, days=30)
-            current_app.logger.info(f"[DECISION] Account performance fetched: has_data={account_performance.get('has_data') if account_performance else 'None'}")
+            # Use session cache (5-min TTL) to avoid slow API call on every page load
+            if _perf_cache_age < 300 and session.get(_perf_cache_key):
+                account_performance = session[_perf_cache_key]
+                prior_performance = session.get(_perf_prior_cache_key)
+                current_app.logger.info(f"[DECISION] Account performance from cache: has_data={account_performance.get('has_data') if account_performance else 'None'}")
+            else:
+                current_app.logger.info(f"Fetching account performance stats for account {aid}")
+                account_performance = fetch_account_performance_stats(aid, days=30)
+                current_app.logger.info(f"[DECISION] Account performance fetched: has_data={account_performance.get('has_data') if account_performance else 'None'}")
+                session[_perf_cache_key] = account_performance
+                session[_perf_cache_ts_key] = _time.time()
 
-            # Also fetch prior 30 days (days 31-60) for comparison
-            prior_performance = fetch_account_performance_stats(aid, days=60)
+            # Also fetch prior 30 days (days 31-60) for comparison — only on fresh fetch
+            if _perf_cache_age >= 300 or not session.get(_perf_prior_cache_key):
+                prior_performance = fetch_account_performance_stats(aid, days=60)
+                session[_perf_prior_cache_key] = prior_performance
+            else:
+                prior_performance = session.get(_perf_prior_cache_key)
             if prior_performance and prior_performance.get('has_data') and account_performance and account_performance.get('has_data'):
                 # Subtract current period from 60-day totals to get prior period
                 prior_impressions = max(0, (prior_performance.get('impressions', 0) or 0) - (account_performance.get('impressions', 0) or 0))
@@ -3588,7 +3605,13 @@ def ads_performance():
     daily_performance = []
     daily_performance_error = None
 
-    if connected:
+    _dp_cache_key = f"daily_perf_{aid}"
+    _dp_cache_ts_key = f"daily_perf_ts_{aid}"
+    _dp_cache_age = _time.time() - session.get(_dp_cache_ts_key, 0)
+    if connected and _dp_cache_age < 600 and session.get(_dp_cache_key):
+        daily_performance = session[_dp_cache_key]
+        current_app.logger.info(f"[ads_performance] daily_performance from cache ({len(daily_performance)} rows)")
+    elif connected:
         try:
             from app.google.utils_ads import (
                 google_ads_search, resolve_ads_context
@@ -3627,6 +3650,9 @@ def ads_performance():
                             "clicks": int(m.get("clicks", 0)),
                             "impressions": int(m.get("impressions", 0)),
                         })
+                    if daily_performance:
+                        session[_dp_cache_key] = daily_performance
+                        session[_dp_cache_ts_key] = _time.time()
         except Exception as e:
             current_app.logger.warning(f"Could not fetch daily performance from API: {e}")
             daily_performance_error = "Live data unavailable — showing cached data"
@@ -3841,7 +3867,7 @@ def ads_performance():
 
     current_app.logger.info(f"[ads_performance] reaching render_template")
     try:
-        return render_template(
+        _rendered = render_template(
             "google/performance_dashboard.html",
             device_data=device_data,
             daypart_data=daypart_data,
@@ -3874,6 +3900,8 @@ def ads_performance():
             has_conversion_tracking=has_conversion_tracking,
             unreviewed_search_terms_count=unreviewed_search_terms_count,
         )
+        current_app.logger.info(f"[ads_performance] render_template COMPLETED OK")
+        return _rendered
     except Exception as _render_err:
         import traceback as _tb
         current_app.logger.error(

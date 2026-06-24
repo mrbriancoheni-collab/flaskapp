@@ -276,6 +276,69 @@
         {% endif %}
     </div>
 
+    <!-- Suppression List Management -->
+    <div class="mt-8 bg-white border rounded-lg p-6 shadow-sm">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">
+            <i class="fa-solid fa-ban text-red-500 mr-2"></i>
+            Suppression List
+            <span class="ml-2 text-sm font-normal text-gray-500">({{ unsubscribe_count }} total)</span>
+        </h2>
+
+        <!-- Add emails form -->
+        <div class="mb-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <h3 class="text-sm font-semibold text-gray-700 mb-2">Add emails to suppression list</h3>
+            <textarea id="suppressEmailsInput" rows="4"
+                      placeholder="Paste one or more email addresses (one per line or comma-separated)"
+                      class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-indigo-300 focus:outline-none"></textarea>
+            <div class="flex items-center gap-3 mt-3">
+                <button onclick="addSuppressions()"
+                        class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-700 flex items-center gap-2">
+                    <i class="fa-solid fa-ban"></i> Suppress Emails
+                </button>
+                <span id="suppressStatus" class="text-sm text-gray-600 hidden"></span>
+            </div>
+        </div>
+
+        <!-- Existing suppressions table -->
+        {% if suppressions %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm" id="suppressionTable">
+                <thead class="bg-gray-50 border-b">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-semibold text-gray-700">Email</th>
+                        <th class="px-4 py-3 text-left font-semibold text-gray-700">Reason</th>
+                        <th class="px-4 py-3 text-left font-semibold text-gray-700">Date Added</th>
+                        <th class="px-4 py-3 text-right font-semibold text-gray-700">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y" id="suppressionTbody">
+                    {% for s in suppressions %}
+                    <tr id="suppress-row-{{ s.id }}">
+                        <td class="px-4 py-2 font-mono text-gray-900">{{ s.email }}</td>
+                        <td class="px-4 py-2 text-gray-600">{{ s.reason or '—' }}</td>
+                        <td class="px-4 py-2 text-gray-500">{{ s.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td class="px-4 py-2 text-right">
+                            <button onclick="removeSuppression({{ s.id }})"
+                                    class="text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded border border-red-200 hover:bg-red-50">
+                                <i class="fa-solid fa-trash"></i> Remove
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% if unsubscribe_count > 200 %}
+            <p class="text-xs text-gray-500 mt-2 px-4">Showing most recent 200 of {{ unsubscribe_count }} suppressions.</p>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="text-center py-8 text-gray-500">
+            <i class="fa-solid fa-check-circle text-3xl mb-2 block text-green-400"></i>
+            <p>No suppressions yet.</p>
+        </div>
+        {% endif %}
+    </div>
+
     <!-- Benchmarks Info -->
     <div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
         <h3 class="text-lg font-bold text-blue-900 mb-3">
@@ -406,5 +469,58 @@
             }
         }
     });
+
+    async function addSuppressions() {
+        const input = document.getElementById('suppressEmailsInput');
+        const status = document.getElementById('suppressStatus');
+        const emails = input.value.trim();
+        if (!emails) { alert('Please enter at least one email address.'); return; }
+
+        status.textContent = 'Adding…';
+        status.className = 'text-sm text-gray-600';
+        status.classList.remove('hidden');
+
+        try {
+            const fd = new FormData();
+            fd.append('emails', emails);
+            const resp = await fetch('{{ url_for("lead_campaigns_bp.manual_suppress") }}', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || '' },
+                body: fd
+            });
+            const data = await resp.json();
+            if (data.success) {
+                status.textContent = `Done: ${data.added} added, ${data.skipped} already suppressed.`;
+                status.className = 'text-sm text-green-700';
+                input.value = '';
+                setTimeout(() => location.reload(), 1200);
+            } else {
+                status.textContent = 'Error: ' + (data.error || 'Unknown error');
+                status.className = 'text-sm text-red-600';
+            }
+        } catch (e) {
+            status.textContent = 'Error: ' + e.message;
+            status.className = 'text-sm text-red-600';
+        }
+    }
+
+    async function removeSuppression(id) {
+        if (!confirm('Remove this address from the suppression list?')) return;
+        try {
+            const resp = await fetch('{{ url_for("lead_campaigns_bp.manual_suppress_delete", unsub_id=0) }}'.replace('/0', '/' + id), {
+                method: 'DELETE',
+                headers: { 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || '' }
+            });
+            const data = await resp.json();
+            if (data.success) {
+                const row = document.getElementById('suppress-row-' + id);
+                if (row) row.remove();
+            } else {
+                alert('Remove failed.');
+            }
+        } catch (e) {
+            alert('Error: ' + e.message);
+        }
+    }
 </script>
 {% endblock %}

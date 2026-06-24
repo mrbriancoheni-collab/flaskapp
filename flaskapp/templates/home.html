@@ -256,8 +256,8 @@
           <video
             id="heroVideo"
             class="w-full h-auto"
-            preload="metadata"
-            poster=""
+            preload="none"
+            poster="{{ url_for('static', filename='img/preview_workflow.png') }}"
             style="max-height: 600px;">
             <source src="{{ url_for('static', filename='video/FieldSprout-GAds-Demo-Walkthru.mp4') }}" type="video/mp4">
             Your browser does not support the video tag.

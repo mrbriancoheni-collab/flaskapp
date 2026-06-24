@@ -28,7 +28,7 @@ Options -Indexes
     # Block direct PHP execution (security hardening)
     RewriteRule \.php$ - [F,L]
 
-    # Serve real static files directly (CSS, JS, images, fonts, robots.txt)
+    # Serve any real file at the document root directly
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule ^ - [L]
 

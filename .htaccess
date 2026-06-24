@@ -28,7 +28,13 @@ Options -Indexes
     # Block direct PHP execution (security hardening)
     RewriteRule \.php$ - [F,L]
 
-    # Serve real static files directly (CSS, JS, images, fonts, robots.txt)
+    # Serve Flask static files directly from flaskapp/static/ without
+    # going through Gunicorn. The document root is one level above the
+    # Flask package, so /static/foo maps to flaskapp/static/foo on disk.
+    RewriteCond %{DOCUMENT_ROOT}/flaskapp/static/$1 -f
+    RewriteRule ^static/(.*)$ flaskapp/static/$1 [L]
+
+    # Serve any other real file at the document root directly
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule ^ - [L]
 

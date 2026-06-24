@@ -1,7 +1,10 @@
 {% extends "base_app.html" %}
+{% set SECTION = 'google' %}
+{% set gads_active = 'search_terms' %}
 {% block title %}Search Terms · Google Ads · {{ app_name }}{% endblock %}
 
 {% block content %}
+{% include "google/components/gads_nav.html" %}
 <div class="max-w-6xl mx-auto space-y-6">
 
   <div class="flex flex-wrap items-center justify-between gap-3">

@@ -5325,10 +5325,10 @@ def _check_competitive_tables_exist():
 # SEARCH TERM REPORT ROUTES
 # ==============================================================================
 
-@google_bp.route("/ads/search-terms", methods=["GET"], endpoint="search_terms")
+@google_bp.route("/ads/search-terms-v1", methods=["GET"], endpoint="search_terms")
 @login_required
 def search_terms():
-    """Search term report — see what queries triggered ads, add bad ones as negatives."""
+    """Legacy search term report — superseded by gads_bp.search_terms."""
     aid = current_account_id()
     days = request.args.get("days", 30, type=int)
     campaign_filter = request.args.get("campaign_id", type=int)

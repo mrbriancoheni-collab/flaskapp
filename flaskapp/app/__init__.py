@@ -512,6 +512,7 @@ def create_app():
             "Content-Security-Policy",
             "default-src 'self'; "
             "img-src 'self' data: https:; "
+            "media-src 'self'; "
             "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
             "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
             f"script-src 'self' 'nonce-{nonce}' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com "
@@ -523,15 +524,18 @@ def create_app():
             "form-action 'self' https://checkout.stripe.com https://*.stripe.com"
         )
 
-        # Performance: Aggressive caching for static files (CSS, JS, images, fonts)
-        if request.path.startswith('/static/'):
-            # Cache static files for 1 year (immutable)
-            resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
-            resp.headers["Expires"] = (datetime.utcnow() + timedelta(days=365)).strftime('%a, %d %b %Y %H:%M:%S GMT')
-        elif request.path.endswith(('.css', '.js', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.woff', '.woff2', '.ttf', '.ico')):
-            # Cache other static assets for 1 week
-            resp.headers["Cache-Control"] = "public, max-age=604800"
-            resp.headers["Expires"] = (datetime.utcnow() + timedelta(days=7)).strftime('%a, %d %b %Y %H:%M:%S GMT')
+        # Performance: Aggressive caching for static files — only on 200 OK.
+        # Never cache errors; a cached 404 would permanently break assets.
+        if resp.status_code == 200:
+            if request.path.startswith('/static/'):
+                resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+                resp.headers["Expires"] = (datetime.utcnow() + timedelta(days=365)).strftime('%a, %d %b %Y %H:%M:%S GMT')
+            elif request.path.endswith(('.css', '.js', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.woff', '.woff2', '.ttf', '.ico')):
+                resp.headers["Cache-Control"] = "public, max-age=604800"
+                resp.headers["Expires"] = (datetime.utcnow() + timedelta(days=7)).strftime('%a, %d %b %Y %H:%M:%S GMT')
+        elif resp.status_code >= 400 and request.path.startswith('/static/'):
+            # Ensure errors on static paths are never cached
+            resp.headers["Cache-Control"] = "no-store"
 
         return resp
 

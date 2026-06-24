@@ -1023,6 +1023,7 @@ def auto_execute_low_risk():
     failed = 0
     skipped = 0
     errors = []
+    executed_ids = []
 
     for row in rows:
         try:
@@ -1050,6 +1051,7 @@ def auto_execute_low_risk():
                 _create_ai_action_from_decision(account_id, row, result)
 
                 executed += 1
+                executed_ids.append(row['id'])
             else:
                 with db.engine.begin() as conn:
                     conn.execute(text("""
@@ -1079,8 +1081,9 @@ def auto_execute_low_risk():
         "message": f"Auto-executed {executed} low-risk decisions ({failed} failed, {skipped} skipped)",
         "total_found": len(rows),
         "executed": executed,
+        "executed_ids": executed_ids,
         "failed": failed,
-        "errors": errors[:10]  # Limit to first 10 errors for readability
+        "errors": errors[:10],
     })
 
 

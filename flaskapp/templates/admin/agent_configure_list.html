@@ -69,7 +69,11 @@
         <i class="fa-solid fa-robot text-indigo-600 mr-2"></i>
         AI Agent Configuration
     </h1>
-    <p class="text-gray-600 mb-6">Configure the 8 AI agents that optimize your Google Ads campaigns 24/7</p>
+    <p class="text-gray-600 mb-4">Configure the 8 AI agents that optimize your Google Ads campaigns 24/7</p>
+    <a href="{{ url_for('agent_config_bp.prompts_list') }}"
+       class="inline-flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 mb-6">
+        <i class="fa-solid fa-scroll"></i> Edit AI Prompt Templates &rarr;
+    </a>
 
     <!-- Global Configurations -->
     <div class="bg-white rounded-lg shadow-lg p-6 mb-8">

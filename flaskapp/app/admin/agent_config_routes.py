@@ -279,6 +279,53 @@ def configure_account(account_id: int, agent_id: str):
     )
 
 
+# ============================================================================
+# AI Prompt Management
+# ============================================================================
+
+@agent_config_bp.route("/prompts")
+@login_required
+@require_admin
+def prompts_list():
+    """List all editable AI prompts."""
+    from app.models_ads import AIPrompt
+    prompts = AIPrompt.query.order_by(AIPrompt.prompt_key).all()
+    return render_template("admin/ai_prompts_list.html", prompts=prompts)
+
+
+@agent_config_bp.route("/prompts/<prompt_key>", methods=["GET", "POST"])
+@login_required
+@require_admin
+def prompt_edit(prompt_key: str):
+    """Edit a single AI prompt."""
+    from app.models_ads import AIPrompt
+
+    prompt = AIPrompt.query.filter_by(prompt_key=prompt_key).first_or_404()
+
+    if request.method == "POST":
+        action = request.form.get("action", "save")
+
+        if action == "revert":
+            from app.services.ai_prompts_init import initialize_ai_prompts
+            initialize_ai_prompts(force=True)
+            flash("All prompts reverted to defaults.", "success")
+            return redirect(url_for("agent_config_bp.prompt_edit", prompt_key=prompt_key))
+
+        prompt.name = request.form.get("name", prompt.name).strip()
+        prompt.description = request.form.get("description", "").strip() or None
+        prompt.system_message = request.form.get("system_message", "").strip()
+        prompt.prompt_template = request.form.get("prompt_template", "").strip()
+        prompt.model = request.form.get("model", prompt.model).strip()
+        prompt.temperature = float(request.form.get("temperature", prompt.temperature))
+        prompt.max_tokens = int(request.form.get("max_tokens", prompt.max_tokens))
+        prompt.is_active = request.form.get("is_active") == "on"
+        db.session.commit()
+        flash(f"Prompt '{prompt.name}' saved.", "success")
+        return redirect(url_for("agent_config_bp.prompts_list"))
+
+    return render_template("admin/ai_prompt_edit.html", prompt=prompt)
+
+
 @agent_config_bp.route("/configure/<int:config_id>/delete", methods=["POST"])
 @login_required
 @require_admin

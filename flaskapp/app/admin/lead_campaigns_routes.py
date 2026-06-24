@@ -2976,9 +2976,10 @@ def email_monitoring_dashboard():
     ).limit(25).all()
 
     # =======================
-    # UNSUBSCRIBE COUNT
+    # UNSUBSCRIBE COUNT + LIST
     # =======================
     unsubscribe_count = db.session.query(func.count(EmailUnsubscribe.id)).scalar() or 0
+    suppressions = EmailUnsubscribe.query.order_by(desc(EmailUnsubscribe.created_at)).limit(200).all()
 
     return render_template(
         'admin/lead_campaigns/email_monitoring.html',
@@ -3002,9 +3003,58 @@ def email_monitoring_dashboard():
         campaign_stats=campaign_data,
         # Recent emails
         recent_emails=recent_emails,
+        # Suppression list
+        suppressions=suppressions,
         # Filters
         days=days
     )
+
+
+# ── Manual suppression management ───────────────────────────────────────────
+
+@lead_campaigns_bp.route('/manual-suppress', methods=['POST'])
+@require_admin
+def manual_suppress():
+    """Add one or more emails to the suppression list."""
+    from app.services.email_dedup_service import get_dedup_service
+    raw = request.form.get('emails', '') or (request.json or {}).get('emails', '')
+    # Accept newline- or comma-separated addresses
+    candidates = [e.strip().lower() for e in raw.replace(',', '\n').splitlines() if e.strip()]
+    if not candidates:
+        return jsonify(success=False, error='No email addresses provided'), 400
+
+    added = []
+    skipped = []
+    for email in candidates:
+        if EmailUnsubscribe.query.filter_by(email=email).first():
+            skipped.append(email)
+        else:
+            db.session.add(EmailUnsubscribe(email=email, reason='manually suppressed by admin'))
+            added.append(email)
+
+    if added:
+        db.session.commit()
+        try:
+            get_dedup_service().clear_cache()
+        except Exception:
+            pass
+
+    return jsonify(success=True, added=len(added), skipped=len(skipped), added_emails=added)
+
+
+@lead_campaigns_bp.route('/manual-suppress/<int:unsub_id>', methods=['DELETE'])
+@require_admin
+def manual_suppress_delete(unsub_id):
+    """Remove an entry from the suppression list."""
+    from app.services.email_dedup_service import get_dedup_service
+    record = EmailUnsubscribe.query.get_or_404(unsub_id)
+    db.session.delete(record)
+    db.session.commit()
+    try:
+        get_dedup_service().clear_cache()
+    except Exception:
+        pass
+    return jsonify(success=True)
 
 
 # ── Purge non-business email addresses ──────────────────────────────────────

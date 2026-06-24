@@ -18,6 +18,7 @@ from sqlalchemy import text
 
 from app import db
 from app.auth.utils import login_required, current_account_id
+from app.services.safety_layer import check_anomaly_gate
 
 log = logging.getLogger(__name__)
 
@@ -81,6 +82,15 @@ def ai_control():
     # ── approval queue ──
     pending_decisions, decisions_by_risk = _safe(
         lambda: _load_pending_decisions(account_id), ([], {"high": [], "low": []})
+    )
+    low_risk_count = sum(
+        1 for d in pending_decisions
+        if d.get("risk_level") == "low" and (d.get("confidence") or 0) >= 0.80
+    )
+
+    # ── anomaly detection ──
+    anomaly_detected, anomaly_details = _safe(
+        lambda: check_anomaly_gate(account_id), (False, "")
     )
 
     # ── change log ──
@@ -150,6 +160,10 @@ def ai_control():
         pending_decisions=pending_decisions,
         decisions_by_risk=decisions_by_risk,
         total_pending=len(pending_decisions),
+        low_risk_count=low_risk_count,
+        # Anomaly
+        anomaly_detected=anomaly_detected,
+        anomaly_details=anomaly_details,
         # Change log
         cl_total_actions=cl_total_actions,
         cl_total_saved=round(cl_total_saved, 2),

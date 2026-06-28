@@ -214,7 +214,7 @@ def _is_connected() -> bool:
     """
     Real: checks token presence. Dev override: ?connected=1
     """
-    if request.args.get("connected") == "1":
+    if current_app.debug and request.args.get("connected") == "1":
         return True
     try:
         aid = current_account_id()
@@ -599,6 +599,14 @@ def select_account_post():
 # -----------------------------------------------------------------------------
 # Connect / Disconnect (now real OAuth; keeps same endpoints)
 # -----------------------------------------------------------------------------
+def _fb_oauth_state() -> str:
+    """Generate and store a per-session CSRF state token for the OAuth flow."""
+    import secrets as _sec
+    state = _sec.token_urlsafe(32)
+    session["fb_oauth_state"] = state
+    return state
+
+
 @fbads_bp.get("/connect", endpoint="connect")
 @login_required
 def fb_connect():
@@ -625,13 +633,19 @@ def fb_connect():
         redirect_uri=redirect_uri,
         response_type="code",
         scope=scope,
-        state="ok",
+        state=_fb_oauth_state(),
     )
     return redirect(f"https://www.facebook.com/v20.0/dialog/oauth?{urlencode(params)}")
 
 @fbads_bp.get("/callback", endpoint="callback")
 @login_required
 def callback():
+    # Verify CSRF state token before doing anything
+    expected_state = session.pop("fb_oauth_state", None)
+    if not expected_state or request.args.get("state") != expected_state:
+        flash("Invalid OAuth state. Please try connecting again.", "error")
+        return redirect(url_for("fbads_bp.index"))
+
     code = request.args.get("code")
     if not code:
         flash("Facebook login failed.", "error")
@@ -729,13 +743,13 @@ def save_token():
                 # Continue with short-lived token
 
         # Save the token
-        _save_fb_token(aid, access_token)
+        _store_fb_token(aid, access_token, None)
 
         return jsonify({"success": True, "message": "Facebook connected successfully"})
 
-    except Exception as e:
+    except Exception:
         current_app.logger.exception("Error saving Facebook token")
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": "An internal error occurred"}), 500
 
 # -----------------------------------------------------------------------------
 # Lead actions used by templates

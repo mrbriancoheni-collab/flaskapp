@@ -905,11 +905,14 @@ def _sync_subscription_status_to_account(user_id: str, stripe_status: str):
                 )
                 return
 
-            # Get table/field names from config
+            # Allowlist identifiers — never interpolate arbitrary config values into SQL
+            _ALLOWED_TABLES = {"accounts", "users_accounts", "account"}
+            _ALLOWED_FIELDS = {"stripe_status", "subscription_status", "plan_status"}
             table_name = current_app.config.get("ACCOUNT_TABLE_NAME", "accounts")
             stripe_field = current_app.config.get("ACCOUNT_STRIPE_FIELD", "stripe_status")
+            if table_name not in _ALLOWED_TABLES or stripe_field not in _ALLOWED_FIELDS:
+                raise ValueError(f"Disallowed SQL identifier: {table_name!r} / {stripe_field!r}")
 
-            # Update accounts table
             conn.execute(
                 text(f"UPDATE {table_name} SET {stripe_field} = :status WHERE id = :id"),
                 {"status": stripe_status, "id": account_id}
@@ -954,9 +957,15 @@ def _grant_lifetime_plan(user_id: str, tier: str):
                 return
 
             account_id = result[0]
+            _ALLOWED_TABLES = {"accounts", "users_accounts", "account"}
+            _ALLOWED_FIELDS = {"stripe_status", "subscription_status", "plan_status"}
+            _ALLOWED_PLAN_FIELDS = {"plan", "plan_name", "subscription_plan"}
             table = current_app.config.get("ACCOUNT_TABLE_NAME", "accounts")
             plan_field = current_app.config.get("ACCOUNT_PLAN_FIELD", "plan")
             stripe_field = current_app.config.get("ACCOUNT_STRIPE_FIELD", "stripe_status")
+            if table not in _ALLOWED_TABLES or plan_field not in _ALLOWED_PLAN_FIELDS \
+                    or stripe_field not in _ALLOWED_FIELDS:
+                raise ValueError(f"Disallowed SQL identifier in grant_lifetime_plan")
 
             conn.execute(
                 text(

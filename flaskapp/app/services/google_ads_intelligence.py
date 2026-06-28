@@ -596,7 +596,24 @@ def predict_quality_score(
         # Factor 4: Landing page quality signals — basic URL + keyword presence check
         try:
             import requests as _req
-            resp = _req.get(landing_page_url, timeout=5, allow_redirects=True,
+            import ipaddress, socket
+            from urllib.parse import urlparse as _urlparse
+
+            def _is_safe_fetch_url(url: str) -> bool:
+                try:
+                    p = _urlparse(url)
+                    if p.scheme != "https":
+                        return False
+                    ip = socket.gethostbyname(p.hostname or "")
+                    a = ipaddress.ip_address(ip)
+                    return not (a.is_private or a.is_loopback or a.is_link_local or a.is_reserved)
+                except Exception:
+                    return False
+
+            if not _is_safe_fetch_url(landing_page_url):
+                raise ValueError("Unsafe or non-HTTPS landing page URL")
+
+            resp = _req.get(landing_page_url, timeout=5, allow_redirects=False,
                             headers={"User-Agent": "Mozilla/5.0"})
             if resp.ok:
                 page_text = resp.text.lower()
@@ -642,7 +659,8 @@ def _get_similar_keywords_ctr(account_id: int, keyword_text: str) -> Optional[fl
     try:
         # Get first 2 words of keyword for matching
         keyword_parts = keyword_text.lower().split()[:2]
-        like_pattern = '%' + '%'.join(keyword_parts) + '%'
+        escaped_parts = [p.replace('%', r'\%').replace('_', r'\_') for p in keyword_parts]
+        like_pattern = '%' + '%'.join(escaped_parts) + '%'
 
         query = text("""
             SELECT AVG(ctr) as avg_ctr
@@ -773,7 +791,7 @@ def analyze_auction_insights(account_id: int, campaign_id: Optional[int] = None)
       - summary: narrative string
     """
     try:
-        campaign_filter = f"AND campaign.id = {campaign_id}" if campaign_id else ""
+        campaign_filter = f"AND campaign.id = {int(campaign_id)}" if campaign_id else ""
         rows = _ads_gaql(account_id, f"""
             SELECT
                 auction_insight.domain,
@@ -1259,7 +1277,7 @@ def forecast_impression_share(
                 metrics.search_budget_lost_impression_share,
                 metrics.search_rank_lost_impression_share
             FROM campaign
-            WHERE campaign.id = {campaign_id}
+            WHERE campaign.id = {int(campaign_id)}
               AND segments.date DURING LAST_30_DAYS
             LIMIT 1
         """)

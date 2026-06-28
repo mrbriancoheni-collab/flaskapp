@@ -60,9 +60,10 @@ def facebook_data_deletion():
             ),
             {"uid": user_id},
         )
+        safe_uid = user_id.replace('%', r'\%').replace('_', r'\_').replace('"', '')
         db.session.execute(
-            text("DELETE FROM fb_leads WHERE raw LIKE :pattern"),
-            {"pattern": f'%"fb_user_id": "{user_id}"%'},
+            text("DELETE FROM fb_leads WHERE raw LIKE :pattern ESCAPE '\\\\'"),
+            {"pattern": f'%"fb_user_id": "{safe_uid}"%'},
         )
         db.session.commit()
     except Exception as _exc:
@@ -73,7 +74,8 @@ def facebook_data_deletion():
             pass
         current_app.logger.warning("FB data deletion DB cleanup failed for user_id=%s: %s", user_id, _exc)
 
-    confirmation_code = f"fbdel_{user_id}_{int(time.time())}"
+    import secrets as _sec
+    confirmation_code = _sec.token_urlsafe(32)
     _DATA_DELETION_REQUESTS[confirmation_code] = {
         "user_id": user_id,
         "status": "scheduled",   # or "completed" after async job
@@ -101,6 +103,5 @@ def facebook_data_deletion_status(code: str):
     return jsonify({
         "ok": True,
         "status": rec["status"],
-        "user_id": rec["user_id"],
         "updated_at": rec["updated_at"]
     }), 200

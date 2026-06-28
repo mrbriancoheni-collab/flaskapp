@@ -475,9 +475,14 @@ class MLTrainingService:
         output.close()
 
         if filepath:
-            with open(filepath, 'w') as f:
+            from pathlib import Path
+            resolved = Path(filepath).resolve()
+            allowed_dir = Path('/tmp').resolve()
+            if not str(resolved).startswith(str(allowed_dir)):
+                raise ValueError(f"Export path outside allowed directory: {filepath}")
+            with open(resolved, 'w') as f:
                 f.write(csv_content)
-            return filepath
+            return str(resolved)
 
         return csv_content
 

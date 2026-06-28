@@ -1222,8 +1222,9 @@ class AutoBudgetService:
             """, (user_id, rejection_reason, change_id))
 
             self.db.commit()
+            rows_affected = cursor.rowcount
             cursor.close()
-            return cursor.rowcount > 0
+            return rows_affected > 0
 
         except Exception as e:
             logger.error(f"Error rejecting pending change: {e}")

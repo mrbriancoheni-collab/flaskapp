@@ -240,21 +240,17 @@ def on_estimate_sent(account_id: int, estimate: "CRMEstimate") -> None:
 
 
 def on_estimate_accepted(account_id: int, estimate: "CRMEstimate") -> None:
-    """
-    Called when an estimate is accepted.
-    TODO: send appointment confirmation SMS/email.
-    """
+    """Called when an estimate is accepted — sends an appointment confirmation."""
     log.info("estimate_accepted account=%s estimate=%s customer=%s",
              account_id, estimate.id, estimate.customer_name)
+    _send_estimate_accepted_confirmation(account_id, estimate)
 
 
 def on_estimate_rejected(account_id: int, estimate: "CRMEstimate") -> None:
-    """
-    Called when an estimate is rejected or expires.
-    TODO: optionally enroll in a 30-day win-back sequence.
-    """
+    """Called when an estimate is rejected or expires — sends a win-back message."""
     log.info("estimate_rejected/expired account=%s estimate=%s status=%s",
              account_id, estimate.id, estimate.status)
+    _send_estimate_rejected_winback(account_id, estimate)
 
 
 def on_appointment_booked(account_id: int, job: "CRMJob") -> None:
@@ -268,13 +264,124 @@ def on_appointment_booked(account_id: int, job: "CRMJob") -> None:
 
 
 def on_invoice_sent(account_id: int, job: "CRMJob") -> None:
-    """
-    Called when a job is marked invoiced.
-    TODO: queue payment follow-up if unpaid after 7 days.
-    """
+    """Called when a job is marked invoiced — payment follow-up runs via daily cron."""
     log.info("invoice_sent account=%s job=%s customer=%s",
              account_id, getattr(job, "external_job_id", job.id),
              getattr(job, "customer_name", "?"))
+
+
+# ---------------------------------------------------------------------------
+# Confirmation / win-back helpers
+# ---------------------------------------------------------------------------
+
+_ACCEPTED_EMAIL_SUBJECT = "You're all set — we'll be in touch soon!"
+_ACCEPTED_EMAIL_HTML = """\
+<p>Hi {name},</p>
+<p>Great news — we've received your acceptance of the estimate for
+<strong>{job_type}</strong>!</p>
+<p>We'll be reaching out shortly to schedule a convenient time for your service.
+In the meantime, if you have any questions, don't hesitate to get in touch.</p>
+<p>Thanks so much for choosing us — we can't wait to help!</p>
+<p style="color:#6b7280;font-size:13px">— {business_name}</p>
+"""
+_ACCEPTED_SMS = (
+    "Hi {name}! Thanks for accepting our estimate for {job_type}. "
+    "We'll be in touch soon to schedule. Questions? Just reply here. — {business_name}"
+)
+
+_REJECTED_EMAIL_SUBJECT = "We'd love another chance — {job_type} estimate"
+_REJECTED_EMAIL_HTML = """\
+<p>Hi {name},</p>
+<p>We noticed you didn't move forward with our estimate for
+<strong>{job_type}</strong>, and we completely understand.</p>
+<p>If there was anything about the price, scope, or timing that didn't feel right,
+we'd genuinely love to hear your feedback — or explore a different option that works
+better for you.</p>
+<p>No pressure at all. Just reply to this email or give us a call if you change
+your mind. We'll be here.</p>
+<p>Thanks for the opportunity — we wish you the best!</p>
+<p style="color:#6b7280;font-size:13px">— {business_name}</p>
+"""
+
+
+def _get_account_name(account_id: int) -> str:
+    try:
+        from app.models import Account
+        acct = Account.query.get(account_id)
+        if acct:
+            return acct.name or "Our team"
+    except Exception:
+        pass
+    return "Our team"
+
+
+def _send_estimate_accepted_confirmation(account_id: int, estimate: "CRMEstimate") -> None:
+    """Email + SMS confirmation that we received the accepted estimate."""
+    business_name = _get_account_name(account_id)
+    v = dict(
+        name=estimate.customer_name or "there",
+        job_type=estimate.job_type or "service",
+        business_name=business_name,
+    )
+    if estimate.customer_email:
+        try:
+            from app.services.email_service import send_email
+            send_email(
+                to_email=estimate.customer_email,
+                subject=_ACCEPTED_EMAIL_SUBJECT,
+                html_body=_ACCEPTED_EMAIL_HTML.format(**v),
+            )
+        except Exception:
+            log.exception("estimate_accepted email failed estimate=%s", estimate.id)
+
+    if estimate.customer_phone:
+        try:
+            import os, requests as _req
+            sid = os.getenv("TWILIO_ACCOUNT_SID")
+            tok = os.getenv("TWILIO_AUTH_TOKEN")
+            frm = os.getenv("TWILIO_FROM_NUMBER")
+            body = _ACCEPTED_SMS.format(**v)
+            if sid and tok and frm:
+                _req.post(
+                    f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json",
+                    data={"From": frm, "To": estimate.customer_phone, "Body": body},
+                    auth=(sid, tok), timeout=10,
+                ).raise_for_status()
+            else:
+                log.info("SMS (simulated) accepted confirmation to %s", estimate.customer_phone)
+        except Exception:
+            log.exception("estimate_accepted SMS failed estimate=%s", estimate.id)
+
+
+def _send_estimate_rejected_winback(account_id: int, estimate: "CRMEstimate") -> None:
+    """Email win-back to a customer who rejected or let an estimate expire."""
+    if not estimate.customer_email:
+        return
+
+    # Suppress if unsubscribed
+    try:
+        from app.models_leads import EmailUnsubscribe
+        if EmailUnsubscribe.query.filter_by(email=estimate.customer_email.lower()).first():
+            return
+    except Exception:
+        pass
+
+    business_name = _get_account_name(account_id)
+    v = dict(
+        name=estimate.customer_name or "there",
+        job_type=estimate.job_type or "service",
+        business_name=business_name,
+    )
+    try:
+        from app.services.email_service import send_email
+        send_email(
+            to_email=estimate.customer_email,
+            subject=_REJECTED_EMAIL_SUBJECT.format(**v),
+            html_body=_REJECTED_EMAIL_HTML.format(**v),
+        )
+        log.info("estimate_rejected winback sent estimate=%s to=%s", estimate.id, estimate.customer_email)
+    except Exception:
+        log.exception("estimate_rejected winback email failed estimate=%s", estimate.id)
 
 
 # ---------------------------------------------------------------------------

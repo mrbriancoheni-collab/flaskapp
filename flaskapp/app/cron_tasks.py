@@ -89,6 +89,15 @@ def run_daily(app, db):
     except Exception:
         app.logger.exception("[CRON] estimate follow-ups failed")
 
+    # Invoice payment follow-ups (7 days after invoicing, if unpaid)
+    try:
+        from app.services.invoice_followup_service import process_pending_invoice_followups
+        n = process_pending_invoice_followups()
+        if n:
+            app.logger.info("[CRON] sent %s invoice follow-ups", n)
+    except Exception:
+        app.logger.exception("[CRON] invoice follow-ups failed")
+
     # NPS satisfaction surveys (daily)
     try:
         from app.services.nps_service import process_pending_nps_surveys

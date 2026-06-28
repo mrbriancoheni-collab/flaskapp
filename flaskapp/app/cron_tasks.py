@@ -39,7 +39,14 @@ def run_minutely(app, db):
 def run_hourly(app, db):
     """Periodic housekeeping. Keep this light; heavy jobs belong in run_daily."""
     app.logger.info("[CRON] hourly tick at %s", datetime.utcnow().isoformat())
-    # TODO: queue blog drafts, refresh sitemaps, sync analytics, etc.
+
+    try:
+        from app.services.appointment_reminder_service import process_pending_appointment_reminders
+        n = process_pending_appointment_reminders()
+        if n:
+            app.logger.info("[CRON] sent %s appointment reminders", n)
+    except Exception:
+        app.logger.exception("[CRON] appointment reminders failed")
 
 
 def run_daily(app, db):
@@ -72,6 +79,15 @@ def run_daily(app, db):
         _run_daily_lead_automation(app)
     except Exception:
         app.logger.exception("[CRON] Lead automation run failed")
+
+    # Estimate follow-up sequences (day 2 + day 5 nudges)
+    try:
+        from app.services.estimate_followup_service import process_pending_estimate_followups
+        n = process_pending_estimate_followups()
+        if n:
+            app.logger.info("[CRON] sent %s estimate follow-ups", n)
+    except Exception:
+        app.logger.exception("[CRON] estimate follow-ups failed")
 
     # Safety layer: rollback detection for all autonomous accounts
     try:

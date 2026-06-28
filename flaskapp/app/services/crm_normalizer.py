@@ -229,12 +229,14 @@ def _fire_estimate_hook(account_id: int, estimate: "CRMEstimate",
 
 
 def on_estimate_sent(account_id: int, estimate: "CRMEstimate") -> None:
-    """
-    Called when a new estimate is logged.
-    TODO: enroll in a 2-day follow-up email/SMS sequence.
-    """
+    """Called when a new estimate is logged — queues follow-up sequence."""
     log.info("estimate_sent account=%s estimate=%s customer=%s amount=$%.2f",
              account_id, estimate.id, estimate.customer_name, estimate.amount_dollars)
+    try:
+        from app.services.estimate_followup_service import queue_estimate_followup
+        queue_estimate_followup(account_id, estimate)
+    except Exception:
+        log.exception("on_estimate_sent: failed to queue follow-up")
 
 
 def on_estimate_accepted(account_id: int, estimate: "CRMEstimate") -> None:
@@ -258,7 +260,7 @@ def on_estimate_rejected(account_id: int, estimate: "CRMEstimate") -> None:
 def on_appointment_booked(account_id: int, job: "CRMJob") -> None:
     """
     Called when a job gets an appointment_at datetime set.
-    TODO: send confirmation now + reminder 24hr before.
+    The hourly cron sends the 24-hour reminder; this hook just logs for now.
     """
     log.info("appointment_booked account=%s job=%s customer=%s at=%s",
              account_id, getattr(job, "external_job_id", job.id),

@@ -63,8 +63,9 @@ class CRMJob(db.Model):
     job_status      = db.Column(db.String(64),  nullable=True)   # estimate|booked|scheduled|completed|invoiced|cancelled
     revenue_cents   = db.Column(db.Integer, nullable=True, default=0)
     job_date        = db.Column(db.Date, nullable=True, index=True)
-    appointment_at  = db.Column(db.DateTime, nullable=True)      # scheduled appointment datetime
-    invoiced_at     = db.Column(db.DateTime, nullable=True)      # when invoice was sent
+    appointment_at              = db.Column(db.DateTime, nullable=True)
+    appointment_reminder_sent_at = db.Column(db.DateTime, nullable=True)
+    invoiced_at                 = db.Column(db.DateTime, nullable=True)
 
     # Lead source
     lead_source     = db.Column(db.String(128), nullable=True)   # 'google_ads'|'organic'|'referral'|etc.

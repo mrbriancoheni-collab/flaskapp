@@ -180,6 +180,11 @@ def on_crm_job_completed(account_id: int, job) -> None:
     """
     Hook called when a CRM job (ServiceTitan / Jobber) is marked completed.
     `job` can be a CRMJob or ServiceTitanJob — we duck-type the fields we need.
+
+    Triggers:
+      1. NPS satisfaction survey (email only)
+      2. Review request (SMS + email) — gated on NPS if survey was sent
+      3. Referral request queued for 7 days later (handled by daily cron)
     """
     try:
         name = getattr(job, "customer_name", None) or getattr(job, "external_customer_id", None)
@@ -191,6 +196,23 @@ def on_crm_job_completed(account_id: int, job) -> None:
             log.debug("on_crm_job_completed: no contact info for job %s, skipping", getattr(job, "id", "?"))
             return
 
+        # 1. NPS survey (email only — gives honest feedback before public review)
+        if email:
+            try:
+                cfg = LeadIntakeConfig.query.filter_by(account_id=account_id).first()
+                google_link = cfg.review_link_google if cfg else None
+                from app.services.nps_service import queue_nps_survey
+                queue_nps_survey(
+                    account_id=account_id,
+                    customer_name=name,
+                    email=email,
+                    job_type=job_type,
+                    google_review_link=google_link,
+                )
+            except Exception:
+                log.exception("on_crm_job_completed: NPS queue failed account=%s", account_id)
+
+        # 2. Review request (SMS + email)
         queue_review_request(
             account_id=account_id,
             customer_name=name,
@@ -198,5 +220,19 @@ def on_crm_job_completed(account_id: int, job) -> None:
             email=email,
             job_type=job_type,
         )
+
+        # 3. Referral request (queued; cron sends 7 days later)
+        try:
+            from app.services.referral_service import queue_referral_request
+            queue_referral_request(
+                account_id=account_id,
+                customer_name=name,
+                phone=phone,
+                email=email,
+                job_type=job_type,
+            )
+        except Exception:
+            log.exception("on_crm_job_completed: referral queue failed account=%s", account_id)
+
     except Exception:
         log.exception("on_crm_job_completed failed for account %s", account_id)

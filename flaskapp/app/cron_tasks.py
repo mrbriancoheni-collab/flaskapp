@@ -89,6 +89,34 @@ def run_daily(app, db):
     except Exception:
         app.logger.exception("[CRON] estimate follow-ups failed")
 
+    # NPS satisfaction surveys (daily)
+    try:
+        from app.services.nps_service import process_pending_nps_surveys
+        n = process_pending_nps_surveys()
+        if n:
+            app.logger.info("[CRON] sent %s NPS surveys", n)
+    except Exception:
+        app.logger.exception("[CRON] NPS surveys failed")
+
+    # Referral requests (daily)
+    try:
+        from app.services.referral_service import process_pending_referral_requests
+        n = process_pending_referral_requests()
+        if n:
+            app.logger.info("[CRON] sent %s referral requests", n)
+    except Exception:
+        app.logger.exception("[CRON] referral requests failed")
+
+    # Reactivation / win-back campaign (Mondays only)
+    if datetime.utcnow().weekday() == 0:
+        try:
+            from app.services.reactivation_service import process_reactivation_campaign
+            n = process_reactivation_campaign()
+            if n:
+                app.logger.info("[CRON] sent %s reactivation messages", n)
+        except Exception:
+            app.logger.exception("[CRON] reactivation campaign failed")
+
     # Safety layer: rollback detection for all autonomous accounts
     try:
         _run_daily_safety_checks(app)

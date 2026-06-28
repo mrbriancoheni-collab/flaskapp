@@ -615,11 +615,8 @@ Account Created: {user.created_at.strftime('%B %d, %Y at %I:%M %p') if user.crea
 This is an automated notification from FieldSprout.
         """
 
-        # Queue emails for both addresses (background processing)
-        notification_emails = [
-            "hi@fieldsprout.io",
-            "mrbriancoheni@gmail.com"
-        ]
+        raw = current_app.config.get("ADMIN_NOTIFICATION_EMAILS", "hi@fieldsprout.io,mrbriancoheni@gmail.com")
+        notification_emails = [e.strip() for e in raw.split(",") if e.strip()]
 
         for email in notification_emails:
             queue_email(
@@ -1089,7 +1086,7 @@ def handle_checkout_session_completed(event_data: Dict[str, Any]):
             """
 
             send_email(
-                to_email="mrbriancoheni@gmail.com",
+                to_email=current_app.config.get("ADMIN_NOTIFICATION_EMAIL", "mrbriancoheni@gmail.com"),
                 subject=subject,
                 body_html=body_html,
                 body_text=body_text

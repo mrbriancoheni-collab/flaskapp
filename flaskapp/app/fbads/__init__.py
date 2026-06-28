@@ -77,8 +77,25 @@ def _openai_client():
 # -----------------------------------------------------------------------------
 # Token storage helpers (DB if available, else session fallback)
 # -----------------------------------------------------------------------------
+def _encrypt_fb_token(token: str) -> str:
+    try:
+        from app.services.crypto import encrypt
+        return encrypt(token)
+    except Exception:
+        return token
+
+
+def _decrypt_fb_token(token: str) -> str:
+    try:
+        from app.services.crypto import decrypt
+        return decrypt(token)
+    except Exception:
+        return token
+
+
 def _store_fb_token(aid: int, token: str, expires_in: Optional[int]) -> None:
     expires_at = datetime.utcnow() + timedelta(seconds=int(expires_in or 60 * 60 * 24 * 60))
+    encrypted = _encrypt_fb_token(token)
     if db:
         try:
             with db.engine.connect() as conn:
@@ -106,14 +123,13 @@ def _store_fb_token(aid: int, token: str, expires_in: Optional[int]) -> None:
                             updated_at   = NOW()
                         """
                     ),
-                    dict(aid=aid, t=token, exp=expires_at),
+                    dict(aid=aid, t=encrypted, exp=expires_at),
                 )
                 conn.commit()
             return
         except Exception:
             current_app.logger.exception("FB token DB store failed; falling back to session.")
-    # Fallback to session (per-account session if you run multi-tenant in one login)
-    session["fb_access_token"] = token
+    session["fb_access_token"] = encrypted
     session["fb_expires_at"] = expires_at.isoformat()
 
 
@@ -153,7 +169,7 @@ def _try_refresh_token(token_row) -> None:
                         "UPDATE facebook_tokens SET access_token=:t, expires_at=:exp, updated_at=NOW() "
                         "WHERE account_id=:aid"
                     ),
-                    dict(t=new_token, exp=new_expires, aid=token_row[2]),
+                    dict(t=_encrypt_fb_token(new_token), exp=new_expires, aid=token_row[2]),
                 )
                 conn.commit()
         current_app.logger.info("FB token proactively refreshed for account %s", token_row[2])
@@ -173,12 +189,11 @@ def _get_fb_token(aid: int) -> Optional[str]:
                 if row:
                     # Check hard expiry
                     if row[1] and row[1] < datetime.utcnow():
-                        # Token expired — do NOT delete, just signal reconnect
                         return None
                     # Proactive refresh if expiring within 7 days
                     if row[1] and row[1] < datetime.utcnow() + timedelta(days=7):
                         _try_refresh_token(row)
-                    return row[0]
+                    return _decrypt_fb_token(row[0])
         except Exception:
             current_app.logger.exception("FB token DB read failed; trying session fallback.")
     # Session fallback
@@ -190,7 +205,8 @@ def _get_fb_token(aid: int) -> Optional[str]:
                 return None
         except Exception:
             pass
-    return session.get("fb_access_token")
+    raw = session.get("fb_access_token")
+    return _decrypt_fb_token(raw) if raw else None
 
 
 def _clear_fb_token(aid: int) -> None:
@@ -665,7 +681,7 @@ def callback():
     try:
         r.raise_for_status()
     except Exception:
-        current_app.logger.exception("FB short-lived token exchange failed: %s", r.text)
+        current_app.logger.error("FB short-lived token exchange failed: HTTP %s", r.status_code)
         flash("Facebook token exchange failed.", "error")
         return redirect(url_for("fbads_bp.index"))
     short_tok = r.json().get("access_token")
@@ -684,7 +700,7 @@ def callback():
     try:
         rr.raise_for_status()
     except Exception:
-        current_app.logger.exception("FB long-lived token exchange failed: %s", rr.text)
+        current_app.logger.error("FB long-lived token exchange failed: HTTP %s", rr.status_code)
         flash("Facebook long-lived token exchange failed.", "error")
         return redirect(url_for("fbads_bp.index"))
 
@@ -1432,18 +1448,13 @@ def create_test_campaign_post():
         return redirect(url_for("fbads_bp.campaigns"))
 
     except requests.exceptions.HTTPError as e:
-        error_msg = e.response.text if e.response else str(e)
-        current_app.logger.error(f"Campaign creation failed: {error_msg}")
-
-        flash(
-            f"Failed to create campaign. Facebook API error: {error_msg}",
-            "error"
-        )
+        current_app.logger.error("Campaign creation failed: HTTP %s", e.response.status_code if e.response else "?")
+        flash("Failed to create campaign. Please check your Facebook Ads settings and try again.", "error")
         return redirect(url_for("fbads_bp.create_test_campaign"))
 
-    except Exception as e:
+    except Exception:
         current_app.logger.exception("Unexpected error creating campaign")
-        flash(f"Unexpected error: {str(e)}", "error")
+        flash("An unexpected error occurred while creating the campaign.", "error")
         return redirect(url_for("fbads_bp.create_test_campaign"))
 
 @fbads_bp.route("/adsets", endpoint="adsets")
@@ -1656,12 +1667,11 @@ def update_ad():
         current_app.logger.info(f"Updated Facebook ad {ad_id}: {name}")
 
     except requests.exceptions.HTTPError as e:
-        error_msg = e.response.text if e.response else str(e)
-        current_app.logger.error(f"Failed to update ad {ad_id}: {error_msg}")
-        flash(f"Failed to update ad: {error_msg}", "error")
-    except Exception as e:
-        current_app.logger.exception(f"Error updating ad {ad_id}")
-        flash(f"Error updating ad: {str(e)}", "error")
+        current_app.logger.error("Failed to update ad %s: HTTP %s", ad_id, e.response.status_code if e.response else "?")
+        flash("Failed to update ad. Please check your Facebook Ads settings and try again.", "error")
+    except Exception:
+        current_app.logger.exception("Error updating ad %s", ad_id)
+        flash("An unexpected error occurred while updating the ad.", "error")
 
     return redirect(url_for("fbads_bp.ads", adset_id=adset_id))
 
@@ -1792,9 +1802,9 @@ def apply_fix():
                 "error": result.get('error', 'Failed to apply fix')
             }), 400
 
-    except Exception as e:
+    except Exception:
         current_app.logger.exception("Error applying Facebook Ads fix")
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": "An internal error occurred"}), 500
 
 def _apply_facebook_fix(access_token: str, action_type: str, entity_type: str, entity_id: str, params: dict) -> dict:
     """
@@ -2001,8 +2011,8 @@ def _apply_facebook_fix(access_token: str, action_type: str, entity_type: str, e
         else:
             return {"success": False, "error": f"Unknown action type: {action_type}"}
 
-    except Exception as e:
+    except Exception:
         current_app.logger.exception("Error in _apply_facebook_fix")
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": "An internal error occurred"}
 
 

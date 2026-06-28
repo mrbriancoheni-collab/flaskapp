@@ -9,7 +9,7 @@ Allows admins to configure:
 - Override risk levels per decision type
 - Define business rules for decision making
 """
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, g
+from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, g, abort
 from sqlalchemy import text
 import json
 
@@ -51,11 +51,19 @@ def configure_list():
     )
 
 
+_VALID_AGENT_IDS = frozenset([
+    "strategic_director", "campaign_manager", "budget_guardian",
+    "quality_score_agent", "keyword_optimizer", "negative_keyword_agent", "ad_copy_agent",
+])
+
+
 @agent_config_bp.route("/configure/global/<agent_id>", methods=["GET", "POST"])
 @login_required
 @require_admin
 def configure_global(agent_id: str):
     """Configure global defaults for an agent."""
+    if agent_id not in _VALID_AGENT_IDS:
+        abort(404)
 
     if request.method == "POST":
         # Update configuration
@@ -190,6 +198,9 @@ def configure_global(agent_id: str):
 @require_admin
 def configure_account(account_id: int, agent_id: str):
     """Configure agent for a specific account (overrides global defaults)."""
+    if agent_id not in _VALID_AGENT_IDS:
+        abort(404)
+
     from app.models import Account
 
     account = Account.query.get_or_404(account_id)

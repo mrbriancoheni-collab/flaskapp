@@ -48,8 +48,31 @@ def facebook_data_deletion():
     if not user_id:
         return jsonify({"error": "missing user_id"}), 400
 
-    # TODO: delete or anonymize any data associated with this user_id in your DB/storage.
-    # For demo, we just mark a request ID + status entry.
+    # Anonymize all FB user data associated with this Facebook user_id
+    try:
+        from app import db
+        from sqlalchemy import text
+        db.session.execute(
+            text(
+                "UPDATE fb_accounts SET fb_user_id = NULL, email = NULL,"
+                " access_token = NULL, page_access_token = NULL"
+                " WHERE fb_user_id = :uid"
+            ),
+            {"uid": user_id},
+        )
+        db.session.execute(
+            text("DELETE FROM fb_leads WHERE raw LIKE :pattern"),
+            {"pattern": f'%"fb_user_id": "{user_id}"%'},
+        )
+        db.session.commit()
+    except Exception as _exc:
+        try:
+            from app import db
+            db.session.rollback()
+        except Exception:
+            pass
+        current_app.logger.warning("FB data deletion DB cleanup failed for user_id=%s: %s", user_id, _exc)
+
     confirmation_code = f"fbdel_{user_id}_{int(time.time())}"
     _DATA_DELETION_REQUESTS[confirmation_code] = {
         "user_id": user_id,

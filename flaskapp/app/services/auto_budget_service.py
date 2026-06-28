@@ -1267,9 +1267,53 @@ class AutoBudgetService:
         if not recent_change:
             return None
 
-        # TODO: Get current ROAS and compare with historical
-        # This would require campaign performance data
-        # For now, return None - implement when performance tracking is available
+        # Compare current ROAS with ROAS at time of the last budget change
+        try:
+            cursor2 = self.db.cursor(dictionary=True)
+            # Average ROAS over the last 24 h from campaign_performance_history
+            cursor2.execute(
+                """
+                SELECT AVG(roas) AS current_roas
+                FROM campaign_performance_history
+                WHERE campaign_id = %s
+                  AND date >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+                """,
+                (campaign_id,),
+            )
+            row_roas = cursor2.fetchone()
+            cursor2.close()
+            current_roas = (row_roas or {}).get("current_roas") or 0.0
+
+            # Baseline ROAS: 7-day average before the change was made
+            change_ts = recent_change.get("created_at")
+            if change_ts and current_roas:
+                cursor3 = self.db.cursor(dictionary=True)
+                cursor3.execute(
+                    """
+                    SELECT AVG(roas) AS baseline_roas
+                    FROM campaign_performance_history
+                    WHERE campaign_id = %s
+                      AND date BETWEEN DATE_SUB(%s, INTERVAL 8 DAY) AND DATE_SUB(%s, INTERVAL 1 DAY)
+                    """,
+                    (campaign_id, change_ts, change_ts),
+                )
+                row_base = cursor3.fetchone()
+                cursor3.close()
+                baseline_roas = (row_base or {}).get("baseline_roas") or 0.0
+
+                if baseline_roas > 0:
+                    pct_drop = (baseline_roas - current_roas) / baseline_roas * 100
+                    if pct_drop >= performance_drop_threshold:
+                        return {
+                            "budget_change_log_id": recent_change["id"],
+                            "reason": (
+                                f"ROAS dropped {pct_drop:.1f}% "
+                                f"(was {baseline_roas:.2f}x, now {current_roas:.2f}x) "
+                                f"after budget change"
+                            ),
+                        }
+        except Exception as exc:
+            logger.warning("check_for_rollback ROAS query failed: %s", exc)
 
         return None
 

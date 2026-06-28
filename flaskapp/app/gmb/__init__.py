@@ -1017,9 +1017,53 @@ def update_profile():
         "attributes": _csv("attributes"),
     }
 
-    # TODO: call GBP Business Information API to update live profile if connected.
     _set_session_profile(payload)
-    flash("Profile saved.", "success")
+
+    # Push to GBP Business Information API if connected
+    if _is_connected(aid) and not allow_demo:
+        try:
+            at = _gbp_access_token_for(aid)
+            loc = _gbp_list_first_location_name(at) if at else None
+            if at and loc:
+                gbp_body: Dict[str, Any] = {}
+                update_fields = []
+                if payload.get("name"):
+                    gbp_body["title"] = payload["name"]
+                    update_fields.append("title")
+                if payload.get("phone"):
+                    gbp_body["phoneNumbers"] = {"primaryPhone": payload["phone"]}
+                    update_fields.append("phoneNumbers")
+                if payload.get("website"):
+                    gbp_body["websiteUri"] = payload["website"]
+                    update_fields.append("websiteUri")
+                if payload.get("description"):
+                    gbp_body["profile"] = {"description": payload["description"]}
+                    update_fields.append("profile")
+                if gbp_body and update_fields:
+                    update_mask = ",".join(update_fields)
+                    resp = requests.patch(
+                        f"https://mybusinessbusinessinformation.googleapis.com/v1/{loc}",
+                        params={"updateMask": update_mask},
+                        headers={"Authorization": f"Bearer {at}", "Content-Type": "application/json"},
+                        json=gbp_body,
+                        timeout=15,
+                    )
+                    if resp.ok:
+                        flash("Profile saved and synced to Google Business.", "success")
+                    else:
+                        current_app.logger.warning("GBP profile update failed: %s %s",
+                                                   resp.status_code, resp.text[:200])
+                        flash("Profile saved locally (Google sync failed — check permissions).", "warning")
+                else:
+                    flash("Profile saved.", "success")
+            else:
+                flash("Profile saved (could not reach Google Business API).", "warning")
+        except Exception:
+            current_app.logger.exception("GBP profile push failed for account_id=%s", aid)
+            flash("Profile saved locally (Google sync error).", "warning")
+    else:
+        flash("Profile saved.", "success")
+
     return redirect(url_for("gmb_bp.index"))
 
 

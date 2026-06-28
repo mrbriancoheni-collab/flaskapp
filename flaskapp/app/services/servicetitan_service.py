@@ -79,12 +79,17 @@ class ServiceTitanService:
             return False
 
         try:
+            try:
+                from app.services.crypto import decrypt
+                _secret = decrypt(self.connection.client_secret)
+            except Exception:
+                _secret = self.connection.client_secret
             response = requests.post(
                 self.AUTH_URL,
                 data={
                     "grant_type": "client_credentials",
                     "client_id": self.connection.client_id,
-                    "client_secret": self.connection.client_secret,
+                    "client_secret": _secret,
                 },
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
                 timeout=30
@@ -115,12 +120,17 @@ class ServiceTitanService:
             return self._get_access_token()
 
         try:
+            try:
+                from app.services.crypto import decrypt
+                _secret = decrypt(self.connection.client_secret)
+            except Exception:
+                _secret = self.connection.client_secret
             response = requests.post(
                 self.AUTH_URL,
                 data={
                     "grant_type": "refresh_token",
                     "client_id": self.connection.client_id,
-                    "client_secret": self.connection.client_secret,
+                    "client_secret": _secret,
                     "refresh_token": self.connection.refresh_token,
                 },
                 headers={"Content-Type": "application/x-www-form-urlencoded"},

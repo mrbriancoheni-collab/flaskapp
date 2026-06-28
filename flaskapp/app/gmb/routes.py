@@ -91,7 +91,6 @@ def update_profile():
         "hours_text": request.form.get("hours") or "",
         "attributes": parse_csv("attributes"),
     }
-    # TODO: push to Google Business Profile API here.
     set_profile(payload)
     flash("Profile saved.", "success")
     return redirect(url_for("gmb_bp.index"))

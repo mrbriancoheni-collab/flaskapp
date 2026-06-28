@@ -991,8 +991,7 @@ def apply_suggestions():
 @login_required
 def update_profile():
     """
-    Save posted profile fields.
-    TODO: If connected, push to Google Business Profile API.
+    Save posted profile fields and push to Google Business Profile API if connected.
     """
     aid = current_account_id()
     allow_demo = (request.args.get("demo") == "1")

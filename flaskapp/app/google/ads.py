@@ -755,7 +755,6 @@ def create_draft():
     }
     """
     payload = request.get_json(force=True)
-    # TODO: add deeper validation if needed
     return jsonify({"status": "ok", "draft": payload})
 
 

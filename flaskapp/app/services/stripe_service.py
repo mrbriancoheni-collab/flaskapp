@@ -830,7 +830,32 @@ def handle_invoice_payment_failed(event_data: Dict[str, Any]):
             }
         )
 
-        # TODO: Queue email notification to customer
+        # Notify the customer that their payment failed
+        try:
+            from app.models import User
+            from app.services.email_service import send_email
+            user = User.query.filter_by(email=customer.user_id).first()
+            if user and user.email:
+                amount_dollars = invoice["amount_due"] / 100
+                send_email(
+                    to_email=user.email,
+                    subject="Action required: your FieldSprout payment failed",
+                    html_body=(
+                        f"<p>Hi {user.name or 'there'},</p>"
+                        f"<p>We were unable to process your payment of "
+                        f"<strong>${amount_dollars:.2f}</strong> "
+                        f"(invoice <code>{invoice['id']}</code>).</p>"
+                        f"<p>Please update your payment method to keep your account active:</p>"
+                        f'<p><a href="https://fieldsprout.io/account/billing" '
+                        f'style="background:#4f46e5;color:#fff;padding:10px 20px;'
+                        f'border-radius:6px;text-decoration:none;font-weight:600;">'
+                        f"Update Payment Method</a></p>"
+                        f"<p style='color:#6b7280;font-size:13px'>"
+                        f"If you have questions, just reply to this email.</p>"
+                    ),
+                )
+        except Exception:
+            current_app.logger.exception("Failed to send payment-failed email for invoice %s", invoice["id"])
 
 
 def _update_subscription_from_stripe(sub: Subscription, stripe_sub: Dict[str, Any]):

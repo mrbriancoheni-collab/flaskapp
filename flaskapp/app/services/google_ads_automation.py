@@ -577,7 +577,14 @@ def reallocate_budgets(account_id: int, dry_run: bool = False) -> Dict[str, Any]
         overperformers = []   # Good CPA, budget remaining
         poor_performers = []  # Bad CPA
 
-        target_cpa = 50.0  # TODO: Get from account settings
+        target_cpa = 50.0  # default fallback
+        try:
+            from app.models_ads import AdsAccountGoal
+            goal = AdsAccountGoal.query.filter_by(account_id=account_id).first()
+            if goal and goal.target_cpa_cents:
+                target_cpa = goal.target_cpa_cents / 100.0
+        except Exception:
+            pass
 
         for campaign in campaigns:
             cpa = campaign['cpa']

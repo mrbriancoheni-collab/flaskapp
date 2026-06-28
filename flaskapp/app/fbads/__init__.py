@@ -283,25 +283,126 @@ def _sample_leads() -> List[Dict[str, Any]]:
         },
     ]
 
-# TODO: replace with your DB CRUD once wired
 def _get_profile_from_db(user_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
-    return None
+    """Load FBProfile for the current account."""
+    if not db:
+        return None
+    try:
+        from app.models_fbads import FBProfile
+        aid = user_id or current_account_id()
+        prof = FBProfile.query.filter_by(account_id=aid).first()
+        if not prof:
+            return None
+        raw = prof.raw or {}
+        return {"page_id": prof.page_id, "page_name": prof.page_name,
+                "about": prof.about, "description": prof.description,
+                "website": prof.website, "phone": prof.phone, **raw}
+    except Exception:
+        return None
+
 
 def _save_profile_to_db(data: Dict[str, Any], user_id: Optional[int] = None) -> None:
-    # Persist `data` to your fbads profile table; also add audit logging if desired
-    pass
+    """Upsert FBProfile; extra fields not in the schema are stored in raw JSON."""
+    if not db:
+        return
+    try:
+        from app.models_fbads import FBProfile
+        aid = user_id or current_account_id()
+        page_id = data.get("page_id") or "default"
+        prof = FBProfile.query.filter_by(account_id=aid, page_id=page_id).first()
+        if prof is None:
+            prof = FBProfile(account_id=aid, page_id=page_id)
+            db.session.add(prof)
+        prof.page_name = data.get("page_name")
+        prof.website = data.get("website")
+        prof.phone = data.get("phone")
+        known = {"page_id", "page_name", "website", "phone", "about", "description"}
+        prof.raw = {k: v for k, v in data.items() if k not in known}
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
 
 def _get_leads_from_db(user_id: Optional[int] = None) -> List[Dict[str, Any]]:
-    return []
+    """Return FBLead rows for the current account as list of dicts."""
+    if not db:
+        return []
+    try:
+        from app.models_fbads import FBLead
+        aid = user_id or current_account_id()
+        leads = (FBLead.query.filter_by(account_id=aid)
+                 .order_by(FBLead.created_at.desc()).limit(200).all())
+        result = []
+        for lead in leads:
+            raw = lead.raw or {}
+            result.append({
+                "id": lead.id,
+                "created_at": lead.created_at.strftime("%Y-%m-%d %H:%M") if lead.created_at else "",
+                "full_name": lead.name, "email": lead.email, "phone": lead.phone,
+                "campaign": raw.get("campaign_name", ""), "adset": raw.get("adset_name", ""),
+                "ad": raw.get("ad_name", ""), "status": raw.get("status", "New"),
+                "notes": raw.get("notes", ""),
+            })
+        return result
+    except Exception:
+        return []
+
 
 def _update_lead_status_in_db(lead_id: int, status: str, user_id: Optional[int] = None) -> None:
-    pass
+    """Update status field stored in FBLead.raw."""
+    if not db:
+        return
+    try:
+        from app.models_fbads import FBLead
+        aid = user_id or current_account_id()
+        lead = FBLead.query.filter_by(id=lead_id, account_id=aid).first()
+        if lead:
+            raw = dict(lead.raw or {})
+            raw["status"] = status
+            lead.raw = raw
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
+
 
 def _update_lead_notes_in_db(lead_id: int, notes: str, user_id: Optional[int] = None) -> None:
-    pass
+    """Update notes field stored in FBLead.raw."""
+    if not db:
+        return
+    try:
+        from app.models_fbads import FBLead
+        aid = user_id or current_account_id()
+        lead = FBLead.query.filter_by(id=lead_id, account_id=aid).first()
+        if lead:
+            raw = dict(lead.raw or {})
+            raw["notes"] = notes
+            lead.raw = raw
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
+
 
 def _get_lead_by_id_from_db(lead_id: int, user_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
-    return None
+    """Return a single FBLead as a dict."""
+    if not db:
+        return None
+    try:
+        from app.models_fbads import FBLead
+        aid = user_id or current_account_id()
+        lead = FBLead.query.filter_by(id=lead_id, account_id=aid).first()
+        if not lead:
+            return None
+        raw = lead.raw or {}
+        return {
+            "id": lead.id,
+            "created_at": lead.created_at.strftime("%Y-%m-%d %H:%M") if lead.created_at else "",
+            "full_name": lead.name, "email": lead.email, "phone": lead.phone,
+            "campaign": raw.get("campaign_name", ""), "adset": raw.get("adset_name", ""),
+            "ad": raw.get("ad_name", ""), "status": raw.get("status", "New"),
+            "notes": raw.get("notes", ""),
+        }
+    except Exception:
+        return None
 
 # -----------------------------------------------------------------------------
 # Routes — UI pages you already had

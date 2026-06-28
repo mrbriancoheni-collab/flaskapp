@@ -7,7 +7,7 @@ from typing import Optional, List, Tuple
 from sqlalchemy import text
 
 from app import db
-from app.models_wp import WPJob
+from app.models_wp import WPJob  # noqa: F401 — kept for ORM identity; process_wp_jobs delegates to wp._process_queue
 
 
 # =========================
@@ -199,60 +199,21 @@ def run_daily(app, db):
 
 def process_wp_jobs(app) -> bool:
     """
-    Pick the oldest queued job and run it.
-    Returns True if a job was processed, else False.
+    Process one queued WP job per site and return True if any were processed.
+    Delegates to the wp module's _process_queue which handles publish and ai_generate kinds.
     """
-    now = datetime.utcnow()
-
-    job = (
-        WPJob.query
-        .filter(WPJob.status == "queued")
-        .order_by(
-            WPJob.scheduled_at.is_(None),
-            WPJob.scheduled_at.asc(),
-            WPJob.priority.desc(),
-            WPJob.created_at.asc(),
-        )
-        .first()
-    )
-    if not job:
-        return False
-
     try:
-        job.status = "running"
-        job.started_at = now
-        db.session.commit()
-
-        if job.action == "publish_manual":
-            # TODO: replace with your real WP publish call
-            title = (job.payload or {}).get("title") or "Untitled"
-            content = (job.payload or {}).get("content") or ""
-            # result = publish_to_wordpress(title, content, ...)
-            job.result = {"preview_url": None, "wp_post_id": None, "title": title}
-            job.status = "done"
-
-        elif job.action == "generate_ai_post":
-            # TODO: call your AI writer (OpenAI/Claude) and optionally publish/save draft
-            brief = job.payload or {}
-            # draft = generate_ai_article(brief)
-            # optionally post to WP as draft
-            job.result = {"draft_title": brief.get("primary_keyword") or "AI Draft", "wp_post_id": None}
-            job.status = "done"
-
-        else:
-            job.error = f"Unknown action: {job.action}"
-            job.status = "failed"
-
-        job.completed_at = datetime.utcnow()
-        db.session.commit()
-        return True
-
-    except Exception as e:
-        app.logger.exception("WP job failed")
-        job.status = "failed"
-        job.error = str(e)
-        job.retries = (job.retries or 0) + 1
-        db.session.commit()
+        from app.models_wp import WPSite
+        from app.wp import _process_queue
+        sites = WPSite.query.all()
+        any_processed = False
+        for site in sites:
+            result = _process_queue(max_jobs=1, site=site)
+            if result.get("processed", 0) > 0:
+                any_processed = True
+        return any_processed
+    except Exception:
+        app.logger.exception("[CRON] process_wp_jobs failed")
         return False
 
 
@@ -500,17 +461,37 @@ def _accounts_with_google_ads_tokens(max_candidates: int = 200) -> List[int]:
 
 
 def _last_google_ads_analysis_time(aid: int) -> Optional[datetime]:
-    """
-    Return the most recent analysis time for this account.
-    For now, we'll use a simple approach - check if we have a table to track this.
-    If not, we'll store it in a metadata table or just run it every interval.
+    """Return the most recent optimization run time for this account, or None if never run."""
+    try:
+        with db.engine.connect() as conn:
+            row = conn.execute(
+                text(
+                    "SELECT ran_at FROM google_ads_optimization_runs"
+                    " WHERE account_id = :aid"
+                    " ORDER BY ran_at DESC LIMIT 1"
+                ),
+                {"aid": aid},
+            ).fetchone()
+        return row[0] if row else None
+    except Exception:
+        return None
 
-    TODO: Create a google_ads_optimization_runs table to track when analysis was last run.
-    For now, return None to always run.
-    """
-    # TODO: Implement tracking table
-    # For now, return None so it runs every time (respects the interval via manual tracking)
-    return None
+
+def _record_google_ads_analysis_time(aid: int) -> None:
+    """Upsert the latest optimization run timestamp for this account."""
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(
+                text(
+                    "INSERT INTO google_ads_optimization_runs (account_id, ran_at)"
+                    " VALUES (:aid, NOW())"
+                    " ON DUPLICATE KEY UPDATE ran_at = NOW()"
+                ),
+                {"aid": aid},
+            )
+            conn.commit()
+    except Exception:
+        pass
 
 
 def _generate_google_ads_optimizations_for_account(app, aid: int) -> bool:
@@ -594,6 +575,7 @@ def _generate_google_ads_optimizations_for_account(app, aid: int) -> bool:
                 "[CRON] Google Ads optimization email sent to %s for account %s (%d optimizations, $%,.0f/mo)",
                 user.email, account.name, len(analysis['opportunities']), total_monthly_value
             )
+            _record_google_ads_analysis_time(aid)
             return True
         else:
             app.logger.warning("[CRON] Failed to send email to %s for account_id=%s", user.email, aid)

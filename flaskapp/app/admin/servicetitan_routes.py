@@ -98,7 +98,11 @@ def settings():
 
         connection.tenant_id = tenant_id
         connection.client_id = client_id
-        connection.client_secret = client_secret  # TODO: Encrypt this!
+        try:
+            from app.services.crypto import encrypt
+            connection.client_secret = encrypt(client_secret)
+        except Exception:
+            connection.client_secret = client_secret
         connection.app_key = app_key
         connection.sync_frequency_hours = sync_frequency
         connection.sync_enabled = sync_enabled

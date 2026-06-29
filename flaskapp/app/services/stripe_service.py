@@ -615,11 +615,8 @@ Account Created: {user.created_at.strftime('%B %d, %Y at %I:%M %p') if user.crea
 This is an automated notification from FieldSprout.
         """
 
-        # Queue emails for both addresses (background processing)
-        notification_emails = [
-            "hi@fieldsprout.io",
-            "mrbriancoheni@gmail.com"
-        ]
+        raw = current_app.config.get("ADMIN_NOTIFICATION_EMAILS", "hi@fieldsprout.io,mrbriancoheni@gmail.com")
+        notification_emails = [e.strip() for e in raw.split(",") if e.strip()]
 
         for email in notification_emails:
             queue_email(
@@ -830,7 +827,32 @@ def handle_invoice_payment_failed(event_data: Dict[str, Any]):
             }
         )
 
-        # TODO: Queue email notification to customer
+        # Notify the customer that their payment failed
+        try:
+            from app.models import User
+            from app.services.email_service import send_email
+            user = User.query.filter_by(email=customer.user_id).first()
+            if user and user.email:
+                amount_dollars = invoice["amount_due"] / 100
+                send_email(
+                    to_email=user.email,
+                    subject="Action required: your FieldSprout payment failed",
+                    html_body=(
+                        f"<p>Hi {user.name or 'there'},</p>"
+                        f"<p>We were unable to process your payment of "
+                        f"<strong>${amount_dollars:.2f}</strong> "
+                        f"(invoice <code>{invoice['id']}</code>).</p>"
+                        f"<p>Please update your payment method to keep your account active:</p>"
+                        f'<p><a href="https://fieldsprout.io/account/billing" '
+                        f'style="background:#4f46e5;color:#fff;padding:10px 20px;'
+                        f'border-radius:6px;text-decoration:none;font-weight:600;">'
+                        f"Update Payment Method</a></p>"
+                        f"<p style='color:#6b7280;font-size:13px'>"
+                        f"If you have questions, just reply to this email.</p>"
+                    ),
+                )
+        except Exception:
+            current_app.logger.exception("Failed to send payment-failed email for invoice %s", invoice["id"])
 
 
 def _update_subscription_from_stripe(sub: Subscription, stripe_sub: Dict[str, Any]):
@@ -880,11 +902,14 @@ def _sync_subscription_status_to_account(user_id: str, stripe_status: str):
                 )
                 return
 
-            # Get table/field names from config
+            # Allowlist identifiers — never interpolate arbitrary config values into SQL
+            _ALLOWED_TABLES = {"accounts", "users_accounts", "account"}
+            _ALLOWED_FIELDS = {"stripe_status", "subscription_status", "plan_status"}
             table_name = current_app.config.get("ACCOUNT_TABLE_NAME", "accounts")
             stripe_field = current_app.config.get("ACCOUNT_STRIPE_FIELD", "stripe_status")
+            if table_name not in _ALLOWED_TABLES or stripe_field not in _ALLOWED_FIELDS:
+                raise ValueError(f"Disallowed SQL identifier: {table_name!r} / {stripe_field!r}")
 
-            # Update accounts table
             conn.execute(
                 text(f"UPDATE {table_name} SET {stripe_field} = :status WHERE id = :id"),
                 {"status": stripe_status, "id": account_id}
@@ -929,9 +954,15 @@ def _grant_lifetime_plan(user_id: str, tier: str):
                 return
 
             account_id = result[0]
+            _ALLOWED_TABLES = {"accounts", "users_accounts", "account"}
+            _ALLOWED_FIELDS = {"stripe_status", "subscription_status", "plan_status"}
+            _ALLOWED_PLAN_FIELDS = {"plan", "plan_name", "subscription_plan"}
             table = current_app.config.get("ACCOUNT_TABLE_NAME", "accounts")
             plan_field = current_app.config.get("ACCOUNT_PLAN_FIELD", "plan")
             stripe_field = current_app.config.get("ACCOUNT_STRIPE_FIELD", "stripe_status")
+            if table not in _ALLOWED_TABLES or plan_field not in _ALLOWED_PLAN_FIELDS \
+                    or stripe_field not in _ALLOWED_FIELDS:
+                raise ValueError(f"Disallowed SQL identifier in grant_lifetime_plan")
 
             conn.execute(
                 text(
@@ -1055,7 +1086,7 @@ def handle_checkout_session_completed(event_data: Dict[str, Any]):
             """
 
             send_email(
-                to_email="mrbriancoheni@gmail.com",
+                to_email=current_app.config.get("ADMIN_NOTIFICATION_EMAIL", "mrbriancoheni@gmail.com"),
                 subject=subject,
                 body_html=body_html,
                 body_text=body_text

@@ -962,6 +962,18 @@ def create_app():
     except Exception:
         app.logger.exception("Failed to register marketing_bp")
 
+    # --- CRM Webhooks (Jobber, HouseCall Pro, ServiceTitan, manual) ---------
+    try:
+        from app.webhooks.crm_webhooks import crm_webhooks_bp
+        app.register_blueprint(crm_webhooks_bp)  # url_prefix=/api/webhooks/crm
+        try:
+            csrf.exempt(crm_webhooks_bp)
+        except Exception as _e:
+            app.logger.warning(f"Could not exempt crm_webhooks_bp from CSRF: {_e}")
+        app.logger.info("crm_webhooks_bp registered at /api/webhooks/crm")
+    except Exception:
+        app.logger.exception("Failed to register crm_webhooks_bp")
+
     # --- Marketing Webhooks (Twilio, Angi, Thumbtack, Nextdoor, generic) ---
     try:
         from app.webhooks.marketing_webhooks import marketing_webhooks_bp

@@ -77,8 +77,25 @@ def _openai_client():
 # -----------------------------------------------------------------------------
 # Token storage helpers (DB if available, else session fallback)
 # -----------------------------------------------------------------------------
+def _encrypt_fb_token(token: str) -> str:
+    try:
+        from app.services.crypto import encrypt
+        return encrypt(token)
+    except Exception:
+        return token
+
+
+def _decrypt_fb_token(token: str) -> str:
+    try:
+        from app.services.crypto import decrypt
+        return decrypt(token)
+    except Exception:
+        return token
+
+
 def _store_fb_token(aid: int, token: str, expires_in: Optional[int]) -> None:
     expires_at = datetime.utcnow() + timedelta(seconds=int(expires_in or 60 * 60 * 24 * 60))
+    encrypted = _encrypt_fb_token(token)
     if db:
         try:
             with db.engine.connect() as conn:
@@ -106,14 +123,13 @@ def _store_fb_token(aid: int, token: str, expires_in: Optional[int]) -> None:
                             updated_at   = NOW()
                         """
                     ),
-                    dict(aid=aid, t=token, exp=expires_at),
+                    dict(aid=aid, t=encrypted, exp=expires_at),
                 )
                 conn.commit()
             return
         except Exception:
             current_app.logger.exception("FB token DB store failed; falling back to session.")
-    # Fallback to session (per-account session if you run multi-tenant in one login)
-    session["fb_access_token"] = token
+    session["fb_access_token"] = encrypted
     session["fb_expires_at"] = expires_at.isoformat()
 
 
@@ -153,7 +169,7 @@ def _try_refresh_token(token_row) -> None:
                         "UPDATE facebook_tokens SET access_token=:t, expires_at=:exp, updated_at=NOW() "
                         "WHERE account_id=:aid"
                     ),
-                    dict(t=new_token, exp=new_expires, aid=token_row[2]),
+                    dict(t=_encrypt_fb_token(new_token), exp=new_expires, aid=token_row[2]),
                 )
                 conn.commit()
         current_app.logger.info("FB token proactively refreshed for account %s", token_row[2])
@@ -173,12 +189,11 @@ def _get_fb_token(aid: int) -> Optional[str]:
                 if row:
                     # Check hard expiry
                     if row[1] and row[1] < datetime.utcnow():
-                        # Token expired — do NOT delete, just signal reconnect
                         return None
                     # Proactive refresh if expiring within 7 days
                     if row[1] and row[1] < datetime.utcnow() + timedelta(days=7):
                         _try_refresh_token(row)
-                    return row[0]
+                    return _decrypt_fb_token(row[0])
         except Exception:
             current_app.logger.exception("FB token DB read failed; trying session fallback.")
     # Session fallback
@@ -190,7 +205,8 @@ def _get_fb_token(aid: int) -> Optional[str]:
                 return None
         except Exception:
             pass
-    return session.get("fb_access_token")
+    raw = session.get("fb_access_token")
+    return _decrypt_fb_token(raw) if raw else None
 
 
 def _clear_fb_token(aid: int) -> None:
@@ -214,7 +230,7 @@ def _is_connected() -> bool:
     """
     Real: checks token presence. Dev override: ?connected=1
     """
-    if request.args.get("connected") == "1":
+    if current_app.debug and request.args.get("connected") == "1":
         return True
     try:
         aid = current_account_id()
@@ -283,25 +299,126 @@ def _sample_leads() -> List[Dict[str, Any]]:
         },
     ]
 
-# TODO: replace with your DB CRUD once wired
 def _get_profile_from_db(user_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
-    return None
+    """Load FBProfile for the current account."""
+    if not db:
+        return None
+    try:
+        from app.models_fbads import FBProfile
+        aid = user_id or current_account_id()
+        prof = FBProfile.query.filter_by(account_id=aid).first()
+        if not prof:
+            return None
+        raw = prof.raw or {}
+        return {"page_id": prof.page_id, "page_name": prof.page_name,
+                "about": prof.about, "description": prof.description,
+                "website": prof.website, "phone": prof.phone, **raw}
+    except Exception:
+        return None
+
 
 def _save_profile_to_db(data: Dict[str, Any], user_id: Optional[int] = None) -> None:
-    # Persist `data` to your fbads profile table; also add audit logging if desired
-    pass
+    """Upsert FBProfile; extra fields not in the schema are stored in raw JSON."""
+    if not db:
+        return
+    try:
+        from app.models_fbads import FBProfile
+        aid = user_id or current_account_id()
+        page_id = data.get("page_id") or "default"
+        prof = FBProfile.query.filter_by(account_id=aid, page_id=page_id).first()
+        if prof is None:
+            prof = FBProfile(account_id=aid, page_id=page_id)
+            db.session.add(prof)
+        prof.page_name = data.get("page_name")
+        prof.website = data.get("website")
+        prof.phone = data.get("phone")
+        known = {"page_id", "page_name", "website", "phone", "about", "description"}
+        prof.raw = {k: v for k, v in data.items() if k not in known}
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
 
 def _get_leads_from_db(user_id: Optional[int] = None) -> List[Dict[str, Any]]:
-    return []
+    """Return FBLead rows for the current account as list of dicts."""
+    if not db:
+        return []
+    try:
+        from app.models_fbads import FBLead
+        aid = user_id or current_account_id()
+        leads = (FBLead.query.filter_by(account_id=aid)
+                 .order_by(FBLead.created_at.desc()).limit(200).all())
+        result = []
+        for lead in leads:
+            raw = lead.raw or {}
+            result.append({
+                "id": lead.id,
+                "created_at": lead.created_at.strftime("%Y-%m-%d %H:%M") if lead.created_at else "",
+                "full_name": lead.name, "email": lead.email, "phone": lead.phone,
+                "campaign": raw.get("campaign_name", ""), "adset": raw.get("adset_name", ""),
+                "ad": raw.get("ad_name", ""), "status": raw.get("status", "New"),
+                "notes": raw.get("notes", ""),
+            })
+        return result
+    except Exception:
+        return []
+
 
 def _update_lead_status_in_db(lead_id: int, status: str, user_id: Optional[int] = None) -> None:
-    pass
+    """Update status field stored in FBLead.raw."""
+    if not db:
+        return
+    try:
+        from app.models_fbads import FBLead
+        aid = user_id or current_account_id()
+        lead = FBLead.query.filter_by(id=lead_id, account_id=aid).first()
+        if lead:
+            raw = dict(lead.raw or {})
+            raw["status"] = status
+            lead.raw = raw
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
+
 
 def _update_lead_notes_in_db(lead_id: int, notes: str, user_id: Optional[int] = None) -> None:
-    pass
+    """Update notes field stored in FBLead.raw."""
+    if not db:
+        return
+    try:
+        from app.models_fbads import FBLead
+        aid = user_id or current_account_id()
+        lead = FBLead.query.filter_by(id=lead_id, account_id=aid).first()
+        if lead:
+            raw = dict(lead.raw or {})
+            raw["notes"] = notes
+            lead.raw = raw
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
+
 
 def _get_lead_by_id_from_db(lead_id: int, user_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
-    return None
+    """Return a single FBLead as a dict."""
+    if not db:
+        return None
+    try:
+        from app.models_fbads import FBLead
+        aid = user_id or current_account_id()
+        lead = FBLead.query.filter_by(id=lead_id, account_id=aid).first()
+        if not lead:
+            return None
+        raw = lead.raw or {}
+        return {
+            "id": lead.id,
+            "created_at": lead.created_at.strftime("%Y-%m-%d %H:%M") if lead.created_at else "",
+            "full_name": lead.name, "email": lead.email, "phone": lead.phone,
+            "campaign": raw.get("campaign_name", ""), "adset": raw.get("adset_name", ""),
+            "ad": raw.get("ad_name", ""), "status": raw.get("status", "New"),
+            "notes": raw.get("notes", ""),
+        }
+    except Exception:
+        return None
 
 # -----------------------------------------------------------------------------
 # Routes — UI pages you already had
@@ -498,6 +615,14 @@ def select_account_post():
 # -----------------------------------------------------------------------------
 # Connect / Disconnect (now real OAuth; keeps same endpoints)
 # -----------------------------------------------------------------------------
+def _fb_oauth_state() -> str:
+    """Generate and store a per-session CSRF state token for the OAuth flow."""
+    import secrets as _sec
+    state = _sec.token_urlsafe(32)
+    session["fb_oauth_state"] = state
+    return state
+
+
 @fbads_bp.get("/connect", endpoint="connect")
 @login_required
 def fb_connect():
@@ -524,13 +649,19 @@ def fb_connect():
         redirect_uri=redirect_uri,
         response_type="code",
         scope=scope,
-        state="ok",
+        state=_fb_oauth_state(),
     )
     return redirect(f"https://www.facebook.com/v20.0/dialog/oauth?{urlencode(params)}")
 
 @fbads_bp.get("/callback", endpoint="callback")
 @login_required
 def callback():
+    # Verify CSRF state token before doing anything
+    expected_state = session.pop("fb_oauth_state", None)
+    if not expected_state or request.args.get("state") != expected_state:
+        flash("Invalid OAuth state. Please try connecting again.", "error")
+        return redirect(url_for("fbads_bp.index"))
+
     code = request.args.get("code")
     if not code:
         flash("Facebook login failed.", "error")
@@ -550,7 +681,7 @@ def callback():
     try:
         r.raise_for_status()
     except Exception:
-        current_app.logger.exception("FB short-lived token exchange failed: %s", r.text)
+        current_app.logger.error("FB short-lived token exchange failed: HTTP %s", r.status_code)
         flash("Facebook token exchange failed.", "error")
         return redirect(url_for("fbads_bp.index"))
     short_tok = r.json().get("access_token")
@@ -569,7 +700,7 @@ def callback():
     try:
         rr.raise_for_status()
     except Exception:
-        current_app.logger.exception("FB long-lived token exchange failed: %s", rr.text)
+        current_app.logger.error("FB long-lived token exchange failed: HTTP %s", rr.status_code)
         flash("Facebook long-lived token exchange failed.", "error")
         return redirect(url_for("fbads_bp.index"))
 
@@ -628,13 +759,13 @@ def save_token():
                 # Continue with short-lived token
 
         # Save the token
-        _save_fb_token(aid, access_token)
+        _store_fb_token(aid, access_token, None)
 
         return jsonify({"success": True, "message": "Facebook connected successfully"})
 
-    except Exception as e:
+    except Exception:
         current_app.logger.exception("Error saving Facebook token")
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": "An internal error occurred"}), 500
 
 # -----------------------------------------------------------------------------
 # Lead actions used by templates
@@ -1317,18 +1448,13 @@ def create_test_campaign_post():
         return redirect(url_for("fbads_bp.campaigns"))
 
     except requests.exceptions.HTTPError as e:
-        error_msg = e.response.text if e.response else str(e)
-        current_app.logger.error(f"Campaign creation failed: {error_msg}")
-
-        flash(
-            f"Failed to create campaign. Facebook API error: {error_msg}",
-            "error"
-        )
+        current_app.logger.error("Campaign creation failed: HTTP %s", e.response.status_code if e.response else "?")
+        flash("Failed to create campaign. Please check your Facebook Ads settings and try again.", "error")
         return redirect(url_for("fbads_bp.create_test_campaign"))
 
-    except Exception as e:
+    except Exception:
         current_app.logger.exception("Unexpected error creating campaign")
-        flash(f"Unexpected error: {str(e)}", "error")
+        flash("An unexpected error occurred while creating the campaign.", "error")
         return redirect(url_for("fbads_bp.create_test_campaign"))
 
 @fbads_bp.route("/adsets", endpoint="adsets")
@@ -1541,12 +1667,11 @@ def update_ad():
         current_app.logger.info(f"Updated Facebook ad {ad_id}: {name}")
 
     except requests.exceptions.HTTPError as e:
-        error_msg = e.response.text if e.response else str(e)
-        current_app.logger.error(f"Failed to update ad {ad_id}: {error_msg}")
-        flash(f"Failed to update ad: {error_msg}", "error")
-    except Exception as e:
-        current_app.logger.exception(f"Error updating ad {ad_id}")
-        flash(f"Error updating ad: {str(e)}", "error")
+        current_app.logger.error("Failed to update ad %s: HTTP %s", ad_id, e.response.status_code if e.response else "?")
+        flash("Failed to update ad. Please check your Facebook Ads settings and try again.", "error")
+    except Exception:
+        current_app.logger.exception("Error updating ad %s", ad_id)
+        flash("An unexpected error occurred while updating the ad.", "error")
 
     return redirect(url_for("fbads_bp.ads", adset_id=adset_id))
 
@@ -1677,9 +1802,9 @@ def apply_fix():
                 "error": result.get('error', 'Failed to apply fix')
             }), 400
 
-    except Exception as e:
+    except Exception:
         current_app.logger.exception("Error applying Facebook Ads fix")
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": "An internal error occurred"}), 500
 
 def _apply_facebook_fix(access_token: str, action_type: str, entity_type: str, entity_id: str, params: dict) -> dict:
     """
@@ -1886,8 +2011,8 @@ def _apply_facebook_fix(access_token: str, action_type: str, entity_type: str, e
         else:
             return {"success": False, "error": f"Unknown action type: {action_type}"}
 
-    except Exception as e:
+    except Exception:
         current_app.logger.exception("Error in _apply_facebook_fix")
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": "An internal error occurred"}
 
 

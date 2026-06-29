@@ -405,19 +405,33 @@ def get_gsc_performance_data(account_id: int, site_url: str, days: int = 30) -> 
     Returns:
         Dict with GSC performance data
     """
-    # TODO: Integrate with actual GSC data fetching from your google routes
-    # For now, return sample structure
+    try:
+        from app.google import _fetch_gsc_report
+        from datetime import date, timedelta
+        end = date.today() - timedelta(days=1)
+        start = end - timedelta(days=days - 1)
+        report = _fetch_gsc_report(site_url, start.isoformat(), end.isoformat())
+        if report:
+            top_queries = report.get("top_queries") or []
+            low_ctr = [q for q in top_queries
+                       if (q.get("impressions") or 0) >= 100 and (q.get("ctr") or 0) < 0.03]
+            return {
+                "summary": {
+                    "clicks": report.get("clicks", 0),
+                    "impressions": report.get("impressions", 0),
+                    "avg_ctr": report.get("ctr", 0.0),
+                    "avg_position": report.get("avg_position", 0.0),
+                },
+                "top_pages": report.get("top_pages") or [],
+                "top_queries": top_queries,
+                "low_ctr_queries": low_ctr,
+            }
+    except Exception:
+        pass
 
     return {
-        "summary": {
-            "clicks": 0,
-            "impressions": 0,
-            "avg_ctr": 0.0,
-            "avg_position": 0.0
-        },
-        "top_pages": [],
-        "top_queries": [],
-        "low_ctr_queries": []
+        "summary": {"clicks": 0, "impressions": 0, "avg_ctr": 0.0, "avg_position": 0.0},
+        "top_pages": [], "top_queries": [], "low_ctr_queries": [],
     }
 
 

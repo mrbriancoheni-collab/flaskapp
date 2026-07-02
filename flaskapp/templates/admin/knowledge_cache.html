@@ -1,0 +1,34 @@
+{% extends "admin/base.html" %}
+{% block title %}Knowledge Cache: {{ agent_type }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="mb-4">
+    <a href="{{ url_for('knowledge_bp.index') }}" class="btn btn-outline-secondary btn-sm mb-2">&larr; Back</a>
+    <h2 class="h4">Knowledge Cache: {{ agent_type.replace('_', ' ').title() }}</h2>
+  </div>
+
+  {% if not entries %}
+    <div class="alert alert-info">No cached knowledge for this agent yet. Approve a source and run a refresh.</div>
+  {% endif %}
+
+  {% for entry in entries %}
+  <div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <strong>{{ entry.source.title if entry.source else 'Unknown Source' }}</strong>
+      <span class="text-muted small">Refreshed {{ entry.refreshed_at.strftime('%b %d, %Y %H:%M') }} UTC</span>
+    </div>
+    <div class="card-body">
+      <p>{{ entry.summary }}</p>
+      {% if entry.key_insights %}
+      <ul class="mb-0">
+        {% for insight in entry.key_insights %}
+        <li>{{ insight }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

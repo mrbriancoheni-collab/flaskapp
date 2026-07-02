@@ -174,6 +174,9 @@ def _ai_generate_post(brief: Dict[str, Any], site: Optional["WPSite"] = None) ->
     topics = brief.get("topics") or []
     cluster_name = brief.get("cluster_name") or ""
     supporting_context = brief.get("supporting_context") or ""
+    content_format = brief.get("content_format") or "standard"
+    include_schema = brief.get("include_schema") or []
+    aeo_signals = brief.get("aeo_signals") or {}
 
     # Brand voice / language directives from site settings
     _LANG_NAMES = {
@@ -220,7 +223,35 @@ def _ai_generate_post(brief: Dict[str, Any], site: Optional["WPSite"] = None) ->
     try:
         from app.ai_clients import get_ai_client
         client = get_ai_client()
-        claude_prompt = f"""You are a senior SEO content writer. Write a complete, publish-ready blog post.
+
+        if content_format == "aeo_optimized":
+            schema_list = ", ".join(include_schema) if include_schema else "FAQPage"
+            claude_prompt = f"""You are a senior SEO/AEO content strategist writing for a local field-service business blog (HVAC, plumbing, electrical, pest control, landscaping, etc.).
+
+Content brief:
+{brief_block}
+
+AEO (Answer Engine Optimization) requirements — follow ALL of these:
+- Tone: {tone}
+- Target length: {word_count} words
+- Title must be a natural-language question that a homeowner or business owner would ask (e.g. "How Much Does HVAC Maintenance Cost?")
+- First paragraph: give a direct, concise answer (30-60 words) before any elaboration — AI citation engines pull this
+- Every H2 heading must be a question (e.g. "What Does an HVAC Tune-Up Include?")
+- Immediately after each H2, write a 30-60 word direct answer paragraph before expanding with details
+- Use numbered lists for step-by-step processes, bullet lists for feature/benefit comparisons
+- Include a "Frequently Asked Questions" H2 section near the end with 3-5 Q&A pairs in HTML <details>/<summary> or plain <h3>/<p> format
+- Add structured data hint comment at the very end: <!-- Schema: {schema_list} -->
+- End with a CTA paragraph tailored to local field-service businesses (mention booking, free estimate, or emergency service)
+- Naturally incorporate the primary keyword in the title, first paragraph, first H2, and meta description
+- Write for E-E-A-T: include specific numbers, timeframes, or cost ranges wherever possible
+{brand_directive_block}
+Return ONLY valid JSON with these exact keys:
+{{"title": "...", "html": "...", "excerpt": "..."}}
+
+The html value must be full HTML article content (no <html>/<body> wrapper).
+The excerpt must be 145-155 characters and answer the title question directly — optimised as a meta description."""
+        else:
+            claude_prompt = f"""You are a senior SEO content writer. Write a complete, publish-ready blog post.
 
 Content brief:
 {brief_block}

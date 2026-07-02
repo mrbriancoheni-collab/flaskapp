@@ -180,6 +180,12 @@ def run_daily(app, db):
     except Exception:
         app.logger.exception("[CRON] Daily content queue failed")
 
+    # Daily: refresh agent knowledge cache from approved external sources
+    try:
+        _run_daily_knowledge_refresh(app)
+    except Exception:
+        app.logger.exception("[CRON] Agent knowledge refresh failed")
+
     # Auto review requests: send to customers who completed jobs in the last 24 hours
     try:
         from app.reputation import _auto_queue_review_requests
@@ -1360,11 +1366,19 @@ def _run_daily_content_queue(app):
                                     f"Pillar topic: {pillar_topic}. "
                                     f"Other supporting topics: {', '.join(t['title'] for t in topics_to_write if t['title'] != kw)}"
                                 ),
-                                "word_count": "1200" if topic["is_pillar"] else "800",
+                                "word_count": "1200" if topic["is_pillar"] else "900",
                                 "status": "draft" if needs_approval else "publish",
                                 "needs_approval": needs_approval,
                                 "require_approval": needs_approval,
                                 "source": "autopilot_cluster",
+                                # AEO optimisation flags
+                                "content_format": "aeo_optimized",
+                                "icp": "field_service",
+                                "include_schema": ["FAQPage", "HowTo"],
+                                "aeo_signals": {
+                                    "use_question_headings": True,
+                                    "direct_answer_per_h2": True,
+                                },
                             }
 
                             job = WPJob(
@@ -1391,3 +1405,25 @@ def _run_daily_content_queue(app):
 
         except Exception:
             app.logger.exception("[CRON] _run_daily_content_queue outer failure")
+
+
+def _run_daily_knowledge_refresh(app):
+    """
+    Daily: refresh the agent knowledge cache from all approved external sources.
+    Sources flagged as 'weekly' are only fetched if their last fetch was >6 days ago.
+    Skipped if the ANTHROPIC_API_KEY is not configured (summarisation requires Claude).
+    """
+    with app.app_context():
+        try:
+            if not (app.config.get("ANTHROPIC_API_KEY") or __import__("os").getenv("ANTHROPIC_API_KEY")):
+                app.logger.info("[CRON] knowledge_refresh: ANTHROPIC_API_KEY not set — skipping")
+                return
+
+            from app.services.agent_knowledge_service import refresh_all_approved_sources
+            counts = refresh_all_approved_sources(force=False)
+            app.logger.info(
+                "[CRON] knowledge_refresh: %d updated, %d skipped, %d failed",
+                counts["success"], counts["skipped"], counts["failed"],
+            )
+        except Exception:
+            app.logger.exception("[CRON] _run_daily_knowledge_refresh outer failure")

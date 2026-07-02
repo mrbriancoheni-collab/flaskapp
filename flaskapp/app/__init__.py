@@ -918,6 +918,13 @@ def create_app():
         app.logger.exception("Failed to register agent_config_bp")
 
     try:
+        from app.admin.knowledge_routes import knowledge_bp
+        app.register_blueprint(knowledge_bp)  # url_prefix=/admin/knowledge
+        app.logger.info("knowledge_bp registered at /admin/knowledge")
+    except Exception:
+        app.logger.exception("Failed to register knowledge_bp")
+
+    try:
         from app.admin.email_workflow_routes import email_workflow_bp
         app.register_blueprint(email_workflow_bp)  # url_prefix=/admin/email-workflows
         app.logger.info("email_workflow_bp registered at /admin/email-workflows")

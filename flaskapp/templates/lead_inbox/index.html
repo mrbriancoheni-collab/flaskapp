@@ -82,6 +82,33 @@
     {% endfor %}
   </div>
 
+  <!-- View toggle -->
+  <div class="flex items-center gap-2 mb-4">
+    <button id="btnKanban" onclick="setView('kanban')"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-600 text-white">
+      <i class="fa-solid fa-table-columns"></i> Pipeline
+    </button>
+    <button id="btnList" onclick="setView('list')"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white text-gray-600 border border-gray-200 hover:bg-gray-50">
+      <i class="fa-solid fa-list"></i> List
+    </button>
+    <div class="ml-auto flex items-center gap-2 text-xs text-gray-500">
+      <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span> &lt;30 min</span>
+      <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span> &lt;2 hr</span>
+      <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span> &gt;2 hr new</span>
+    </div>
+  </div>
+
+  <!-- Kanban board -->
+  <div id="kanbanView" class="overflow-x-auto pb-4">
+    <div class="flex gap-4 min-w-max">
+      {% set status_meta = {
+        'new':       {'label': 'New',          'bg': 'bg-gray-100',   'dot': 'bg-gray-400'},
+        'contacted': {'label': 'Contacted',    'bg': 'bg-blue-50',    'dot': 'bg-blue-500'},
+        'quote':     {'label': 'Quote Sent',   'bg': 'bg-purple-50',  'dot': 'bg-purple-500'},
+        'booked':    {'label': 'Booked',       'bg': 'bg-yellow-50',  'dot': 'bg-yellow-500'},
+        'completed': {'label': 'Completed',    'bg': 'bg-green-50',   'dot': 'bg-green-500'},
+        'lost':      {'label': 'Lost',         'bg': 'bg-red-50',     'dot': 'bg-red-400'},
   {# ── Kanban ──────────────────────────────────────────────────────────────── #}
   <div class="overflow-x-auto pb-4">
     <div class="flex gap-4 min-w-max">
@@ -103,6 +130,13 @@
           </div>
           <div class="space-y-3 min-h-[120px]" id="col-{{ status }}">
             {% for lead in col_leads %}
+              {% set now_ts = lead.occurred_at %}
+              {% set age_minutes = ((now()|default(lead.occurred_at)) - lead.occurred_at).total_seconds() // 60 if lead.occurred_at else 999 %}
+              {% set age_color = 'green' if age_minutes < 30 else 'amber' if age_minutes < 120 else 'red' %}
+              <div class="bg-white rounded-xl border shadow-sm p-4 cursor-pointer hover:shadow-md transition-shadow
+                          {% if lead.status == 'new' and age_minutes >= 120 %}border-red-300{% else %}border-gray-200{% endif %}"
+                   onclick="openLeadModal('{{ lead.id }}')">
+                <!-- Source badge + age indicator -->
               <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 cursor-pointer hover:shadow-md transition-shadow"
                    id="card-{{ lead.id }}"
                    onclick="openLeadModal('{{ lead.id }}', '{{ lead.source_key }}')">
@@ -111,6 +145,14 @@
                     <i class="fa-solid {{ lead.source_icon }} text-[10px]"></i>
                     {{ lead.source_label }}
                   </span>
+                  <div class="flex items-center gap-1.5">
+                    {% if lead.status == 'new' %}
+                    <span class="w-2 h-2 rounded-full bg-{{ age_color }}-500 inline-block" title="Lead age"></span>
+                    {% endif %}
+                    {% if lead.lead_cost %}
+                    <span class="text-xs text-gray-400">${{ "%.0f"|format(lead.lead_cost) }}</span>
+                    {% endif %}
+                  </div>
                   {% if lead.lead_cost %}
                     <span class="text-xs text-gray-400 font-medium">${{ "%.0f"|format(lead.lead_cost) }}</span>
                   {% endif %}
@@ -158,6 +200,65 @@
     </div>
   </div>
   {% endif %}
+
+  <!-- List view (hidden by default) -->
+  <div id="listView" class="hidden">
+    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead><tr class="bg-gray-50 border-b border-gray-200 text-left">
+            <th class="px-4 py-3 font-semibold text-gray-600">Lead</th>
+            <th class="px-4 py-3 font-semibold text-gray-600">Source</th>
+            <th class="px-4 py-3 font-semibold text-gray-600">Service</th>
+            <th class="px-4 py-3 font-semibold text-gray-600">Contact</th>
+            <th class="px-4 py-3 font-semibold text-gray-600">Age</th>
+            <th class="px-4 py-3 font-semibold text-gray-600">Status</th>
+            <th class="px-4 py-3 font-semibold text-gray-600 text-right">Cost</th>
+          </tr></thead>
+          <tbody class="divide-y divide-gray-100">
+            {% for lead in leads %}
+            {% set age_minutes = 999 %}
+            <tr class="hover:bg-gray-50 cursor-pointer" onclick="openLeadModal('{{ lead.id }}')">
+              <td class="px-4 py-3 font-medium text-gray-900">
+                {{ lead.name }}
+                {% if lead.city %}<div class="text-xs text-gray-400">{{ lead.city }}</div>{% endif %}
+              </td>
+              <td class="px-4 py-3">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-{{ lead.source_color }}-100 text-{{ lead.source_color }}-800">
+                  <i class="fa-solid {{ lead.source_icon }} text-[10px]"></i>{{ lead.source_label }}
+                </span>
+              </td>
+              <td class="px-4 py-3 text-gray-600 text-xs">{{ lead.service_type or '—' }}</td>
+              <td class="px-4 py-3">
+                {% if lead.phone %}
+                <a href="tel:{{ lead.phone }}" onclick="event.stopPropagation()" class="text-xs text-indigo-600 hover:underline">
+                  <i class="fa-solid fa-phone text-[10px] mr-0.5"></i>{{ lead.phone }}
+                </a>
+                {% endif %}
+              </td>
+              <td class="px-4 py-3 text-xs text-gray-500">
+                {{ lead.occurred_at.strftime('%b %-d, %-I:%M %p') if lead.occurred_at else '—' }}
+              </td>
+              <td class="px-4 py-3">
+                <span class="px-2 py-0.5 rounded-full text-xs font-semibold
+                  {% if lead.status == 'new' %}bg-gray-100 text-gray-700
+                  {% elif lead.status == 'contacted' %}bg-blue-100 text-blue-700
+                  {% elif lead.status == 'booked' %}bg-yellow-100 text-yellow-700
+                  {% elif lead.status == 'completed' %}bg-green-100 text-green-700
+                  {% else %}bg-red-100 text-red-700{% endif %}">
+                  {{ lead.status.title() }}
+                </span>
+              </td>
+              <td class="px-4 py-3 text-right text-gray-500 text-xs">
+                {% if lead.lead_cost %}${{ "%.0f"|format(lead.lead_cost) }}{% else %}—{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
 </div>
 
@@ -319,6 +420,30 @@ function closeLeadModal() {
   document.getElementById('lead-modal').classList.add('hidden');
 }
 
+function setView(view) {
+  const kanban = document.getElementById('kanbanView');
+  const list   = document.getElementById('listView');
+  const btnK   = document.getElementById('btnKanban');
+  const btnL   = document.getElementById('btnList');
+  if (view === 'kanban') {
+    kanban.classList.remove('hidden');
+    list.classList.add('hidden');
+    btnK.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-600 text-white';
+    btnL.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white text-gray-600 border border-gray-200 hover:bg-gray-50';
+  } else {
+    list.classList.remove('hidden');
+    kanban.classList.add('hidden');
+    btnL.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-600 text-white';
+    btnK.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white text-gray-600 border border-gray-200 hover:bg-gray-50';
+  }
+  localStorage.setItem('leadInboxView', view);
+}
+
+// Restore last view preference
+(function() {
+  const saved = localStorage.getItem('leadInboxView');
+  if (saved === 'list') setView('list');
+})();
 // Close on Escape
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLeadModal(); });
 </script>

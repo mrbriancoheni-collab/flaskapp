@@ -1,0 +1,226 @@
+{% extends "base_app.html" %}
+{% block title %}Channel Growth Optimizer — FieldSprout{% endblock %}
+{% block content %}
+<div class="px-4 py-6 max-w-7xl mx-auto">
+
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Channel Growth Optimizer</h1>
+      <p class="text-gray-500 text-sm mt-0.5">Where should your next marketing dollar go? Ranked by acquisition cost.</p>
+    </div>
+    <select onchange="window.location.search='?days='+this.value"
+            class="border border-gray-200 rounded-lg px-3 py-2 text-sm">
+      {% for d in [14,30,60,90] %}
+        <option value="{{ d }}" {% if days==d %}selected{% endif %}>Last {{ d }} days</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <!-- Onboarding / integration prompts -->
+  {% if integrations and (not integrations.has_profile or not integrations.industry or not integrations.services) %}
+  <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-5 mb-6" id="profilePrompt">
+    <div class="flex items-start gap-4">
+      <div class="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0">
+        <i class="fa-solid fa-store text-indigo-600"></i>
+      </div>
+      <div class="flex-1">
+        {% if not integrations.industry %}
+        <h3 class="font-semibold text-indigo-900 mb-1">What trade do you serve?</h3>
+        <p class="text-sm text-indigo-700 mb-3">Select your industry to unlock personalized benchmarks, seasonal budget patterns, and upsell recommendations for your trade.</p>
+        <div class="flex flex-wrap gap-2 mb-3">
+          {% for val, label in [('hvac','HVAC'),('plumbing','Plumbing'),('roofing','Roofing'),('electrical','Electrical'),('landscaping','Landscaping'),('pest','Pest Control')] %}
+          <button onclick="setIndustry('{{ val }}')"
+                  class="px-3 py-1.5 border border-indigo-300 rounded-lg text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition-colors">
+            {{ label }}
+          </button>
+          {% endfor %}
+        </div>
+        {% else %}
+        <h3 class="font-semibold text-indigo-900 mb-1">What services do you offer?</h3>
+        <p class="text-sm text-indigo-700 mb-3">Adding your services helps FieldSprout personalize upsell suggestions, seasonal planning, and channel recommendations.</p>
+        {% endif %}
+        <a href="/account"
+           class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">
+          <i class="fa-solid fa-pen-to-square"></i> Complete Business Profile
+        </a>
+      </div>
+      <button onclick="document.getElementById('profilePrompt').remove()" class="text-indigo-400 hover:text-indigo-600 flex-shrink-0">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if integrations and not integrations.has_any_ads %}
+  <div class="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+    <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+      <i class="fa-solid fa-plug text-indigo-400"></i> Connect your ad platforms to unlock full optimization
+    </h3>
+    <div class="grid sm:grid-cols-3 gap-3">
+      {% if not integrations.google_ads %}
+      <a href="{{ url_for('marketing_bp.aggregators') }}"
+         class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50 transition-colors">
+        <i class="fa-brands fa-google text-blue-500 text-lg"></i>
+        <div>
+          <div class="text-sm font-medium text-gray-900">Google Ads</div>
+          <div class="text-xs text-gray-500">Auto-import spend</div>
+        </div>
+        <i class="fa-solid fa-arrow-right text-gray-400 ml-auto text-xs"></i>
+      </a>
+      {% endif %}
+      {% if not integrations.facebook %}
+      <a href="{{ url_for('marketing_bp.aggregators') }}"
+         class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-colors">
+        <i class="fa-brands fa-facebook text-blue-600 text-lg"></i>
+        <div>
+          <div class="text-sm font-medium text-gray-900">Facebook Ads</div>
+          <div class="text-xs text-gray-500">Track social spend</div>
+        </div>
+        <i class="fa-solid fa-arrow-right text-gray-400 ml-auto text-xs"></i>
+      </a>
+      {% endif %}
+      {% if not integrations.servicetitan %}
+      <a href="{{ url_for('marketing_bp.aggregators') }}"
+         class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl hover:border-green-300 hover:bg-green-50 transition-colors">
+        <i class="fa-solid fa-wrench text-green-600 text-lg"></i>
+        <div>
+          <div class="text-sm font-medium text-gray-900">ServiceTitan</div>
+          <div class="text-xs text-gray-500">Sync booked jobs</div>
+        </div>
+        <i class="fa-solid fa-arrow-right text-gray-400 ml-auto text-xs"></i>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- AI Recommendations -->
+  {% if recommendations %}
+  <div class="space-y-3 mb-8">
+    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Recommendations</h2>
+    {% for rec in recommendations %}
+    <div class="bg-white rounded-xl border border-gray-200 p-5 flex items-start gap-4">
+      <div class="w-10 h-10 rounded-xl bg-{{ rec.color }}-100 flex items-center justify-center text-{{ rec.color }}-600 flex-shrink-0">
+        <i class="fa-solid {{ rec.icon }}"></i>
+      </div>
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-1">
+          {% if rec.type == 'invest' %}
+          <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded">↑ Scale</span>
+          {% elif rec.type == 'cut' %}
+          <span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded">↓ Reduce</span>
+          {% else %}
+          <span class="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs font-bold rounded">⚠ Investigate</span>
+          {% endif %}
+          <span class="font-semibold text-gray-900">{{ rec.channel }}</span>
+        </div>
+        <p class="text-gray-600 text-sm">{{ rec.message }}</p>
+      </div>
+      <div class="flex-shrink-0">
+        <a href="{{ url_for('marketing_bp.pacing') }}"
+           class="text-xs px-3 py-1.5 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 font-medium whitespace-nowrap">
+          {{ rec.action }} →
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Ranked channel table -->
+  {% if rows %}
+  <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100">
+      <h2 class="font-semibold text-gray-900">All Channels — Ranked by CAC</h2>
+      <p class="text-xs text-gray-500 mt-0.5">Lower CAC = more efficient. Scale channels at the top; scrutinize channels at the bottom.</p>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="bg-gray-50 border-b border-gray-200 text-left">
+          <th class="px-4 py-3 font-semibold text-gray-600">Rank</th>
+          <th class="px-4 py-3 font-semibold text-gray-600">Channel</th>
+          <th class="px-4 py-3 font-semibold text-gray-600 text-right">CAC</th>
+          <th class="px-4 py-3 font-semibold text-gray-600 text-right">CPL</th>
+          <th class="px-4 py-3 font-semibold text-gray-600 text-right">Book Rate</th>
+          <th class="px-4 py-3 font-semibold text-gray-600 text-right">Spend</th>
+          <th class="px-4 py-3 font-semibold text-gray-600 text-right">Revenue</th>
+          <th class="px-4 py-3 font-semibold text-gray-600 text-right">Verdict</th>
+        </tr></thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for i, row in rows|enumerate %}
+          {% set book_rate = (row.booked / row.total_leads * 100)|round(1) if row.total_leads else 0 %}
+          <tr class="hover:bg-gray-50 {% if i == 0 and row.cac %}bg-green-50{% endif %}">
+            <td class="px-4 py-3">
+              {% if i == 0 and row.cac %}
+              <span class="w-7 h-7 rounded-full bg-green-500 text-white text-xs font-bold flex items-center justify-center">1</span>
+              {% else %}
+              <span class="text-gray-400 text-sm font-medium pl-2">{{ i + 1 }}</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded bg-{{ row.color }}-100 flex items-center justify-center text-{{ row.color }}-600 text-xs">
+                  <i class="fa-solid {{ row.icon }}"></i>
+                </div>
+                <span class="font-medium text-gray-900">{{ row.label }}</span>
+              </div>
+            </td>
+            <td class="px-4 py-3 text-right font-bold
+              {% if row.cac and row.cac < 150 %}text-green-600
+              {% elif row.cac and row.cac < 300 %}text-yellow-600
+              {% elif row.cac %}text-red-600{% else %}text-gray-400{% endif %}">
+              {% if row.cac %}${{ "%.0f"|format(row.cac) }}{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right text-gray-700">{% if row.cpl %}${{ "%.0f"|format(row.cpl) }}{% else %}—{% endif %}</td>
+            <td class="px-4 py-3 text-right text-gray-700">{{ book_rate }}%</td>
+            <td class="px-4 py-3 text-right text-gray-700">${{ "%.0f"|format(row.spend) }}</td>
+            <td class="px-4 py-3 text-right {% if row.revenue %}text-green-700 font-semibold{% else %}text-gray-400{% endif %}">
+              {% if row.revenue %}${{ "%.0f"|format(row.revenue) }}{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right">
+              {% if row.cac %}
+                {% if row.cac < 150 %}<span class="text-xs font-bold text-green-700 bg-green-100 px-2 py-1 rounded-full">↑ Scale</span>
+                {% elif row.cac < 300 %}<span class="text-xs font-bold text-yellow-700 bg-yellow-100 px-2 py-1 rounded-full">→ Hold</span>
+                {% else %}<span class="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded-full">↓ Cut</span>{% endif %}
+              {% elif row.spend > 50 %}<span class="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-full">No bookings</span>
+              {% else %}<span class="text-xs text-gray-400">—</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
+    <i class="fa-solid fa-chart-line text-4xl text-gray-300 mb-4"></i>
+    <h3 class="text-lg font-semibold text-gray-700 mb-2">Not enough data yet</h3>
+    <p class="text-gray-500 text-sm mb-6">Log spend and leads across multiple channels to get optimization recommendations.</p>
+    <div class="flex gap-3 justify-center">
+      <a href="{{ url_for('marketing_bp.offline_tracker') }}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">Log Offline Spend</a>
+      <a href="{{ url_for('marketing_bp.aggregators') }}" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50">Connect Aggregators</a>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+function setIndustry(industry) {
+  fetch('/api/account/update-industry', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+    },
+    body: JSON.stringify({ industry })
+  }).then(r => r.json()).then(d => {
+    if (d.ok || d.success) {
+      document.getElementById('profilePrompt')?.remove();
+    }
+  }).catch(() => {
+    window.location.href = '/account';
+  });
+}
+</script>
+{% endblock %}

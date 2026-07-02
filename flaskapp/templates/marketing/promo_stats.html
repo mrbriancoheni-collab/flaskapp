@@ -1,0 +1,83 @@
+{% extends "base_app.html" %}
+{% block title %}Promo Code ROI — FieldSprout{% endblock %}
+{% block content %}
+<div class="px-4 py-6 max-w-7xl mx-auto">
+
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Promo Code ROI</h1>
+    <p class="text-gray-500 text-sm mt-0.5">Track which offline promo codes are generating leads and revenue.</p>
+  </div>
+
+  {% if rows %}
+  <div class="bg-white rounded-xl border border-gray-200 overflow-hidden mb-6">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="bg-gray-50 border-b border-gray-200 text-left">
+          <th class="px-4 py-3 font-semibold text-gray-600">Promo Code</th>
+          <th class="px-4 py-3 font-semibold text-gray-600">Channel / Label</th>
+          <th class="px-4 py-3 font-semibold text-gray-600 text-right">Spend</th>
+          <th class="px-4 py-3 font-semibold text-gray-600 text-right">Redemptions</th>
+          <th class="px-4 py-3 font-semibold text-gray-600 text-right">Revenue</th>
+          <th class="px-4 py-3 font-semibold text-gray-600 text-right">ROAS</th>
+        </tr></thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for row in rows %}
+          {% set meta = channel_meta.get(row.channel_type, channel_meta['other']) %}
+          {% set roas = (row.revenue / row.spend)|round(2) if row.spend else None %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3">
+              <span class="font-mono font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">{{ row.promo_code }}</span>
+            </td>
+            <td class="px-4 py-3">
+              {% if row.channel_label %}
+              <div class="font-medium text-gray-800">{{ row.channel_label }}</div>
+              {% if row.channel_type %}
+              <div class="text-xs text-gray-400">{{ meta.label }}</div>
+              {% endif %}
+              {% else %}
+              <span class="text-gray-400 text-xs">Unlinked code</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-right text-gray-700">${{ "%.0f"|format(row.spend or 0) }}</td>
+            <td class="px-4 py-3 text-right font-semibold text-gray-900">{{ row.redemptions }}</td>
+            <td class="px-4 py-3 text-right font-semibold text-green-700">${{ "%.0f"|format(row.revenue or 0) }}</td>
+            <td class="px-4 py-3 text-right">
+              {% if roas %}
+              <span class="font-semibold {% if roas >= 3 %}text-green-700{% elif roas >= 1.5 %}text-amber-600{% else %}text-red-600{% endif %}">
+                {{ roas }}x
+              </span>
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
+    <i class="fa-solid fa-ticket text-4xl text-gray-300 mb-4"></i>
+    <h3 class="text-lg font-semibold text-gray-700 mb-2">No promo redemptions yet</h3>
+    <p class="text-gray-500 text-sm mb-4">Add promo codes to your offline spend entries, then record redemptions when customers mention a code during booking.</p>
+    <a href="{{ url_for('marketing_bp.offline_tracker') }}"
+       class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">
+      <i class="fa-solid fa-rectangle-ad"></i> Go to Offline Tracker
+    </a>
+  </div>
+  {% endif %}
+
+  <div class="bg-indigo-50 rounded-xl border border-indigo-200 p-5 mt-6">
+    <div class="flex gap-3">
+      <i class="fa-solid fa-lightbulb text-indigo-500 mt-0.5 flex-shrink-0"></i>
+      <div class="text-sm text-indigo-900">
+        <strong>How to track promo codes:</strong> When a customer books and mentions a coupon
+        (e.g., "SPRING50"), your CSR records it in your booking system. Use the API endpoint
+        <code class="bg-indigo-100 px-1 rounded">POST /account/marketing/promo/redeem</code> with
+        <code class="bg-indigo-100 px-1 rounded">{"promo_code": "SPRING50", "revenue": 350}</code>
+        to automatically attribute the lead to the correct offline campaign.
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

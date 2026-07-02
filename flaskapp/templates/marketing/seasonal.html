@@ -1,4 +1,96 @@
 {% extends "base_app.html" %}
+{% block title %}Seasonal Budget Planner — FieldSprout{% endblock %}
+{% block content %}
+<div class="px-4 py-6 max-w-7xl mx-auto">
+
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Seasonal Budget Planner</h1>
+      <p class="text-gray-500 text-sm mt-0.5">12-month marketing budget by channel — plan your full year of spend.</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <select onchange="window.location.search='?year='+this.value" class="border border-gray-200 rounded-lg px-3 py-2 text-sm">
+        {% for y in [year-1, year, year+1] %}
+          <option value="{{ y }}" {% if y==year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+      <a href="{{ url_for('marketing_bp.seasonal_export_csv', year=year) }}"
+         class="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+        <i class="fa-solid fa-download"></i> CSV
+      </a>
+      <button onclick="showSuggestModal()" class="flex items-center gap-2 px-3 py-2 border border-indigo-300 rounded-lg text-sm text-indigo-600 hover:bg-indigo-50">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> Suggest
+      </button>
+      <button onclick="savePlan()" class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">
+        <i class="fa-solid fa-floppy-disk"></i> Save Plan
+      </button>
+    </div>
+  </div>
+
+  <!-- Profile / services prompt -->
+  {% if integrations and not integrations.industry %}
+  <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-5 flex items-start gap-3">
+    <i class="fa-solid fa-hard-hat text-indigo-500 mt-0.5 flex-shrink-0"></i>
+    <div class="flex-1">
+      <p class="text-sm text-indigo-900 font-medium">What trade do you serve?</p>
+      <p class="text-xs text-indigo-700 mt-0.5">Set your industry (HVAC, Plumbing, Roofing, etc.) to unlock seasonal budget suggestions tuned for your business's demand patterns.</p>
+    </div>
+    <a href="/account/settings/profile"
+       class="flex-shrink-0 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 whitespace-nowrap">
+      Set Industry
+    </a>
+  </div>
+  {% endif %}
+
+  <!-- Year total summary -->
+  <div class="bg-white rounded-xl border border-gray-200 p-5 mb-6" id="summaryStrip">
+    <div class="grid grid-cols-3 md:grid-cols-6 gap-4 text-center">
+      {% for i, mon in months|enumerate %}
+      <div>
+        <div class="text-xs text-gray-500 font-semibold uppercase mb-1">{{ mon }}</div>
+        <div id="sum_{{ i }}" class="text-sm font-bold text-gray-900">$0</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Budget grid -->
+  <div class="bg-white rounded-xl border border-gray-200 overflow-hidden mb-6">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm min-w-[900px]">
+        <thead>
+          <tr class="bg-gray-50 border-b border-gray-200">
+            <th class="px-4 py-3 font-semibold text-gray-600 text-left sticky left-0 bg-gray-50 z-10 w-36">Channel</th>
+            {% for mon in months %}
+            <th class="px-2 py-3 font-semibold text-gray-600 text-center min-w-[80px]">{{ mon }}</th>
+            {% endfor %}
+            <th class="px-4 py-3 font-semibold text-gray-600 text-right">Total</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100" id="planBody">
+          {% for ch in all_channels %}
+          {% set meta = channel_meta.get(ch, channel_meta['other']) %}
+          {% set amounts = plan_map.get(ch, [0]*12) %}
+          <tr class="hover:bg-gray-50" data-channel="{{ ch }}">
+            <td class="px-4 py-2.5 sticky left-0 bg-white z-10">
+              <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded bg-{{ meta.color }}-100 flex items-center justify-center text-{{ meta.color }}-600 text-xs flex-shrink-0">
+                  <i class="fa-solid {{ meta.icon }}"></i>
+                </div>
+                <span class="font-medium text-gray-800 text-xs">{{ meta.label }}</span>
+              </div>
+            </td>
+            {% for i in range(12) %}
+            <td class="px-1.5 py-2">
+              <input type="number" min="0" step="100"
+                     data-channel="{{ ch }}" data-month="{{ i }}"
+                     class="plan-input w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs text-center focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 hover:border-gray-400"
+                     value="{{ amounts[i]|round(0)|int if amounts[i] else '' }}"
+                     placeholder="0">
+            </td>
+            {% endfor %}
+            <td class="px-4 py-2.5 text-right font-semibold text-gray-900 text-xs" data-row-total="{{ ch }}">
+              ${{ amounts|sum|round(0)|int }}
 {% set active_nav = 'seasonal' %}
 {% block title %}Seasonal Planner — FieldSprout{% endblock %}
 
@@ -83,6 +175,198 @@
           </tr>
           {% endfor %}
         </tbody>
+        <tfoot>
+          <tr class="bg-gray-50 border-t-2 border-gray-200 font-bold">
+            <td class="px-4 py-3 sticky left-0 bg-gray-50 z-10 text-gray-700">Monthly Total</td>
+            {% for i in range(12) %}
+            <td class="px-2 py-3 text-center text-gray-900" id="col_{{ i }}">$0</td>
+            {% endfor %}
+            <td class="px-4 py-3 text-right text-indigo-700" id="grand_total">$0</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- Historical actuals comparison -->
+  {% if hist %}
+  <div class="bg-indigo-50 rounded-xl border border-indigo-200 p-5 mb-6">
+    <h3 class="font-semibold text-indigo-900 mb-3">{{ year }} Digital Actuals (vs Plan)</h3>
+    <div class="grid grid-cols-6 md:grid-cols-12 gap-2">
+      {% for i, mon in months|enumerate %}
+      <div class="text-center">
+        <div class="text-xs text-indigo-600 font-semibold">{{ mon }}</div>
+        <div class="text-sm font-bold text-indigo-900 mt-0.5">${{ "%.0f"|format(hist.get(i, 0)) }}</div>
+        <div class="text-xs text-indigo-400">actual</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Tips -->
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+        <i class="fa-solid fa-snowflake text-blue-400"></i> Typical seasonal patterns
+      </h3>
+      <ul class="space-y-2 text-sm text-gray-600">
+        <li class="flex gap-2"><span class="text-orange-500">🔥</span> <strong>HVAC:</strong> Surge May–Jul (AC) & Sep–Nov (heat)</li>
+        <li class="flex gap-2"><span class="text-blue-500">💧</span> <strong>Plumbing:</strong> Steady year-round; spike Jan (freeze) & Mar (spring thaw)</li>
+        <li class="flex gap-2"><span class="text-amber-500">🏠</span> <strong>Roofing:</strong> Peak Apr–Jun post-storm season</li>
+        <li class="flex gap-2"><span class="text-yellow-500">⚡</span> <strong>Electrical:</strong> Steady; slight surge Dec (holiday lighting)</li>
+        <li class="flex gap-2"><span class="text-green-500">🌿</span> <strong>Landscaping:</strong> March–October; pause Nov–Feb</li>
+        <li class="flex gap-2"><span class="text-red-500">🐛</span> <strong>Pest Control:</strong> Surge Apr–Sep; drop Nov–Feb</li>
+      </ul>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+        <i class="fa-solid fa-lightbulb text-yellow-400"></i> Planning tips
+      </h3>
+      <ul class="space-y-2 text-sm text-gray-600">
+        <li class="flex gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5 flex-shrink-0"></i> Increase digital spend 4–6 weeks before your peak season, not when demand hits.</li>
+        <li class="flex gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5 flex-shrink-0"></i> Use slow months (typically Jan–Feb) for direct mail and brand building — lower ad costs.</li>
+        <li class="flex gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5 flex-shrink-0"></i> Seasonal LSA budgets should track closely with demand — FieldSprout adjusts these automatically.</li>
+        <li class="flex gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5 flex-shrink-0"></i> Offline channels (billboard, mail) need 6–8 weeks lead time — plan ahead.</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<script nonce="{{ g.csp_nonce }}">
+const MONTHS = 12;
+
+function recalc() {
+  const colTotals = Array(MONTHS).fill(0);
+  const rowTotals = {};
+
+  document.querySelectorAll('.plan-input').forEach(inp => {
+    const ch = inp.dataset.channel;
+    const m = parseInt(inp.dataset.month);
+    const v = parseFloat(inp.value) || 0;
+    colTotals[m] = (colTotals[m] || 0) + v;
+    rowTotals[ch] = (rowTotals[ch] || 0) + v;
+  });
+
+  // Update column totals
+  for (let i = 0; i < MONTHS; i++) {
+    const el = document.getElementById('col_' + i);
+    if (el) el.textContent = '$' + Math.round(colTotals[i]).toLocaleString();
+    const sumEl = document.getElementById('sum_' + i);
+    if (sumEl) sumEl.textContent = '$' + Math.round(colTotals[i]).toLocaleString();
+  }
+
+  // Update row totals
+  Object.entries(rowTotals).forEach(([ch, total]) => {
+    const el = document.querySelector('[data-row-total="' + ch + '"]');
+    if (el) el.textContent = '$' + Math.round(total).toLocaleString();
+  });
+
+  // Grand total
+  const grand = colTotals.reduce((a, b) => a + b, 0);
+  const gtEl = document.getElementById('grand_total');
+  if (gtEl) gtEl.textContent = '$' + Math.round(grand).toLocaleString();
+}
+
+document.querySelectorAll('.plan-input').forEach(inp => inp.addEventListener('input', recalc));
+recalc();
+
+function savePlan() {
+  const plans = {};
+  document.querySelectorAll('.plan-input').forEach(inp => {
+    const ch = inp.dataset.channel;
+    const m = parseInt(inp.dataset.month);
+    if (!plans[ch]) plans[ch] = Array(12).fill(0);
+    plans[ch][m] = parseFloat(inp.value) || 0;
+  });
+  // Only save channels with any non-zero value
+  const filtered = Object.fromEntries(
+    Object.entries(plans).filter(([, vals]) => vals.some(v => v > 0))
+  );
+
+  fetch('{{ url_for("marketing_bp.seasonal_save") }}', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content },
+    body: JSON.stringify({ year: {{ year }}, plans: filtered })
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      const btn = document.querySelector('button[onclick="savePlan()"]');
+      const orig = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> Saved!';
+      btn.classList.replace('bg-indigo-600', 'bg-green-600');
+      setTimeout(() => { btn.innerHTML = orig; btn.classList.replace('bg-green-600', 'bg-indigo-600'); }, 2000);
+    } else alert('Save failed: ' + d.error);
+  });
+}
+
+function showSuggestModal() {
+  document.getElementById('suggestModal').classList.remove('hidden');
+}
+
+function applySuggestion() {
+  const annual = parseFloat(document.getElementById('suggestAnnual').value) || 0;
+  const industry = document.getElementById('suggestIndustry').value;
+  const channel = document.getElementById('suggestChannel').value;
+  if (!annual || !channel) { alert('Enter an annual budget and select a channel.'); return; }
+
+  fetch(`{{ url_for("marketing_bp.seasonal_suggest") }}?annual=${annual}&industry=${industry}`)
+    .then(r => r.json()).then(d => {
+      d.months.forEach((val, i) => {
+        const inp = document.querySelector(`.plan-input[data-channel="${channel}"][data-month="${i}"]`);
+        if (inp) inp.value = val > 0 ? val : '';
+      });
+      recalc();
+      document.getElementById('suggestModal').classList.add('hidden');
+    });
+}
+</script>
+
+<!-- Suggest Modal -->
+<div id="suggestModal" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-bold text-gray-900">Suggest Monthly Budget</h3>
+      <button onclick="document.getElementById('suggestModal').classList.add('hidden')"
+              class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Annual Budget for this Channel ($)</label>
+        <input type="number" id="suggestAnnual" min="0" step="100" placeholder="12000"
+               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Apply to Channel</label>
+        <select id="suggestChannel" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+          {% for ch in all_channels %}
+          {% set meta = channel_meta.get(ch, channel_meta['other']) %}
+          <option value="{{ ch }}">{{ meta.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Industry (for seasonal weighting)</label>
+        <select id="suggestIndustry" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+          <option value="default">General / Even spread</option>
+          <option value="hvac">HVAC</option>
+          <option value="plumbing">Plumbing</option>
+          <option value="roofing">Roofing</option>
+          <option value="electrical">Electrical</option>
+          <option value="landscaping">Landscaping</option>
+          <option value="pest">Pest Control</option>
+        </select>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button onclick="document.getElementById('suggestModal').classList.add('hidden')"
+                class="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600">Cancel</button>
+        <button onclick="applySuggestion()"
+                class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">
+          Apply Suggestion
+        </button>
+      </div>
+    </div>
+  </div>
       </table>
     </div>
   </div>

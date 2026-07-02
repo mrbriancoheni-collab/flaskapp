@@ -98,8 +98,119 @@ class FBProfile(db.Model):
         return f"<FBProfile id={self.id} acct={self.account_id} page={self.page_id}>"
 
 
+class FBCampaign(db.Model):
+    """
+    Local cache of Facebook Ad campaigns, synced daily.
+    """
+    __tablename__ = "fb_campaigns"
+
+    id = db.Column(BIGINT(unsigned=True), primary_key=True, autoincrement=True)
+    account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=False, index=True)
+
+    fb_campaign_id = db.Column(db.String(64), nullable=False, index=True)
+    name = db.Column(db.String(255), nullable=True)
+    status = db.Column(db.String(32), nullable=True)        # ACTIVE, PAUSED, ARCHIVED
+    objective = db.Column(db.String(64), nullable=True)
+    daily_budget = db.Column(db.BigInteger, nullable=True)   # in cents
+    lifetime_budget = db.Column(db.BigInteger, nullable=True)
+    start_time = db.Column(db.DateTime, nullable=True)
+    stop_time = db.Column(db.DateTime, nullable=True)
+    synced_at = db.Column(db.DateTime, nullable=True)
+
+    __table_args__ = (
+        db.UniqueConstraint("account_id", "fb_campaign_id", name="uq_fb_campaign"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<FBCampaign id={self.id} acct={self.account_id} fb={self.fb_campaign_id} name={self.name!r}>"
+
+
+class FBAdSet(db.Model):
+    """
+    Local cache of Facebook Ad sets, synced daily.
+    """
+    __tablename__ = "fb_adsets"
+
+    id = db.Column(BIGINT(unsigned=True), primary_key=True, autoincrement=True)
+    account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=False, index=True)
+
+    fb_adset_id = db.Column(db.String(64), nullable=False, index=True)
+    fb_campaign_id = db.Column(db.String(64), nullable=True, index=True)
+    name = db.Column(db.String(255), nullable=True)
+    status = db.Column(db.String(32), nullable=True)
+    daily_budget = db.Column(db.BigInteger, nullable=True)
+    bid_amount = db.Column(db.BigInteger, nullable=True)
+    synced_at = db.Column(db.DateTime, nullable=True)
+
+    __table_args__ = (
+        db.UniqueConstraint("account_id", "fb_adset_id", name="uq_fb_adset"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<FBAdSet id={self.id} acct={self.account_id} fb={self.fb_adset_id} name={self.name!r}>"
+
+
+class FBAd(db.Model):
+    """
+    Local cache of Facebook Ads, synced daily.
+    """
+    __tablename__ = "fb_ads"
+
+    id = db.Column(BIGINT(unsigned=True), primary_key=True, autoincrement=True)
+    account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=False, index=True)
+
+    fb_ad_id = db.Column(db.String(64), nullable=False, index=True)
+    fb_adset_id = db.Column(db.String(64), nullable=True, index=True)
+    fb_campaign_id = db.Column(db.String(64), nullable=True, index=True)
+    name = db.Column(db.String(255), nullable=True)
+    status = db.Column(db.String(32), nullable=True)
+    synced_at = db.Column(db.DateTime, nullable=True)
+
+    __table_args__ = (
+        db.UniqueConstraint("account_id", "fb_ad_id", name="uq_fb_ad"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<FBAd id={self.id} acct={self.account_id} fb={self.fb_ad_id} name={self.name!r}>"
+
+
+class FBDailyInsight(db.Model):
+    """
+    Daily aggregated Facebook Ads insights at the campaign level.
+    """
+    __tablename__ = "fb_daily_insights"
+
+    id = db.Column(BIGINT(unsigned=True), primary_key=True, autoincrement=True)
+    account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=False, index=True)
+
+    fb_campaign_id = db.Column(db.String(64), nullable=True, index=True)
+    date = db.Column(db.Date, nullable=False, index=True)
+    spend = db.Column(db.Numeric(12, 2), nullable=True)
+    impressions = db.Column(db.Integer, nullable=True)
+    clicks = db.Column(db.Integer, nullable=True)
+    conversions = db.Column(db.Integer, nullable=True)
+    leads = db.Column(db.Integer, nullable=True)
+    cpm = db.Column(db.Numeric(10, 4), nullable=True)
+    cpc = db.Column(db.Numeric(10, 4), nullable=True)
+    ctr = db.Column(db.Numeric(8, 4), nullable=True)
+
+    __table_args__ = (
+        db.UniqueConstraint("account_id", "fb_campaign_id", "date", name="uq_fb_daily_insight"),
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<FBDailyInsight id={self.id} acct={self.account_id} "
+            f"camp={self.fb_campaign_id} date={self.date}>"
+        )
+
+
 __all__ = [
     "FBAccount",
     "FBLead",
     "FBProfile",
+    "FBCampaign",
+    "FBAdSet",
+    "FBAd",
+    "FBDailyInsight",
 ]

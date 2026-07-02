@@ -1,0 +1,237 @@
+{% extends "base_app.html" %}
+{% block title %}Update Old Pages · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Update Old Pages</h1>
+      <p class="text-gray-500 text-sm mt-1">See which pages are getting old or losing visitors, so you can refresh them and keep showing up in Google search.</p>
+    </div>
+    {% if posts %}
+    <div class="flex items-center gap-3">
+      <span class="text-xs text-gray-400">{{ posts | length }} posts analysed</span>
+      <button id="ai-plan-btn"
+              onclick="fetchAIPlan()"
+              class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow-sm transition">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+        AI Update Plan
+      </button>
+    </div>
+    {% endif %}
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+    <div class="rounded-xl px-4 py-3 text-sm font-medium border
+      {% if cat == 'success' %}bg-green-50 border-green-300 text-green-800
+      {% elif cat == 'error' %}bg-red-50 border-red-300 text-red-800
+      {% else %}bg-blue-50 border-blue-300 text-blue-800{% endif %}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {% if error %}
+  <div class="bg-yellow-50 border border-yellow-300 rounded-xl p-5 flex items-start gap-4">
+    <i class="fa-solid fa-triangle-exclamation text-yellow-500 text-xl mt-0.5"></i>
+    <p class="text-yellow-900 font-medium">{{ error }}</p>
+  </div>
+  {% endif %}
+
+  {% if not site %}
+  <div class="bg-white rounded-xl shadow-sm border p-12 text-center">
+    <i class="fa-brands fa-wordpress text-gray-300 text-5xl mb-4"></i>
+    <p class="text-gray-600 mb-4">Connect a WordPress site to analyse content freshness.</p>
+    <a href="{{ url_for('wp_bp.settings') }}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">
+      Connect WordPress
+    </a>
+  </div>
+  {% elif posts %}
+
+  <!-- AI Refresh Plan panel (hidden until populated) -->
+  <div id="ai-plan-panel" class="hidden space-y-4">
+    <div class="flex items-center justify-between">
+      <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+        <i class="fa-solid fa-wand-magic-sparkles text-indigo-500"></i>
+        AI Plan: Which Pages to Update First
+      </h2>
+      <button onclick="document.getElementById('ai-plan-panel').classList.add('hidden')"
+              class="text-xs text-gray-400 hover:text-gray-600">Dismiss</button>
+    </div>
+    <div id="ai-plan-loading" class="hidden bg-indigo-50 border border-indigo-200 rounded-xl p-6 text-center text-indigo-700 text-sm">
+      <i class="fa-solid fa-spinner fa-spin mr-2"></i>Generating your personalised refresh plan…
+    </div>
+    <div id="ai-plan-error" class="hidden bg-red-50 border border-red-300 rounded-xl px-4 py-3 text-sm text-red-700"></div>
+    <div id="ai-plan-cards" class="grid gap-4 sm:grid-cols-2"></div>
+  </div>
+
+  <!-- Staleness legend -->
+  <div class="flex flex-wrap gap-3 text-xs">
+    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span>Critical (score ≥ 70)</span>
+    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-400 inline-block"></span>Stale (40–69)</span>
+    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-yellow-200 inline-block"></span>Aging (20–39)</span>
+    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-green-400 inline-block"></span>Fresh (&lt; 20)</span>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+    <table class="min-w-full text-sm">
+      <thead class="bg-gray-50 border-b">
+        <tr>
+          <th class="px-4 py-3 text-left font-semibold text-gray-700">Post</th>
+          <th class="px-4 py-3 text-right font-semibold text-gray-700">Last Modified</th>
+          <th class="px-4 py-3 text-right font-semibold text-gray-700">Age (days)</th>
+          <th class="px-4 py-3 text-right font-semibold text-gray-700">Visitor change</th>
+          <th class="px-4 py-3 text-center font-semibold text-gray-700">Out of date</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for p in posts %}
+        {% set s = p.staleness %}
+        <tr class="hover:bg-indigo-50 transition">
+          <td class="px-4 py-2.5">
+            <a href="{{ p.url }}" target="_blank" rel="noopener"
+               class="font-medium text-gray-900 hover:text-indigo-600 line-clamp-1">
+              {{ p.title | truncate(60) }}
+            </a>
+          </td>
+          <td class="px-4 py-2.5 text-right text-gray-500 text-xs">{{ p.modified }}</td>
+          <td class="px-4 py-2.5 text-right {% if p.days_old > 365 %}text-red-600 font-semibold{% elif p.days_old > 180 %}text-amber-600{% else %}text-gray-600{% endif %}">
+            {{ p.days_old }}
+          </td>
+          <td class="px-4 py-2.5 text-right text-xs">
+            {% if p.traffic_change is not none %}
+              <span class="{% if p.traffic_change < -20 %}text-red-600 font-semibold{% elif p.traffic_change < 0 %}text-amber-600{% else %}text-green-600{% endif %}">
+                {% if p.traffic_change >= 0 %}+{% endif %}{{ p.traffic_change }}%
+              </span>
+            {% else %}
+              <span class="text-gray-300">—</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-2.5 text-center">
+            <div class="inline-flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full
+                {% if s >= 70 %}bg-red-500{% elif s >= 40 %}bg-amber-400{% elif s >= 20 %}bg-yellow-200{% else %}bg-green-400{% endif %}">
+              </span>
+              <span class="font-semibold {% if s >= 70 %}text-red-600{% elif s >= 40 %}text-amber-600{% elif s >= 20 %}text-yellow-600{% else %}text-green-600{% endif %}">
+                {{ s }}
+              </span>
+            </div>
+          </td>
+          <td class="px-4 py-2.5 text-right">
+            <form method="POST" action="{{ url_for('wp_bp.queue_refresh') }}" class="inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="post_id" value="{{ p.id }}">
+              <input type="hidden" name="status" value="publish">
+              <button type="submit"
+                      class="text-xs px-2.5 py-1 border border-indigo-300 text-indigo-600 rounded hover:bg-indigo-50 whitespace-nowrap">
+                Refresh now →
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <p class="text-xs text-gray-400 text-center">
+    "Out of date" score combines how old the page is plus how much its visitor traffic has dropped.
+    Visitor drop needs Google Search Console connected.
+  </p>
+
+  {% elif site %}
+  <div class="bg-white rounded-xl shadow-sm border p-12 text-center text-gray-400">
+    <i class="fa-solid fa-seedling text-5xl mb-4"></i>
+    <p>No published posts found on your connected WordPress site.</p>
+  </div>
+  {% endif %}
+
+</div>
+{% if posts %}
+<script>
+  window.__freshnessData = {{ posts | tojson }};
+
+  const ACTION_COLORS = {
+    refresh:     "bg-blue-100 text-blue-800",
+    rewrite:     "bg-red-100 text-red-800",
+    consolidate: "bg-amber-100 text-amber-800",
+    redirect:    "bg-gray-100 text-gray-700",
+  };
+
+  async function fetchAIPlan() {
+    const btn      = document.getElementById("ai-plan-btn");
+    const panel    = document.getElementById("ai-plan-panel");
+    const loading  = document.getElementById("ai-plan-loading");
+    const errorDiv = document.getElementById("ai-plan-error");
+    const cards    = document.getElementById("ai-plan-cards");
+
+    // Reset state
+    panel.classList.remove("hidden");
+    loading.classList.remove("hidden");
+    errorDiv.classList.add("hidden");
+    cards.innerHTML = "";
+    btn.disabled = true;
+    btn.classList.add("opacity-60", "cursor-not-allowed");
+
+    // Scroll panel into view
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    try {
+      const csrf = document.querySelector('meta[name="csrf-token"]')?.content || "";
+      const resp = await fetch("{{ url_for('wp_bp.freshness_ai_plan') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": csrf },
+        body: JSON.stringify({ posts: window.__freshnessData }),
+      });
+      const data = await resp.json();
+
+      loading.classList.add("hidden");
+
+      if (data.error) {
+        errorDiv.textContent = data.error;
+        errorDiv.classList.remove("hidden");
+        return;
+      }
+
+      const recs = data.recommendations || [];
+      if (recs.length === 0) {
+        errorDiv.textContent = "No recommendations returned. Please try again.";
+        errorDiv.classList.remove("hidden");
+        return;
+      }
+
+      recs.forEach(function(rec) {
+        const actionClass = ACTION_COLORS[rec.action] || "bg-gray-100 text-gray-700";
+        const bullets = (rec.specific_changes || [])
+          .map(function(b) { return `<li class="flex items-start gap-1.5"><span class="text-indigo-400 mt-0.5">•</span><span>${b}</span></li>`; })
+          .join("");
+
+        const card = document.createElement("div");
+        card.className = "bg-white border rounded-xl p-5 shadow-sm space-y-3";
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-2">
+            <a href="${rec.url}" target="_blank" rel="noopener"
+               class="font-semibold text-gray-900 hover:text-indigo-600 text-sm leading-snug line-clamp-2">${rec.title}</a>
+            <span class="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full bg-indigo-600 text-white text-xs font-bold" title="Priority">${rec.priority}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full ${actionClass}">${rec.action}</span>
+          </div>
+          <p class="text-sm text-gray-600">${rec.reason}</p>
+          <ul class="text-xs text-gray-700 space-y-1">${bullets}</ul>`;
+        cards.appendChild(card);
+      });
+
+    } catch (err) {
+      loading.classList.add("hidden");
+      errorDiv.textContent = "Request failed: " + err.message;
+      errorDiv.classList.remove("hidden");
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove("opacity-60", "cursor-not-allowed");
+    }
+  }
+</script>
+{% endif %}
+{% endblock %}

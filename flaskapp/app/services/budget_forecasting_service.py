@@ -16,6 +16,95 @@ from app.services.weather_service import fetch_weather_forecast, calculate_weath
 import calendar
 
 
+# ============================================================================
+# Self-healing seasonality seed data
+# ============================================================================
+# Industry-standard monthly seasonality curves for service types not in the
+# original migration. Each tuple is:
+#   (service_type, service_category, month, demand_mult, cpl_mult, conv_mult, note)
+# Multiplier 1.0 = baseline. <1.0 = below baseline (slow month).
+_SEASONALITY_SEED = [
+    # Pool service: dramatic seasonality. Trough Dec-Feb (winterized), peak Jun-Aug.
+    ('pool_cleaning', 'closing',     1,  0.30, 0.90, 0.80, 'Pools winterized — minimal service demand'),
+    ('pool_cleaning', 'closing',     2,  0.30, 0.90, 0.80, 'Off-season — sunbelt only'),
+    ('pool_cleaning', 'opening',     3,  0.70, 1.00, 1.00, 'Early pool openings (south/southwest)'),
+    ('pool_cleaning', 'opening',     4,  1.40, 1.10, 1.20, 'Peak pool opening season nationwide'),
+    ('pool_cleaning', 'maintenance', 5,  1.60, 1.10, 1.20, 'Memorial Day — weekly service ramps up'),
+    ('pool_cleaning', 'maintenance', 6,  1.80, 1.20, 1.20, 'Peak swim season begins'),
+    ('pool_cleaning', 'maintenance', 7,  2.00, 1.30, 1.30, 'Peak demand — July heat + holiday parties'),
+    ('pool_cleaning', 'maintenance', 8,  1.80, 1.20, 1.20, 'Late-summer peak continues'),
+    ('pool_cleaning', 'maintenance', 9,  1.20, 1.00, 1.10, 'Labor Day push, demand tapering'),
+    ('pool_cleaning', 'closing',    10,  1.30, 1.00, 1.20, 'Peak pool closing/winterization season'),
+    ('pool_cleaning', 'closing',    11,  0.70, 0.90, 0.90, 'Late winterizations, demand drops'),
+    ('pool_cleaning', 'closing',    12,  0.30, 0.90, 0.80, 'Off-season — minimal service'),
+    # Generic home services: mild seasonality (post-holiday lull, spring/summer bump, December dip).
+    ('generic', 'baseline', 1,  0.95, 1.00, 0.95, 'Post-holiday lull'),
+    ('generic', 'baseline', 2,  0.95, 1.00, 0.95, 'Winter baseline'),
+    ('generic', 'baseline', 3,  1.05, 1.00, 1.05, 'Spring activity picks up'),
+    ('generic', 'baseline', 4,  1.10, 1.00, 1.05, 'Spring season demand'),
+    ('generic', 'baseline', 5,  1.15, 1.00, 1.10, 'Peak spring demand'),
+    ('generic', 'baseline', 6,  1.15, 1.05, 1.05, 'Summer baseline'),
+    ('generic', 'baseline', 7,  1.10, 1.05, 1.05, 'Mid-summer'),
+    ('generic', 'baseline', 8,  1.10, 1.05, 1.05, 'Late summer'),
+    ('generic', 'baseline', 9,  1.05, 1.00, 1.05, 'Fall begins'),
+    ('generic', 'baseline', 10, 1.00, 1.00, 1.00, 'Steady baseline'),
+    ('generic', 'baseline', 11, 0.90, 0.95, 0.95, 'Pre-holiday dip'),
+    ('generic', 'baseline', 12, 0.85, 0.95, 0.90, 'Holiday slowdown'),
+]
+
+_SERVICE_LABELS = {
+    'pool_cleaning': 'Pool service',
+    'hvac_ac':       'HVAC – Air conditioning',
+    'hvac_heat':     'HVAC – Heating',
+    'plumbing':      'Plumbing',
+    'electrical':    'Electrical',
+    'roofing':       'Roofing',
+    'generic':       'Generic home services',
+}
+
+
+def ensure_seasonality_curves() -> None:
+    """Idempotently seed pool_cleaning + generic seasonality rows if missing."""
+    try:
+        seeded_types = {row[0] for row in _SEASONALITY_SEED}
+        existing = db.session.execute(
+            text("SELECT service_type, COUNT(*) FROM service_seasonality_curves "
+                 "WHERE service_type IN :types GROUP BY service_type"),
+            {"types": tuple(seeded_types)},
+        ).all()
+        existing_counts = {row[0]: row[1] for row in existing}
+        for st, cat, month, dm, cm, crm, note in _SEASONALITY_SEED:
+            if existing_counts.get(st, 0) >= 12:
+                continue  # this service_type already fully seeded
+            db.session.execute(text("""
+                INSERT INTO service_seasonality_curves
+                  (service_type, service_category, month,
+                   demand_multiplier, cpl_multiplier, conversion_rate_multiplier, notes)
+                VALUES (:st, :cat, :month, :dm, :cm, :crm, :note)
+            """), {"st": st, "cat": cat, "month": month,
+                   "dm": dm, "cm": cm, "crm": crm, "note": note})
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+
+def get_service_type_label(service_type: str) -> str:
+    return _SERVICE_LABELS.get(service_type, service_type.replace('_', ' ').title())
+
+
+def get_seasonality_note(service_type: str, month: int) -> str:
+    """Return the seasonality note for a given service_type/month, or empty string."""
+    try:
+        row = db.session.execute(text("""
+            SELECT notes FROM service_seasonality_curves
+            WHERE service_type = :st AND month = :m
+            ORDER BY confidence_score DESC LIMIT 1
+        """), {"st": service_type, "m": month}).first()
+        return row[0] if row and row[0] else ""
+    except Exception:
+        return ""
+
+
 def generate_monthly_forecast(
     account_id: int,
     campaign_id: int,
@@ -40,6 +129,8 @@ def generate_monthly_forecast(
     Returns:
         Dict with forecast details
     """
+    ensure_seasonality_curves()
+
     # 1. Get baseline metrics from historical data (90 days)
     baseline = calculate_baseline_metrics(campaign_id, days=90)
 
@@ -146,7 +237,10 @@ def generate_monthly_forecast(
             "weather_multiplier": round(weather_multiplier, 2),
             "capacity_adjustment": round(capacity_adjustment, 2),
             "combined_multiplier": round(combined_multiplier, 2)
-        }
+        },
+        "service_type": service_type,
+        "service_type_label": get_service_type_label(service_type),
+        "seasonality_note": get_seasonality_note(service_type, target_month),
     }
 
 
@@ -364,6 +458,7 @@ def generate_seasonal_budget_recommendations(
     Returns:
         List of monthly budget recommendations
     """
+    ensure_seasonality_curves()
     recommendations = []
     today = date.today()
 
@@ -401,10 +496,15 @@ def generate_seasonal_budget_recommendations(
                 "budget_change_pct": round(budget_change_pct, 1),
                 "projected_leads": forecast['forecast']['projected_leads'],
                 "seasonality_factor": round(seasonality_factor, 2),
-                "confidence": forecast['forecast']['confidence_score']
+                "confidence": forecast['forecast']['confidence_score'],
+                "note": get_seasonality_note(service_type, target_month),
             })
 
-    return recommendations
+    return {
+        "recommendations": recommendations,
+        "service_type": service_type,
+        "service_type_label": get_service_type_label(service_type),
+    }
 
 
 def detect_budget_anomalies(campaign_id: int, lookback_days: int = 7) -> List[Dict[str, Any]]:

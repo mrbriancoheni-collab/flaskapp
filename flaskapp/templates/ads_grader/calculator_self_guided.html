@@ -683,6 +683,14 @@
 
 <!-- Reuse calculator.html script -->
 <script nonce="{{ g.csp_nonce }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
 // IMMEDIATELY define global functions (no waiting, no dependencies)
 (function() {
   'use strict';
@@ -1006,12 +1014,12 @@ function approveOptimizations() {
   console.log('Selected count:', selectedCount);
 
   if (selectedCount === 0) {
-    alert('Please select at least one optimization to approve.');
+    showToast('Please select at least one optimization to approve.', 'error');
     return;
   }
 
   // In demo mode, just show success message
-  alert('Demo Mode: In the live version, ' + selectedCount + ' optimization(s) would be submitted to your Google Ads account for implementation.');
+  showToast('Demo: In the live version, ' + selectedCount + ' optimization(s) would be sent to your Google Ads account.', 'info');
   closeOptimizationsModal();
 }
 

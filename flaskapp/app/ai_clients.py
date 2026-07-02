@@ -48,6 +48,16 @@ def chatgpt_response(prompt: str, profile: Optional[Dict] = None) -> str:
         return f"Error (OpenAI): {e}"
 
 
+def get_ai_client():
+    """Return an anthropic.Anthropic client ready for messages.create() calls."""
+    if anthropic is None:
+        raise RuntimeError("anthropic package is not installed")
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise RuntimeError("ANTHROPIC_API_KEY is not configured")
+    return anthropic.Anthropic(api_key=api_key)
+
+
 def claude_response(prompt: str, profile: Optional[Dict] = None) -> str:
     """Call Anthropic Messages API (latest style; no deprecated Completion)."""
     if anthropic is None:

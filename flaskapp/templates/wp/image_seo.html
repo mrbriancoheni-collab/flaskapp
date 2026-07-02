@@ -1,0 +1,183 @@
+{% extends "base_app.html" %}
+{% block title %}Optimize Images for Google · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Add Image Descriptions for Google</h1>
+      <p class="text-gray-500 text-sm mt-1">Every image needs a short description so Google (and screen readers) can understand it. Find and fix missing or weak descriptions across all your pages.</p>
+    </div>
+    {% if posts_data %}
+    {% set total_missing = posts_data | sum(attribute='missing_count') %}
+    <span class="text-sm {% if total_missing > 0 %}text-red-600 font-semibold{% else %}text-green-600 font-semibold{% endif %}">
+      {{ total_missing }} image{{ 's' if total_missing != 1 }} missing a description
+    </span>
+    {% endif %}
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+    <div class="rounded-xl px-4 py-3 text-sm border
+      {% if cat == 'success' %}bg-green-50 border-green-200 text-green-800
+      {% elif cat == 'error' %}bg-red-50 border-red-200 text-red-800
+      {% elif cat == 'warning' %}bg-yellow-50 border-yellow-200 text-yellow-800
+      {% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {% if error %}
+  <div class="bg-red-50 border border-red-200 rounded-xl p-4">
+    <p class="text-red-800 text-sm"><i class="fa-solid fa-circle-xmark text-red-400 mr-2"></i>{{ error }}</p>
+  </div>
+  {% endif %}
+
+  {% if not site %}
+  <div class="bg-white rounded-xl shadow-sm border p-12 text-center">
+    <i class="fa-brands fa-wordpress text-gray-300 text-5xl mb-4"></i>
+    <p class="text-gray-600 mb-4">Connect a WordPress site to audit image SEO.</p>
+    <a href="{{ url_for('wp_bp.settings') }}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">Connect WordPress</a>
+  </div>
+
+  {% elif posts_data %}
+  {% set total_missing = posts_data | sum(attribute='missing_count') %}
+  <form method="POST" action="{{ url_for('wp_bp.image_seo') }}" id="img-form">
+    <input type="hidden" name="action" value="save_alts" id="img-action">
+
+    <!-- Toolbar -->
+    <div class="bg-white rounded-xl shadow-sm border p-4 flex flex-wrap items-center gap-3">
+      <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+        <input type="checkbox" id="select-all" class="rounded">
+        Select all missing
+      </label>
+      <div class="ml-auto flex gap-2">
+        <button type="button" onclick="submitAction('ai_generate')"
+                class="px-4 py-2 border border-indigo-300 text-indigo-600 rounded-lg text-sm hover:bg-indigo-50 font-medium">
+          <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>AI Generate Selected
+        </button>
+        {% if total_missing > 0 %}
+        <button type="button" id="bulk-fix-btn" onclick="bulkFixAltText()"
+                class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 font-medium">
+          <i class="fa-solid fa-bolt mr-1"></i>Fix all missing alt text
+        </button>
+        {% endif %}
+        <button type="submit"
+                class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 font-medium">
+          <i class="fa-solid fa-floppy-disk mr-1"></i>Save Descriptions
+        </button>
+      </div>
+    </div>
+
+    {% for post in posts_data %}
+    <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+      <div class="px-5 py-3 border-b bg-gray-50 flex items-center gap-3">
+        <span class="{% if post.missing_count > 0 %}text-red-500{% else %}text-green-500{% endif %}">
+          <i class="fa-solid {% if post.missing_count > 0 %}fa-circle-xmark{% else %}fa-circle-check{% endif %}"></i>
+        </span>
+        <div class="flex-1 min-w-0">
+          <p class="font-semibold text-gray-900 truncate">{{ post.title }}</p>
+          <a href="{{ post.url }}" target="_blank" rel="noopener" class="text-xs text-gray-400 hover:text-indigo-500">{{ post.url }}</a>
+        </div>
+        <span class="text-xs text-gray-400 whitespace-nowrap">
+          {{ post.missing_count }} missing / {{ post.total }} images
+        </span>
+      </div>
+      <input type="hidden" name="post_id" value="{{ post.id }}">
+      <div class="divide-y">
+        {% for img in post.images %}
+        <div class="px-5 py-3 flex flex-wrap items-start gap-4
+          {% if img.missing and not img.decorative %}bg-red-50{% elif img.generic %}bg-amber-50{% endif %}">
+          <!-- Image preview -->
+          <div class="w-16 h-16 flex-shrink-0 rounded overflow-hidden bg-gray-100">
+            <img src="{{ img.src }}" alt="" class="w-full h-full object-cover"
+                 onerror="this.parentElement.innerHTML='<div class=\'w-full h-full flex items-center justify-center\'><i class=\'fa-solid fa-image text-gray-300 text-xl\'></i></div>'">
+          </div>
+          <div class="flex-1 min-w-48 space-y-1">
+            <p class="text-xs font-mono text-gray-500 truncate">{{ img.filename }}</p>
+            <input type="hidden" name="src_{{ post.id }}_{{ img.idx }}" value="{{ img.src }}">
+            <input type="hidden" name="src_val_{{ img.key }}" value="{{ img.src }}">
+            <input type="hidden" name="post_title_{{ img.key }}" value="{{ post.title | e }}">
+            <input type="text"
+                   name="alt_{{ post.id }}_{{ img.idx }}"
+                   value="{{ img.suggested or img.alt or '' }}"
+                   placeholder="{{ '⚠ Missing description' if img.missing else ('⚠ Generic description' if img.generic else 'Image description') }}"
+                   class="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-300 focus:outline-none
+                     {% if img.missing %}border-red-300{% elif img.generic %}border-amber-300{% else %}border-gray-200{% endif %}">
+            {% if img.suggested %}
+            <p class="text-xs text-indigo-600"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>AI suggestion applied</p>
+            {% endif %}
+          </div>
+          {% if img.missing and not img.decorative %}
+          <label class="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer mt-1 flex-shrink-0">
+            <input type="checkbox" name="selected_img" value="{{ img.key }}" class="img-cb rounded">
+            Select for AI
+          </label>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+
+    <div class="bg-white rounded-xl shadow-sm border p-4 flex justify-end">
+      <button type="submit" class="px-5 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 font-medium">
+        <i class="fa-solid fa-floppy-disk mr-1"></i>Save All Descriptions
+      </button>
+    </div>
+  </form>
+
+  {% elif site %}
+  <div class="bg-green-50 border border-green-200 rounded-xl p-8 text-center">
+    <i class="fa-solid fa-circle-check text-green-500 text-4xl mb-3"></i>
+    <p class="text-green-800 font-semibold">All your images have descriptions — great work!</p>
+  </div>
+  {% endif %}
+
+</div>
+<script>
+document.getElementById('select-all')?.addEventListener('change', function() {
+  document.querySelectorAll('.img-cb').forEach(cb => cb.checked = this.checked);
+});
+function submitAction(action) {
+  document.getElementById('img-action').value = action;
+  document.getElementById('img-form').submit();
+}
+
+async function bulkFixAltText() {
+  const btn = document.getElementById('bulk-fix-btn');
+  if (!btn) return;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Fixing...';
+
+  try {
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const resp = await fetch('{{ url_for("wp_bp.bulk_fix_alt_text") }}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+    });
+    const data = await resp.json();
+    if (data.error) {
+      btn.innerHTML = '<i class="fa-solid fa-circle-xmark mr-1"></i>Error';
+      btn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+      btn.classList.add('bg-red-600');
+    } else {
+      const n = data.queued || 0;
+      btn.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i>Fixing ${n} image${n !== 1 ? 's' : ''}…`;
+      btn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+      btn.classList.add('bg-green-600');
+      // Show a success toast-like message
+      const toast = document.createElement('div');
+      toast.className = 'fixed bottom-4 right-4 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg text-sm z-50';
+      toast.innerHTML = `<i class="fa-solid fa-circle-check mr-2"></i>Queued alt text fixes for ${n} post${n !== 1 ? 's' : ''}. Run the publisher to apply.`;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 5000);
+    }
+  } catch (err) {
+    btn.innerHTML = '<i class="fa-solid fa-circle-xmark mr-1"></i>Failed';
+    btn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+    btn.classList.add('bg-red-600');
+  }
+}
+</script>
+{% endblock %}

@@ -82,41 +82,69 @@
   {% endif %}
 
   {# ── opportunities header ── #}
-  <div class="bg-white border border-gray-200 rounded-xl p-5 flex items-center justify-between gap-4 shadow-sm">
-    <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
-        <i class="fa-solid fa-robot text-indigo-600"></i>
+  <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+    <div class="flex items-start justify-between gap-4 flex-wrap">
+      <div class="flex items-start gap-3">
+        <div class="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <i class="fa-solid fa-robot text-indigo-600"></i>
+        </div>
+        <div>
+          <h2 class="font-semibold text-gray-900">
+            {% if is_demo %}Things the AI found (demo){% else %}Things the AI found in your account{% endif %}
+          </h2>
+          <p class="text-sm text-gray-500 mt-0.5">
+            {% if is_demo %}
+              Sample data from a fictional HVAC company — connect your account to see real opportunities.
+            {% else %}
+              The AI scanned your account and found <strong class="text-gray-700">{{ analysis.opportunities|length }} {{ 'opportunity' if analysis.opportunities|length == 1 else 'opportunities' }}</strong> to improve performance.
+            {% endif %}
+          </p>
+        </div>
       </div>
-      <div>
-        <h2 class="font-semibold text-gray-900">
-          {% if is_demo %}AI-Powered Optimization Analysis (Demo){% else %}AI Optimization Opportunities{% endif %}
-        </h2>
-        <p class="text-sm text-gray-500">
-          {% if is_demo %}
-            Sample data from a fictional HVAC company — connect your account to see real optimizations.
-          {% else %}
-            {{ analysis.opportunities|length }} opportunities identified · low-risk changes auto-execute, high-risk require approval
-          {% endif %}
-        </p>
+      <div class="flex-shrink-0 flex items-center gap-2 flex-wrap">
+        {% if not is_demo %}
+        <button onclick="runAIAgents()" id="runAgentsBtn"
+                class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition"
+                title="{% if not is_paid %}Upgrade to a paid plan to run AI agents{% endif %}">
+          {% if not is_paid %}<i class="fa-solid fa-crown text-yellow-300"></i>{% else %}<i class="fa-solid fa-robot"></i>{% endif %}
+          Run AI Agents
+        </button>
+        <a href="{{ url_for('agents_bp.approval_queue') }}"
+           class="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition">
+          <i class="fa-solid fa-clipboard-check"></i> Review AI Suggestions
+        </a>
+        {% else %}
+        <a href="{{ url_for('auth_bp.signup') }}"
+           class="inline-flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
+          <i class="fa-solid fa-rocket"></i> Get Started
+        </a>
+        {% endif %}
       </div>
     </div>
-    <div class="flex-shrink-0 flex items-center gap-2">
-      {% if not is_demo %}
-      <button onclick="runAIAgents()" id="runAgentsBtn"
-              class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
-        <i class="fa-solid fa-robot"></i> Run AI Agents
-      </button>
-      <a href="{{ url_for('agents_bp.approval_queue') }}"
-         class="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition">
-        <i class="fa-solid fa-clipboard-check"></i> Approval Queue
-      </a>
-      {% else %}
-      <a href="{{ url_for('auth_bp.signup') }}"
-         class="inline-flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
-        <i class="fa-solid fa-rocket"></i> Get Started
-      </a>
-      {% endif %}
+
+    {# Plain-English explainer of how the AI decides what to do — replaces the "low-risk auto-execute, high-risk require approval" jargon line #}
+    {% if not is_demo %}
+    <div class="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+      <div class="flex items-start gap-3">
+        <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+          <i class="fa-solid fa-bolt text-green-600 text-xs"></i>
+        </div>
+        <div>
+          <p class="font-semibold text-gray-800">Safe changes happen automatically</p>
+          <p class="text-xs text-gray-500 mt-0.5">Things like blocking obviously-wasteful search terms — the AI applies them without bothering you. Every change is logged and reversible.</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-3">
+        <div class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+          <i class="fa-solid fa-hand text-amber-600 text-xs"></i>
+        </div>
+        <div>
+          <p class="font-semibold text-gray-800">Bigger changes wait for you</p>
+          <p class="text-xs text-gray-500 mt-0.5">Things like increasing a budget or pausing a campaign — the AI suggests them and waits for your approval. You stay in control.</p>
+        </div>
+      </div>
     </div>
+    {% endif %}
   </div>
 
   <!-- Agent Status Banner -->
@@ -167,7 +195,8 @@
         </div>
         <button onclick="runAIAgents()" id="runAgentsBtnBanner"
                 class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
-          <i class="fa-solid fa-bolt"></i> Run Now
+          {% if not is_paid %}<i class="fa-solid fa-crown text-yellow-300"></i>{% else %}<i class="fa-solid fa-robot"></i>{% endif %}
+          {% if is_paid %}Run AI Agents{% else %}Upgrade to Run{% endif %}
         </button>
       </div>
     </div>
@@ -203,6 +232,35 @@
           View AI Actions
         </a>
       </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- First-Run Hero CTA: Show when connected but agents have never been run -->
+  {% if connected and agent_status and not agent_status.last_run %}
+  <div class="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl shadow-2xl p-8 text-white text-center">
+    <div class="max-w-2xl mx-auto">
+      <div class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-5">
+        <i class="fa-solid fa-robot text-4xl"></i>
+      </div>
+      <h2 class="text-3xl font-extrabold mb-3">Your AI Team is Ready</h2>
+      <p class="text-indigo-100 text-lg mb-2">
+        8 AI agents are standing by to analyze your account, find wasted spend, and start optimizing automatically.
+      </p>
+      <p class="text-indigo-200 text-sm mb-8">
+        Safe changes happen automatically. Bigger decisions wait for your approval. Every change is logged and reversible.
+      </p>
+      <button onclick="runAIAgents()" id="runAgentsBtnHero"
+              class="inline-flex items-center gap-3 px-10 py-5 bg-white text-indigo-700 font-extrabold text-xl rounded-2xl hover:bg-indigo-50 transition shadow-2xl transform hover:scale-105">
+        {% if not is_paid %}<i class="fa-solid fa-crown text-yellow-500 mr-1"></i>{% endif %}
+        <i class="fa-solid fa-rocket"></i>
+        {% if is_paid %}Launch AI Agents Now{% else %}Upgrade to Launch AI Agents{% endif %}
+        <i class="fa-solid fa-arrow-right"></i>
+      </button>
+      {% if not is_paid %}
+      <p class="text-indigo-200 text-xs mt-3">AI Agents are available on paid plans</p>
+      {% endif %}
+      <p class="text-indigo-300 text-xs mt-2">Takes about 30 seconds &nbsp;·&nbsp; No changes made without your review</p>
     </div>
   </div>
   {% endif %}
@@ -433,6 +491,36 @@
         <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Combined Value</div>
         <div class="text-3xl font-black text-purple-600">${{ "%.0f"|format(ns.total_combined_value) }}</div>
         <div class="text-xs text-gray-500">/month</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- AI Agents Launch CTA (shown when there are opportunities and agents have been run) -->
+  {% if not is_demo and connected and analysis.opportunities|length > 0 and agent_status and agent_status.last_run %}
+  <div class="bg-gradient-to-r from-indigo-600 to-purple-700 rounded-2xl shadow-xl p-6 text-white">
+    <div class="flex flex-col sm:flex-row items-center gap-6">
+      <div class="flex-shrink-0 w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+        <i class="fa-solid fa-robot text-3xl"></i>
+      </div>
+      <div class="flex-1 text-center sm:text-left">
+        <h3 class="text-xl font-extrabold mb-1">Don't do this manually — let AI handle it</h3>
+        <p class="text-indigo-100 text-sm">
+          Run your AI agents to automatically apply safe fixes and queue the bigger ones for your approval.
+          Every change is logged and reversible.
+        </p>
+      </div>
+      <div class="flex-shrink-0 flex flex-col sm:flex-row items-center gap-3">
+        <button onclick="runAIAgents()" id="runAgentsBtnCTA"
+                class="inline-flex items-center gap-2 px-8 py-4 bg-white text-indigo-700 font-extrabold text-base rounded-xl hover:bg-indigo-50 transition shadow-xl transform hover:scale-105 whitespace-nowrap">
+          {% if not is_paid %}<i class="fa-solid fa-crown text-yellow-500 mr-1"></i>{% else %}<i class="fa-solid fa-rocket"></i>{% endif %}
+          {% if is_paid %}Launch AI Agents{% else %}Upgrade to Unlock{% endif %}
+        </button>
+        <a href="{{ url_for('agents_bp.approval_queue') }}"
+           class="inline-flex items-center gap-2 px-5 py-4 border border-white/40 text-white text-sm font-medium rounded-xl hover:bg-white/10 transition whitespace-nowrap">
+          <i class="fa-solid fa-clipboard-check"></i>
+          Review Queue
+        </a>
       </div>
     </div>
   </div>
@@ -1100,6 +1188,14 @@
 
 <!-- JavaScript -->
 <script nonce="{{ g.csp_nonce }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
 // Toggle accordion
 function toggleAccordion(contentId, chevronId) {
   const content = document.getElementById(contentId);
@@ -1335,7 +1431,7 @@ function approveOptimizations() {
   const checkboxes = document.querySelectorAll('#opportunitiesList .optimization-checkbox:checked');
 
   if (checkboxes.length === 0) {
-    alert('Please select at least one optimization to approve.');
+    showToast('Please select at least one optimization to approve.', 'error');
     return;
   }
 
@@ -1681,13 +1777,13 @@ async function markManualTaskComplete(taskId, taskTitle, buttonElement) {
       }, 300);
     } else {
       // Error - restore button
-      alert('Failed to mark task as complete: ' + (result.error || 'Unknown error'));
+      showToast('Failed to mark task as complete: ' + (result.error || 'Unknown error'), 'error');
       buttonElement.disabled = false;
       buttonElement.innerHTML = originalHTML;
     }
   } catch (error) {
     console.error('Error marking task complete:', error);
-    alert('Failed to mark task as complete. Please try again.');
+    showToast('Failed to mark task as complete. Please try again.', 'error');
     buttonElement.disabled = false;
     buttonElement.innerHTML = originalHTML;
   }
@@ -1960,14 +2056,14 @@ async function activateCampaign(campaignId) {
     const result = await response.json();
 
     if (result.success) {
-      alert('✅ Campaign activated successfully!\n\nYour campaign is now running. You can view its performance in your Google Ads dashboard.');
+      showToast('Campaign activated! It is now running.', 'success');
       loadPausedCampaigns(); // Refresh the list
     } else {
-      alert('❌ Failed to activate campaign:\n\n' + (result.error || 'Unknown error'));
+      showToast('Failed to activate campaign: ' + (result.error || 'Unknown error'), 'error');
     }
   } catch (error) {
     console.error('Error activating campaign:', error);
-    alert('❌ Error activating campaign:\n\n' + (error.message || 'Please try again'));
+    showToast('Error activating campaign: ' + (error.message || 'Please try again'), 'error');
   }
 }
 
@@ -1982,22 +2078,35 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
+// Paid-account flag injected from server
+const _IS_PAID_ACCOUNT = {{ 'true' if is_paid else 'false' }};
+
 // Run AI Agents manually
 async function runAIAgents() {
+  // Non-paid users see the upgrade modal instead
+  if (!_IS_PAID_ACCOUNT) {
+    if (typeof openPricingModal === 'function') {
+      openPricingModal();
+    } else {
+      window.location.href = '{{ url_for("main_bp.pricing") }}';
+    }
+    return;
+  }
+  const agentBtnIds = ['runAgentsBtn', 'runAgentsBtnBanner', 'runAgentsBtnHero', 'runAgentsBtnCTA'];
+  const agentBtns = agentBtnIds.map(id => document.getElementById(id)).filter(Boolean);
+  const originalContents = agentBtns.map(btn => btn.innerHTML);
+
+  // Disable all agent launch buttons
+  agentBtns.forEach(btn => {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-gear processing-spinner"></i> Launching...';
+  });
+
+  // Keep legacy references for restore on error
   const btn = document.getElementById('runAgentsBtn');
   const btnBanner = document.getElementById('runAgentsBtnBanner');
   const originalText = btn ? btn.innerHTML : '';
   const originalTextBanner = btnBanner ? btnBanner.innerHTML : '';
-
-  // Disable both buttons
-  if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-gear processing-spinner"></i> Analyzing...';
-  }
-  if (btnBanner) {
-    btnBanner.disabled = true;
-    btnBanner.innerHTML = '<i class="fa-solid fa-gear processing-spinner"></i> Running...';
-  }
 
   // Show running overlay
   const overlay = document.createElement('div');
@@ -2139,15 +2248,11 @@ async function runAIAgents() {
     // Auto-remove after 8 seconds
     setTimeout(() => notification.remove(), 8000);
 
-    // Restore both buttons
-    if (btn) {
+    // Restore all agent buttons
+    agentBtns.forEach((btn, i) => {
       btn.disabled = false;
-      btn.innerHTML = originalText;
-    }
-    if (btnBanner) {
-      btnBanner.disabled = false;
-      btnBanner.innerHTML = originalTextBanner;
-    }
+      btn.innerHTML = originalContents[i];
+    });
   }
 }
 
@@ -2186,11 +2291,11 @@ async function undoAction(actionId) {
       setTimeout(() => notification.remove(), 3000);
       setTimeout(() => location.reload(), 2000);
     } else {
-      alert('Error: ' + (data.error || 'Failed to undo action'));
+      showToast('Error: ' + (data.error || 'Failed to undo action'), 'error');
     }
   } catch (error) {
     console.error('Error undoing action:', error);
-    alert('Error undoing action: ' + error.message);
+    showToast('Error undoing action: ' + error.message, 'error');
   }
 }
 </script>

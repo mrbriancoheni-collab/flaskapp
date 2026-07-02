@@ -1,6 +1,7 @@
 {# templates/public/home.html - Conversion Optimized #}
 {% extends "base_public.html" %}
-{% block title %}FieldSprout — Get Found. Book More Jobs with AI{% endblock %}
+{% block title %}FieldSprout — The AI Marketing Command Center for Local Pros{% endblock %}
+{% block meta_description %}FieldSprout is the AI Marketing Command Center for home & field service businesses. Manage Google Ads, Facebook Ads, and your website from one dashboard — AI agents optimize everything 24/7, without hiring an agency.{% endblock %}
 
 {% block head_extra %}
 <!-- FAQ Schema for AI Search -->
@@ -200,36 +201,36 @@
   </div>
 
   <div class="container-max relative py-12 lg:py-20 text-center">
-    <span class="badge animate-fade-in">Revenue AI for Local Pros</span>
+    <span class="badge animate-fade-in">The Marketing Command Center for Local Pros</span>
 
     <h1 class="mt-6 text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight animate-fade-in-up">
-      Cut Google Ads costs by <span class="text-primary-700 relative">
-        20–30%
+      Run all your marketing from <span class="text-primary-700 relative">
+        one command center
         <svg class="absolute -bottom-2 left-0 w-full" height="8" viewBox="0 0 200 8" fill="none">
           <path d="M0 7C60 1 140 1 200 7" stroke="currentColor" stroke-width="2" class="text-accent-500"/>
         </svg>
-      </span> while increasing booked jobs
+      </span>
     </h1>
 
     <p class="mt-6 text-xl md:text-2xl text-gray-700 max-w-4xl mx-auto font-medium animate-fade-in-up animation-delay-200">
-      FieldSprout uses AI agents that monitor, optimize, and improve your campaigns 24/7 — so you get more calls, more booked jobs, and less wasted ad spend.
+      FieldSprout is your Marketing Command Center — AI agents manage your Google Ads, Facebook Ads, and website 24/7 from a single dashboard, so you get more booked jobs and less wasted spend without juggling tools or agencies.
     </p>
 
     <!-- CTA buttons -->
     <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up animation-delay-400">
       {% if has_endpoint('signup') %}
         <a href="{{ url_for(ep('signup')) }}?plan=annual" class="btn btn-primary btn-lg group relative overflow-hidden">
-          <span class="relative z-10">Try FieldSprout →</span>
+          <span class="relative z-10">Start free trial →</span>
           <span class="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
         </a>
       {% elif has_endpoint('register') %}
         <a href="{{ url_for(ep('register')) }}?plan=annual" class="btn btn-primary btn-lg group relative overflow-hidden">
-          <span class="relative z-10">Try FieldSprout →</span>
+          <span class="relative z-10">Start free trial →</span>
           <span class="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
         </a>
       {% else %}
         <a href="/signup?plan=annual" class="btn btn-primary btn-lg group relative overflow-hidden">
-          <span class="relative z-10">Try FieldSprout →</span>
+          <span class="relative z-10">Start free trial →</span>
           <span class="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
         </a>
       {% endif %}
@@ -241,6 +242,13 @@
       </a>
     </div>
 
+    <!-- Trust microcopy under hero CTAs -->
+    <p class="mt-4 text-sm text-gray-500 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 animate-fade-in-up animation-delay-400">
+      <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-check text-green-500"></i>14-day free trial</span>
+      <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-check text-green-500"></i>No credit card required</span>
+      <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-check text-green-500"></i>Connect Google account in 30s</span>
+    </p>
+
     <!-- Video Showcase -->
     <div class="mt-12 max-w-4xl mx-auto animate-fade-in-up animation-delay-600">
       <div class="bg-white rounded-2xl shadow-2xl p-2 border border-gray-200">
@@ -248,8 +256,8 @@
           <video
             id="heroVideo"
             class="w-full h-auto"
-            preload="metadata"
-            poster=""
+            preload="none"
+            poster="{{ url_for('static', filename='img/preview_workflow.png') }}"
             style="max-height: 600px;">
             <source src="{{ url_for('static', filename='video/FieldSprout-GAds-Demo-Walkthru.mp4') }}" type="video/mp4">
             Your browser does not support the video tag.

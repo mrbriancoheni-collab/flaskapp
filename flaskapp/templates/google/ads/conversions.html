@@ -1,0 +1,150 @@
+{% extends "base_app.html" %}
+{% block title %}Conversion Tracking · Google Ads{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Conversion Actions</h1>
+      <p class="text-gray-500 text-sm mt-1">Google Ads conversion actions — last 30 days performance</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <button id="sync-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 flex items-center gap-2">
+        <i class="fa-solid fa-rotate"></i>Sync from Google Ads
+      </button>
+      <a href="{{ url_for('gads_bp.optimize', tab='campaigns') }}" class="text-sm text-gray-500 hover:text-indigo-600">
+        ← Back to Optimizer
+      </a>
+    </div>
+  </div>
+
+  <div id="sync-status" class="hidden rounded-xl px-4 py-3 text-sm border bg-blue-50 border-blue-200 text-blue-800"></div>
+
+  {% if not conversions %}
+  <div class="bg-white rounded-xl shadow-sm border p-12 text-center">
+    <i class="fa-solid fa-chart-line text-gray-300 text-5xl mb-4"></i>
+    <p class="text-gray-600 mb-2">No conversion actions synced yet.</p>
+    <p class="text-sm text-gray-400">Click "Sync from Google Ads" to pull your conversion actions.</p>
+  </div>
+  {% else %}
+
+  <!-- Summary cards -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    {% set total_conv = conversions | sum(attribute='conversions_30d') %}
+    {% set total_val = conversions | sum(attribute='conversion_value_30d') %}
+    {% set active_count = conversions | selectattr('status', 'equalto', 'ENABLED') | list | length %}
+    <div class="bg-white rounded-xl border p-4">
+      <div class="text-xs text-gray-500">Total Conversions (30d)</div>
+      <div class="text-2xl font-bold text-gray-900">{{ total_conv | int }}</div>
+    </div>
+    <div class="bg-white rounded-xl border p-4">
+      <div class="text-xs text-gray-500">Total Value (30d)</div>
+      <div class="text-2xl font-bold text-green-600">${{ "%.2f" | format(total_val) }}</div>
+    </div>
+    <div class="bg-white rounded-xl border p-4">
+      <div class="text-xs text-gray-500">Active Actions</div>
+      <div class="text-2xl font-bold text-gray-900">{{ active_count }}</div>
+    </div>
+    <div class="bg-white rounded-xl border p-4">
+      <div class="text-xs text-gray-500">Avg Value / Conv</div>
+      <div class="text-2xl font-bold text-gray-900">
+        {% if total_conv > 0 %}${{ "%.2f" | format(total_val / total_conv) }}{% else %}—{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+          <tr>
+            <th class="text-left px-4 py-3">Conversion Action</th>
+            <th class="text-left px-4 py-3 w-32">Category</th>
+            <th class="text-left px-4 py-3 w-28">Type</th>
+            <th class="text-center px-4 py-3 w-24">Status</th>
+            <th class="text-right px-4 py-3 w-28">Conv. (30d)</th>
+            <th class="text-right px-4 py-3 w-28">Value (30d)</th>
+            <th class="text-left px-4 py-3 w-24">Counting</th>
+            <th class="text-right px-4 py-3 w-24">Click Window</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          {% for ca in conversions %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 font-medium text-gray-900">{{ ca.name }}</td>
+            <td class="px-4 py-3 text-gray-600">
+              {{ ca.category | replace('_', ' ') | title if ca.category else '—' }}
+            </td>
+            <td class="px-4 py-3 text-gray-600 text-xs">
+              {{ ca.type_ | replace('_', ' ') | title if ca.type_ else '—' }}
+            </td>
+            <td class="px-4 py-3 text-center">
+              {% if ca.status == 'ENABLED' %}
+                <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Active</span>
+              {% elif ca.status == 'HIDDEN' %}
+                <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Hidden</span>
+              {% else %}
+                <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{{ ca.status or '—' }}</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-right {% if ca.conversions_30d and ca.conversions_30d > 0 %}text-green-600 font-semibold{% else %}text-gray-400{% endif %}">
+              {{ ca.conversions_30d | int if ca.conversions_30d else '0' }}
+            </td>
+            <td class="px-4 py-3 text-right text-gray-700">
+              {% if ca.conversion_value_30d and ca.conversion_value_30d > 0 %}
+                ${{ "%.2f" | format(ca.conversion_value_30d) }}
+              {% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3 text-xs text-gray-500">
+              {{ ca.counting_type | replace('_', ' ') | title if ca.counting_type else '—' }}
+            </td>
+            <td class="px-4 py-3 text-right text-gray-600">
+              {{ ca.click_through_window_days or '—' }}d
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% endif %}
+</div>
+
+<script>
+(function () {
+  const syncBtn = document.getElementById('sync-btn');
+  const syncStatus = document.getElementById('sync-status');
+
+  syncBtn?.addEventListener('click', async function () {
+    syncBtn.disabled = true;
+    syncBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Syncing…';
+    syncStatus?.classList.remove('hidden');
+    if (syncStatus) syncStatus.textContent = 'Pulling conversion actions from Google Ads…';
+    try {
+      const r = await fetch('/account/google/ads/conversions/sync', {method: 'POST'});
+      const data = await r.json();
+      if (syncStatus) {
+        if (data.ok) {
+          syncStatus.textContent = `Sync complete — ${data.synced || 0} conversion actions updated. Refresh to see data.`;
+          syncStatus.className = 'rounded-xl px-4 py-3 text-sm border bg-green-50 border-green-200 text-green-800';
+        } else {
+          syncStatus.textContent = `Sync error: ${data.error}`;
+          syncStatus.className = 'rounded-xl px-4 py-3 text-sm border bg-red-50 border-red-200 text-red-800';
+        }
+      }
+    } catch (e) {
+      if (syncStatus) {
+        syncStatus.textContent = `Sync failed: ${e.message}`;
+        syncStatus.className = 'rounded-xl px-4 py-3 text-sm border bg-red-50 border-red-200 text-red-800';
+      }
+    } finally {
+      syncBtn.disabled = false;
+      syncBtn.innerHTML = '<i class="fa-solid fa-rotate mr-2"></i>Sync from Google Ads';
+    }
+  });
+})();
+</script>
+{% endblock %}

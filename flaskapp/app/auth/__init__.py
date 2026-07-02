@@ -420,7 +420,7 @@ def register():
         elif not _is_valid_email(email):  # <-- server-side email sanity check
             errs.append("Enter a valid email address.")
 
-        ok_pw, msg_pw = validate_strength(password, email, min_length=12)
+        ok_pw, msg_pw = validate_strength(password, email, min_length=8)
         if not ok_pw and msg_pw:
             errs.append(msg_pw)
 

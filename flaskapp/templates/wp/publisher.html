@@ -8,7 +8,7 @@
       <div>
         <h1 class="text-2xl font-bold flex items-center gap-2">
           <i class="fa-brands fa-wordpress"></i>
-          Content Publisher
+          Pages & Posts
         </h1>
         {% if site %}
           <div class="flex items-center gap-2 mt-2 text-indigo-100">
@@ -51,10 +51,10 @@
         <div class="text-3xl font-bold">{{ jobs|selectattr('status', 'eq', 'done')|list|length }}</div>
         <div class="text-sm text-indigo-200">Published</div>
       </div>
-      <div class="bg-white/10 rounded-xl p-4">
+      <a href="{{ url_for('wp_bp.approvals') }}" class="bg-white/10 rounded-xl p-4 hover:bg-white/20 transition block">
         <div class="text-3xl font-bold">{{ jobs|selectattr('payload.needs_approval')|list|length if jobs else 0 }}</div>
-        <div class="text-sm text-indigo-200">Pending Approval</div>
-      </div>
+        <div class="text-sm text-indigo-200">Pending Approval <i class="fa-solid fa-arrow-right text-xs ml-1"></i></div>
+      </a>
       <div class="bg-white/10 rounded-xl p-4">
         <div class="text-3xl font-bold">{{ site.autopilot_daily_new or 0 }}</div>
         <div class="text-sm text-indigo-200">Daily Target</div>
@@ -74,24 +74,24 @@
           <div class="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center mb-3 group-hover:scale-110 transition">
             <i class="fa-solid fa-wand-magic-sparkles text-xl"></i>
           </div>
-          <div class="font-semibold text-gray-900">AI Draft</div>
-          <div class="text-sm text-gray-500 mt-1">Generate content with AI assistance</div>
+          <div class="font-semibold text-gray-900">Write with AI</div>
+          <div class="text-sm text-gray-500 mt-1">Let AI draft a new page or post for you</div>
         </a>
 
         <a href="{{ url_for('wp_bp.compose') }}?mode=manual" class="group bg-white border rounded-xl p-5 hover:shadow-lg hover:border-indigo-300 transition">
           <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-3 group-hover:scale-110 transition">
             <i class="fa-solid fa-pen-to-square text-xl"></i>
           </div>
-          <div class="font-semibold text-gray-900">Write Post</div>
-          <div class="text-sm text-gray-500 mt-1">Create content manually</div>
+          <div class="font-semibold text-gray-900">Write It Yourself</div>
+          <div class="text-sm text-gray-500 mt-1">Write your own page or post from scratch</div>
         </a>
 
         <a href="{{ url_for('wp_bp.analyze') }}" class="group bg-white border rounded-xl p-5 hover:shadow-lg hover:border-indigo-300 transition">
           <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center mb-3 group-hover:scale-110 transition">
             <i class="fa-solid fa-magnifying-glass-chart text-xl"></i>
           </div>
-          <div class="font-semibold text-gray-900">Analyze URL</div>
-          <div class="text-sm text-gray-500 mt-1">Improve existing content</div>
+          <div class="font-semibold text-gray-900">Improve a Page</div>
+          <div class="text-sm text-gray-500 mt-1">Paste a page link to get improvement ideas</div>
         </a>
       </div>
 
@@ -99,16 +99,27 @@
       <div class="bg-white rounded-xl border shadow-sm">
         <div class="px-5 py-4 border-b flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <h2 class="font-semibold text-gray-900">Content Queue</h2>
+            <h2 class="font-semibold text-gray-900">What's Being Worked On</h2>
             <span class="px-2 py-0.5 rounded-full bg-gray-100 text-xs font-medium">{{ jobs|length }} items</span>
           </div>
-          <form method="post" action="{{ url_for('wp_bp.run_now') }}" class="inline">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="text-sm px-3 py-1.5 rounded-lg border hover:bg-gray-50 flex items-center gap-1.5 transition">
-              <i class="fa-solid fa-play text-xs"></i>
-              Process Now
-            </button>
-          </form>
+          <div class="flex items-center gap-2">
+            <form method="post" action="{{ url_for('wp_bp.run_now') }}" class="inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="text-sm px-3 py-1.5 rounded-lg border hover:bg-gray-50 flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-play text-xs"></i>
+                Process Now
+              </button>
+            </form>
+            {% if jobs|selectattr('status','equalto','error')|list %}
+            <form method="post" action="{{ url_for('wp_bp.clear_errors') }}" class="inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="text-sm px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-trash-can text-xs"></i>
+                Clear Errors
+              </button>
+            </form>
+            {% endif %}
+          </div>
         </div>
 
         <div class="divide-y max-h-[500px] overflow-y-auto">
@@ -168,6 +179,21 @@
                   </div>
                 {% endif %}
 
+                {% set sc = social_copy.get(j.id) if social_copy is defined else None %}
+                {% if sc and j.status == 'done' %}
+                  <div class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div class="flex items-center justify-between gap-2 mb-1">
+                      <span class="text-xs font-semibold text-blue-700 flex items-center gap-1">
+                        <i class="fa-solid fa-share-nodes"></i> Social Copy
+                      </span>
+                      <button type="button" onclick="navigator.clipboard.writeText(this.dataset.text).then(()=>this.textContent='Copied!')"
+                              data-text="{{ sc | e }}"
+                              class="text-xs text-blue-600 hover:underline">Copy</button>
+                    </div>
+                    <p class="text-sm text-gray-700 italic">{{ sc }}</p>
+                  </div>
+                {% endif %}
+
                 {% if j.payload and j.payload.findings %}
                   <details class="mt-3">
                     <summary class="cursor-pointer text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
@@ -214,8 +240,8 @@
             <div class="w-16 h-16 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center mx-auto mb-4">
               <i class="fa-solid fa-inbox text-2xl"></i>
             </div>
-            <div class="text-gray-500">No content in queue</div>
-            <div class="text-sm text-gray-400 mt-1">Create your first post to get started</div>
+            <div class="text-gray-500">Nothing being worked on right now</div>
+            <div class="text-sm text-gray-400 mt-1">Create your first page or post to get started</div>
           </div>
           {% endfor %}
         </div>
@@ -270,7 +296,7 @@
           </a>
           <a href="{{ url_for('wp_bp.edit_lookup') }}" class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition text-sm text-gray-700">
             <i class="fa-solid fa-pen text-gray-400 w-5"></i>
-            Edit Existing Post
+            Edit an Existing Page
           </a>
           {% if site %}
           <a href="{{ site.base_url }}/wp-admin/edit.php" target="_blank" class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition text-sm text-gray-700">
@@ -289,7 +315,7 @@
           <h3 class="font-semibold text-gray-900">Pro Tip</h3>
         </div>
         <p class="text-sm text-gray-600">
-          Use the AI Draft feature with specific keywords and topics to generate SEO-optimized content that ranks well in search results.
+          When you use "Write with AI", give it a specific service and the city you serve — that's what makes pages show up in Google for the right local searches.
         </p>
       </div>
     </div>
@@ -310,6 +336,26 @@
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
+{% set queued_count = jobs|selectattr('status','eq','queued')|list|length %}
+{% if site and queued_count > 0 and not site.autopilot_require_approval %}
+// Auto-process queued jobs on page load (no approval gate, jobs waiting)
+(async function autoProcess() {
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
+  try {
+    const r = await fetch('{{ url_for("wp_bp.run_now") }}', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json', 'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'csrf_token=' + encodeURIComponent(csrf) + '&max=10',
+    });
+    const d = await r.json();
+    if (d.processed && d.processed > 0) {
+      setTimeout(() => location.reload(), 1500);
+    }
+  } catch(e) {}
+})();
+{% endif %}
+
 document.addEventListener('DOMContentLoaded', function() {
   const modal = document.getElementById('previewModal');
   const previewTitle = document.getElementById('previewTitle');

@@ -1,0 +1,198 @@
+{% extends "base_app.html" %}
+{% block title %}Seasonal Intelligence · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto py-8 px-4 space-y-6">
+
+  {# ── Header ─────────────────────────────────────────────────────────────── #}
+  <div class="flex items-start gap-4">
+    <a href="{{ url_for('journey_bp.index') }}"
+       class="mt-1 inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-indigo-600">
+      <i class="fa-solid fa-arrow-left text-xs"></i>Back
+    </a>
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shrink-0">
+        <i class="fa-solid fa-sun-plant-wilt text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-2xl font-extrabold text-gray-900">Seasonal Intelligence</h1>
+        <p class="text-gray-500 text-sm">Understand your revenue seasonality and optimize ad spend by month.</p>
+      </div>
+    </div>
+  </div>
+
+  {# ── Chart Card ─────────────────────────────────────────────────────────── #}
+  <div class="bg-white border border-gray-200 rounded-xl p-6">
+    <div class="flex items-center justify-between mb-5">
+      <h2 class="text-base font-semibold text-gray-900">Monthly Revenue &amp; Ad Spend (Last 12 Months)</h2>
+      <div class="flex items-center gap-4 text-xs text-gray-500">
+        <span class="flex items-center gap-1.5">
+          <span class="inline-block w-3 h-3 rounded-full bg-indigo-500"></span>Revenue
+        </span>
+        <span class="flex items-center gap-1.5">
+          <span class="inline-block w-3 h-3 rounded-full bg-amber-400"></span>Ad Spend
+        </span>
+      </div>
+    </div>
+
+    {# SVG bar chart rendered server-side data, animated by JS #}
+    <div id="chart-container" class="relative w-full overflow-x-auto">
+      <svg id="seasonal-chart" viewBox="0 0 780 280" width="100%" height="auto"
+           role="img" aria-label="Monthly revenue and spend chart">
+        <!-- Grid lines -->
+        {% set max_val = monthly_data | map(attribute='avg_revenue') | max %}
+        {% set max_val = [max_val, 1] | max %}
+        {% set chart_h = 220 %}
+        {% set bar_w = 24 %}
+        {% set gap = 40 %}
+        {% set left = 48 %}
+        {% for i in range(5) %}
+          {% set y = 10 + (chart_h / 4) * i %}
+          <line x1="{{ left }}" y1="{{ y }}" x2="772" y2="{{ y }}" stroke="#f3f4f6" stroke-width="1"/>
+          <text x="{{ left - 4 }}" y="{{ y + 4 }}" text-anchor="end" font-size="10" fill="#9ca3af">
+            ${{ "{:,.0f}".format(max_val - (max_val / 4) * i) }}
+          </text>
+        {% endfor %}
+
+        <!-- Bars -->
+        {% for d in monthly_data %}
+          {% set x = left + loop.index0 * gap %}
+          {% set rev_h = (d.avg_revenue / max_val) * chart_h %}
+          {% set spnd_h = (d.avg_spend / max_val) * chart_h %}
+          {% set rec_pct = d.recommended_budget_pct %}
+
+          {# Revenue bar #}
+          <rect class="rev-bar"
+                x="{{ x }}" y="{{ 10 + chart_h - rev_h }}"
+                width="{{ bar_w }}" height="{{ rev_h }}"
+                rx="3"
+                fill="{{ '#4f46e5' if rec_pct >= 120 else ('#6366f1' if rec_pct >= 100 else '#a5b4fc') }}"
+                opacity="0.85">
+            <title>{{ d.month_name }}: Revenue ${{ "{:,.0f}".format(d.avg_revenue) }}</title>
+          </rect>
+
+          {# Spend bar (overlaid, narrower) #}
+          <rect class="spnd-bar"
+                x="{{ x + bar_w + 2 }}" y="{{ 10 + chart_h - spnd_h }}"
+                width="{{ (bar_w * 0.6) | int }}" height="{{ spnd_h }}"
+                rx="3"
+                fill="#f59e0b"
+                opacity="0.8">
+            <title>{{ d.month_name }}: Ad Spend ${{ "{:,.0f}".format(d.avg_spend) }}</title>
+          </rect>
+
+          {# Recommended budget indicator #}
+          {% if rec_pct >= 120 %}
+          <text x="{{ x + bar_w / 2 }}" y="{{ 10 + chart_h - rev_h - 5 }}"
+                text-anchor="middle" font-size="9" fill="#16a34a" font-weight="700">▲</text>
+          {% elif rec_pct <= 80 %}
+          <text x="{{ x + bar_w / 2 }}" y="{{ 10 + chart_h - rev_h - 5 }}"
+                text-anchor="middle" font-size="9" fill="#dc2626" font-weight="700">▼</text>
+          {% endif %}
+
+          {# Month label #}
+          <text x="{{ x + bar_w / 2 }}" y="{{ 10 + chart_h + 16 }}"
+                text-anchor="middle" font-size="10" fill="#6b7280">{{ d.month_name }}</text>
+        {% endfor %}
+      </svg>
+    </div>
+
+    <p class="text-xs text-gray-400 mt-2 text-center">
+      <i class="fa-solid fa-triangle text-green-500 mr-1"></i>Increase budget &nbsp;
+      <i class="fa-solid fa-triangle fa-rotate-180 text-red-500 mr-1 ml-3"></i>Reduce budget
+    </p>
+  </div>
+
+  {# ── Monthly Data Table ─────────────────────────────────────────────────── #}
+  <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100">
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Month-by-Month Breakdown</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+          <tr>
+            <th class="px-5 py-3 text-left">Month</th>
+            <th class="px-5 py-3 text-right">Revenue</th>
+            <th class="px-5 py-3 text-right">Ad Spend</th>
+            <th class="px-5 py-3 text-right">Jobs</th>
+            <th class="px-5 py-3 text-right">Recommended Budget</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for d in monthly_data %}
+          {% set rec = d.recommended_budget_pct %}
+          <tr class="hover:bg-gray-50 transition-colors">
+            <td class="px-5 py-3 font-medium text-gray-900">{{ d.month_name }}</td>
+            <td class="px-5 py-3 text-right text-gray-700">${{ "{:,.0f}".format(d.avg_revenue) }}</td>
+            <td class="px-5 py-3 text-right text-gray-700">${{ "{:,.0f}".format(d.avg_spend) }}</td>
+            <td class="px-5 py-3 text-right text-gray-500">{{ d.job_count }}</td>
+            <td class="px-5 py-3 text-right">
+              {% if rec >= 120 %}
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                  <i class="fa-solid fa-arrow-up text-[10px]"></i>+{{ (rec - 100) | int }}%
+                </span>
+              {% elif rec <= 80 %}
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+                  <i class="fa-solid fa-arrow-down text-[10px]"></i>-{{ (100 - rec) | int }}%
+                </span>
+              {% else %}
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
+                  Steady
+                </span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# ── AI Recommendations ─────────────────────────────────────────────────── #}
+  <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-6">
+    <h2 class="text-base font-semibold text-indigo-900 mb-4 flex items-center gap-2">
+      <i class="fa-solid fa-wand-magic-sparkles text-indigo-500"></i>
+      AI Budget Recommendations
+    </h2>
+    <ul class="space-y-3">
+      {% for rec in recommendations %}
+      <li class="flex items-start gap-3">
+        <span class="mt-0.5 w-6 h-6 bg-indigo-200 text-indigo-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0">{{ loop.index }}</span>
+        <p class="text-sm text-indigo-900">{{ rec }}</p>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  {# ── Action Buttons ─────────────────────────────────────────────────────── #}
+  <div class="flex flex-wrap gap-3 justify-end">
+    <a href="{{ url_for('journey_bp.reactivation') }}"
+       class="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors text-sm">
+      <i class="fa-solid fa-rotate-right text-indigo-500"></i>
+      Customer Reactivation
+    </a>
+    <button onclick="applyRecommendations()"
+            class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors shadow-md shadow-indigo-100 text-sm">
+      <i class="fa-solid fa-check"></i>
+      Apply Recommendations
+    </button>
+  </div>
+
+</div>
+
+<script nonce="{{ g.csp_nonce }}">
+  function applyRecommendations() {
+    // Placeholder — in production this would call an auto-budget API
+    const btn = event.currentTarget;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Applying…';
+    setTimeout(function() {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Recommendations Applied!';
+      btn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+      btn.classList.add('bg-green-600', 'hover:bg-green-700');
+    }, 1500);
+  }
+</script>
+{% endblock %}

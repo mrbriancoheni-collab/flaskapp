@@ -1,0 +1,62 @@
+{% extends "base_public.html" %}
+{% block title %}Choose Your Google Ads Account – FieldSprout{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4 py-16">
+  <div class="w-full max-w-lg">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4"
+           style="background:linear-gradient(135deg,#4c1d95,#7c3aed);">
+        <i class="fa-brands fa-google text-white text-2xl"></i>
+      </div>
+      <h1 class="text-2xl font-bold text-gray-900">Which account should we grade?</h1>
+      {% if email %}
+      <p class="text-gray-500 text-sm mt-1">Connected as <strong>{{ email }}</strong></p>
+      {% endif %}
+    </div>
+
+    <!-- Account list -->
+    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+        <p class="text-sm font-medium text-gray-600">
+          {{ accessible_customers | length }} Google Ads account{{ 's' if accessible_customers | length != 1 else '' }} found
+        </p>
+      </div>
+
+      <ul class="divide-y divide-gray-100">
+        {% for customer_id in accessible_customers %}
+        <li>
+          <a href="{{ url_for('ads_grader_bp.public_analyze', customer_id=customer_id) }}"
+             class="flex items-center justify-between px-6 py-4 hover:bg-purple-50 transition group">
+            <div class="flex items-center gap-4">
+              <div class="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                <i class="fa-brands fa-google text-indigo-600"></i>
+              </div>
+              <div>
+                <p class="font-semibold text-gray-900 group-hover:text-indigo-700">Account {{ customer_id }}</p>
+                <p class="text-xs text-gray-400">ID: {{ customer_id }}</p>
+              </div>
+            </div>
+            <i class="fa-solid fa-arrow-right text-gray-300 group-hover:text-indigo-500 transition"></i>
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <!-- Trust line -->
+    <p class="text-center text-xs text-gray-400 mt-5">
+      <i class="fa-solid fa-lock mr-1"></i>Read-only access &nbsp;·&nbsp; No changes made to your account &nbsp;·&nbsp; 100% free
+    </p>
+
+    <!-- Start over link -->
+    <p class="text-center text-sm text-gray-500 mt-4">
+      Wrong account?
+      <a href="{{ url_for('ads_grader_bp.public_connect') }}" class="text-indigo-600 hover:text-indigo-800 font-medium">Connect a different Google account</a>
+    </p>
+
+  </div>
+</div>
+{% endblock %}

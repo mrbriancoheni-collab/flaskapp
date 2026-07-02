@@ -216,6 +216,97 @@ def is_paid_account() -> bool:
         # If schema differs or table missing, treat as not paid (safe default)
         return False
 
+_PLAN_TIER_MAP = {
+    'free': 0,
+    'growth': 1,
+    'pro': 2,
+    'managed': 3,
+}
+
+def current_plan_name() -> str:
+    """Return the account's current plan name: 'free', 'growth', 'pro', or 'managed'."""
+    aid = current_account_id()
+    if not aid:
+        return 'free'
+    table = current_app.config.get("ACCOUNT_TABLE_NAME", "accounts")
+    plan_field = current_app.config.get("ACCOUNT_PLAN_FIELD", "plan")
+    stripe_field = current_app.config.get("ACCOUNT_STRIPE_FIELD", "stripe_status")
+    try:
+        with db.engine.connect() as conn:
+            row = conn.execute(
+                text(f"SELECT {plan_field} AS plan, {stripe_field} AS stripe_status "
+                     f"FROM {table} WHERE id=:id LIMIT 1"),
+                {"id": aid},
+            ).mappings().first()
+            if not row:
+                return 'free'
+            plan = (row.get("plan") or "").strip().lower()
+            stripe_status = (row.get("stripe_status") or "").strip().lower()
+            if plan in _PLAN_TIER_MAP:
+                return plan
+            # Fall back: any active Stripe subscription without a named plan = growth
+            if stripe_status in ('active', 'trialing'):
+                return 'growth'
+            return 'free'
+    except Exception:
+        return 'free'
+
+
+def current_plan_tier() -> int:
+    """Return the account's plan tier as an integer: 0=free, 1=growth, 2=pro, 3=managed."""
+    return _PLAN_TIER_MAP.get(current_plan_name(), 0)
+
+
+def plan_required(min_plan: str):
+    """
+    Decorator that requires the account to be on at least `min_plan`.
+
+    For JSON/API endpoints (request path ends with .json or Content-Type is JSON
+    or it's a POST to an action URL): returns HTTP 402 JSON.
+    For page requests: redirects to /pricing with a flash message.
+
+    Usage:
+        @rsa_bp.post("/auto-promote")
+        @login_required
+        @plan_required('growth')
+        def auto_promote():
+            ...
+    """
+    min_tier = _PLAN_TIER_MAP.get(min_plan, 1)
+
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(*args, **kwargs):
+            if current_plan_tier() < min_tier:
+                plan_label = min_plan.capitalize()
+                msg = f"{plan_label} plan required to use this feature."
+                # API / AJAX requests get a 402 JSON response
+                is_api = (
+                    request.is_json
+                    or request.path.endswith('.json')
+                    or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+                    or request.method == 'POST'
+                )
+                if is_api:
+                    from flask import jsonify
+                    return jsonify({
+                        "ok": False,
+                        "upgrade_required": True,
+                        "min_plan": min_plan,
+                        "message": msg,
+                    }), 402
+                flash(msg, "info")
+                return redirect(url_for("main_bp.pricing"))
+            return view_func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
+# Convenience decorators
+growth_required = plan_required('growth')
+pro_required = plan_required('pro')
+managed_required = plan_required('managed')
+
 # ---------------------------------------------------------------------
 # Session helpers (used by your login/Google One Tap routes)
 # ---------------------------------------------------------------------
@@ -319,6 +410,98 @@ def verified_email_required(view_func):
             return redirect(url_for("auth_bp.verify_notice"))
         return view_func(*args, **kwargs)
     return wrapper
+
+_PLAN_TIER_MAP = {
+    'free': 0,
+    'growth': 1,
+    'pro': 2,
+    'managed': 3,
+}
+
+def current_plan_name() -> str:
+    """Return the account's current plan name: 'free', 'growth', 'pro', or 'managed'."""
+    aid = current_account_id()
+    if not aid:
+        return 'free'
+    table = current_app.config.get("ACCOUNT_TABLE_NAME", "accounts")
+    plan_field = current_app.config.get("ACCOUNT_PLAN_FIELD", "plan")
+    stripe_field = current_app.config.get("ACCOUNT_STRIPE_FIELD", "stripe_status")
+    try:
+        with db.engine.connect() as conn:
+            row = conn.execute(
+                text(f"SELECT {plan_field} AS plan, {stripe_field} AS stripe_status "
+                     f"FROM {table} WHERE id=:id LIMIT 1"),
+                {"id": aid},
+            ).mappings().first()
+            if not row:
+                return 'free'
+            plan = (row.get("plan") or "").strip().lower()
+            stripe_status = (row.get("stripe_status") or "").strip().lower()
+            if plan in _PLAN_TIER_MAP:
+                return plan
+            # Fall back: any active Stripe subscription without a named plan = growth
+            if stripe_status in ('active', 'trialing'):
+                return 'growth'
+            return 'free'
+    except Exception:
+        return 'free'
+
+
+def current_plan_tier() -> int:
+    """Return the account's plan tier as an integer: 0=free, 1=growth, 2=pro, 3=managed."""
+    return _PLAN_TIER_MAP.get(current_plan_name(), 0)
+
+
+def plan_required(min_plan: str):
+    """
+    Decorator that requires the account to be on at least `min_plan`.
+
+    For JSON/API endpoints (request path ends with .json or Content-Type is JSON
+    or it's a POST to an action URL): returns HTTP 402 JSON.
+    For page requests: redirects to /pricing with a flash message.
+
+    Usage:
+        @rsa_bp.post("/auto-promote")
+        @login_required
+        @plan_required('growth')
+        def auto_promote():
+            ...
+    """
+    min_tier = _PLAN_TIER_MAP.get(min_plan, 1)
+
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(*args, **kwargs):
+            if current_plan_tier() < min_tier:
+                plan_label = min_plan.capitalize()
+                msg = f"{plan_label} plan required to use this feature."
+                # API / AJAX requests get a 402 JSON response
+                is_api = (
+                    request.is_json
+                    or request.path.endswith('.json')
+                    or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+                    or request.method == 'POST'
+                )
+                if is_api:
+                    from flask import jsonify
+                    return jsonify({
+                        "ok": False,
+                        "upgrade_required": True,
+                        "min_plan": min_plan,
+                        "message": msg,
+                    }), 402
+                flash(msg, "info")
+                return redirect(url_for("main_bp.pricing"))
+            return view_func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
+# Convenience decorators
+growth_required = plan_required('growth')
+pro_required = plan_required('pro')
+managed_required = plan_required('managed')
+
 
 def paid_required(view_func):
     """

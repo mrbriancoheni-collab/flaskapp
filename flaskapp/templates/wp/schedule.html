@@ -1,0 +1,298 @@
+{% extends "base_app.html" %}
+{% block title %}Content Schedule · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Content Schedule</h1>
+      <p class="text-sm text-gray-500 mt-0.5">Upcoming posts, ASAP queue, and recently published.</p>
+    </div>
+    <div class="flex gap-2">
+      <a href="{{ url_for('wp_bp.approvals') }}"
+         class="px-4 py-2 rounded-lg border text-sm hover:bg-gray-50 flex items-center gap-2">
+        <i class="fa-solid fa-inbox"></i> Approvals
+      </a>
+      <a href="{{ url_for('wp_bp.new_post') }}"
+         class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-700 transition flex items-center gap-2">
+        <i class="fa-solid fa-plus"></i> Schedule Post
+      </a>
+    </div>
+  </div>
+
+  <!-- Calendar view -->
+  {% if scheduled %}
+  <div class="rounded-xl border bg-white overflow-hidden">
+    <div class="px-5 py-4 border-b bg-gray-50 flex items-center gap-2">
+      <i class="fa-solid fa-calendar text-indigo-500"></i>
+      <h2 class="font-semibold text-gray-800">Calendar</h2>
+      <span class="ml-auto text-xs text-gray-400" id="cal-month-label"></span>
+    </div>
+    <div class="p-4">
+      <div id="cal-grid" class="grid grid-cols-7 gap-1 text-center text-xs text-gray-500 mb-1">
+        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+      </div>
+      <div id="cal-body" class="grid grid-cols-7 gap-1"></div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Summary tiles -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="rounded-xl border bg-white p-5 text-center">
+      <div class="text-3xl font-bold text-indigo-600">{{ scheduled | length }}</div>
+      <div class="text-xs text-gray-500 mt-1">Scheduled</div>
+    </div>
+    <div class="rounded-xl border bg-white p-5 text-center">
+      <div class="text-3xl font-bold text-green-600">{{ asap_ready | length }}</div>
+      <div class="text-xs text-gray-500 mt-1">Ready to Publish</div>
+    </div>
+    <div class="rounded-xl border bg-white p-5 text-center">
+      <div class="text-3xl font-bold text-amber-600">{{ pending_approval | length }}</div>
+      <div class="text-xs text-gray-500 mt-1">Awaiting Approval</div>
+    </div>
+    <div class="rounded-xl border bg-white p-5 text-center">
+      <div class="text-3xl font-bold text-gray-600">{{ recently_published | length }}</div>
+      <div class="text-xs text-gray-500 mt-1">Recently Published</div>
+    </div>
+  </div>
+
+  <!-- Future-dated timeline -->
+  {% if scheduled %}
+  <div class="rounded-xl border bg-white overflow-hidden">
+    <div class="px-5 py-4 border-b bg-gray-50 flex items-center gap-2">
+      <i class="fa-solid fa-calendar-days text-indigo-500"></i>
+      <h2 class="font-semibold text-gray-800">Scheduled Posts</h2>
+      <span class="ml-auto text-xs text-gray-400">Sorted by publish date</span>
+    </div>
+    <ul class="divide-y divide-gray-100">
+      {% for job in scheduled %}
+      {% set p = job.payload or {} %}
+      {% set days_out = ((job.run_at - now).days) if job.run_at else 0 %}
+      <li class="px-5 py-4 flex flex-wrap items-center gap-4">
+        <!-- Date column -->
+        <div class="w-20 shrink-0 text-center">
+          <div class="text-lg font-bold text-indigo-700">{{ job.run_at.strftime('%b %d') }}</div>
+          <div class="text-xs text-gray-400">{{ job.run_at.strftime('%H:%M') }} UTC</div>
+          <div class="text-xs mt-0.5
+            {% if days_out <= 1 %}text-amber-600 font-medium{% else %}text-gray-400{% endif %}">
+            {% if days_out == 0 %}Today
+            {% elif days_out == 1 %}Tomorrow
+            {% else %}{{ days_out }}d away{% endif %}
+          </div>
+        </div>
+
+        <!-- Post info -->
+        <div class="flex-1 min-w-0">
+          <div class="font-medium text-gray-900 truncate">
+            {{ p.get('title') or p.get('primary_keyword') or 'Untitled' }}
+          </div>
+          <div class="flex items-center gap-2 mt-0.5 text-xs text-gray-500">
+            <span class="px-1.5 py-0.5 rounded
+              {% if job.kind == 'ai_generate' %}bg-purple-100 text-purple-700
+              {% else %}bg-blue-100 text-blue-700{% endif %}">
+              {{ 'AI Draft' if job.kind == 'ai_generate' else job.kind }}
+            </span>
+            {% if p.get('primary_keyword') %}
+            <span>{{ p.primary_keyword }}</span>
+            {% endif %}
+            {% if (p.get('needs_approval')) %}
+            <span class="text-amber-600"><i class="fa-solid fa-lock mr-1"></i>Needs approval</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Status bar showing time until publish -->
+        <div class="hidden md:block w-32">
+          {% set max_days = 30 %}
+          {% set pct = [100 - ((days_out / max_days * 100) | int), 4] | max %}
+          <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div class="h-full rounded-full
+              {% if days_out <= 2 %}bg-amber-400{% else %}bg-indigo-300{% endif %}"
+              style="width: {{ pct }}%"></div>
+          </div>
+          <div class="text-xs text-gray-400 mt-1 text-right">Job #{{ job.id }}</div>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <!-- ASAP queue -->
+  {% if asap_ready %}
+  <div class="rounded-xl border bg-white overflow-hidden">
+    <div class="px-5 py-4 border-b bg-green-50 flex items-center gap-2">
+      <i class="fa-solid fa-bolt text-green-500"></i>
+      <h2 class="font-semibold text-gray-800">Ready to Publish <span class="text-green-600">(Next Cron Run)</span></h2>
+    </div>
+    <ul class="divide-y divide-gray-100">
+      {% for job in asap_ready %}
+      {% set p = job.payload or {} %}
+      <li class="px-5 py-3 flex items-center gap-3">
+        <i class="fa-solid fa-circle text-green-400 text-xs"></i>
+        <div class="flex-1 min-w-0">
+          <span class="font-medium text-gray-900">
+            {{ p.get('title') or p.get('primary_keyword') or 'Untitled' }}
+          </span>
+          <span class="ml-2 text-xs px-1.5 py-0.5 rounded
+            {% if job.kind == 'ai_generate' %}bg-purple-100 text-purple-700
+            {% else %}bg-blue-100 text-blue-700{% endif %}">
+            {{ 'AI' if job.kind == 'ai_generate' else job.kind }}
+          </span>
+        </div>
+        <span class="text-xs text-gray-400">Job #{{ job.id }} · {{ job.created_at.strftime('%b %d') }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <!-- Pending approval -->
+  {% if pending_approval %}
+  <div class="rounded-xl border border-amber-200 bg-amber-50 overflow-hidden">
+    <div class="px-5 py-4 border-b border-amber-200 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-lock text-amber-500"></i>
+        <h2 class="font-semibold text-gray-800">Awaiting Approval</h2>
+        <span class="text-xs px-2 py-0.5 rounded-full bg-amber-200 text-amber-800 font-medium">
+          {{ pending_approval | length }}
+        </span>
+      </div>
+      <a href="{{ url_for('wp_bp.approvals') }}"
+         class="text-sm text-indigo-600 hover:underline font-medium">Review →</a>
+    </div>
+    <ul class="divide-y divide-amber-100">
+      {% for job in pending_approval %}
+      {% set p = job.payload or {} %}
+      <li class="px-5 py-3 flex items-center gap-3">
+        <i class="fa-solid fa-clock text-amber-400 text-xs"></i>
+        <span class="flex-1 text-sm text-gray-700">
+          {{ p.get('title') or p.get('primary_keyword') or 'Untitled' }}
+        </span>
+        <a href="{{ url_for('wp_bp.approvals') }}"
+           class="text-xs text-indigo-600 hover:underline">Approve</a>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <!-- Recently published -->
+  {% if recently_published %}
+  <div class="rounded-xl border bg-white overflow-hidden">
+    <div class="px-5 py-4 border-b bg-gray-50 flex items-center gap-2">
+      <i class="fa-solid fa-circle-check text-green-500"></i>
+      <h2 class="font-semibold text-gray-800">Recently Published</h2>
+    </div>
+    <ul class="divide-y divide-gray-100">
+      {% for job in recently_published %}
+      {% set p = job.payload or {} %}
+      <li class="px-5 py-3 flex items-center gap-3">
+        <div class="flex-1 min-w-0">
+          <span class="text-sm font-medium text-gray-900 truncate block">
+            {{ p.get('title') or 'Untitled' }}
+          </span>
+          {% if p.get('link') or p.get('analysis_url') %}
+          <a href="{{ p.get('link') or p.get('analysis_url') }}" target="_blank"
+             class="text-xs text-indigo-600 hover:underline truncate block max-w-xs">
+            {{ p.get('link') or p.get('analysis_url') }}
+          </a>
+          {% endif %}
+        </div>
+        <span class="text-xs text-gray-400 whitespace-nowrap">
+          {{ job.updated_at.strftime('%b %d, %H:%M') }}
+        </span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {% if not scheduled and not asap_ready and not pending_approval and not recently_published %}
+  <div class="rounded-xl border bg-white p-12 text-center text-gray-400">
+    <i class="fa-solid fa-calendar-xmark text-4xl mb-3"></i>
+    <p class="font-medium">Nothing scheduled yet.</p>
+    <a href="{{ url_for('wp_bp.new_post') }}"
+       class="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-700 transition">
+      <i class="fa-solid fa-plus"></i> Create Your First Post
+    </a>
+  </div>
+  {% endif %}
+
+</div>
+
+{% if scheduled %}
+<script>
+(function() {
+  // Scheduled posts from server
+  const scheduledPosts = [
+    {% for job in scheduled %}
+    {% set p = job.payload or {} %}
+    {
+      date: "{{ job.run_at.strftime('%Y-%m-%d') }}",
+      title: {{ (p.get('title') or p.get('primary_keyword') or 'Untitled') | tojson }},
+      kind: "{{ job.kind }}"
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ];
+
+  const postsByDate = {};
+  scheduledPosts.forEach(p => {
+    if (!postsByDate[p.date]) postsByDate[p.date] = [];
+    postsByDate[p.date].push(p);
+  });
+
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+
+  const monthNames = ["January","February","March","April","May","June",
+                      "July","August","September","October","November","December"];
+  document.getElementById("cal-month-label").textContent = monthNames[month] + " " + year;
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const body = document.getElementById("cal-body");
+
+  // Empty cells before first day
+  for (let i = 0; i < firstDay; i++) {
+    const el = document.createElement("div");
+    el.className = "h-10";
+    body.appendChild(el);
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = year + "-" + String(month + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+    const posts = postsByDate[dateStr] || [];
+    const isToday = d === today.getDate();
+
+    const cell = document.createElement("div");
+    cell.className = "h-10 rounded-lg flex flex-col items-center justify-start pt-1 text-xs " +
+      (isToday ? "bg-indigo-50 border border-indigo-200" : "hover:bg-gray-50");
+
+    const dayNum = document.createElement("span");
+    dayNum.className = "font-medium " + (isToday ? "text-indigo-700" : "text-gray-700");
+    dayNum.textContent = d;
+    cell.appendChild(dayNum);
+
+    if (posts.length) {
+      const dots = document.createElement("div");
+      dots.className = "flex gap-0.5 mt-0.5";
+      posts.slice(0, 3).forEach(p => {
+        const dot = document.createElement("span");
+        dot.className = "w-1.5 h-1.5 rounded-full " +
+          (p.kind === "ai_generate" ? "bg-purple-400" : "bg-indigo-400");
+        dot.title = p.title;
+        dots.appendChild(dot);
+      });
+      cell.appendChild(dots);
+    }
+
+    body.appendChild(cell);
+  }
+})();
+</script>
+{% endif %}
+{% endblock %}

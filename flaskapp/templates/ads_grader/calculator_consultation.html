@@ -267,6 +267,14 @@
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
 (function() {
   'use strict';
 
@@ -285,7 +293,7 @@
 
       // TODO: Send to backend API
       // For now, show success message
-      alert('Thank you for your interest! We\'ll contact you within 24 hours to schedule your free consultation.');
+      showToast('Thanks! We\'ll contact you within 24 hours to schedule your free consultation.', 'success');
 
       // In production, you would:
       // 1. Send data to backend API

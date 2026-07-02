@@ -1705,8 +1705,9 @@ def ai_prompt_edit(prompt_id: int):
 def ai_prompts_initialize():
     """Initialize missing AI prompts with defaults."""
     try:
-        from app.services.ai_prompts_init import initialize_ai_prompts
+        from app.services.ai_prompts_init import initialize_ai_prompts, initialize_seo_ai_prompts
         count = initialize_ai_prompts()
+        count += initialize_seo_ai_prompts()
         _audit("ai_prompts_initialize", note=f"Initialized {count} prompts")
         flash(f"Initialized {count} missing prompts", "success")
     except Exception as e:
@@ -2266,3 +2267,202 @@ def api_tutorials_track_dismiss(popup_id):
         db.session.rollback()
         logger.exception("Error tracking tutorial dismiss")
         return flask_jsonify({"error": str(e)}), 500
+
+
+# -------------------------
+# Ads Grader Scoring Reference
+# -------------------------
+@admin_bp.get("/ads-grader-scoring")
+@login_required
+@require_admin
+def ads_grader_scoring():
+    """Reference page explaining how the Google Ads Health Grader scores each dimension."""
+    dimensions = [
+        {
+            "key": "wasted_spend",
+            "name": "Wasted Spend",
+            "weight": 25,
+            "icon": "fa-solid fa-fire",
+            "color": "red",
+            "description": "Primary signal: search terms matching DIY, job-seeker, or informational intent patterns. Blends non-converting keyword spend (30%) when conversion tracking is on. Falls back to negative keyword coverage ratio when no search term data exists.",
+            "formula": "score = max(0, 100 − waste_pct × 2.5)",
+            "data_source": "search_term_view, keyword metrics (conversions), negative_keywords count",
+            "thresholds": [
+                {"label": "0% waste", "score": 100, "grade": "A"},
+                {"label": "10% waste", "score": 75, "grade": "B+"},
+                {"label": "20% waste", "score": 50, "grade": "C-"},
+                {"label": "30% waste", "score": 25, "grade": "D+"},
+                {"label": "40%+ waste", "score": 0, "grade": "F"},
+            ],
+            "notes": "Extra penalty applied to overall score when actual waste > 10%: −(waste_pct − 10) × 2 pts. Example: 20% waste = −20 additional overall points on top of the 25% weight penalty.",
+        },
+        {
+            "key": "quality_score",
+            "name": "Quality Score",
+            "weight": 15,
+            "icon": "fa-solid fa-star",
+            "color": "yellow",
+            "description": "Google's 1–10 quality rating averaged across all active keywords. Higher QS lowers cost-per-click and wins more auctions. Target is 7+.",
+            "formula": "score = (avg_qs / 10) × 100",
+            "data_source": "keyword quality_score field (Google Ads API)",
+            "thresholds": [
+                {"label": "QS 10", "score": 100, "grade": "A+"},
+                {"label": "QS 7", "score": 70, "grade": "B"},
+                {"label": "QS 5", "score": 50, "grade": "C-"},
+                {"label": "QS 3", "score": 30, "grade": "D"},
+                {"label": "QS 1", "score": 10, "grade": "F"},
+            ],
+            "notes": "Benchmark target: 7.0 average QS. Each point of QS improvement reduces CPC by ~10–15%.",
+        },
+        {
+            "key": "ctr_optimization",
+            "name": "CTR Optimization",
+            "weight": 12,
+            "icon": "fa-solid fa-arrow-pointer",
+            "color": "blue",
+            "description": "Overall click-through rate vs industry benchmarks for search campaigns. Bonus of up to 10 points for consistent CTR across devices.",
+            "formula": "step function on overall CTR + device consistency bonus",
+            "data_source": "metrics.ctr, device_performance (mobile/desktop/tablet)",
+            "thresholds": [
+                {"label": "CTR ≥ 5%", "score": 100, "grade": "A+"},
+                {"label": "CTR ≥ 3%", "score": 70, "grade": "B"},
+                {"label": "CTR ≥ 2%", "score": 50, "grade": "C-"},
+                {"label": "CTR ≥ 1%", "score": 30, "grade": "D"},
+                {"label": "CTR < 1%", "score": 10, "grade": "F"},
+            ],
+            "notes": "Device consistency bonus: up to +10 pts when all devices show similar CTR (low variance).",
+        },
+        {
+            "key": "landing_pages",
+            "name": "Landing Page Experience",
+            "weight": 10,
+            "icon": "fa-solid fa-browser",
+            "color": "green",
+            "description": "Uses Google's own post-click quality score component, which already measures keyword/ad/landing page relevance and page speed. No external HTTP calls needed.",
+            "formula": "(ABOVE_AVG×100 + AVG×65 + UNKNOWN×50 + BELOW_AVG×20) / total_keywords",
+            "data_source": "keyword post_click_quality_score (Google Ads API)",
+            "thresholds": [
+                {"label": "All ABOVE_AVERAGE", "score": 100, "grade": "A+"},
+                {"label": "All AVERAGE", "score": 65, "grade": "B-"},
+                {"label": "50/50 split", "score": 60, "grade": "C+"},
+                {"label": "All BELOW_AVERAGE", "score": 20, "grade": "F"},
+            ],
+            "notes": "UNKNOWN counts as neutral (50). Accounts with no impressions may show mostly UNKNOWN.",
+        },
+        {
+            "key": "text_ad_optimization",
+            "name": "Text Ad Optimization",
+            "weight": 10,
+            "icon": "fa-solid fa-pen-nib",
+            "color": "purple",
+            "description": "60% weighted by RSA ad strength distribution (Google's creative quality signal) + 40% CTR component. ETAs are flagged as a best-practice issue but don't affect this score.",
+            "formula": "(strength_score × 0.60) + (min(100, ctr/4.0×100) × 0.40)",
+            "data_source": "ad_group_ad.ad_strength (RSA only), metrics.ctr",
+            "thresholds": [
+                {"label": "All EXCELLENT RSAs", "score": 100, "grade": "A+"},
+                {"label": "All GOOD RSAs", "score": 78, "grade": "B+"},
+                {"label": "All AVERAGE RSAs", "score": 55, "grade": "C"},
+                {"label": "All POOR RSAs", "score": 20, "grade": "F"},
+            ],
+            "notes": "RSA weights: EXCELLENT=100, GOOD=78, AVERAGE=55, POOR=20. CTR target: 4% = full 40 pts.",
+        },
+        {
+            "key": "account_activity",
+            "name": "Account Activity",
+            "weight": 10,
+            "icon": "fa-solid fa-list-check",
+            "color": "indigo",
+            "description": "Points-based score measuring active, quality account management. Account size is not penalized — a lean, well-organized account scores just as well as a large one.",
+            "formula": "sum of points across 4 signals (max 100)",
+            "data_source": "ad count, ad_group count, keyword count, extensions, conversions",
+            "thresholds": [
+                {"label": "≥3 ads/group (35) + 5–20 KW/group (30) + extensions (20) + conv tracking (15)", "score": 100, "grade": "A+"},
+                {"label": "≥2 ads/group (22) + tight KW grouping (20) + extensions (20)", "score": 62, "grade": "C+"},
+                {"label": "1 ad/group only, no extensions, no tracking", "score": 10, "grade": "F"},
+            ],
+            "notes": "Ads/group: ≥3=35pts, ≥2=22pts, ≥1=10pts. KW/group: 5–20=30pts, 1–5=20pts, 21–50=15pts, >50=5pts. Extensions=+20. Conv tracking=+15.",
+        },
+        {
+            "key": "long_tail_keywords",
+            "name": "Long-Tail Keywords",
+            "weight": 8,
+            "icon": "fa-solid fa-tags",
+            "color": "teal",
+            "description": "Percentage of keywords with 3+ words vs a 50% benchmark. Long-tail keywords cost less per click and convert at higher rates due to stronger intent.",
+            "formula": "(long_tail_count / total_keywords / 0.50) × 100",
+            "data_source": "keyword text word count distribution",
+            "thresholds": [
+                {"label": "≥50% long-tail", "score": 100, "grade": "A+"},
+                {"label": "25% long-tail", "score": 50, "grade": "C-"},
+                {"label": "10% long-tail", "score": 20, "grade": "F"},
+            ],
+            "notes": "Benchmark: 50%+ of keywords should be 3+ words. Score is capped at 100.",
+        },
+        {
+            "key": "impression_share",
+            "name": "Impression Share (Rank)",
+            "weight": 5,
+            "icon": "fa-solid fa-chart-bar",
+            "color": "orange",
+            "description": "Scored ONLY on impression share lost to rank (a quality/bid problem you can fix). Budget-lost share is shown as informational only — losing to budget is often a deliberate business decision.",
+            "formula": "step function on rank_lost_share percentage",
+            "data_source": "search_impression_share, search_rank_lost_impression_share",
+            "thresholds": [
+                {"label": "Rank-lost < 5%", "score": 95, "grade": "A+"},
+                {"label": "Rank-lost < 10%", "score": 80, "grade": "A-"},
+                {"label": "Rank-lost < 20%", "score": 62, "grade": "C+"},
+                {"label": "Rank-lost < 30%", "score": 45, "grade": "D+"},
+                {"label": "Rank-lost < 40%", "score": 28, "grade": "D-"},
+                {"label": "Rank-lost ≥ 40%", "score": 10, "grade": "F"},
+            ],
+            "notes": "Budget-lost share is displayed in the report as an FYI metric alongside a note that it's a business decision, not a grading factor.",
+        },
+        {
+            "key": "mobile_advertising",
+            "name": "Mobile Advertising",
+            "weight": 5,
+            "icon": "fa-solid fa-mobile-screen",
+            "color": "pink",
+            "description": "Additive points scoring mobile readiness. Checks whether device bid adjustments actually exist in the account (not assumed), traffic share, and whether adjustment direction aligns with relative mobile performance.",
+            "formula": "35 (base) + traffic share bonus + bid adj bonus + direction alignment bonus",
+            "data_source": "campaign_criterion (type=DEVICE), device metrics (ctr, clicks)",
+            "thresholds": [
+                {"label": "Base only, no mobile traffic, no adjustments", "score": 35, "grade": "D"},
+                {"label": "Mobile ≥45% share + bid adjustments set + aligned direction", "score": 100, "grade": "A+"},
+            ],
+            "notes": "Traffic share: ≥45%=+20, ≥25%=+12, >0%=+5. Has adjustments=+25. Direction aligns with CTR=+20, mismatched=+8. No adj but CTR ratio within 15%=+10.",
+        },
+        {
+            "key": "expanded_text_ads",
+            "name": "Expanded Text Ads",
+            "weight": 0,
+            "icon": "fa-solid fa-triangle-exclamation",
+            "color": "gray",
+            "description": "ETAs were sunset by Google in June 2022. Presence of ETAs is flagged as a best-practice warning in the report but carries zero weight in the score — penalising for an immutable legacy format isn't fair.",
+            "formula": "Informational only — 0% weight",
+            "data_source": "ad_group_ad type = EXPANDED_TEXT_AD",
+            "thresholds": [],
+            "notes": "Shown in Best Practices section as a yellow warning. No score impact.",
+        },
+    ]
+
+    grade_scale = [
+        {"range": "90–100", "grade": "A+", "label": "Excellent"},
+        {"range": "85–89",  "grade": "A",  "label": "Great"},
+        {"range": "80–84",  "grade": "A-", "label": "Good"},
+        {"range": "75–79",  "grade": "B+", "label": "Above Average"},
+        {"range": "70–74",  "grade": "B",  "label": "Average"},
+        {"range": "65–69",  "grade": "B-", "label": "Below Average"},
+        {"range": "60–64",  "grade": "C+", "label": "Needs Work"},
+        {"range": "55–59",  "grade": "C",  "label": "Poor"},
+        {"range": "50–54",  "grade": "C-", "label": "Poor"},
+        {"range": "45–49",  "grade": "D+", "label": "Failing"},
+        {"range": "40–44",  "grade": "D",  "label": "Failing"},
+        {"range": "< 40",   "grade": "F",  "label": "Critical"},
+    ]
+
+    return render_template(
+        "admin/ads_grader_scoring.html",
+        dimensions=dimensions,
+        grade_scale=grade_scale,
+    )

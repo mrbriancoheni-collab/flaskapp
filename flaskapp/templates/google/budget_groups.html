@@ -349,6 +349,14 @@
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
 // Group Modal Functions
 function openCreateGroupModal() {
   document.getElementById('groupModalTitle').textContent = 'Create Budget Group';
@@ -407,10 +415,10 @@ async function saveGroup() {
       closeGroupModal();
       location.reload();
     } else {
-      alert('Error: ' + result.error);
+      showToast('Error: ' + result.error, 'error');
     }
   } catch (error) {
-    alert('Error saving group: ' + error.message);
+    showToast('Error saving group: ' + error.message, 'error');
   }
 }
 
@@ -432,10 +440,10 @@ async function deleteGroup(groupId) {
     if (result.success) {
       location.reload();
     } else {
-      alert('Error: ' + result.error);
+      showToast('Error: ' + result.error, 'error');
     }
   } catch (error) {
-    alert('Error deleting group: ' + error.message);
+    showToast('Error deleting group: ' + error.message, 'error');
   }
 }
 
@@ -459,7 +467,7 @@ async function saveAssignments() {
     .map(cb => parseInt(cb.value));
 
   if (selectedCampaigns.length === 0) {
-    alert('Please select at least one campaign');
+    showToast('Please select at least one campaign', 'error');
     return;
   }
 
@@ -479,10 +487,10 @@ async function saveAssignments() {
       closeAssignModal();
       location.reload();
     } else {
-      alert('Error: ' + result.error);
+      showToast('Error: ' + result.error, 'error');
     }
   } catch (error) {
-    alert('Error assigning campaigns: ' + error.message);
+    showToast('Error assigning campaigns: ' + error.message, 'error');
   }
 }
 
@@ -504,10 +512,10 @@ async function unassignCampaign(campaignId) {
     if (result.success) {
       location.reload();
     } else {
-      alert('Error: ' + result.error);
+      showToast('Error: ' + result.error, 'error');
     }
   } catch (error) {
-    alert('Error unassigning campaign: ' + error.message);
+    showToast('Error unassigning campaign: ' + error.message, 'error');
   }
 }
 </script>

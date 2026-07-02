@@ -1,20 +1,122 @@
 {% extends "base_app.html" %}
+{% from "components/jargon_tip.html" import jargon %}
 {% set gads_active = 'structure' %}
-{% block title %}Google Ads · Optimize{% endblock %}
+{% block title %}Google Ads · {% if tab == 'cockpit' %}Command Center{% else %}Optimize{% endif %}{% endblock %}
 {% block content %}
 {% include "google/components/gads_nav.html" %}
+<script>
+window.showToast = window.showToast || function(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+};
+window.appConfirm = window.appConfirm || function(message) {
+  return new Promise(resolve => {
+    const back = document.createElement('div');
+    back.className = 'fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4';
+    back.innerHTML = '<div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6"><p class="text-sm text-gray-800 mb-5"></p><div class="flex justify-end gap-3"><button type="button" data-a="c" class="px-4 py-2 text-sm border rounded-lg hover:bg-gray-50">Cancel</button><button type="button" data-a="o" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">OK</button></div></div>';
+    back.querySelector('p').textContent = message;
+    document.body.appendChild(back);
+    back.querySelector('[data-a="o"]').onclick = () => { back.remove(); resolve(true); };
+    back.querySelector('[data-a="c"]').onclick = () => { back.remove(); resolve(false); };
+  });
+};
+window.appPrompt = window.appPrompt || function(message, defaultValue) {
+  return new Promise(resolve => {
+    const back = document.createElement('div');
+    back.className = 'fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4';
+    back.innerHTML = '<div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6"><p class="text-sm text-gray-800 mb-3"></p><input type="text" class="w-full rounded-lg border px-3 py-2 text-sm mb-5"><div class="flex justify-end gap-3"><button type="button" data-a="c" class="px-4 py-2 text-sm border rounded-lg hover:bg-gray-50">Cancel</button><button type="button" data-a="o" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">OK</button></div></div>';
+    back.querySelector('p').textContent = message;
+    const input = back.querySelector('input');
+    input.value = defaultValue || '';
+    document.body.appendChild(back);
+    input.focus();
+    back.querySelector('[data-a="o"]').onclick = () => { const v = input.value; back.remove(); resolve(v); };
+    back.querySelector('[data-a="c"]').onclick = () => { back.remove(); resolve(null); };
+  });
+};
+async function undoAction(actionId, btn) {
+  btn.disabled = true;
+  btn.textContent = '…';
+  try {
+    const r = await fetch('/account/google/ads/actions/' + actionId + '/undo', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+    });
+    const d = await r.json();
+    if (r.ok && d.ok) {
+      const row = document.getElementById('activity-row-' + actionId);
+      if (row) {
+        row.classList.add('opacity-50');
+        btn.remove();
+        const undoneLabel = document.createElement('span');
+        undoneLabel.className = 'text-xs text-gray-400 flex-shrink-0';
+        undoneLabel.textContent = 'Undone';
+        row.appendChild(undoneLabel);
+        const icon = row.querySelector('i');
+        if (icon) {
+          icon.className = 'fa-solid fa-rotate-left text-gray-400 text-xs flex-shrink-0';
+        }
+      }
+      showToast('Action undone successfully', 'success');
+    } else {
+      btn.disabled = false;
+      btn.textContent = 'Undo';
+      showToast(d.error || 'Undo failed', 'error');
+    }
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Undo';
+    showToast('Undo failed — network error', 'error');
+  }
+}
+</script>
 <div class="max-w-7xl mx-auto">
 
   <!-- Header -->
   <div class="flex items-center justify-between mb-6">
     <div>
-      <h1 class="text-2xl font-semibold tracking-tight">Google Search Ads — Optimize</h1>
-      <p class="text-gray-500">Manage campaigns, ad groups, ads, keywords, negatives, budgets, schedule, locations, devices, audiences, assets, and bidding in one place.</p>
+      {% if tab == 'cockpit' %}
+      <h1 class="text-2xl font-semibold tracking-tight">Google Ads — Dashboard</h1>
+      <p class="text-gray-500">Your whole ad account at a glance — how it's doing, what needs fixing, and every tool in one place.</p>
+      {% elif tab == 'optimizer' %}
+      <h1 class="text-2xl font-semibold tracking-tight">Google Ads — Fix Problems</h1>
+      <p class="text-gray-500">Manage your campaigns, ads, keywords, search-blocking words, budgets, and what you pay per click.</p>
+      {% else %}
+      <h1 class="text-2xl font-semibold tracking-tight">Google Ads — Fix Problems</h1>
+      <p class="text-gray-500">Manage your campaigns, ads, keywords, search-blocking words, budgets, and what you pay per click.</p>
+      {% endif %}
     </div>
     <div class="flex items-center gap-3">
-      <a href="{{ url_for('google_bp.ads_ui') if url_for else '#' }}" class="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"><i class="fa-solid fa-arrow-left"></i> Back</a>
-      <a href="{{ url_for('gads_bp.optimize') if url_for else '#' }}" class="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"><i class="fa-solid fa-rotate-right"></i> Refresh</a>
-      <a href="{{ url_for('gads_bp.apply_suggestions') if url_for else '#' }}" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500"><i class="fa-solid fa-wand-magic-sparkles"></i> Apply Suggestions</a>
+      {% if last_synced_at is defined and last_synced_at %}
+      <span class="text-xs {{ 'text-amber-600 font-medium' if last_synced_stale else 'text-gray-400' }}"
+            title="{{ last_synced_at.strftime('%Y-%m-%d %H:%M') }} UTC">
+        {% if last_synced_stale %}<i class="fa-solid fa-triangle-exclamation mr-1"></i>{% endif %}
+        Synced {{ last_synced_at.strftime('%b %-d, %H:%M') }} UTC
+      </span>
+      {% elif connected %}
+      <span class="text-xs text-amber-600 font-medium">
+        <i class="fa-solid fa-triangle-exclamation mr-1"></i> Never synced
+      </span>
+      {% endif %}
+      <!-- Date range selector -->
+      <div id="date-range-selector" class="inline-flex rounded-lg border overflow-hidden text-sm">
+        <button data-days="7"  class="date-range-btn px-3 py-2 hover:bg-gray-50 border-r">Last 7 days</button>
+        <button data-days="30" class="date-range-btn px-3 py-2 hover:bg-gray-50 border-r">Last 30 days</button>
+        <button data-days="90" class="date-range-btn px-3 py-2 hover:bg-gray-50">Last 90 days</button>
+      </div>
+      <button type="button" onclick="if(window.FSStrategy) FSStrategy.open();"
+              class="inline-flex items-center gap-2 rounded-lg border border-indigo-300 bg-indigo-50 text-indigo-700 px-3 py-2 text-sm hover:bg-indigo-100 transition-colors">
+        <i class="fa-solid fa-sliders"></i>
+        {% if strategy_setup_complete %}Edit Strategy{% else %}Strategy Setup{% endif %}
+      </button>
+      <a href="{{ url_for('gads_bp.optimize') }}" class="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"><i class="fa-solid fa-rotate-right"></i> Refresh</a>
+      <button id="gads-sync-btn-top" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500">
+        <i class="fa-solid fa-rotate"></i> Sync Data
+      </button>
     </div>
   </div>
 
@@ -31,21 +133,16 @@
   <section id="kpi" class="mb-6">
     <div class="flex items-center justify-between mb-2">
       <h3 class="text-sm font-medium">Account KPIs (<span id="kpi-days">30</span>d)</h3>
-      <div class="flex items-center gap-2 text-xs">
-        <button id="kpi-7"  class="px-2 py-1 rounded border hover:bg-gray-50">7d</button>
-        <button id="kpi-30" class="px-2 py-1 rounded border bg-gray-100">30d</button>
-        <button id="kpi-90" class="px-2 py-1 rounded border hover:bg-gray-50">90d</button>
-      </div>
     </div>
 
     <!-- Dynamic cards get injected into #kpi-cards; below is SSR fallback -->
     <div id="kpi-cards" class="grid grid-cols-2 md:grid-cols-5 gap-3">
       {% set cards = [
-          ('Spend', '$' ~ stats.spend),
-          ('Impressions', stats.impr),
+          ('Ad spend', '$' ~ stats.spend),
+          ('Times your ad showed', stats.impr),
           ('Clicks', stats.clicks),
-          ('Conversions', stats.conv),
-          ('Avg CPA', '$' ~ stats.cpa)
+          ('Leads', stats.conv),
+          ('$ per booked job (avg)', '$' ~ stats.cpa)
       ] %}
       {% for label, value in cards %}
       <div class="rounded-xl border bg-white p-4">
@@ -58,30 +155,808 @@
   </section>
 
   <!-- Tabs -->
-  {% set tab = request.args.get('tab','campaigns') if request else 'campaigns' %}
-  <div class="border-b mb-4 flex items-center gap-4 text-sm overflow-x-auto">
-    {% for t,label in [
-      ('campaigns','Campaigns'),
-      ('adgroups','Ad Groups'),
-      ('ads','Ads'),
-      ('keywords','Keywords'),
-      ('negatives','Negatives'),
-      ('optimizer','Optimizer'),
-      ('publish','Create/Publish')
-    ] %}
-      <a href="{{ url_for('gads_bp.optimize') }}?tab={{t}}"
-         class="whitespace-nowrap border-b-2 px-2 py-2 {{ 'border-indigo-600 text-indigo-700' if tab==t else 'border-transparent text-gray-500 hover:text-gray-700' }}">
-        {{ label }}
+  {% set tab = tab if tab is defined else 'cockpit' %}
+  {# Determine if the active tab is one of the "More" hidden items #}
+  {% set more_tabs = ['campaigns', 'adgroups', 'ads', 'publish', 'rules', 'ab_tests', 'analysis_doc'] %}
+  {% set active_in_more = tab in more_tabs %}
+  <div class="border-b mb-4 flex items-center gap-0 text-sm overflow-x-auto relative">
+
+    {# --- Primary visible tabs --- #}
+    <a href="{{ url_for('gads_bp.optimize') }}?tab=cockpit"
+       class="whitespace-nowrap border-b-2 px-3 py-2 flex items-center gap-1.5 {{ 'border-indigo-600 text-indigo-700 font-medium' if tab=='cockpit' else 'border-transparent text-gray-500 hover:text-gray-700' }}">
+      <i class="fa-solid fa-gauge-high text-xs"></i> Dashboard
+    </a>
+
+    <a href="{{ url_for('gads_bp.optimize') }}?tab=optimizer"
+       class="whitespace-nowrap border-b-2 px-3 py-2 flex items-center gap-1.5 {{ 'border-indigo-600 text-indigo-700 font-medium' if tab=='optimizer' else 'border-transparent text-gray-500 hover:text-gray-700' }}">
+      <i class="fa-solid fa-wrench text-xs"></i> Fix Problems
+      {% if pending_recs_count %}
+      <span class="ml-1 inline-flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 leading-none min-w-[1.25rem]">{{ pending_recs_count }}</span>
+      {% endif %}
+    </a>
+
+    <a href="{{ url_for('gads_bp.optimize') }}?tab=keywords"
+       class="whitespace-nowrap border-b-2 px-3 py-2 {{ 'border-indigo-600 text-indigo-700 font-medium' if tab=='keywords' else 'border-transparent text-gray-500 hover:text-gray-700' }}">
+      My Keywords
+    </a>
+
+    <a href="{{ url_for('gads_bp.search_terms') }}"
+       class="whitespace-nowrap border-b-2 px-3 py-2 {{ 'border-indigo-600 text-indigo-700 font-medium' if tab=='negatives' else 'border-transparent text-gray-500 hover:text-gray-700' }}">
+      Block Junk Searches
+    </a>
+
+    <a href="{{ url_for('gads_bp.conversions') }}"
+       class="whitespace-nowrap border-b-2 border-transparent px-3 py-2 text-gray-500 hover:text-gray-700">
+      Results
+    </a>
+
+    {# If the active tab is hidden in "More", show it as a visible selected tab #}
+    {% if active_in_more %}
+      {% set active_more_labels = {
+        'campaigns': 'My Campaigns',
+        'adgroups': 'Ad Groups',
+        'ads': 'My Ads',
+        'publish': 'Create / Publish',
+        'rules': 'Automatic Actions',
+        'ab_tests': 'Ad Tests',
+        'analysis_doc': 'Docs'
+      } %}
+      <a href="{{ url_for('gads_bp.optimize') }}?tab={{ tab }}"
+         class="whitespace-nowrap border-b-2 border-indigo-600 text-indigo-700 font-medium px-3 py-2">
+        {{ active_more_labels.get(tab, tab) }}
       </a>
-    {% endfor %}
+    {% endif %}
+
+    {# --- "More ▸" dropdown --- #}
+    <div class="relative ml-auto" id="more-tabs-wrapper">
+      <button id="more-tabs-btn" type="button"
+              class="whitespace-nowrap border-b-2 px-3 py-2 flex items-center gap-1 {{ 'border-indigo-600 text-indigo-700 font-medium' if active_in_more else 'border-transparent text-gray-500 hover:text-gray-700' }}">
+        More <i class="fa-solid fa-caret-right text-xs"></i>
+      </button>
+      <div id="more-tabs-menu"
+           class="hidden absolute right-0 top-full z-50 mt-1 w-48 rounded-xl border bg-white shadow-lg py-1 text-sm">
+        <a href="{{ url_for('gads_bp.optimize') }}?tab=campaigns"
+           class="block px-4 py-2 {{ 'bg-indigo-50 text-indigo-700 font-medium' if tab=='campaigns' else 'text-gray-700 hover:bg-gray-50' }}">
+          My Campaigns
+        </a>
+        <a href="{{ url_for('gads_bp.optimize') }}?tab=adgroups"
+           class="block px-4 py-2 {{ 'bg-indigo-50 text-indigo-700 font-medium' if tab=='adgroups' else 'text-gray-700 hover:bg-gray-50' }}">
+          Ad Groups
+        </a>
+        <a href="{{ url_for('gads_bp.optimize') }}?tab=ads"
+           class="block px-4 py-2 {{ 'bg-indigo-50 text-indigo-700 font-medium' if tab=='ads' else 'text-gray-700 hover:bg-gray-50' }}">
+          My Ads
+        </a>
+        <a href="{{ url_for('gads_bp.optimize') }}?tab=publish"
+           class="block px-4 py-2 {{ 'bg-indigo-50 text-indigo-700 font-medium' if tab=='publish' else 'text-gray-700 hover:bg-gray-50' }}">
+          Create / Publish
+        </a>
+        <hr class="my-1 border-gray-100">
+        <a href="{{ url_for('gads_bp.rules_list') }}"
+           class="block px-4 py-2 text-gray-700 hover:bg-gray-50">
+          Automatic Actions
+        </a>
+        <a href="{{ url_for('gads_bp.ab_tests') }}"
+           class="block px-4 py-2 text-gray-700 hover:bg-gray-50">
+          Ad Tests
+        </a>
+        <a href="{{ url_for('gads_bp.analysis_doc') }}"
+           class="block px-4 py-2 text-gray-400 hover:bg-gray-50 flex items-center gap-1">
+          <i class="fa-solid fa-file-lines"></i> Docs
+        </a>
+      </div>
+    </div>
   </div>
+  <script>
+  (function() {
+    var btn = document.getElementById('more-tabs-btn');
+    var menu = document.getElementById('more-tabs-menu');
+    if (!btn || !menu) return;
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      menu.classList.toggle('hidden');
+    });
+    document.addEventListener('click', function() {
+      menu.classList.add('hidden');
+    });
+    menu.addEventListener('click', function(e) {
+      e.stopPropagation();
+    });
+  })();
+  </script>
 
   <!-- Tab content -->
-  <div class="space-y-8">
+  <div class="space-y-6">
 
-    <!-- Optimizer Tab -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- COMMAND CENTER TAB                                      -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    {% if tab == 'cockpit' %}
+    {% set cp = cockpit if cockpit else {} %}
+    {% set health = cp.get('health', {}) %}
+    {% set kpis = cp.get('kpis', {}) %}
+    {% set badges = cp.get('badges', {}) %}
+    {% set priority_action = cp.get('priority_action') %}
+    {% set pending_count = badges.get('optimizer', 0) %}
+
+    <!-- Today's Priority Card -->
+    {% if not cp.get('needs_sync') %}
+    {% if priority_action %}
+    <div class="rounded-2xl overflow-hidden shadow-md mb-6">
+      <div class="bg-gradient-to-r from-green-600 to-indigo-600 px-5 py-3 flex items-center gap-2">
+        <i class="fa-solid fa-bolt text-yellow-300 text-base"></i>
+        <span class="text-white font-semibold text-sm tracking-wide">Your agent found something to fix</span>
+      </div>
+      <div class="bg-white px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <div class="flex-1 min-w-0">
+          <p class="text-base font-bold text-gray-900 leading-snug">{{ priority_action.title }}</p>
+          <p class="text-sm text-gray-500 mt-1">{{ priority_action.details[:160] }}{% if priority_action.details|length > 160 %}…{% endif %}</p>
+        </div>
+        <div class="flex flex-col items-start sm:items-end gap-1 flex-shrink-0">
+          <a href="?tab=optimizer"
+             class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm shadow transition whitespace-nowrap">
+            Fix it now <i class="fa-solid fa-arrow-right text-xs"></i>
+          </a>
+          {% if pending_count > 1 %}
+          <a href="?tab=optimizer" class="text-xs text-gray-400 hover:text-indigo-600 hover:underline">
+            or review all {{ pending_count }} issues
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="rounded-xl border border-green-200 bg-green-50 px-4 py-3 flex items-center gap-3 mb-6">
+      <i class="fa-solid fa-circle-check text-green-500 text-lg flex-shrink-0"></i>
+      <p class="text-sm text-green-800">Your account looks good — no urgent fixes right now.</p>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% if cp.get('needs_sync') %}
+    <div class="rounded-xl border border-amber-300 bg-amber-50 p-4 flex items-start gap-3 mb-2">
+      <i class="fa-solid fa-triangle-exclamation text-amber-500 text-xl mt-0.5 flex-shrink-0"></i>
+      <div class="flex-1">
+        <p class="font-semibold text-amber-900">No synced data yet</p>
+        <p class="text-sm text-amber-700 mt-0.5">Run a sync to pull your Google Ads performance data. This populates the health score, KPIs, and pending actions.</p>
+      </div>
+      <button id="gads-sync-btn-cockpit" onclick="doSync(this)"
+              class="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-lg transition">
+        <i class="fa-solid fa-rotate"></i> Sync Now
+      </button>
+    </div>
+    {% endif %}
+
+    {# ---- Your Week in Review (latest stored weekly digest) ---- #}
+    {% if weekly_digest %}
+    <div class="rounded-xl border bg-white overflow-hidden">
+      <div class="px-5 py-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-b flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <i class="fa-solid fa-newspaper text-indigo-500"></i>
+          <p class="font-semibold text-gray-900 truncate">Your Week in Review</p>
+        </div>
+        {% if weekly_digest.week_start and weekly_digest.week_end %}
+        <span class="text-xs text-gray-500 whitespace-nowrap">{{ weekly_digest.week_start }} – {{ weekly_digest.week_end }}</span>
+        {% endif %}
+      </div>
+      <div class="p-5 space-y-3">
+        <p class="text-base font-semibold text-gray-900">{{ weekly_digest.headline }}</p>
+        {% if weekly_digest.summary_lines %}
+        <ul class="space-y-1.5">
+          {% for line in weekly_digest.summary_lines %}
+          <li class="text-sm text-gray-600 flex items-start gap-2">
+            <i class="fa-solid fa-circle text-[5px] text-gray-300 mt-2 flex-shrink-0"></i>
+            <span>{{ line }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+        {% if weekly_digest.agent_lines %}
+        <div class="rounded-lg bg-indigo-50 px-4 py-3 space-y-1.5">
+          {% for line in weekly_digest.agent_lines %}
+          <p class="text-sm text-indigo-800 flex items-start gap-2">
+            <i class="fa-solid fa-robot text-indigo-400 text-xs mt-1 flex-shrink-0"></i>
+            <span>{{ line }}</span>
+          </p>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# ---- Goal progress bar (shown when goals are set) ---- #}
+    {% set gp = health.get('goal_performance') %}
+    {% if gp %}
+    <div class="rounded-xl border bg-white p-4 flex items-center gap-4">
+      <div class="flex-shrink-0">
+        {% if gp.on_track %}
+        <i class="fa-solid fa-circle-check text-green-500 text-2xl"></i>
+        {% else %}
+        <i class="fa-solid fa-flag text-indigo-400 text-2xl"></i>
+        {% endif %}
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold text-gray-900">
+          {% if gp.on_track %}
+          You've hit your monthly lead goal of {{ gp.target_leads }}!
+          {% else %}
+          You've hit {{ gp.actual_leads }} of your {{ gp.target_leads }} monthly lead target
+          {% endif %}
+        </p>
+        <div class="mt-1.5 h-2 bg-gray-100 rounded-full overflow-hidden w-full max-w-sm">
+          {% set pct = [(gp.actual_leads / gp.target_leads * 100)|int, 100]|min %}
+          <div class="h-2 rounded-full {{ 'bg-green-500' if gp.on_track else 'bg-indigo-500' }}"
+               style="width: {{ pct }}%"></div>
+        </div>
+        <p class="text-xs text-gray-500 mt-1">{{ gp.gap_message }}</p>
+      </div>
+      <a href="{{ url_for('gads_bp.goals_page') }}"
+         class="flex-shrink-0 text-xs text-indigo-600 hover:underline whitespace-nowrap">Edit goals →</a>
+    </div>
+    {% endif %}
+
+    <!-- Row 1: Health score + KPI cards -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+
+      <!-- Health Score card (7-dimension) -->
+      <div class="bg-white rounded-xl border p-5 flex flex-col gap-3 lg:col-span-2">
+        {% set score = health.get('overall', 0) %}
+        {% set grade = health.get('grade', 'N/A') %}
+        {% set color = 'text-green-600' if score >= 75 else ('text-amber-500' if score >= 50 else 'text-red-600') %}
+        {% set ring = 'border-green-400' if score >= 75 else ('border-amber-400' if score >= 50 else 'border-red-400') %}
+
+        <!-- Score circle + label -->
+        <div class="flex items-center gap-4">
+          <div class="w-20 h-20 rounded-full border-8 {{ ring }} flex flex-col items-center justify-center flex-shrink-0">
+            <span class="text-2xl font-bold {{ color }}">{{ score }}</span>
+            <span class="text-xs font-semibold {{ color }}">{{ grade }}</span>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-gray-900">Account Health Score</p>
+            <p class="text-xs text-gray-500 mt-0.5">Based on 7 dimensions of account performance</p>
+            {% if not connected %}
+            <p class="text-xs text-amber-600 mt-1">Connect Google Ads for live data</p>
+            {% endif %}
+            {% if not gp %}
+            <a href="{{ url_for('gads_bp.goals_page') }}"
+               class="inline-block mt-1.5 text-xs text-indigo-600 hover:underline">Set goals to track progress →</a>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- 7-dimension bars -->
+        {% set dims = health.get('dimensions', {}) %}
+        {% if dims %}
+        <div class="space-y-2 mt-1">
+          {% for key, dim in dims.items() %}
+          {% set dc = 'bg-green-500' if dim.color == 'green' else ('bg-amber-400' if dim.color == 'yellow' else 'bg-red-500') %}
+          {% set tc = 'text-green-700' if dim.color == 'green' else ('text-amber-700' if dim.color == 'yellow' else 'text-red-700') %}
+          <div class="group relative">
+            <div class="flex items-center justify-between text-xs mb-0.5">
+              <span class="text-gray-600 font-medium">{{ dim.label }}</span>
+              <span class="{{ tc }} font-semibold">{{ dim.score }}/100</span>
+            </div>
+            <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div class="{{ dc }} h-1.5 rounded-full transition-all" style="width: {{ dim.score }}%"></div>
+            </div>
+            <!-- Detail tooltip on hover -->
+            <div class="hidden group-hover:block absolute left-0 bottom-full mb-1 z-10 bg-gray-900 text-white text-xs rounded-lg px-3 py-2 max-w-xs shadow-lg">
+              {{ dim.detail }}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Top issues -->
+        {% set issues = health.get('top_issues', []) %}
+        {% if issues %}
+        <div class="border-t pt-3 space-y-1.5">
+          <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Top Issues</p>
+          {% for issue in issues %}
+          {% set ibg = 'bg-red-50 border-red-200 text-red-800' if issue.impact == 'High' else ('bg-amber-50 border-amber-200 text-amber-800' if issue.impact == 'Medium' else 'bg-blue-50 border-blue-200 text-blue-800') %}
+          <div class="flex items-center gap-2 text-xs">
+            <span class="inline-block px-1.5 py-0.5 rounded border font-semibold {{ ibg }}">{{ issue.impact }}</span>
+            <span class="text-gray-700 flex-1 min-w-0 truncate">{{ issue.title }}</span>
+            <a href="{{ url_for('gads_bp.optimize') }}?tab=optimizer" class="text-indigo-600 hover:underline whitespace-nowrap">Fix it →</a>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- KPI Cards (30d) -->
+      <div class="lg:col-span-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-3 content-start">
+        {% set kpi_list = [
+          ('fa-dollar-sign','Ad spend (30d)', '$' ~ (kpis.get('spend', 0)|round(2)), 'indigo'),
+          ('fa-mouse-pointer','Clicks', kpis.get('clicks', 0)|int, 'blue'),
+          ('fa-bullseye','Leads', kpis.get('conversions', 0)|round(1), 'green'),
+          ('fa-eye','Times shown', kpis.get('impressions', 0)|int, 'purple'),
+          ('fa-tag','$ per booked job', '$' ~ (kpis.get('cpa', 0)|round(2)), 'rose'),
+        ] %}
+        {% for icon, label, value, color in kpi_list %}
+        <div class="bg-white rounded-xl border p-4">
+          <div class="flex items-center gap-1.5 mb-1">
+            <i class="fa-solid {{ icon }} text-{{ color }}-500 text-xs"></i>
+            <span class="text-xs text-gray-500">{{ label }}</span>
+          </div>
+          <div class="text-xl font-bold text-gray-900">{{ value }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Row 2: Top Actions + Sub-tool Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+      <!-- Top Actions panel (takes 2 cols) - conversational cards -->
+      <div class="lg:col-span-2 bg-white rounded-xl border">
+        <div class="flex items-center justify-between px-4 py-3 border-b">
+          <h2 class="text-sm font-semibold text-gray-900 flex items-center gap-2">
+            <i class="fa-solid fa-bolt text-amber-500"></i> Top things to fix
+          </h2>
+          <a href="{{ url_for('gads_bp.optimize') }}?tab=optimizer" class="text-xs text-indigo-600 hover:underline">View all →</a>
+        </div>
+        <div id="cockpit-actions" class="divide-y">
+          {% set top_actions = cp.get('top_actions', []) %}
+          {% if top_actions %}
+            {% for rec in top_actions %}
+            {# Severity color strip: 1=red, 2=orange, 3=yellow, 4-5=blue #}
+            {% if rec.severity == 1 %}
+              {% set sev_strip = 'bg-red-500' %}
+              {% set sev_badge = 'bg-red-100 text-red-700 border-red-200' %}
+              {% set sev_label = 'Urgent' %}
+            {% elif rec.severity == 2 %}
+              {% set sev_strip = 'bg-orange-400' %}
+              {% set sev_badge = 'bg-orange-100 text-orange-700 border-orange-200' %}
+              {% set sev_label = 'High' %}
+            {% elif rec.severity == 3 %}
+              {% set sev_strip = 'bg-yellow-400' %}
+              {% set sev_badge = 'bg-yellow-100 text-yellow-700 border-yellow-200' %}
+              {% set sev_label = 'Medium' %}
+            {% else %}
+              {% set sev_strip = 'bg-blue-400' %}
+              {% set sev_badge = 'bg-blue-100 text-blue-700 border-blue-200' %}
+              {% set sev_label = 'Low' %}
+            {% endif %}
+            <div class="flex items-stretch hover:bg-gray-50 transition" id="action-row-{{ rec.id }}">
+              <!-- Severity color strip -->
+              <div class="w-1 flex-shrink-0 rounded-bl-none {{ sev_strip }}"></div>
+              <div class="flex-1 px-4 py-3 min-w-0">
+                <!-- Headline + impact badge -->
+                <div class="flex items-start gap-2 flex-wrap">
+                  <p class="text-sm font-semibold text-gray-900 flex-1 min-w-0">{{ rec.title }}</p>
+                  <span class="inline-block flex-shrink-0 px-1.5 py-0.5 text-[10px] font-semibold rounded border {{ sev_badge }}">{{ sev_label }}</span>
+                </div>
+                <!-- Expected dollar impact -->
+                {% if rec.expected_impact %}
+                <p class="text-xs text-green-700 font-medium mt-0.5">
+                  <i class="fa-solid fa-arrow-trend-up text-[10px] mr-0.5"></i>{{ rec.expected_impact }}
+                </p>
+                {% endif %}
+                <!-- Detail panel (toggled) -->
+                <div id="detail-{{ rec.id }}" class="hidden mt-2 text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-2 border">
+                  {{ rec.details or 'No additional details.' }}
+                </div>
+                <!-- Action buttons -->
+                <div class="flex items-center gap-2 mt-2">
+                  <button onclick="applyAction({{ rec.id }}, this)"
+                          class="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium">
+                    <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Do It For Me
+                  </button>
+                  <button type="button"
+                          onclick="var d=document.getElementById('detail-{{ rec.id }}'); d.classList.toggle('hidden'); this.textContent = d.classList.contains('hidden') ? 'Tell Me More' : 'Hide Details';"
+                          class="px-3 py-1.5 text-xs border rounded-lg hover:bg-gray-100 transition text-gray-600">
+                    Tell Me More
+                  </button>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="px-4 py-10 text-center">
+              {% if cp.get('needs_sync') %}
+              <i class="fa-solid fa-rotate text-gray-300 text-4xl mb-3 block"></i>
+              <p class="text-sm font-semibold text-gray-700">Nothing to fix yet</p>
+              <p class="text-sm text-gray-500 mt-1 mb-4">Sync your Google Ads account and we'll look for ways to save you money.</p>
+              <button onclick="doSync(this)"
+                      class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500 transition">
+                <i class="fa-solid fa-rotate"></i> Sync Data
+              </button>
+              {% else %}
+              <i class="fa-solid fa-circle-check text-green-400 text-4xl mb-3 block"></i>
+              <p class="text-sm font-semibold text-gray-700">You're all caught up!</p>
+              <p class="text-sm text-gray-500 mt-1">No new recommendations right now. We check your account daily.</p>
+              {% endif %}
+            </div>
+          {% endif %}
+        </div>
+        <div class="px-4 py-3 border-t bg-gray-50 rounded-b-xl">
+          <button onclick="runBulkApply()"
+                  class="text-xs text-indigo-700 hover:underline flex items-center gap-1">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Apply all high-priority actions
+          </button>
+        </div>
+      </div>
+
+      <!-- Sub-tool navigation grid -->
+      <div class="flex flex-col gap-3">
+        <h2 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+          <i class="fa-solid fa-grid-2 text-gray-400"></i> All Tools
+        </h2>
+        {# Tools grid — hardcoded paths to avoid url_for failures on optional blueprints #}
+        {% set tools = [
+          ('/account/google/ads/?tab=optimizer', 'fa-wand-magic-sparkles', 'Tune up', badges.get('optimizer', 0), 'indigo', 'Smart suggestions'),
+          ('/account/google/ads/rules', 'fa-robot', 'Automatic actions', badges.get('rules', 0), 'violet', 'Set & forget tweaks'),
+          ('/account/google/ads/search-terms', 'fa-magnifying-glass', 'Search terms', badges.get('search_terms', 0), 'blue', 'See & block bad searches'),
+          ('/account/google/ads/ab-tests', 'fa-flask', 'Side-by-side tests', badges.get('ab_tests', 0), 'cyan', 'Test ad headlines'),
+          ('/account/google/ads/conversions', 'fa-bullseye', 'Leads tracking', 0, 'green', 'What counts as a lead'),
+          ('/account/google/ads/alerts', 'fa-bell', 'Alerts', 0, 'amber', 'Get warned about issues'),
+          ('/account/google/ads/forecasting', 'fa-chart-line', 'Forecasts', 0, 'purple', 'What to expect'),
+          ('/account/google/ads/competitive', 'fa-chess', 'Competitors', 0, 'rose', 'Who you compete with'),
+          ('/account/google/ads/budget', 'fa-wallet', 'Budgets', 0, 'orange', 'Plan your spend'),
+          ('/account/google/ads/agents/dashboard', 'fa-microchip-ai', 'AI assistants', 0, 'slate', 'Hands-off helpers'),
+        ] %}
+        <div class="grid grid-cols-2 gap-2">
+          {% for href, icon, label, badge, color, sub in tools %}
+          <a href="{{ href }}"
+             class="bg-white rounded-lg border p-3 hover:shadow-sm transition flex flex-col gap-1 relative">
+            {% if badge > 0 %}
+            <span class="absolute top-2 right-2 min-w-[18px] h-[18px] rounded-full bg-indigo-500 text-white text-[10px] font-bold flex items-center justify-center px-1">{{ badge }}</span>
+            {% endif %}
+            <i class="fa-solid {{ icon }} text-{{ color }}-500 text-sm"></i>
+            <span class="text-xs font-semibold text-gray-800">{{ label }}</span>
+            <span class="text-[10px] text-gray-400">{{ sub }}</span>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {# ---- Account Health (onboarding health check) — self-contained block ---- #}
+    <div id="account-health-card" class="bg-white rounded-xl border">
+      <div class="flex items-center justify-between px-4 py-3 border-b">
+        <h2 class="text-sm font-semibold text-gray-900 flex items-center gap-2">
+          <i class="fa-solid fa-stethoscope text-teal-500"></i> Account Health
+        </h2>
+        {% if health_check %}
+        <button id="health-recheck-btn" onclick="runHealthCheck(this)"
+                class="text-xs text-indigo-600 hover:underline flex items-center gap-1">
+          <i class="fa-solid fa-rotate"></i> Re-check
+        </button>
+        {% endif %}
+      </div>
+
+      {% if health_check %}
+      {% set hc_score = health_check.get('score', 0) %}
+      {% if hc_score >= 85 %}
+        {% set hc_color = 'text-green-600' %}{% set hc_ring = 'border-green-400' %}
+      {% elif hc_score >= 60 %}
+        {% set hc_color = 'text-amber-500' %}{% set hc_ring = 'border-amber-400' %}
+      {% else %}
+        {% set hc_color = 'text-red-600' %}{% set hc_ring = 'border-red-400' %}
+      {% endif %}
+      {% set hc_checks = health_check.get('checks', []) %}
+      {% set hc_problems = hc_checks | selectattr('status', 'ne', 'pass') | list %}
+      {% set hc_passed = hc_checks | selectattr('status', 'eq', 'pass') | list %}
+
+      <div class="p-5 flex flex-col sm:flex-row gap-5">
+        <div class="flex-shrink-0 flex sm:flex-col items-center gap-3 sm:gap-1">
+          <div class="w-20 h-20 rounded-full border-8 {{ hc_ring }} flex items-center justify-center">
+            <span class="text-2xl font-bold {{ hc_color }}">{{ hc_score }}</span>
+          </div>
+          <div class="text-center">
+            <p class="text-xs font-semibold text-gray-700">Setup score</p>
+            {% if health_check.get('ran_at') %}
+            <p class="text-[10px] text-gray-400">Checked {{ health_check.ran_at[:10] }}</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="flex-1 min-w-0 space-y-3">
+          {% if hc_problems %}
+          {% for c in hc_problems %}
+          <div class="rounded-lg border p-3 {{ 'border-red-200 bg-red-50' if c.status == 'fail' else 'border-amber-200 bg-amber-50' }}">
+            <div class="flex items-start gap-2">
+              {% if c.status == 'fail' %}
+              <i class="fa-solid fa-circle-xmark text-red-500 mt-0.5 flex-shrink-0"></i>
+              {% else %}
+              <i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5 flex-shrink-0"></i>
+              {% endif %}
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold {{ 'text-red-900' if c.status == 'fail' else 'text-amber-900' }}">{{ c.title }}</p>
+                <p class="text-xs mt-0.5 {{ 'text-red-700' if c.status == 'fail' else 'text-amber-700' }}">{{ c.explanation }}</p>
+                {% set fix = c.get('fix_action') %}
+                {% if fix %}
+                <div class="mt-2">
+                  {% if fix.type == 'sync' %}
+                  <button onclick="doSync(this)"
+                          class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white border rounded-lg hover:bg-gray-50 transition text-gray-700">
+                    <i class="fa-solid fa-rotate"></i> {{ fix.get('label', 'Sync now') }}
+                  </button>
+                  {% elif fix.type == 'link' and fix.href %}
+                  <a href="{{ fix.href }}"
+                     class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white border rounded-lg hover:bg-gray-50 transition text-gray-700">
+                    {{ fix.get('label', 'Fix it') }} <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                  </a>
+                  {% endif %}
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div class="rounded-lg border border-green-200 bg-green-50 p-3 flex items-center gap-2">
+            <i class="fa-solid fa-circle-check text-green-500"></i>
+            <p class="text-sm text-green-800 font-medium">No setup problems found — your account passed every check.</p>
+          </div>
+          {% endif %}
+
+          {% if hc_passed %}
+          <details class="group">
+            <summary class="cursor-pointer text-xs text-gray-500 hover:text-gray-700 select-none flex items-center gap-1.5">
+              <i class="fa-solid fa-chevron-right text-[9px] transition-transform group-open:rotate-90"></i>
+              {{ hc_passed | length }} check{{ 's' if hc_passed | length != 1 else '' }} passed ✓
+            </summary>
+            <div class="mt-2 space-y-1.5 pl-4">
+              {% for c in hc_passed %}
+              <div class="flex items-start gap-2 text-xs">
+                <i class="fa-solid fa-circle-check text-green-400 mt-0.5 flex-shrink-0"></i>
+                <div>
+                  <span class="font-medium text-gray-700">{{ c.title }}</span>
+                  <span class="text-gray-400"> — {{ c.explanation }}</span>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </details>
+          {% endif %}
+        </div>
+      </div>
+
+      {% else %}
+      <div class="px-4 py-8 text-center">
+        <i class="fa-solid fa-stethoscope text-gray-300 text-4xl mb-3 block"></i>
+        <p class="text-sm font-semibold text-gray-700">Check your account setup</p>
+        <p class="text-sm text-gray-500 mt-1 mb-4">We'll scan for common setup problems — like missing lead tracking or paying for junk searches — and explain how to fix them.</p>
+        <button id="health-run-btn" onclick="runHealthCheck(this)"
+                class="inline-flex items-center gap-2 rounded-lg bg-teal-600 text-white px-4 py-2 text-sm hover:bg-teal-500 transition">
+          <i class="fa-solid fa-stethoscope"></i> Run health check
+        </button>
+      </div>
+      {% endif %}
+    </div>
+
+    <script>
+    async function runHealthCheck(btn) {
+      const original = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking…';
+      try {
+        const r = await fetch('/account/google/ads/health-check', { method: 'POST' });
+        const d = await r.json();
+        if (r.ok && typeof d.score === 'number') {
+          if (typeof showToast !== 'undefined') showToast('Health check complete — score ' + d.score + '/100', 'success');
+          window.location.reload();
+        } else {
+          btn.disabled = false;
+          btn.innerHTML = original;
+          if (typeof showToast !== 'undefined') showToast(d.error || 'Health check failed. Please try again.', 'error');
+        }
+      } catch (e) {
+        btn.disabled = false;
+        btn.innerHTML = original;
+        if (typeof showToast !== 'undefined') showToast('Health check failed. Please try again.', 'error');
+      }
+    }
+    </script>
+
+    <!-- Row 3: Recent Activity -->
+    <div class="bg-white rounded-xl border">
+      <div class="flex items-center justify-between px-4 py-3 border-b">
+        <h2 class="text-sm font-semibold text-gray-900 flex items-center gap-2">
+          <i class="fa-solid fa-clock-rotate-left text-gray-400"></i> Recent Activity
+        </h2>
+        <span class="text-xs text-gray-400">Last 10 actions</span>
+      </div>
+      <div class="divide-y">
+        {% set recent = cp.get('recent_actions', []) %}
+        {% if recent %}
+          {% set undoable_types = ['keyword_paused', 'bid_adjusted', 'negative_keyword_added'] %}
+          {% for act in recent %}
+          <div class="flex items-center gap-3 px-4 py-2.5 text-sm activity-row {{ 'opacity-50' if act.status == 'undone' else '' }}" id="activity-row-{{ act.id }}">
+            {% if act.status == 'executed' or act.status == 'applied' %}
+            <i class="fa-solid fa-circle-check text-green-500 text-xs flex-shrink-0"></i>
+            {% elif act.status == 'undone' %}
+            <i class="fa-solid fa-rotate-left text-gray-400 text-xs flex-shrink-0"></i>
+            {% elif act.status == 'failed' %}
+            <i class="fa-solid fa-circle-xmark text-red-400 text-xs flex-shrink-0"></i>
+            {% elif act.status == 'pending' %}
+            <i class="fa-solid fa-clock text-amber-400 text-xs flex-shrink-0"></i>
+            {% else %}
+            <i class="fa-solid fa-circle-dot text-gray-300 text-xs flex-shrink-0"></i>
+            {% endif %}
+            <div class="flex-1 min-w-0">
+              <span class="font-medium text-gray-800 truncate block">{{ act.title }}</span>
+              {% if act.campaign_name %}<span class="text-xs text-gray-400">{{ act.campaign_name }}</span>{% endif %}
+            </div>
+            <span class="text-xs text-gray-400 flex-shrink-0">{{ act.created_at.strftime('%b %-d %H:%M') if act.created_at else '' }}</span>
+            {% if act.status == 'executed' and act.action_type in undoable_types %}
+            <button class="undo-btn text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded border border-gray-200 hover:border-red-300 transition flex-shrink-0"
+                    data-action-id="{{ act.id }}"
+                    onclick="undoAction({{ act.id }}, this)">Undo</button>
+            {% elif act.status == 'executed' %}
+            <span class="text-xs text-gray-300 flex-shrink-0" title="This action cannot be undone">—</span>
+            {% elif act.status == 'undone' %}
+            <span class="text-xs text-gray-400 flex-shrink-0">Undone</span>
+            {% endif %}
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="px-4 py-10 text-center">
+            <i class="fa-solid fa-clock-rotate-left text-gray-300 text-4xl mb-3 block"></i>
+            <p class="text-sm font-semibold text-gray-700">No AI actions yet</p>
+            <p class="text-sm text-gray-500 mt-1">Once your agent starts optimizing, every change will be logged here.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <script>
+    if (typeof showToast === 'undefined') {
+      window.showToast = function(msg, kind) {
+        const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+        const t = document.createElement('div');
+        t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 4000);
+      };
+    }
+    if (typeof appConfirm === 'undefined') {
+      window.appConfirm = function(message) {
+        return new Promise(resolve => {
+          const back = document.createElement('div');
+          back.className = 'fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4';
+          back.innerHTML = `
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+              <p class="text-sm text-gray-800 mb-5"></p>
+              <div class="flex justify-end gap-3">
+                <button type="button" data-a="c" class="px-4 py-2 text-sm border rounded-lg hover:bg-gray-50">Cancel</button>
+                <button type="button" data-a="o" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">OK</button>
+              </div>
+            </div>`;
+          back.querySelector('p').textContent = message;
+          document.body.appendChild(back);
+          back.querySelector('[data-a="o"]').onclick = () => { back.remove(); resolve(true); };
+          back.querySelector('[data-a="c"]').onclick = () => { back.remove(); resolve(false); };
+        });
+      };
+    }
+    if (typeof appPrompt === 'undefined') {
+      window.appPrompt = function(message, defaultValue) {
+        return new Promise(resolve => {
+          const back = document.createElement('div');
+          back.className = 'fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4';
+          back.innerHTML = `
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+              <p class="text-sm text-gray-800 mb-3"></p>
+              <input type="text" class="w-full rounded-lg border px-3 py-2 text-sm mb-5">
+              <div class="flex justify-end gap-3">
+                <button type="button" data-a="c" class="px-4 py-2 text-sm border rounded-lg hover:bg-gray-50">Cancel</button>
+                <button type="button" data-a="o" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">OK</button>
+              </div>
+            </div>`;
+          back.querySelector('p').textContent = message;
+          const input = back.querySelector('input');
+          input.value = defaultValue || '';
+          document.body.appendChild(back);
+          input.focus();
+          back.querySelector('[data-a="o"]').onclick = () => { const v = input.value; back.remove(); resolve(v); };
+          back.querySelector('[data-a="c"]').onclick = () => { back.remove(); resolve(null); };
+        });
+      };
+    }
+    async function applyAction(recId, btn) {
+      if (!window.confirm('Apply this optimization? The change will be pushed to your live Google Ads account immediately.')) {
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = '…';
+      try {
+        const r = await fetch('/account/google/ads/optimizer/apply', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({recommendation_ids: [recId]})
+        });
+        const d = await r.json();
+        if (d.applied) {
+          const row = document.getElementById('action-row-' + recId);
+          if (row) row.style.opacity = '0.4';
+          btn.textContent = '✓';
+          btn.classList.replace('bg-indigo-600', 'bg-green-600');
+        } else {
+          btn.textContent = 'Err';
+          btn.classList.replace('bg-indigo-600', 'bg-red-600');
+          setTimeout(() => { btn.disabled = false; btn.textContent = 'Apply'; btn.classList.replace('bg-red-600','bg-indigo-600'); }, 2000);
+        }
+      } catch(e) {
+        btn.disabled = false;
+        btn.textContent = 'Apply';
+      }
+    }
+    async function runBulkApply() {
+      const rows = document.querySelectorAll('[id^="action-row-"]');
+      const highPriority = [];
+      rows.forEach(r => {
+        const sev = r.querySelector('.bg-red-100');
+        if (sev) {
+          const id = parseInt(r.id.replace('action-row-',''));
+          if (id) highPriority.push(id);
+        }
+      });
+      if (!highPriority.length) { showToast('No high-priority (red) actions found.', 'info'); return; }
+      const okBulk = await appConfirm('Apply ' + highPriority.length + ' high-priority action(s)?');
+      if (!okBulk) return;
+      for (const id of highPriority) {
+        const btn = document.querySelector('#action-row-' + id + ' button');
+        if (btn) await applyAction(id, btn);
+      }
+    }
+    </script>
+    {% endif %}
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- OPTIMIZER TAB                                           -->
+    <!-- ═══════════════════════════════════════════════════════ -->
     {% if tab == 'optimizer' %}
     <section id="optimizer">
+      <!-- Your Goals card -->
+      {% set has_goals = gads_goals and (gads_goals.target_cpl or gads_goals.max_monthly_budget) %}
+      <div id="goals-card" class="mb-6 rounded-xl border bg-white p-5"
+           data-goals='{{ (gads_goals or {"target_cpl": none, "max_monthly_budget": none}) | tojson }}'>
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-gray-900">Your Goals</h3>
+          <button id="goals-edit-btn" type="button"
+                  class="text-xs font-medium text-indigo-600 hover:text-indigo-800 {{ '' if has_goals else 'hidden' }}">
+            Edit
+          </button>
+        </div>
+        <div id="goals-summary" class="mt-2 {{ '' if has_goals else 'hidden' }}">
+          <p class="text-sm text-gray-700">
+            <span id="goals-summary-text" class="font-medium"></span>
+            <span id="goals-actual-cpl" class="ml-2 hidden"></span>
+          </p>
+        </div>
+        <div id="goals-form" class="mt-3 {{ 'hidden' if has_goals else '' }}">
+          <p class="text-sm text-gray-600 mb-3">Tell us your goal and we'll optimize toward it.</p>
+          <div class="flex flex-wrap items-end gap-4">
+            <div>
+              <label for="goal-target-cpl" class="block text-xs text-gray-500 mb-1">What's a good cost per lead for you?</label>
+              <div class="flex items-center gap-1">
+                <span class="text-sm text-gray-500">$</span>
+                <input id="goal-target-cpl" type="number" min="1" step="0.01" placeholder="45"
+                       class="w-28 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+              </div>
+            </div>
+            <div>
+              <label for="goal-max-budget" class="block text-xs text-gray-500 mb-1">Monthly budget cap (optional)</label>
+              <div class="flex items-center gap-1">
+                <span class="text-sm text-gray-500">$</span>
+                <input id="goal-max-budget" type="number" min="1" step="0.01" placeholder="1200"
+                       class="w-28 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+              </div>
+            </div>
+            <button id="goals-save-btn" type="button"
+                    class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition">
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div class="flex items-center justify-between mb-2">
         <h3 class="text-sm font-medium">Optimizer Recommendations</h3>
         <button id="btn-reload-optimizer" class="px-3 py-1.5 text-sm rounded border hover:bg-gray-50">Reload</button>
@@ -93,6 +968,7 @@
               <th class="text-left px-3 py-2 w-16">
                 <input type="checkbox" id="select-all-optimizations" class="h-4 w-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500" title="Select all">
               </th>
+              <th class="px-2 py-2 w-8"><span class="sr-only">Expand</span></th>
               <th class="text-left px-3 py-2 w-32">Priority</th>
               <th class="text-left px-3 py-2 w-28">Type</th>
               <th class="text-left px-3 py-2">Recommendation</th>
@@ -111,6 +987,23 @@
                 disabled>
           <i class="fa-solid fa-check mr-2"></i>Apply Selected Optimizations
         </button>
+      </div>
+
+      <!-- Smart Bulk Actions -->
+      <div class="mt-6 rounded-xl border bg-white p-5">
+        <h3 class="text-sm font-semibold text-gray-900 mb-1">Smart Actions</h3>
+        <p class="text-xs text-gray-500 mb-4">One-click bulk optimizations based on your account data.</p>
+        <div class="flex flex-wrap gap-3">
+          <button id="btn-pause-wasted"
+                  class="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 transition">
+            <i class="fa-solid fa-pause"></i> Pause wasted spend
+          </button>
+          <button id="btn-tighten-broad"
+                  class="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100 transition">
+            <i class="fa-solid fa-filter"></i> Tighten broad match
+          </button>
+        </div>
+        <p id="smart-action-status" class="mt-3 text-xs text-gray-500 hidden"></p>
       </div>
     </section>
     {% endif %}
@@ -314,7 +1207,7 @@
 
       {% if campaigns_tab_data %}
       <div class="overflow-auto rounded-xl border bg-white shadow-sm">
-        <table id="campaigns-table" class="min-w-full text-sm">
+        <table id="campaigns-table" class="mobile-card-table min-w-full text-sm">
           <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
             <tr>
               <th class="px-3 py-2 w-8">
@@ -327,8 +1220,12 @@
               <th class="text-right px-3 py-2 w-24">Ad Groups</th>
               <th class="text-right px-3 py-2 w-24">Keywords</th>
               <th class="text-right px-3 py-2 w-28">30d Spend</th>
-              <th class="text-right px-3 py-2 w-28">30d Conv.</th>
-              <th class="text-center px-3 py-2 w-24">Actions</th>
+              <th class="text-right px-3 py-2 w-28">30d Leads {{ jargon("Actions that matter — calls, form fills, bookings.") }}</th>
+              <th class="text-right px-3 py-2 w-24">Your share of searches {{ jargon("Out of all the searches your ad could have shown for, the % of times it actually did. Marketers call this impression share.") }}</th>
+              <th class="text-right px-3 py-2 w-24">Missed (budget) {{ jargon("Searches you missed because your daily budget ran out.") }}</th>
+              <th class="text-right px-3 py-2 w-24">Missed (rank) {{ jargon("Searches you missed because competitors' ads ranked higher than yours.") }}</th>
+              <th class="text-left px-3 py-2 w-36">Max you pay per click</th>
+              <th class="text-center px-3 py-2 w-32">Actions</th>
             </tr>
           </thead>
           <tbody id="campaigns-tbody" class="divide-y">
@@ -337,18 +1234,18 @@
                 data-id="{{ c.id }}"
                 data-name="{{ c.name | lower | e }}"
                 data-status="{{ c.status }}">
-              <td class="px-3 py-2">
+              <td class="px-3 py-2" data-label="">
                 <input type="checkbox" class="camp-checkbox h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" data-id="{{ c.id }}">
               </td>
-              <td class="px-3 py-2 font-medium text-gray-900">{{ c.name }}</td>
-              <td class="px-3 py-2">
+              <td class="px-3 py-2 font-medium text-gray-900" data-label="Campaign">{{ c.name }}</td>
+              <td class="px-3 py-2" data-label="Status">
                 <span class="camp-status-badge inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium
                   {{ 'bg-green-100 text-green-700' if c.status == 'enabled' else 'bg-amber-100 text-amber-700' }}">
                   <span class="w-1.5 h-1.5 rounded-full {{ 'bg-green-500' if c.status == 'enabled' else 'bg-amber-500' }}"></span>
                   {{ c.status|title }}
                 </span>
               </td>
-              <td class="px-3 py-2">
+              <td class="px-3 py-2" data-label="Daily Budget">
                 <span class="camp-budget-display" data-id="{{ c.id }}" data-cents="{{ c.daily_budget_cents or 0 }}">
                   ${{ "%.2f"|format((c.daily_budget_cents or 0) / 100) }}/day
                 </span>
@@ -364,38 +1261,80 @@
                   <button class="camp-budget-cancel-btn ml-1 text-xs text-gray-400 hover:text-gray-600" data-id="{{ c.id }}">Cancel</button>
                 </span>
               </td>
-              <td class="px-3 py-2">
+              <td class="px-3 py-2" data-label="Network">
                 {% if c.network %}
                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">{{ c.network }}</span>
                 {% else %}
                 <span class="text-gray-400">—</span>
                 {% endif %}
               </td>
-              <td class="px-3 py-2 text-right text-gray-700">{{ c.adgroup_count }}</td>
-              <td class="px-3 py-2 text-right text-gray-700">{{ c.keyword_count }}</td>
-              <td class="px-3 py-2 text-right text-gray-700">
+              <td class="px-3 py-2 text-right text-gray-700" data-label="Ad Groups">{{ c.adgroup_count }}</td>
+              <td class="px-3 py-2 text-right text-gray-700" data-label="Keywords">{{ c.keyword_count }}</td>
+              <td class="px-3 py-2 text-right text-gray-700" data-label="30d Spend">
                 {% if c.spend_30d and c.spend_30d > 0 %}
                   ${{ "%.2f"|format(c.spend_30d) }}
                 {% else %}
                   <span class="text-gray-400">—</span>
                 {% endif %}
               </td>
-              <td class="px-3 py-2 text-right text-gray-700">
+              <td class="px-3 py-2 text-right text-gray-700" data-label="30d Leads">
                 {% if c.conversions_30d and c.conversions_30d > 0 %}
                   {{ c.conversions_30d|int }}
                 {% else %}
                   <span class="text-gray-400">—</span>
                 {% endif %}
               </td>
-              <td class="px-3 py-2 text-center">
-                <button class="camp-toggle-btn text-xs px-2 py-1 rounded border hover:bg-gray-50 transition"
-                        data-id="{{ c.id }}" data-status="{{ c.status }}" title="{{ 'Pause' if c.status == 'enabled' else 'Enable' }}">
-                  {% if c.status == 'enabled' %}
-                  <i class="fa-solid fa-pause text-amber-500"></i>
-                  {% else %}
-                  <i class="fa-solid fa-play text-green-600"></i>
-                  {% endif %}
-                </button>
+              <td class="px-3 py-2 text-right text-sm" data-label="Impr. Share">
+                {% if c.avg_impr_share is not none and c.avg_impr_share %}
+                  <span class="font-medium {% if c.avg_impr_share >= 0.7 %}text-green-600{% elif c.avg_impr_share >= 0.4 %}text-amber-600{% else %}text-red-600{% endif %}">
+                    {{ (c.avg_impr_share * 100)|round(1) }}%
+                  </span>
+                {% else %}<span class="text-gray-300">—</span>{% endif %}
+              </td>
+              <td class="px-3 py-2 text-right text-sm" data-label="Missed (budget)">
+                {% if c.avg_lost_is_budget is not none and c.avg_lost_is_budget %}
+                  <span class="{% if c.avg_lost_is_budget > 0.2 %}text-red-600 font-semibold{% else %}text-gray-500{% endif %}">
+                    {{ (c.avg_lost_is_budget * 100)|round(1) }}%
+                  </span>
+                {% else %}<span class="text-gray-300">—</span>{% endif %}
+              </td>
+              <td class="px-3 py-2 text-right text-sm" data-label="Missed (rank)">
+                {% if c.avg_lost_is_rank is not none and c.avg_lost_is_rank %}
+                  <span class="{% if c.avg_lost_is_rank > 0.3 %}text-amber-600 font-semibold{% else %}text-gray-500{% endif %}">
+                    {{ (c.avg_lost_is_rank * 100)|round(1) }}%
+                  </span>
+                {% else %}<span class="text-gray-300">—</span>{% endif %}
+              </td>
+              <td class="px-3 py-2" data-label="Bid Strategy">
+                <select class="bid-strategy-select text-xs rounded border px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-300 w-full"
+                        data-id="{{ c.id }}">
+                  {% for strat, label in [
+                    ('manual_cpc','You set max per click'),
+                    ('enhanced_cpc','You set, Google adjusts'),
+                    ('target_cpa','Aim for $ per booked job'),
+                    ('target_roas','Aim for $ earned per $1 spent'),
+                    ('maximize_conversions','Max Conversions'),
+                    ('maximize_conversion_value','Max Conv. Value'),
+                  ] %}
+                  <option value="{{ strat }}" {{ 'selected' if (c.bid_strategy or 'manual_cpc') == strat else '' }}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+              <td class="px-3 py-2 text-center" data-label="Actions">
+                <div class="flex justify-center gap-1">
+                  <button class="camp-toggle-btn text-xs px-2 py-1 rounded border hover:bg-gray-50 transition"
+                          data-id="{{ c.id }}" data-status="{{ c.status }}" title="{{ 'Pause' if c.status == 'enabled' else 'Enable' }}">
+                    {% if c.status == 'enabled' %}
+                    <i class="fa-solid fa-pause text-amber-500"></i>
+                    {% else %}
+                    <i class="fa-solid fa-play text-green-600"></i>
+                    {% endif %}
+                  </button>
+                  <button class="camp-clone-btn text-xs px-2 py-1 rounded border hover:bg-gray-50 transition text-gray-500"
+                          data-id="{{ c.id }}" data-name="{{ c.name | e }}" title="Clone campaign">
+                    <i class="fa-solid fa-copy"></i>
+                  </button>
+                </div>
               </td>
             </tr>
             {% endfor %}
@@ -480,11 +1419,11 @@
               <th class="text-left px-3 py-2">Ad Group</th>
               <th class="text-left px-3 py-2">Campaign</th>
               <th class="text-left px-3 py-2 w-32">Status</th>
-              <th class="text-right px-3 py-2 w-28">Max CPC</th>
+              <th class="text-right px-3 py-2 w-28">Max CPC {{ jargon("Cost per click: what you pay on average when someone clicks your ad. Max CPC is the most you're willing to pay.") }}</th>
               <th class="text-right px-3 py-2 w-24">Keywords</th>
               <th class="text-right px-3 py-2 w-20">Ads</th>
               <th class="text-right px-3 py-2 w-28">30d Spend</th>
-              <th class="text-right px-3 py-2 w-28">30d Conv.</th>
+              <th class="text-right px-3 py-2 w-28">30d Conv. {{ jargon("Conversions: actions that matter — calls, form fills, bookings.") }}</th>
               <th class="text-center px-3 py-2 w-24">Actions</th>
             </tr>
           </thead>
@@ -673,16 +1612,24 @@
 
       {% else %}
       <!-- Empty state -->
+      {% set never_synced = not (last_synced_at is defined and last_synced_at) %}
       <div class="rounded-xl border bg-white p-12 text-center shadow-sm">
-        <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50">
-          <i class="fa-solid fa-rectangle-ad text-indigo-400 text-2xl"></i>
-        </div>
+        <i class="fa-solid fa-rectangle-ad text-gray-300 text-4xl mb-4"></i>
+        {% if never_synced %}
+        <h3 class="text-base font-semibold text-gray-800 mb-1">No ads synced yet</h3>
+        <p class="text-sm text-gray-500 mb-4">Sync your Google Ads account to see your ads here.</p>
+        <button onclick="doSync(this)"
+                class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500 transition">
+          <i class="fa-solid fa-rotate"></i> Sync Data
+        </button>
+        {% else %}
         <h3 class="text-base font-semibold text-gray-800 mb-1">No ads yet</h3>
-        <p class="text-sm text-gray-500 mb-4">Create a campaign with ads to start showing your ads.</p>
+        <p class="text-sm text-gray-500 mb-4">Ads are what customers see on Google — create a campaign to write your first one.</p>
         <a href="{{ url_for('gads_bp.optimize') }}?tab=publish"
            class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500 transition">
           <i class="fa-solid fa-plus"></i> Create Campaign
         </a>
+        {% endif %}
       </div>
       {% endif %}
 
@@ -699,7 +1646,7 @@
       <div class="flex items-center justify-between mb-4">
         <div>
           <h2 class="text-lg font-semibold">Keywords</h2>
-          <p class="text-xs text-gray-500 mt-0.5">Quality Score data syncs from Google Ads. Low QS (1–6) means higher CPCs — fix ad relevance and landing pages.</p>
+          <p class="text-xs text-gray-500 mt-0.5">Google's quality grade (1–10) for each keyword. A low grade (1–6) means you pay more per click — improve ad wording and landing pages to boost it.</p>
         </div>
         <button id="btn-show-add-keyword"
                 class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500 transition">
@@ -717,7 +1664,7 @@
                    class="w-full rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
           </div>
           <div>
-            <label class="block text-xs text-gray-500 mb-1">Match Type</label>
+            <label class="block text-xs text-gray-500 mb-1">Match Type {{ jargon("Controls how closely a search must match your keyword. Exact = tightest, Broad = loosest.") }}</label>
             <select id="new-kw-match" class="w-full rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
               <option value="broad">Broad</option>
               <option value="phrase" selected>Phrase</option>
@@ -725,7 +1672,7 @@
             </select>
           </div>
           <div>
-            <label class="block text-xs text-gray-500 mb-1">Max CPC ($)</label>
+            <label class="block text-xs text-gray-500 mb-1">Max CPC ($) {{ jargon("Cost per click: what you pay on average when someone clicks your ad. Max CPC is the most you're willing to pay.") }}</label>
             <input id="new-kw-cpc" type="number" min="0" step="0.01" placeholder="e.g. 1.50"
                    class="w-full rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
           </div>
@@ -808,19 +1755,19 @@
       <!-- Keywords table -->
       {% if keywords_data %}
       <div class="overflow-auto rounded-xl border bg-white shadow-sm">
-        <table id="keywords-table" class="min-w-full text-sm">
+        <table id="keywords-table" class="mobile-card-table min-w-full text-sm">
           <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
             <tr>
               <th class="px-3 py-2 w-8">
                 <input type="checkbox" id="kw-select-all" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
               </th>
               <th class="text-left px-3 py-2">Keyword</th>
-              <th class="text-left px-3 py-2 w-28">Match Type</th>
+              <th class="text-left px-3 py-2 w-28">Match Type {{ jargon("Controls how closely a search must match your keyword. Exact = tightest, Broad = loosest.") }}</th>
               <th class="text-left px-3 py-2 w-24">Status</th>
               <th class="text-left px-3 py-2">Campaign</th>
               <th class="text-left px-3 py-2">Ad Group</th>
-              <th class="text-right px-3 py-2 w-24">Max CPC</th>
-              <th class="text-center px-3 py-2 w-24">Quality Score</th>
+              <th class="text-right px-3 py-2 w-24">Max CPC {{ jargon("Cost per click: what you pay on average when someone clicks your ad. Max CPC is the most you're willing to pay.") }}</th>
+              <th class="text-center px-3 py-2 w-24">Google's quality grade {{ jargon("Google's 1–10 rating of how relevant your ad and keyword are. Higher scores = cheaper clicks.") }}</th>
               <th class="text-center px-3 py-2 w-20">Actions</th>
             </tr>
           </thead>
@@ -832,12 +1779,12 @@
                 data-status="{{ kw.status }}"
                 data-match="{{ kw.match_type }}"
                 data-text="{{ kw.text | lower | e }}">
-              <td class="px-3 py-2">
+              <td class="px-3 py-2" data-label="">
                 <input type="checkbox" class="kw-checkbox h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                        data-id="{{ kw.id }}" data-status="{{ kw.status }}">
               </td>
-              <td class="px-3 py-2 font-medium text-gray-900">{{ kw.text }}</td>
-              <td class="px-3 py-2">
+              <td class="px-3 py-2 font-medium text-gray-900" data-label="Keyword">{{ kw.text }}</td>
+              <td class="px-3 py-2" data-label="Match Type">
                 {% if kw.match_type == 'broad' %}
                   <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700">Broad</span>
                 {% elif kw.match_type == 'phrase' %}
@@ -848,7 +1795,7 @@
                   <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">{{ kw.match_type }}</span>
                 {% endif %}
               </td>
-              <td class="px-3 py-2">
+              <td class="px-3 py-2" data-label="Status">
                 {% if kw.status == 'enabled' %}
                   <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
                     <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>Enabled
@@ -863,19 +1810,30 @@
                   </span>
                 {% endif %}
               </td>
-              <td class="px-3 py-2 text-gray-600 text-xs">{{ kw.campaign_name }}</td>
-              <td class="px-3 py-2 text-gray-600 text-xs">{{ kw.adgroup_name }}</td>
-              <td class="px-3 py-2 text-right text-gray-700">
+              <td class="px-3 py-2 text-gray-600 text-xs" data-label="Campaign">{{ kw.campaign_name }}</td>
+              <td class="px-3 py-2 text-gray-600 text-xs" data-label="Ad Group">{{ kw.adgroup_name }}</td>
+              <td class="px-3 py-2 text-right text-gray-700" data-label="Max CPC">
                 {% if kw.max_cpc_cents %}
                   ${{ "%.2f"|format(kw.max_cpc_cents / 100) }}
                 {% else %}
                   <span class="text-gray-400">—</span>
                 {% endif %}
               </td>
-              <td class="px-3 py-2 text-center">
-                <span class="text-gray-400 text-xs">—</span>
+              <td class="px-3 py-2 text-center" data-label="Quality">
+                {% set qs = kw.quality_score %}
+                {% if qs and qs > 0 %}
+                  {% if qs <= 3 %}
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">{{ qs }} Needs work</span>
+                  {% elif qs <= 6 %}
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700">{{ qs }} OK</span>
+                  {% else %}
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">{{ qs }} Great</span>
+                  {% endif %}
+                {% else %}
+                  <span class="text-gray-400 text-xs">—</span>
+                {% endif %}
               </td>
-              <td class="px-3 py-2 text-center">
+              <td class="px-3 py-2 text-center" data-label="Actions">
                 <div class="flex items-center justify-center gap-1">
                   {% if kw.status == 'enabled' %}
                   <button class="kw-action-btn text-amber-500 hover:text-amber-700 transition"
@@ -896,19 +1854,30 @@
         </table>
       </div>
       <p class="text-xs text-gray-400 mt-2">Showing <span id="kw-visible-count">{{ keywords_data|length }}</span> of {{ keywords_data|length }} keywords</p>
+      {% if keywords_truncated %}
+      <p class="text-xs text-amber-600 mt-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i>This list is capped at 1,000 keywords — your account has more. Use the campaign filter to narrow down.</p>
+      {% endif %}
 
       {% else %}
       <!-- Empty state -->
+      {% set never_synced = not (last_synced_at is defined and last_synced_at) %}
       <div class="rounded-xl border bg-white p-12 text-center shadow-sm">
-        <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50">
-          <i class="fa-solid fa-key text-indigo-400 text-2xl"></i>
-        </div>
-        <h3 class="text-base font-semibold text-gray-800 mb-1">No keywords found</h3>
-        <p class="text-sm text-gray-500 mb-4">Add keywords to your ad groups to start targeting searches.</p>
+        <i class="fa-solid fa-key text-gray-300 text-4xl mb-4"></i>
+        {% if never_synced %}
+        <h3 class="text-base font-semibold text-gray-800 mb-1">No keywords synced yet</h3>
+        <p class="text-sm text-gray-500 mb-4">Sync your Google Ads account to see your keywords here.</p>
+        <button onclick="doSync(this)"
+                class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500 transition">
+          <i class="fa-solid fa-rotate"></i> Sync Data
+        </button>
+        {% else %}
+        <h3 class="text-base font-semibold text-gray-800 mb-1">No keywords yet</h3>
+        <p class="text-sm text-gray-500 mb-4">Keywords are the searches you want your ad to show up for — add your first one to start reaching customers.</p>
         <button id="btn-show-add-keyword-empty"
                 class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500 transition">
           <i class="fa-solid fa-plus"></i> Add Your First Keyword
         </button>
+        {% endif %}
       </div>
       {% endif %}
 
@@ -924,7 +1893,7 @@
       <!-- Header -->
       <div class="flex items-center justify-between mb-4">
         <div>
-          <h2 class="text-lg font-semibold">Negative Keywords</h2>
+          <h2 class="text-lg font-semibold">Negative Keywords {{ jargon("A word or phrase you block so your ad never shows for those searches.") }}</h2>
           <p class="text-xs text-gray-500 mt-0.5">Negative keywords prevent your ads from showing for irrelevant searches. Phrase match recommended for most terms.</p>
         </div>
         <button id="btn-show-add-negative"
@@ -943,7 +1912,7 @@
                    class="w-full rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
           </div>
           <div>
-            <label class="block text-xs text-gray-500 mb-1">Match Type</label>
+            <label class="block text-xs text-gray-500 mb-1">Match Type {{ jargon("Controls how closely a search must match your keyword. Exact = tightest, Broad = loosest.") }}</label>
             <select id="new-neg-match" class="w-full rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
               <option value="BROAD">Broad</option>
               <option value="PHRASE" selected>Phrase (recommended)</option>
@@ -1016,7 +1985,7 @@
                            data-section="campaign">
                   </th>
                   <th class="text-left px-3 py-2">Term</th>
-                  <th class="text-left px-3 py-2 w-28">Match Type</th>
+                  <th class="text-left px-3 py-2 w-28">Match Type {{ jargon("Controls how closely a search must match your keyword. Exact = tightest, Broad = loosest.") }}</th>
                   <th class="text-left px-3 py-2">Campaign</th>
                   <th class="text-center px-3 py-2 w-20">Remove</th>
                 </tr>
@@ -1043,7 +2012,7 @@
                   <td class="px-3 py-2 text-gray-600 text-xs">{{ nk.campaign_name or '—' }}</td>
                   <td class="px-3 py-2 text-center">
                     <button class="neg-remove-btn text-red-400 hover:text-red-600 transition"
-                            data-id="{{ nk.id }}" title="Remove negative keyword">
+                            data-id="{{ nk.id }}" data-text="{{ nk.text | e }}" title="Remove negative keyword">
                       <i class="fa-solid fa-trash text-xs"></i>
                     </button>
                   </td>
@@ -1071,7 +2040,7 @@
                            data-section="adgroup">
                   </th>
                   <th class="text-left px-3 py-2">Term</th>
-                  <th class="text-left px-3 py-2 w-28">Match Type</th>
+                  <th class="text-left px-3 py-2 w-28">Match Type {{ jargon("Controls how closely a search must match your keyword. Exact = tightest, Broad = loosest.") }}</th>
                   <th class="text-left px-3 py-2">Campaign</th>
                   <th class="text-left px-3 py-2">Ad Group</th>
                   <th class="text-center px-3 py-2 w-20">Remove</th>
@@ -1100,7 +2069,7 @@
                   <td class="px-3 py-2 text-gray-600 text-xs">{{ nk.adgroup_name or '—' }}</td>
                   <td class="px-3 py-2 text-center">
                     <button class="neg-remove-btn text-red-400 hover:text-red-600 transition"
-                            data-id="{{ nk.id }}" title="Remove negative keyword">
+                            data-id="{{ nk.id }}" data-text="{{ nk.text | e }}" title="Remove negative keyword">
                       <i class="fa-solid fa-trash text-xs"></i>
                     </button>
                   </td>
@@ -1115,22 +2084,20 @@
       {% else %}
       <!-- Empty state -->
       <div class="rounded-xl border bg-white p-12 text-center shadow-sm">
-        <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
-          <i class="fa-solid fa-ban text-red-400 text-2xl"></i>
-        </div>
+        <i class="fa-solid fa-ban text-gray-300 text-4xl mb-4"></i>
         <h3 class="text-base font-semibold text-gray-800 mb-1">No negative keywords yet</h3>
-        <p class="text-sm text-gray-500 mb-4">Add negative keywords to stop wasting budget on irrelevant searches.</p>
+        <p class="text-sm text-gray-500 mb-4">These block junk searches from wasting your budget — like "free" or "DIY" when you sell a paid service.</p>
         <div class="flex items-center justify-center gap-3">
           <button id="btn-show-add-negative-empty"
                   class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500 transition">
             <i class="fa-solid fa-plus"></i> Add Negative Keyword
           </button>
-          <a href="{{ url_for('gads_bp.optimize') }}?tab=keywords"
+          <a href="{{ url_for('gads_bp.search_terms') }}"
              class="inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm hover:bg-gray-50 transition text-gray-600">
             <i class="fa-solid fa-magnifying-glass"></i> Review Search Terms
           </a>
         </div>
-        <p class="text-xs text-gray-400 mt-4">Tip: Review your search terms report to find candidates for negative keywords.</p>
+        <p class="text-xs text-gray-400 mt-4">Tip: Your search terms report shows what people actually typed — block anything that isn't a real customer.</p>
       </div>
       {% endif %}
 
@@ -1187,6 +2154,13 @@
     return res;
   }
 
+  // Small jargon tooltip for JS-rendered labels (mirrors the Jinja jargon macro)
+  function tipIcon(text) {
+    return `<span class="group relative inline-block align-middle">` +
+      `<i class="fa-solid fa-circle-question text-gray-300 group-hover:text-gray-500 text-[11px] cursor-help ml-0.5"></i>` +
+      `<span class="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 top-full mt-1.5 z-30 w-56 whitespace-normal rounded-lg bg-gray-900 px-3 py-2 text-xs leading-snug text-white text-left shadow-lg pointer-events-none">${text}</span></span>`;
+  }
+
   // --- KPI ---
   async function loadKPI(days) {
     document.getElementById("kpi-days").textContent = String(days);
@@ -1204,7 +2178,7 @@
           <div class="kpi-label">Last ${days} days</div>
         </div>
         <div class="kpi">
-          <div class="kpi-label">Impressions</div>
+          <div class="kpi-label">Impressions ${tipIcon('How many times your ad was shown.')}</div>
           <div class="kpi-value">${fmt(kpi.impressions).toLocaleString()}</div>
           <div class="kpi-label">Last ${days} days</div>
         </div>
@@ -1214,12 +2188,12 @@
           <div class="kpi-label">Last ${days} days</div>
         </div>
         <div class="kpi">
-          <div class="kpi-label">Conversions</div>
+          <div class="kpi-label">Conversions ${tipIcon('Actions that matter — calls, form fills, bookings.')}</div>
           <div class="kpi-value">${fmt(kpi.conversions).toLocaleString()}</div>
           <div class="kpi-label">Last ${days} days</div>
         </div>
         <div class="kpi">
-          <div class="kpi-label">Avg CPC</div>
+          <div class="kpi-label">Avg CPC ${tipIcon('Cost per click: what you pay on average when someone clicks your ad.')}</div>
           <div class="kpi-value">${currency(kpi.avg_cpc || 0)}</div>
           <div class="kpi-label">Last ${days} days</div>
         </div>
@@ -1228,13 +2202,15 @@
     if (el) el.innerHTML = html;
   }
 
-  // KPI controls
-  const btn7  = document.getElementById("kpi-7");
-  const btn30 = document.getElementById("kpi-30");
-  const btn90 = document.getElementById("kpi-90");
-  if (btn7)  btn7.addEventListener("click", () => (loadKPI(7),  btn7.classList.add('bg-gray-100'), btn30.classList.remove('bg-gray-100'), btn90.classList.remove('bg-gray-100')));
-  if (btn30) btn30.addEventListener("click", () => (loadKPI(30), btn30.classList.add('bg-gray-100'), btn7.classList.remove('bg-gray-100'), btn90.classList.remove('bg-gray-100')));
-  if (btn90) btn90.addEventListener("click", () => (loadKPI(90), btn90.classList.add('bg-gray-100'), btn7.classList.remove('bg-gray-100'), btn30.classList.remove('bg-gray-100')));
+  // KPI controls — driven by outer #date-range-selector buttons
+  document.querySelectorAll('.date-range-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const days = parseInt(this.dataset.days, 10);
+      loadKPI(days);
+      document.querySelectorAll('.date-range-btn').forEach(b => b.classList.remove('bg-gray-100'));
+      this.classList.add('bg-gray-100');
+    });
+  });
 
   // --- Optimizer ---
   function formatROI(impactData) {
@@ -1290,19 +2266,145 @@
     return badges[severity] || `<span class="text-gray-600">${severity}</span>`;
   }
 
+  // Escape untrusted strings before injecting into HTML
+  function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = String(s ?? '');
+    return d.innerHTML;
+  }
+
+  const money = v => '$' + Number(v).toFixed(2);
+
+  // Build the plain-English "why are we suggesting this?" panel for a
+  // recommendation, using the metrics stored in suggested_action_json.
+  function buildRecExplanation(r) {
+    let a = {};
+    try { a = JSON.parse(r.suggested_action_json || '{}') || {}; } catch (e) { a = {}; }
+
+    let text = '';
+    const facts = [];   // [label, value] chips showing the underlying data
+
+    switch (r.category) {
+      case 'wasted_spend': {
+        text = `This keyword spent ${a.spend != null ? money(a.spend) : 'money'} over the last 30 days but produced 0 leads.`;
+        if (a.clicks != null) {
+          text += ` That's ${a.clicks} click${a.clicks === 1 ? '' : 's'} you paid for that never turned into a call, form fill, or booking.`;
+        }
+        if (a.account_avg_cpa) {
+          text += ` For comparison, the average keyword in your account converts at ${money(a.account_avg_cpa)} per lead — this one has given you nothing back.`;
+        }
+        text += ' Pausing it stops the waste, and you can always turn it back on later.';
+        if (a.keyword_text) facts.push(['Keyword', '"' + a.keyword_text + '"']);
+        if (a.spend != null) facts.push(['Spent (30d)', money(a.spend)]);
+        if (a.clicks != null) facts.push(['Clicks', a.clicks]);
+        facts.push(['Leads', '0']);
+        if (a.account_avg_cpa) facts.push(['Account avg. cost per lead', money(a.account_avg_cpa)]);
+        break;
+      }
+      case 'broad_match': {
+        text = 'Broad match lets Google show your ad for loosely related searches — not just the words you picked.';
+        if (a.spend != null) {
+          const conv = Number(a.conversions || 0);
+          text += ` This keyword spent ${money(a.spend)} with ${conv} lead${conv === 1 ? '' : 's'} — switching to phrase match keeps your ad on relevant searches only.`;
+        } else {
+          text += ' Switching to phrase match keeps your ad on relevant searches only.';
+        }
+        if (a.reason) text += ' ' + a.reason;
+        if (a.keyword_text) facts.push(['Keyword', '"' + a.keyword_text + '"']);
+        if (a.spend != null) facts.push(['Spent (30d)', money(a.spend)]);
+        if (a.clicks != null) facts.push(['Clicks', a.clicks]);
+        if (a.conversions != null) facts.push(['Leads', Number(a.conversions)]);
+        if (a.keyword_cpa) facts.push(['Cost per lead', money(a.keyword_cpa)]);
+        if (a.benchmark_cpa) facts.push(['Phrase/exact avg. cost per lead', money(a.benchmark_cpa)]);
+        facts.push(['Change', 'Broad → Phrase match']);
+        break;
+      }
+      case 'budget': {
+        const cur = a.current_budget_cents != null ? money(a.current_budget_cents / 100) : null;
+        const sug = a.suggested_budget_cents != null ? money(a.suggested_budget_cents / 100) : null;
+        text = `This campaign is hitting its daily budget cap${cur ? ' of ' + cur + '/day' : ''} and missing an estimated ${a.lost_is_budget_pct != null ? a.lost_is_budget_pct + '%' : 'a share'} of available impressions — searches where your ad could have shown, but didn't because the day's money had already run out.`;
+        if (sug) text += ` Raising the budget to ${sug}/day would let your ad keep showing for more of those searches.`;
+        if (cur) facts.push(['Current daily budget', cur + '/day']);
+        if (sug) facts.push(['Suggested daily budget', sug + '/day']);
+        if (a.lost_is_budget_pct != null) facts.push(['Impressions missed (budget)', a.lost_is_budget_pct + '%']);
+        if (a.avg_impression_share_pct != null) facts.push(['Current impression share', a.avg_impression_share_pct + '%']);
+        break;
+      }
+      case 'qs':
+      case 'low_qs': {
+        const qs = a.quality_score;
+        text = `Google rates this keyword's relevance as ${qs != null ? qs : '?'}/10. Low scores mean you pay more per click than competitors do for the same ad spot.`;
+        const subLabels = { 'Landing Page': 'Landing page experience', 'Ad Relevance': 'Ad relevance', 'Expected CTR': 'Expected click-through rate' };
+        const weak = Object.entries(a.sub_scores || {})
+          .filter(([, v]) => v === 'BELOW_AVERAGE')
+          .map(([k]) => subLabels[k] || k);
+        if (weak.length) text += ` Google says the weak spot is: ${weak.join(', ').toLowerCase()}.`;
+        if (a.fix_hint) text += ' ' + a.fix_hint;
+        text += ' Raising the score makes every click cheaper.';
+        if (a.keyword_text) facts.push(['Keyword', '"' + a.keyword_text + '"']);
+        if (qs != null) facts.push(['Quality Score', qs + '/10']);
+        if (a.impressions != null) facts.push(['Times shown (14d)', Number(a.impressions).toLocaleString()]);
+        if (a.spend != null) facts.push(['Spent (14d)', money(a.spend)]);
+        break;
+      }
+      case 'impression_share': {
+        text = 'Impression share is the percentage of searches where your ad actually appeared, out of all the searches it was eligible to show for.';
+        text += ` This campaign is missing ${a.lost_is_rank_pct != null ? a.lost_is_rank_pct + '%' : 'a chunk'} of those searches because competitors' ads rank higher — usually due to low quality scores or bids set too low. Those are potential customers who never saw your ad.`;
+        if (a.avg_impression_share_pct != null) facts.push(['Current impression share', a.avg_impression_share_pct + '%']);
+        if (a.lost_is_rank_pct != null) facts.push(['Missed (outranked)', a.lost_is_rank_pct + '%']);
+        break;
+      }
+      default:
+        text = r.details || 'No additional details available.';
+    }
+
+    if (a.campaign_name) facts.push(['Campaign', a.campaign_name]);
+
+    const factsHtml = facts.length ? `
+      <div class="flex flex-wrap gap-2 mt-2">
+        ${facts.map(([k, v]) => `
+          <span class="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 py-1 text-xs">
+            <span class="text-gray-400">${esc(k)}</span>
+            <span class="font-semibold text-gray-700">${esc(v)}</span>
+          </span>`).join('')}
+      </div>` : '';
+
+    return `
+      <div class="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Why we're suggesting this</div>
+      <p class="text-sm text-gray-700 leading-relaxed max-w-3xl">${esc(text)}</p>
+      ${factsHtml}`;
+  }
+
   async function loadOptimizer() {
     const res = await fetch(`${base}/optimizer/data`);
     const rows = await res.json();
     const tbody = document.querySelector("#optimizer-table tbody");
     if (!tbody) return;
+    if (!rows.length) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" class="px-4 py-12 text-center">
+            <i class="fa-solid fa-circle-check text-green-400 text-4xl mb-3 block"></i>
+            <p class="text-sm font-semibold text-gray-700">You're all caught up!</p>
+            <p class="text-sm text-gray-500 mt-1">No new recommendations right now. We check your account daily.</p>
+          </td>
+        </tr>`;
+      updateSelectedCount();
+      return;
+    }
     tbody.innerHTML = rows.map(r => `
-      <tr class="hover:bg-gray-50">
+      <tr class="rec-row hover:bg-gray-50 cursor-pointer" data-rec-id="${r.id}">
         <td class="px-3 py-2">
           <input type="checkbox" class="optimization-checkbox h-4 w-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
                  data-id="${r.id}"
                  data-title="${(r.title ?? '').replace(/"/g, '&quot;')}"
                  data-category="${r.category ?? ''}"
                  data-severity="${r.severity ?? ''}">
+        </td>
+        <td class="px-2 py-2 text-center">
+          <button type="button" class="rec-toggle-btn text-gray-400 hover:text-gray-600 p-1" title="Show why">
+            <i class="rec-chevron fa-solid fa-chevron-right text-xs transition-transform duration-150"></i>
+          </button>
         </td>
         <td class="px-3 py-2">${getSeverityBadge(r.severity)}</td>
         <td class="px-3 py-2">
@@ -1316,6 +2418,11 @@
         </td>
         <td class="px-3 py-2">${formatROI(r.expected_impact)}</td>
       </tr>
+      <tr id="rec-detail-${r.id}" class="rec-detail-row hidden">
+        <td colspan="6" class="bg-gray-50 px-6 py-3 border-t border-gray-100">
+          ${buildRecExplanation(r)}
+        </td>
+      </tr>
     `).join("");
 
     // Wire up checkboxes
@@ -1324,6 +2431,114 @@
       cb.addEventListener("change", updateSelectedCount);
     });
   }
+
+  // Expand/collapse recommendation detail rows (click the chevron or the row)
+  (function () {
+    const tbody = document.querySelector("#optimizer-table tbody");
+    if (!tbody) return;
+    tbody.addEventListener("click", (e) => {
+      if (e.target.closest("input, a, label")) return;     // don't fight the checkbox
+      const row = e.target.closest("tr.rec-row");
+      if (!row) return;
+      const detail = document.getElementById("rec-detail-" + row.dataset.recId);
+      const chevron = row.querySelector(".rec-chevron");
+      if (detail) detail.classList.toggle("hidden");
+      if (chevron) chevron.classList.toggle("rotate-90");
+    });
+  })();
+
+  // --- Your Goals card ---
+  (function () {
+    const card = document.getElementById("goals-card");
+    if (!card) return;
+    let goals = {};
+    try { goals = JSON.parse(card.dataset.goals || "{}"); } catch (e) {}
+
+    const summary = document.getElementById("goals-summary");
+    const summaryText = document.getElementById("goals-summary-text");
+    const actualCplEl = document.getElementById("goals-actual-cpl");
+    const form = document.getElementById("goals-form");
+    const editBtn = document.getElementById("goals-edit-btn");
+    const saveBtn = document.getElementById("goals-save-btn");
+    const cplInput = document.getElementById("goal-target-cpl");
+    const budgetInput = document.getElementById("goal-max-budget");
+
+    const money = v => `$${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+    const hasGoals = () => !!(goals.target_cpl || goals.max_monthly_budget);
+
+    function renderSummary() {
+      const parts = [];
+      if (goals.target_cpl) parts.push(`Goal: leads under ${money(goals.target_cpl)}`);
+      if (goals.max_monthly_budget) parts.push(`Budget cap: ${money(goals.max_monthly_budget)}/mo`);
+      summaryText.textContent = parts.join(" · ");
+    }
+
+    async function renderActualCpl() {
+      if (!goals.target_cpl) { actualCplEl.classList.add("hidden"); return; }
+      try {
+        const res = await fetch(`${base}/overview?days=30`);
+        const kpi = await res.json();
+        const spend = (Number(kpi.cost_micros) || 0) / 1_000_000;
+        const conv = Number(kpi.conversions) || 0;
+        if (!conv) { actualCplEl.classList.add("hidden"); return; }
+        const cpl = spend / conv;
+        const under = cpl <= goals.target_cpl;
+        actualCplEl.className = `ml-2 font-semibold ${under ? "text-green-600" : "text-red-600"}`;
+        actualCplEl.textContent = `Right now you're paying ${money(cpl.toFixed(2))} per lead`;
+      } catch (e) {
+        actualCplEl.classList.add("hidden");
+      }
+    }
+
+    function showForm() {
+      if (goals.target_cpl) cplInput.value = goals.target_cpl;
+      if (goals.max_monthly_budget) budgetInput.value = goals.max_monthly_budget;
+      form.classList.remove("hidden");
+      summary.classList.add("hidden");
+      editBtn.classList.add("hidden");
+    }
+
+    function showSummary() {
+      renderSummary();
+      renderActualCpl();
+      form.classList.add("hidden");
+      summary.classList.remove("hidden");
+      editBtn.classList.remove("hidden");
+    }
+
+    editBtn.addEventListener("click", showForm);
+
+    saveBtn.addEventListener("click", async () => {
+      const cpl = cplInput.value.trim();
+      const budget = budgetInput.value.trim();
+      if (!cpl && !budget) {
+        showToast("Enter a cost per lead or a monthly budget cap first.", "info");
+        return;
+      }
+      saveBtn.disabled = true;
+      try {
+        const res = await apiPost(`${base}/goals`, {
+          target_cpl: cpl || null,
+          max_monthly_budget: budget || null,
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) {
+          showToast(data.error || "Could not save your goals.", "error");
+          return;
+        }
+        goals = data.goals || {};
+        showToast("Goals saved! We'll optimize toward them.", "success");
+        if (hasGoals()) showSummary();
+        if (typeof loadOptimizer === "function") loadOptimizer();
+      } catch (e) {
+        showToast("Could not save your goals: " + e.message, "error");
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+
+    if (hasGoals()) showSummary();
+  })();
 
   function updateSelectedCount() {
     const checkboxes = document.querySelectorAll(".optimization-checkbox");
@@ -1351,11 +2566,20 @@
     applySelectedBtn.addEventListener("click", async () => {
       const checkboxes = document.querySelectorAll(".optimization-checkbox:checked");
       if (checkboxes.length === 0) {
-        alert("Please select at least one optimization to apply.");
+        showToast("Please select at least one suggestion to apply.", "info");
         return;
       }
 
       const recommendation_ids = Array.from(checkboxes).map(cb => Number(cb.getAttribute("data-id")));
+
+      // Confirm before touching the live account
+      const confirmed = window.confirm(
+        `Apply ${recommendation_ids.length} optimization(s)?\n\n` +
+        `These changes will be pushed to your live Google Ads account ` +
+        `(keyword pauses, match type changes, budget updates) and take effect immediately.`
+      );
+      if (!confirmed) return;
+
       const applyBtn = applySelectedBtn;
       const originalText = applyBtn.innerHTML;
 
@@ -1378,7 +2602,15 @@
         }
 
         const out = await res.json();
-        alert(`✓ Successfully queued ${recommendation_ids.length} optimization(s)!\n\nAction IDs: ${(out.action_ids || []).join(', ')}`);
+        if (out.local_only > 0) {
+          showToast(
+            `${out.pushed_to_google || 0} pushed to Google Ads · ${out.local_only} saved locally only ` +
+            `(reconnect Google Ads to push everything live).`, 'info');
+        } else if ((out.errors || []).length > 0) {
+          showToast(`Applied ${out.applied || 0}, ${out.errors.length} failed: ${out.errors[0].error || ''}`, 'error');
+        } else {
+          showToast(`Applied ${out.applied || recommendation_ids.length} optimization(s) to your Google Ads account.`, 'success');
+        }
 
         // Uncheck all and reload
         document.querySelectorAll(".optimization-checkbox:checked").forEach(cb => cb.checked = false);
@@ -1389,7 +2621,7 @@
         await loadOptimizer();
       } catch (error) {
         console.error("Error applying optimizations:", error);
-        alert(`Failed to apply optimizations: ${error.message}\n\nPlease try again or contact support.`);
+        showToast(`Failed to apply: ${error.message}`, 'error');
       } finally {
         applyBtn.disabled = false;
         applyBtn.innerHTML = originalText;
@@ -1441,14 +2673,404 @@
     }
   });
 
+  // --- Date range selector ---
+  (function() {
+    const LS_KEY = 'gads_date_range_days';
+    const saved = parseInt(localStorage.getItem(LS_KEY) || '30', 10);
+    const validDays = [7, 30, 90];
+    const days = validDays.includes(saved) ? saved : 30;
+
+    function applyDateRange(d) {
+      localStorage.setItem(LS_KEY, String(d));
+      const url = new URL(window.location.href);
+      url.searchParams.set('days', String(d));
+      window.location.href = url.toString();
+    }
+
+    function highlightBtn(d) {
+      document.querySelectorAll('.date-range-btn').forEach(btn => {
+        const active = parseInt(btn.dataset.days, 10) === d;
+        btn.classList.toggle('bg-indigo-50', active);
+        btn.classList.toggle('text-indigo-700', active);
+        btn.classList.toggle('font-medium', active);
+      });
+    }
+
+    const urlDays = parseInt(new URLSearchParams(window.location.search).get('days') || '0', 10);
+    const activeDays = validDays.includes(urlDays) ? urlDays : days;
+    if (!urlDays && activeDays !== 30) {
+      applyDateRange(activeDays);
+      return;
+    }
+    highlightBtn(activeDays);
+
+    document.querySelectorAll('.date-range-btn').forEach(btn => {
+      btn.addEventListener('click', () => applyDateRange(parseInt(btn.dataset.days, 10)));
+    });
+
+    loadKPI(activeDays);
+  })();
+
   // Initial loads (only run the ones visible on the current tab)
   try {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get("tab") || "campaigns";
-    // Always load KPIs so header is fresh
-    loadKPI(30);
     if (tab === "optimizer") loadOptimizer();
   } catch(_) {}
 })();
+
+// Smart bulk actions
+(function() {
+  const base = "{{ url_for('gads_bp.overview')|replace('/overview','') }}";
+  const CSRF = () => document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+  function getDays() {
+    return parseInt(new URLSearchParams(window.location.search).get('days') || '30', 10);
+  }
+
+  function setStatus(msg, color) {
+    const el = document.getElementById('smart-action-status');
+    if (!el) return;
+    el.textContent = msg;
+    el.className = `mt-3 text-xs ${color}`;
+    el.classList.remove('hidden');
+  }
+
+  const btnPause = document.getElementById('btn-pause-wasted');
+  if (btnPause) {
+    btnPause.addEventListener('click', async () => {
+      const days = getDays();
+      btnPause.disabled = true;
+      btnPause.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking…';
+      try {
+        const previewRes = await fetch(`${base}/bulk-pause-wasted?days=${days}&preview=1`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF() },
+          body: JSON.stringify({ preview: true }),
+        });
+        const preview = await previewRes.json();
+        if (preview.error) { setStatus('Error: ' + preview.error, 'text-red-600'); btnPause.disabled = false; btnPause.innerHTML = '<i class="fa-solid fa-pause"></i> Pause wasted spend'; return; }
+        const count = preview.paused ?? preview.would_pause ?? 0;
+        const savedDollars = ((preview.saved_micros || 0) / 1_000_000).toFixed(2);
+        if (count === 0) { setStatus('No qualifying keywords found (need spend > $5 + 0 conversions).', 'text-gray-500'); btnPause.disabled = false; btnPause.innerHTML = '<i class="fa-solid fa-pause"></i> Pause wasted spend'; return; }
+        const ok = await appConfirm(`Pausing ${count} keyword${count !== 1 ? 's' : ''} will stop $${savedDollars} in wasted spend. Continue?`);
+        if (!ok) { btnPause.disabled = false; btnPause.innerHTML = '<i class="fa-solid fa-pause"></i> Pause wasted spend'; return; }
+        const res = await fetch(`${base}/bulk-pause-wasted?days=${days}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF() },
+          body: JSON.stringify({}),
+        });
+        const data = await res.json();
+        if (data.error) { setStatus('Error: ' + data.error, 'text-red-600'); }
+        else { setStatus(`Paused ${data.paused} keyword${data.paused !== 1 ? 's' : ''}, saving $${((data.saved_micros||0)/1_000_000).toFixed(2)}.`, 'text-green-700'); }
+      } catch(e) {
+        setStatus('Request failed: ' + e.message, 'text-red-600');
+      }
+      btnPause.disabled = false;
+      btnPause.innerHTML = '<i class="fa-solid fa-pause"></i> Pause wasted spend';
+    });
+  }
+
+  const btnTighten = document.getElementById('btn-tighten-broad');
+  if (btnTighten) {
+    btnTighten.addEventListener('click', async () => {
+      btnTighten.disabled = true;
+      btnTighten.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking…';
+      try {
+        const previewRes = await fetch(`${base}/bulk-tighten-broad?preview=1`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF() },
+          body: JSON.stringify({ preview: true }),
+        });
+        const preview = await previewRes.json();
+        if (preview.error) { setStatus('Error: ' + preview.error, 'text-red-600'); btnTighten.disabled = false; btnTighten.innerHTML = '<i class="fa-solid fa-filter"></i> Tighten broad match'; return; }
+        const count = preview.changed ?? preview.would_change ?? 0;
+        if (count === 0) { setStatus('No broad match keywords flagged for tightening.', 'text-gray-500'); btnTighten.disabled = false; btnTighten.innerHTML = '<i class="fa-solid fa-filter"></i> Tighten broad match'; return; }
+        const ok = await appConfirm(`Change ${count} broad match keyword${count !== 1 ? 's' : ''} to phrase match? This cannot be undone without a manual edit.`);
+        if (!ok) { btnTighten.disabled = false; btnTighten.innerHTML = '<i class="fa-solid fa-filter"></i> Tighten broad match'; return; }
+        const res = await fetch(`${base}/bulk-tighten-broad`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF() },
+          body: JSON.stringify({}),
+        });
+        const data = await res.json();
+        if (data.error) { setStatus('Error: ' + data.error, 'text-red-600'); }
+        else { setStatus(`Changed ${data.changed} keyword${data.changed !== 1 ? 's' : ''} to phrase match.`, 'text-green-700'); }
+      } catch(e) {
+        setStatus('Request failed: ' + e.message, 'text-red-600');
+      }
+      btnTighten.disabled = false;
+      btnTighten.innerHTML = '<i class="fa-solid fa-filter"></i> Tighten broad match';
+    });
+  }
+})();
+
+// Bid strategy selects (item 9)
+(function () {
+  document.querySelectorAll('.bid-strategy-select').forEach(sel => {
+    sel.addEventListener('change', async function () {
+      const id = this.dataset.id;
+      const strategy = this.value;
+      let targetCpa = null, targetRoas = null;
+      if (strategy === 'target_cpa') {
+        targetCpa = await appPrompt('Target $ per booked job ($):');
+        if (!targetCpa) { this.value = this.dataset.prev || 'manual_cpc'; return; }
+      } else if (strategy === 'target_roas') {
+        targetRoas = await appPrompt('Target return on ad spend (e.g. 4.0 for $4 earned per $1 spent):');
+        if (!targetRoas) { this.value = this.dataset.prev || 'manual_cpc'; return; }
+      }
+      this.dataset.prev = strategy;
+      try {
+        const r = await fetch(`/account/google/ads/campaigns/${id}/bid-strategy`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({bid_strategy: strategy, target_cpa: targetCpa, target_roas: targetRoas}),
+        });
+        const data = await r.json();
+        if (!data.ok) showToast('Error saving max-per-click setup: ' + data.error, 'error');
+      } catch (e) {
+        showToast('Request failed: ' + e.message, 'error');
+      }
+    });
+    // Store initial value
+    sel.dataset.prev = sel.value;
+  });
+})();
+
+// Campaign clone buttons (item 8)
+(function () {
+  document.querySelectorAll('.camp-clone-btn').forEach(btn => {
+    btn.addEventListener('click', async function () {
+      const id = this.dataset.id;
+      const srcName = this.dataset.name;
+      const newName = await appPrompt('Name for the copy:', srcName + ' (Copy)');
+      if (!newName) return;
+      this.disabled = true;
+      this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+      try {
+        const r = await fetch(`/account/google/ads/campaigns/${id}/clone`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({name: newName}),
+        });
+        const data = await r.json();
+        if (data.ok) {
+          this.innerHTML = '<i class="fa-solid fa-check text-green-600"></i>';
+          setTimeout(() => window.location.reload(), 800);
+        } else {
+          showToast('Copy failed: ' + data.error, 'error');
+          this.innerHTML = '<i class="fa-solid fa-copy"></i>';
+          this.disabled = false;
+        }
+      } catch (e) {
+        showToast('Request failed: ' + e.message, 'error');
+        this.innerHTML = '<i class="fa-solid fa-copy"></i>';
+        this.disabled = false;
+      }
+    });
+  });
+})();
+
+// Keyword & negative-keyword tables: selection, delete confirmations, empty-state CTAs
+(function () {
+  const base = "{{ url_for('gads_bp.overview')|replace('/overview','') }}";
+
+  // ----- Keywords tab: checkbox selection + bulk action bar -----
+  const kwBar = document.getElementById('kw-bulk-bar');
+  const kwLabel = document.getElementById('kw-selected-label');
+  function kwChecked() { return Array.from(document.querySelectorAll('.kw-checkbox:checked')); }
+  function refreshKwBar() {
+    if (!kwBar) return;
+    const n = kwChecked().length;
+    kwBar.classList.toggle('hidden', n === 0);
+    kwBar.classList.toggle('flex', n > 0);
+    if (kwLabel) kwLabel.textContent = n + ' keyword' + (n === 1 ? '' : 's') + ' selected';
+  }
+  document.querySelectorAll('.kw-checkbox').forEach(cb => cb.addEventListener('change', refreshKwBar));
+  const kwAll = document.getElementById('kw-select-all');
+  if (kwAll) kwAll.addEventListener('change', function () {
+    document.querySelectorAll('.kw-checkbox').forEach(cb => {
+      const row = cb.closest('tr');
+      if (!row || row.style.display !== 'none') cb.checked = this.checked;
+    });
+    refreshKwBar();
+  });
+
+  document.querySelectorAll('#kw-bulk-bar [data-bulk]').forEach(btn => {
+    btn.addEventListener('click', async function () {
+      const action = this.dataset.bulk;
+      const boxes = kwChecked();
+      if (!boxes.length) return;
+      const ids = boxes.map(cb => parseInt(cb.dataset.id, 10)).filter(Boolean);
+      if (action === 'delete') {
+        let msg;
+        if (boxes.length === 1) {
+          const kwText = boxes[0].closest('tr')?.dataset.text || 'this keyword';
+          msg = 'Delete keyword "' + kwText + '"? Your ad will stop showing for these searches.';
+        } else {
+          msg = 'Delete ' + boxes.length + ' keywords? Your ads will stop showing for all of these searches.';
+        }
+        if (!window.confirm(msg)) return;
+      }
+      this.disabled = true;
+      try {
+        const r = await fetch(base + '/keywords/bulk-action', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({action: action, ids: ids}),
+        });
+        const data = await r.json();
+        if (r.ok && data.ok) {
+          window.location.reload();
+          return;
+        }
+        showToast(data.error || 'Action failed', 'error');
+      } catch (e) {
+        showToast('Request failed: ' + e.message, 'error');
+      }
+      this.disabled = false;
+    });
+  });
+
+  // ----- Negatives tab: single remove with confirmation -----
+  document.querySelectorAll('.neg-remove-btn').forEach(btn => {
+    btn.addEventListener('click', async function () {
+      const negText = this.dataset.text || 'this term';
+      if (!window.confirm('Remove the negative keyword "' + negText + '"? Your ads may start showing for these searches again.')) return;
+      this.disabled = true;
+      try {
+        const r = await fetch(base + '/negatives/' + this.dataset.id, {method: 'DELETE'});
+        const data = await r.json();
+        if (r.ok && data.ok) {
+          this.closest('tr')?.remove();
+          showToast('Negative keyword removed', 'success');
+          return;
+        }
+        showToast(data.error || 'Remove failed', 'error');
+      } catch (e) {
+        showToast('Request failed: ' + e.message, 'error');
+      }
+      this.disabled = false;
+    });
+  });
+
+  // ----- Negatives tab: checkbox selection + bulk remove -----
+  const negBar = document.getElementById('neg-bulk-bar');
+  const negLabel = document.getElementById('neg-selected-label');
+  function negChecked() { return Array.from(document.querySelectorAll('.neg-checkbox:checked')); }
+  function refreshNegBar() {
+    if (!negBar) return;
+    const n = negChecked().length;
+    negBar.classList.toggle('hidden', n === 0);
+    negBar.classList.toggle('flex', n > 0);
+    if (negLabel) negLabel.textContent = n + ' negative keyword' + (n === 1 ? '' : 's') + ' selected';
+  }
+  document.querySelectorAll('.neg-checkbox').forEach(cb => cb.addEventListener('change', refreshNegBar));
+  document.querySelectorAll('.neg-section-select-all').forEach(master => {
+    master.addEventListener('change', function () {
+      document.querySelectorAll('.neg-checkbox[data-section="' + this.dataset.section + '"]')
+        .forEach(cb => { cb.checked = this.checked; });
+      refreshNegBar();
+    });
+  });
+  const negBulkRemove = document.getElementById('neg-bulk-remove');
+  if (negBulkRemove) negBulkRemove.addEventListener('click', async function () {
+    const boxes = negChecked();
+    if (!boxes.length) return;
+    let msg;
+    if (boxes.length === 1) {
+      const row = boxes[0].closest('tr');
+      const negText = row?.querySelector('.neg-remove-btn')?.dataset.text || 'this term';
+      msg = 'Remove the negative keyword "' + negText + '"? Your ads may start showing for these searches again.';
+    } else {
+      msg = 'Remove ' + boxes.length + ' negative keywords? Your ads may start showing for these searches again.';
+    }
+    if (!window.confirm(msg)) return;
+    this.disabled = true;
+    let removed = 0;
+    for (const cb of boxes) {
+      try {
+        const r = await fetch(base + '/negatives/' + cb.dataset.id, {method: 'DELETE'});
+        const data = await r.json();
+        if (r.ok && data.ok) { cb.closest('tr')?.remove(); removed++; }
+      } catch (e) { /* keep going; summary toast below */ }
+    }
+    this.disabled = false;
+    refreshNegBar();
+    showToast(removed
+      ? 'Removed ' + removed + ' negative keyword' + (removed === 1 ? '' : 's')
+      : 'Could not remove the selected negative keywords', removed ? 'success' : 'error');
+  });
+
+  // ----- Empty-state CTAs: open the inline add forms -----
+  document.getElementById('btn-show-add-keyword-empty')?.addEventListener('click', () => {
+    document.getElementById('add-keyword-form')?.classList.remove('hidden');
+  });
+  document.getElementById('btn-show-add-negative-empty')?.addEventListener('click', () => {
+    document.getElementById('add-negative-form')?.classList.remove('hidden');
+  });
+  document.getElementById('btn-show-add-keyword')?.addEventListener('click', () => {
+    document.getElementById('add-keyword-form')?.classList.toggle('hidden');
+  });
+  document.getElementById('btn-show-add-negative')?.addEventListener('click', () => {
+    document.getElementById('add-negative-form')?.classList.toggle('hidden');
+  });
+})();
+
+// Sync button (handles both header btn and tab bar btn)
+async function doSync(btn) {
+  if (!btn) return;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Syncing…';
+  try {
+    const r = await fetch('/account/google/ads/sync', {method: 'POST'});
+    const data = await r.json();
+    const s = data.sync || {};
+    const errs = (data.errors || []).concat(s.errors || []);
+    const msg = `Synced: ${s.campaigns_synced || 0} campaigns · ${s.keywords_synced || 0} keywords · ${s.search_terms_synced || 0} search terms · ${data.optimizer?.created || 0} recommendations`;
+    btn.title = msg;
+    if (errs.length > 0) {
+      btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-amber-300"></i> Partial';
+      if (typeof showToast === 'function') {
+        showToast('Sync finished with issues: ' + errs[0], 'error');
+      }
+    } else {
+      btn.innerHTML = '<i class="fa-solid fa-check text-green-300"></i> Done';
+    }
+    setTimeout(() => {
+      btn.innerHTML = '<i class="fa-solid fa-rotate"></i> Sync Data';
+      btn.disabled = false;
+      if (errs.length === 0 && (window.location.search.includes('cockpit') || !window.location.search)) {
+        window.location.reload();
+      }
+    }, errs.length > 0 ? 5000 : 2500);
+    if (typeof loadOptimizer === 'function') loadOptimizer();
+  } catch (e) {
+    if (typeof showToast === 'function') showToast('Sync failed: ' + e.message, 'error');
+    btn.innerHTML = '<i class="fa-solid fa-rotate"></i> Sync Data';
+    btn.disabled = false;
+  }
+}
+document.addEventListener('DOMContentLoaded', () => {
+  ['gads-sync-btn-top', 'gads-sync-btn'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.addEventListener('click', () => doSync(btn));
+  });
+});
 </script>
+
+{# ── Strategy Setup Wizard Modal ── #}
+{% include "account/strategy_wizard_modal.html" %}
+
+{# Auto-open the wizard on cockpit if strategy_setup_complete is false, or if triggered via query param #}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var autoOpen = {% if tab == 'cockpit' and not strategy_setup_complete %}true{% else %}false{% endif %};
+  var paramOpen = new URLSearchParams(window.location.search).get('_open_strategy') === '1';
+  if ((autoOpen || paramOpen) && typeof window.FSStrategy !== 'undefined') {
+    window.FSStrategy.open();
+  }
+});
+</script>
+
 {% endblock %}

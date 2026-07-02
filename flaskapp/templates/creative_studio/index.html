@@ -3,71 +3,95 @@
 
 {% block content %}
 <div class="max-w-5xl mx-auto py-8 px-4">
-  <!-- Header -->
-  <div class="mb-8">
-    <div class="flex items-center gap-3 mb-2">
-      <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+
+  {# ── Toast container ─────────────────────────────────────────────────────── #}
+  <div id="toast-container" class="fixed bottom-5 right-5 z-[100] space-y-2 pointer-events-none"></div>
+
+  {# ── Header ──────────────────────────────────────────────────────────────── #}
+  <div class="mb-8 flex items-start justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shrink-0">
         <i class="fa-solid fa-wand-magic-sparkles text-white"></i>
       </div>
-      <h1 class="text-2xl font-extrabold text-gray-900">AI Creative Studio</h1>
+      <div>
+        <h1 class="text-2xl font-extrabold text-gray-900">AI Creative Studio</h1>
+        <p class="text-gray-500 text-sm">Generate professional ad copy, social posts, and emails in seconds.</p>
+      </div>
     </div>
-    <p class="text-gray-600">Generate professional ad copy, social posts, and email content in seconds.</p>
   </div>
 
-  <!-- Business Info Form -->
-  <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
-    <h2 class="text-lg font-semibold text-gray-900 mb-4">
-      <i class="fa-solid fa-building text-indigo-600 mr-2"></i>
-      Your Business Details
+  {# ── Business context form ────────────────────────────────────────────────── #}
+  <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6 shadow-sm">
+    <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">
+      <i class="fa-solid fa-building text-indigo-500 mr-1.5"></i>Business Context
     </h2>
     <div class="grid md:grid-cols-2 gap-4">
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Business Name</label>
         <input type="text" id="businessName" value="{{ business_info.business_name or '' }}"
-               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-               placeholder="Your Business Name">
+               class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition"
+               placeholder="e.g. Smith Plumbing & Drain">
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Industry</label>
-        <select id="industrySelect" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-          <option value="plumbing" {{ 'selected' if industry == 'plumber' else '' }}>Plumbing</option>
-          <option value="electrical" {{ 'selected' if industry == 'electrician' else '' }}>Electrical</option>
-          <option value="hvac" {{ 'selected' if industry == 'hvac' else '' }}>HVAC</option>
-          <option value="roofing" {{ 'selected' if industry == 'roofer' else '' }}>Roofing</option>
-          <option value="landscaping" {{ 'selected' if industry == 'landscaper' else '' }}>Landscaping</option>
-          <option value="cleaning" {{ 'selected' if industry == 'cleaning' else '' }}>Cleaning</option>
-          <option value="pest control" {{ 'selected' if industry == 'pest_control' else '' }}>Pest Control</option>
-          <option value="general contractor" {{ 'selected' if industry == 'general_contractor' else '' }}>General Contractor</option>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Industry</label>
+        <select id="industrySelect" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm transition">
+          <option value="plumbing"           {{ 'selected' if industry == 'plumber' }}>Plumbing</option>
+          <option value="electrical"         {{ 'selected' if industry == 'electrician' }}>Electrical</option>
+          <option value="HVAC"               {{ 'selected' if industry == 'hvac' }}>HVAC</option>
+          <option value="roofing"            {{ 'selected' if industry == 'roofer' }}>Roofing</option>
+          <option value="landscaping"        {{ 'selected' if industry == 'landscaper' }}>Landscaping</option>
+          <option value="cleaning"           {{ 'selected' if industry == 'cleaning' }}>Cleaning</option>
+          <option value="pest control"       {{ 'selected' if industry == 'pest_control' }}>Pest Control</option>
+          <option value="general contractor" {{ 'selected' if industry == 'general_contractor' }}>General Contractor</option>
           <option value="services">Other Services</option>
         </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">
+          Target Keywords
+          <span class="text-gray-400 font-normal ml-1">(comma-separated)</span>
+        </label>
+        <input type="text" id="keywords"
+               class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm transition"
+               placeholder="e.g. emergency plumber, drain cleaning, same day service">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">
+          What makes you different?
+          <span class="text-gray-400 font-normal ml-1">(comma-separated)</span>
+        </label>
+        <input type="text" id="usps"
+               class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm transition"
+               placeholder="e.g. 24/7 service, 10-year warranty, licensed since 1995">
       </div>
     </div>
   </div>
 
-  <!-- Creative Types -->
-  <div class="grid md:grid-cols-3 gap-6">
-    <!-- Google Ads Card -->
-    <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+  {# ── Generator cards ─────────────────────────────────────────────────────── #}
+  <div class="grid md:grid-cols-3 gap-5">
+
+    {# Google Ads #}
+    <div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm flex flex-col">
       <div class="bg-gradient-to-r from-blue-500 to-blue-600 p-4">
         <div class="flex items-center gap-3 text-white">
           <i class="fa-brands fa-google text-2xl"></i>
           <div>
             <h3 class="font-semibold">Google Ads</h3>
-            <p class="text-xs text-blue-100">Headlines & Descriptions</p>
+            <p class="text-xs text-blue-100">Headlines &amp; Descriptions</p>
           </div>
         </div>
       </div>
-      <div class="p-4">
-        <p class="text-sm text-gray-600 mb-4">Generate optimized headlines (30 chars) and descriptions (90 chars) for your search ads.</p>
-        <button onclick="generateAds()"
-                class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-          <i class="fa-solid fa-sparkles mr-2"></i>Generate Ads
+      <div class="p-4 flex-1 flex flex-col justify-between">
+        <p class="text-sm text-gray-600 mb-4">Optimized headlines (30 chars) and descriptions (90 chars) ready to paste into Google Ads.</p>
+        <button id="btn-ads" onclick="generateAds()"
+                class="w-full px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors text-sm font-medium flex items-center justify-center gap-2">
+          <i class="fa-solid fa-sparkles"></i>Generate Ads
         </button>
       </div>
     </div>
 
-    <!-- Social Media Card -->
-    <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+    {# Social Media #}
+    <div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm flex flex-col">
       <div class="bg-gradient-to-r from-pink-500 to-rose-600 p-4">
         <div class="flex items-center gap-3 text-white">
           <i class="fa-solid fa-share-nodes text-2xl"></i>
@@ -77,268 +101,284 @@
           </div>
         </div>
       </div>
-      <div class="p-4">
+      <div class="p-4 flex-1 flex flex-col justify-between">
         <div class="mb-3">
-          <label class="block text-xs font-medium text-gray-600 mb-1">Post Type</label>
-          <select id="socialPostType" class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg">
-            <option value="promotional">Promotional</option>
-            <option value="educational">Educational Tip</option>
-            <option value="testimonial">Customer Review</option>
-            <option value="seasonal">Seasonal Offer</option>
+          <label class="block text-xs font-medium text-gray-600 mb-1.5">Post Type</label>
+          <select id="socialPostType" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 transition">
+            <option value="promotional">Promotional offer</option>
+            <option value="educational">Educational tip</option>
+            <option value="testimonial">Customer testimonial</option>
+            <option value="seasonal">Seasonal promotion</option>
           </select>
         </div>
-        <button onclick="generateSocial()"
-                class="w-full px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors">
-          <i class="fa-solid fa-sparkles mr-2"></i>Generate Post
+        <button id="btn-social" onclick="generateSocial()"
+                class="w-full px-4 py-2.5 bg-pink-600 text-white rounded-xl hover:bg-pink-700 transition-colors text-sm font-medium flex items-center justify-center gap-2">
+          <i class="fa-solid fa-sparkles"></i>Generate Post
         </button>
       </div>
     </div>
 
-    <!-- Email Card -->
-    <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+    {# Email #}
+    <div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm flex flex-col">
       <div class="bg-gradient-to-r from-green-500 to-emerald-600 p-4">
         <div class="flex items-center gap-3 text-white">
           <i class="fa-solid fa-envelope text-2xl"></i>
           <div>
             <h3 class="font-semibold">Email Marketing</h3>
-            <p class="text-xs text-green-100">Subject Lines & Copy</p>
+            <p class="text-xs text-green-100">Subject Lines</p>
           </div>
         </div>
       </div>
-      <div class="p-4">
+      <div class="p-4 flex-1 flex flex-col justify-between">
         <div class="mb-3">
-          <label class="block text-xs font-medium text-gray-600 mb-1">Email Type</label>
-          <select id="emailType" class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg">
+          <label class="block text-xs font-medium text-gray-600 mb-1.5">Email Type</label>
+          <select id="emailType" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 transition">
             <option value="promotional">Promotional</option>
-            <option value="follow_up">Follow-up</option>
-            <option value="reminder">Reminder</option>
+            <option value="follow_up">Post-service follow-up</option>
+            <option value="reminder">Appointment reminder</option>
           </select>
         </div>
-        <button onclick="generateEmail()"
-                class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-          <i class="fa-solid fa-sparkles mr-2"></i>Generate Email
+        <button id="btn-email" onclick="generateEmail()"
+                class="w-full px-4 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors text-sm font-medium flex items-center justify-center gap-2">
+          <i class="fa-solid fa-sparkles"></i>Generate Subjects
         </button>
       </div>
     </div>
+
   </div>
 
-  <!-- Results Section -->
+  {# ── Results ─────────────────────────────────────────────────────────────── #}
   <div id="resultsSection" class="mt-8 hidden">
-    <div class="bg-white border border-gray-200 rounded-xl p-6">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold text-gray-900">
-          <i class="fa-solid fa-list-check text-indigo-600 mr-2"></i>
-          Generated Content
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <h2 class="font-semibold text-gray-900 flex items-center gap-2">
+          <i class="fa-solid fa-list-check text-indigo-500"></i>Generated Content
         </h2>
-        <button onclick="copyAllContent()" class="text-sm text-indigo-600 hover:text-indigo-700">
-          <i class="fa-solid fa-copy mr-1"></i>Copy All
-        </button>
-      </div>
-
-      <!-- Headlines -->
-      <div id="headlinesSection" class="hidden mb-6">
-        <h3 class="text-sm font-semibold text-gray-700 mb-2">Headlines (max 30 characters)</h3>
-        <div id="headlinesList" class="space-y-2"></div>
-      </div>
-
-      <!-- Descriptions -->
-      <div id="descriptionsSection" class="hidden mb-6">
-        <h3 class="text-sm font-semibold text-gray-700 mb-2">Descriptions (max 90 characters)</h3>
-        <div id="descriptionsList" class="space-y-2"></div>
-      </div>
-
-      <!-- Social Post -->
-      <div id="socialSection" class="hidden mb-6">
-        <h3 class="text-sm font-semibold text-gray-700 mb-2">Social Media Post</h3>
-        <div id="socialContent" class="bg-gray-50 rounded-lg p-4">
-          <pre id="socialText" class="whitespace-pre-wrap text-sm text-gray-700"></pre>
+        <div class="flex items-center gap-3">
+          <span id="results-label" class="text-xs text-gray-400"></span>
+          <button id="btn-copy-all" onclick="copyAllContent()"
+                  class="text-sm text-indigo-600 hover:text-indigo-700 flex items-center gap-1.5 font-medium">
+            <i class="fa-solid fa-copy text-xs"></i>Copy all
+          </button>
+          <button onclick="clearResults()"
+                  class="text-sm text-gray-400 hover:text-gray-600 flex items-center gap-1">
+            <i class="fa-solid fa-xmark text-xs"></i>Clear
+          </button>
         </div>
       </div>
+      <div class="p-6 space-y-6">
 
-      <!-- Email Subjects -->
-      <div id="emailSection" class="hidden">
-        <h3 class="text-sm font-semibold text-gray-700 mb-2">Email Subject Lines</h3>
-        <div id="emailList" class="space-y-2"></div>
+        <div id="headlinesSection" class="hidden">
+          <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Headlines <span class="normal-case font-normal text-gray-400">— max 30 characters each</span></h3>
+          <div id="headlinesList" class="space-y-2"></div>
+        </div>
+
+        <div id="descriptionsSection" class="hidden">
+          <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Descriptions <span class="normal-case font-normal text-gray-400">— max 90 characters each</span></h3>
+          <div id="descriptionsList" class="space-y-2"></div>
+        </div>
+
+        <div id="socialSection" class="hidden">
+          <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Social Post</h3>
+          <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 relative group">
+            <pre id="socialText" class="whitespace-pre-wrap text-sm text-gray-700 leading-relaxed"></pre>
+            <button onclick="copySingle(document.getElementById('socialText').textContent)"
+                    class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition text-xs text-indigo-600 bg-white border border-gray-200 rounded-lg px-2 py-1">
+              <i class="fa-solid fa-copy mr-1"></i>Copy
+            </button>
+          </div>
+          <div id="socialHashtags" class="mt-2 flex flex-wrap gap-1.5"></div>
+        </div>
+
+        <div id="emailSection" class="hidden">
+          <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Email Subject Lines</h3>
+          <div id="emailList" class="space-y-2"></div>
+        </div>
+
       </div>
     </div>
   </div>
+
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
-const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
-function getBusinessInfo() {
+function toast(msg, type = 'success') {
+  const el = document.createElement('div');
+  const colors = { success: 'bg-green-700 text-white', error: 'bg-red-700 text-white', info: 'bg-gray-800 text-white' };
+  el.className = `pointer-events-auto px-4 py-3 rounded-xl shadow-lg text-sm font-medium flex items-center gap-2 transition-opacity ${colors[type] || colors.info}`;
+  el.innerHTML = `<i class="fa-solid ${type === 'error' ? 'fa-circle-exclamation' : 'fa-check-circle'}"></i>${msg}`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3000);
+}
+
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.disabled = loading;
+  btn.innerHTML = loading
+    ? '<svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Generating…'
+    : btn.getAttribute('data-orig');
+  if (!loading) btn.disabled = false;
+}
+
+// Preserve original button HTML
+document.querySelectorAll('[id^="btn-"]').forEach(b => b.setAttribute('data-orig', b.innerHTML));
+
+function getContext() {
   return {
-    business_name: document.getElementById('businessName').value || 'Your Business',
-    industry: document.getElementById('industrySelect').value
+    business_name: document.getElementById('businessName').value.trim() || 'Your Business',
+    industry: document.getElementById('industrySelect').value,
+    keywords: document.getElementById('keywords').value.split(',').map(s => s.trim()).filter(Boolean),
+    unique_selling_points: document.getElementById('usps').value.split(',').map(s => s.trim()).filter(Boolean),
   };
 }
 
-function showResults() {
+function showResults(label) {
   document.getElementById('resultsSection').classList.remove('hidden');
+  document.getElementById('results-label', ).textContent = label || '';
+  document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function createCopyableItem(text, charLimit = null) {
-  const div = document.createElement('div');
-  div.className = 'flex items-center justify-between bg-gray-50 rounded-lg px-4 py-2';
+function clearResults() {
+  document.getElementById('resultsSection').classList.add('hidden');
+  ['headlinesSection','descriptionsSection','socialSection','emailSection'].forEach(id => {
+    document.getElementById(id).classList.add('hidden');
+  });
+}
 
-  const textSpan = document.createElement('span');
-  textSpan.className = 'text-sm text-gray-700';
-  textSpan.textContent = text;
+function createCopyRow(text, charLimit = null) {
+  const over = charLimit && text.length > charLimit;
+  const row = document.createElement('div');
+  row.className = `flex items-start justify-between gap-3 px-4 py-2.5 rounded-xl border ${over ? 'border-red-200 bg-red-50' : 'border-gray-100 bg-gray-50'} group`;
+  row.innerHTML = `
+    <span class="text-sm text-gray-800 flex-1">${text}</span>
+    <div class="flex items-center gap-2 shrink-0">
+      ${charLimit ? `<span class="text-xs font-medium ${over ? 'text-red-600' : 'text-green-600'}">${text.length}/${charLimit}</span>` : ''}
+      <button onclick="copySingle('${text.replace(/'/g,"\\'")}', this)"
+              class="text-gray-300 group-hover:text-indigo-500 transition-colors">
+        <i class="fa-solid fa-copy text-sm"></i>
+      </button>
+    </div>`;
+  return row;
+}
 
-  const rightDiv = document.createElement('div');
-  rightDiv.className = 'flex items-center gap-2';
-
-  if (charLimit) {
-    const charCount = document.createElement('span');
-    charCount.className = `text-xs ${text.length <= charLimit ? 'text-green-600' : 'text-red-600'}`;
-    charCount.textContent = `${text.length}/${charLimit}`;
-    rightDiv.appendChild(charCount);
-  }
-
-  const copyBtn = document.createElement('button');
-  copyBtn.className = 'text-indigo-600 hover:text-indigo-700';
-  copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i>';
-  copyBtn.onclick = () => {
-    navigator.clipboard.writeText(text);
-    copyBtn.innerHTML = '<i class="fa-solid fa-check text-green-600"></i>';
-    setTimeout(() => copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i>', 1500);
-  };
-  rightDiv.appendChild(copyBtn);
-
-  div.appendChild(textSpan);
-  div.appendChild(rightDiv);
-  return div;
+function copySingle(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    toast('Copied!', 'success');
+    if (btn) {
+      btn.innerHTML = '<i class="fa-solid fa-check text-green-500 text-sm"></i>';
+      setTimeout(() => btn.innerHTML = '<i class="fa-solid fa-copy text-sm"></i>', 1500);
+    }
+  });
 }
 
 async function generateAds() {
-  const info = getBusinessInfo();
-
+  setLoading('btn-ads', true);
   try {
-    const response = await fetch('/account/creative-studio/generate/ads', {
+    const r = await fetch('/account/creative-studio/generate/ads', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': csrfToken
-      },
-      body: JSON.stringify(info)
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify(getContext()),
     });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Generation failed');
 
-    const data = await response.json();
-
-    // Clear and populate headlines
-    const headlinesList = document.getElementById('headlinesList');
-    headlinesList.innerHTML = '';
-    data.headlines.forEach(h => headlinesList.appendChild(createCopyableItem(h, 30)));
-
-    // Clear and populate descriptions
-    const descriptionsList = document.getElementById('descriptionsList');
-    descriptionsList.innerHTML = '';
-    data.descriptions.forEach(d => descriptionsList.appendChild(createCopyableItem(d, 90)));
-
-    // Show sections
+    const hl = document.getElementById('headlinesList');
+    hl.innerHTML = '';
+    d.headlines.forEach(h => hl.appendChild(createCopyRow(h, 30)));
     document.getElementById('headlinesSection').classList.remove('hidden');
+
+    const dl = document.getElementById('descriptionsList');
+    dl.innerHTML = '';
+    d.descriptions.forEach(desc => dl.appendChild(createCopyRow(desc, 90)));
     document.getElementById('descriptionsSection').classList.remove('hidden');
+
     document.getElementById('socialSection').classList.add('hidden');
     document.getElementById('emailSection').classList.add('hidden');
-    showResults();
-  } catch (error) {
-    console.error('Error generating ads:', error);
-    alert('Failed to generate ads. Please try again.');
+    showResults(`${d.headlines.length} headlines · ${d.descriptions.length} descriptions`);
+  } catch(e) {
+    toast(e.message || 'Failed to generate ads. Try again.', 'error');
+  } finally {
+    setLoading('btn-ads', false);
   }
 }
 
 async function generateSocial() {
-  const info = getBusinessInfo();
-  info.post_type = document.getElementById('socialPostType').value;
-
+  setLoading('btn-social', true);
+  const ctx = getContext();
+  ctx.post_type = document.getElementById('socialPostType').value;
   try {
-    const response = await fetch('/account/creative-studio/generate/social', {
+    const r = await fetch('/account/creative-studio/generate/social', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': csrfToken
-      },
-      body: JSON.stringify(info)
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify(ctx),
     });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Generation failed');
 
-    const data = await response.json();
+    document.getElementById('socialText').textContent = d.text;
 
-    document.getElementById('socialText').textContent = data.text;
+    const hashDiv = document.getElementById('socialHashtags');
+    hashDiv.innerHTML = '';
+    (d.hashtags || []).forEach(tag => {
+      const span = document.createElement('span');
+      span.className = 'text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full';
+      span.textContent = tag;
+      hashDiv.appendChild(span);
+    });
 
     document.getElementById('headlinesSection').classList.add('hidden');
     document.getElementById('descriptionsSection').classList.add('hidden');
     document.getElementById('socialSection').classList.remove('hidden');
     document.getElementById('emailSection').classList.add('hidden');
-    showResults();
-  } catch (error) {
-    console.error('Error generating social:', error);
-    alert('Failed to generate social post. Please try again.');
+    showResults('Social post ready');
+  } catch(e) {
+    toast(e.message || 'Failed to generate post. Try again.', 'error');
+  } finally {
+    setLoading('btn-social', false);
   }
 }
 
 async function generateEmail() {
-  const info = getBusinessInfo();
-  info.email_type = document.getElementById('emailType').value;
-
+  setLoading('btn-email', true);
+  const ctx = getContext();
+  ctx.email_type = document.getElementById('emailType').value;
   try {
-    const response = await fetch('/account/creative-studio/generate/email', {
+    const r = await fetch('/account/creative-studio/generate/email', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': csrfToken
-      },
-      body: JSON.stringify(info)
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify(ctx),
     });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Generation failed');
 
-    const data = await response.json();
-
-    const emailList = document.getElementById('emailList');
-    emailList.innerHTML = '';
-    data.subject_lines.forEach(s => emailList.appendChild(createCopyableItem(s)));
-
+    const el = document.getElementById('emailList');
+    el.innerHTML = '';
+    d.subject_lines.forEach(s => el.appendChild(createCopyRow(s)));
     document.getElementById('headlinesSection').classList.add('hidden');
     document.getElementById('descriptionsSection').classList.add('hidden');
     document.getElementById('socialSection').classList.add('hidden');
     document.getElementById('emailSection').classList.remove('hidden');
-    showResults();
-  } catch (error) {
-    console.error('Error generating email:', error);
-    alert('Failed to generate email subjects. Please try again.');
+    showResults(`${d.subject_lines.length} subject lines`);
+  } catch(e) {
+    toast(e.message || 'Failed to generate email subjects. Try again.', 'error');
+  } finally {
+    setLoading('btn-email', false);
   }
 }
 
 function copyAllContent() {
   let content = '';
-
-  const headlines = document.querySelectorAll('#headlinesList span.text-gray-700');
-  if (headlines.length > 0) {
-    content += 'HEADLINES:\n';
-    headlines.forEach(h => content += '• ' + h.textContent + '\n');
-    content += '\n';
-  }
-
-  const descriptions = document.querySelectorAll('#descriptionsList span.text-gray-700');
-  if (descriptions.length > 0) {
-    content += 'DESCRIPTIONS:\n';
-    descriptions.forEach(d => content += '• ' + d.textContent + '\n');
-    content += '\n';
-  }
-
-  const socialText = document.getElementById('socialText').textContent;
-  if (socialText) {
-    content += 'SOCIAL POST:\n' + socialText + '\n\n';
-  }
-
-  const emails = document.querySelectorAll('#emailList span.text-gray-700');
-  if (emails.length > 0) {
-    content += 'EMAIL SUBJECTS:\n';
-    emails.forEach(e => content += '• ' + e.textContent + '\n');
-  }
-
-  if (content) {
-    navigator.clipboard.writeText(content);
-    alert('All content copied to clipboard!');
+  document.querySelectorAll('#headlinesList .text-gray-800').forEach(el => content += el.textContent + '\n');
+  document.querySelectorAll('#descriptionsList .text-gray-800').forEach(el => content += el.textContent + '\n');
+  const social = document.getElementById('socialText').textContent;
+  if (social) content += '\n' + social + '\n';
+  document.querySelectorAll('#emailList .text-gray-800').forEach(el => content += el.textContent + '\n');
+  if (content.trim()) {
+    navigator.clipboard.writeText(content.trim());
+    toast('All content copied!', 'success');
   }
 }
 </script>

@@ -128,3 +128,39 @@ def industry_pool_service():
 @public_bp.route("/industries/solar", endpoint="industry_solar")
 def industry_solar():
     return render_template("industries/solar.html")
+
+
+@public_bp.route("/sitemap.html", endpoint="sitemap")
+def sitemap():
+    return render_template("public/sitemap.html")
+
+
+@public_bp.route("/lifetime/<tier>", endpoint="lifetime_deal")
+def lifetime_deal(tier):
+    if tier not in ("499", "999"):
+        from flask import abort
+        abort(404)
+    return render_template("public/lifetime_deal.html", tier=tier)
+
+
+@public_bp.route("/nps/<token>", endpoint="nps_respond")
+def nps_respond(token: str):
+    """Public NPS survey response endpoint — no login required."""
+    from flask import request, make_response
+    try:
+        score = int(request.args.get("score", 0))
+    except (ValueError, TypeError):
+        score = 0
+
+    if score < 1 or score > 10:
+        from flask import abort
+        abort(400)
+
+    try:
+        from app.services.nps_service import record_nps_response, build_response_page
+        survey = record_nps_response(token, score)
+        html = build_response_page(survey, score)
+    except Exception:
+        html = "<p>Thank you for your feedback!</p>"
+
+    return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})

@@ -8,6 +8,7 @@ optimizing ad placements, and analyzing creative elements.
 
 from typing import Dict, List, Any
 from .base import BaseAgent, AgentDecision, AgentCapability, DecisionRiskLevel
+from .fb_agent_executor import _fb_execute_action
 
 import logging
 logger = logging.getLogger(__name__)
@@ -686,16 +687,42 @@ class FBBidOptimizerAgent(BaseAgent):
         return decisions
 
     def _execute_impl(self, decision: AgentDecision, fb_ads_client: Any) -> Dict[str, Any]:
-        """Execute bid changes."""
+        """Execute bid changes via Graph API where possible."""
         decision_type = decision.decision_type
+        account_id = decision.account_id
 
-        # Would integrate with Facebook Marketing API
+        if decision_type == 'adjust_cost_cap':
+            # ad_group_id holds the adset_id for FB agents
+            adset_id = decision.ad_group_id
+            new_cap = decision.action_data.get('new_cap')
+            if adset_id and new_cap is not None:
+                result = _fb_execute_action(
+                    account_id=account_id,
+                    entity_id=str(adset_id),
+                    entity_type='adset',
+                    action='adjust_bid',
+                    params={'bid_amount': float(new_cap)},
+                )
+                return {
+                    **result,
+                    'decision_type': decision_type,
+                    'adset_id': adset_id,
+                    'old_cap': decision.action_data.get('current_cap'),
+                    'new_cap': new_cap,
+                }
+            return {
+                'success': False,
+                'error': 'Missing adset_id or new_cap',
+                'decision_type': decision_type,
+            }
+
+        # Non-mutating decision types (need manual setup)
         return {
             'success': True,
             'decision_type': decision_type,
             'note': 'Bid changes require implementation in Ads Manager',
             'requires_manual_work': True,
-            'action_data': decision.action_data
+            'action_data': decision.action_data,
         }
 
 
@@ -881,11 +908,27 @@ class FBCreativeOptimizerAgent(BaseAgent):
         return decisions
 
     def _execute_impl(self, decision: AgentDecision, fb_ads_client: Any) -> Dict[str, Any]:
-        """Execute creative changes."""
+        """Execute creative changes via Graph API where possible."""
+        decision_type = decision.decision_type
+        account_id = decision.account_id
+
+        if decision_type == 'pause_ad':
+            ad_id = decision.action_data.get('ad_id')
+            if ad_id:
+                result = _fb_execute_action(
+                    account_id=account_id,
+                    entity_id=str(ad_id),
+                    entity_type='ad',
+                    action='pause',
+                )
+                return {**result, 'decision_type': decision_type, 'ad_id': ad_id}
+            return {'success': False, 'error': 'Missing ad_id', 'decision_type': decision_type}
+
+        # Non-mutating decision types
         return {
             'success': True,
-            'decision_type': decision.decision_type,
+            'decision_type': decision_type,
             'note': 'Creative changes require implementation in Ads Manager',
             'requires_manual_work': True,
-            'suggestions': decision.action_data.get('suggestions', [])
+            'suggestions': decision.action_data.get('suggestions', []),
         }

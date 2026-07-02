@@ -253,6 +253,74 @@ def create_subscription(
 
 
 @with_circuit_breaker
+def create_lifetime_checkout(
+    user_id: str,
+    tier: str,
+    email: str,
+    name: Optional[str] = None,
+    success_url: Optional[str] = None,
+    cancel_url: Optional[str] = None,
+) -> str:
+    """
+    Create a one-time Stripe Checkout session for a lifetime deal purchase.
+
+    Args:
+        user_id: Internal user ID
+        tier: '499' or '999' — selects the configured price ID
+        email: Customer email
+        name: Customer name (optional)
+        success_url: Redirect after successful payment
+        cancel_url: Redirect if customer cancels
+
+    Returns:
+        Stripe Checkout Session URL
+    """
+    from flask import url_for
+
+    get_stripe_client()
+
+    price_key = f"STRIPE_LIFETIME_{tier}_PRICE_ID"
+    price_id = current_app.config.get(price_key, "")
+    if not price_id:
+        raise ValueError(
+            f"Lifetime deal price ID not configured. Set the {price_key} environment variable."
+        )
+
+    customer = get_or_create_stripe_customer(user_id, email, name)
+
+    if not success_url:
+        success_url = url_for(
+            "account_bp.dashboard",
+            payment="success",
+            plan="lifetime",
+            _external=True,
+        )
+    if not cancel_url:
+        cancel_url = url_for("public_bp.lifetime_deal", tier=tier, _external=True)
+
+    session = stripe.checkout.Session.create(
+        customer=customer.stripe_customer_id,
+        payment_method_types=["card"],
+        line_items=[{"price": price_id, "quantity": 1}],
+        mode="payment",
+        success_url=success_url,
+        cancel_url=cancel_url,
+        allow_promotion_codes=True,
+        metadata={
+            "user_id": str(user_id),
+            "plan_type": f"lifetime_{tier}",
+        },
+        client_reference_id=str(user_id),
+    )
+
+    current_app.logger.info(
+        f"Created lifetime checkout session {session.id} for user {user_id} tier={tier}",
+        extra={"metric": "stripe.lifetime_checkout.created", "user_id": user_id, "tier": tier},
+    )
+    return session.url
+
+
+@with_circuit_breaker
 def upgrade_subscription(subscription_id: str, new_price_id: str, prorate: bool = True) -> Subscription:
     """
     Upgrade or change a subscription to a different price.
@@ -547,11 +615,8 @@ Account Created: {user.created_at.strftime('%B %d, %Y at %I:%M %p') if user.crea
 This is an automated notification from FieldSprout.
         """
 
-        # Queue emails for both addresses (background processing)
-        notification_emails = [
-            "hi@fieldsprout.io",
-            "mrbriancoheni@gmail.com"
-        ]
+        raw = current_app.config.get("ADMIN_NOTIFICATION_EMAILS", "hi@fieldsprout.io,mrbriancoheni@gmail.com")
+        notification_emails = [e.strip() for e in raw.split(",") if e.strip()]
 
         for email in notification_emails:
             queue_email(
@@ -762,7 +827,32 @@ def handle_invoice_payment_failed(event_data: Dict[str, Any]):
             }
         )
 
-        # TODO: Queue email notification to customer
+        # Notify the customer that their payment failed
+        try:
+            from app.models import User
+            from app.services.email_service import send_email
+            user = User.query.filter_by(email=customer.user_id).first()
+            if user and user.email:
+                amount_dollars = invoice["amount_due"] / 100
+                send_email(
+                    to_email=user.email,
+                    subject="Action required: your FieldSprout payment failed",
+                    html_body=(
+                        f"<p>Hi {user.name or 'there'},</p>"
+                        f"<p>We were unable to process your payment of "
+                        f"<strong>${amount_dollars:.2f}</strong> "
+                        f"(invoice <code>{invoice['id']}</code>).</p>"
+                        f"<p>Please update your payment method to keep your account active:</p>"
+                        f'<p><a href="https://fieldsprout.io/account/billing" '
+                        f'style="background:#4f46e5;color:#fff;padding:10px 20px;'
+                        f'border-radius:6px;text-decoration:none;font-weight:600;">'
+                        f"Update Payment Method</a></p>"
+                        f"<p style='color:#6b7280;font-size:13px'>"
+                        f"If you have questions, just reply to this email.</p>"
+                    ),
+                )
+        except Exception:
+            current_app.logger.exception("Failed to send payment-failed email for invoice %s", invoice["id"])
 
 
 def _update_subscription_from_stripe(sub: Subscription, stripe_sub: Dict[str, Any]):
@@ -812,11 +902,14 @@ def _sync_subscription_status_to_account(user_id: str, stripe_status: str):
                 )
                 return
 
-            # Get table/field names from config
+            # Allowlist identifiers — never interpolate arbitrary config values into SQL
+            _ALLOWED_TABLES = {"accounts", "users_accounts", "account"}
+            _ALLOWED_FIELDS = {"stripe_status", "subscription_status", "plan_status"}
             table_name = current_app.config.get("ACCOUNT_TABLE_NAME", "accounts")
             stripe_field = current_app.config.get("ACCOUNT_STRIPE_FIELD", "stripe_status")
+            if table_name not in _ALLOWED_TABLES or stripe_field not in _ALLOWED_FIELDS:
+                raise ValueError(f"Disallowed SQL identifier: {table_name!r} / {stripe_field!r}")
 
-            # Update accounts table
             conn.execute(
                 text(f"UPDATE {table_name} SET {stripe_field} = :status WHERE id = :id"),
                 {"status": stripe_status, "id": account_id}
@@ -840,17 +933,88 @@ def _sync_subscription_status_to_account(user_id: str, stripe_status: str):
         )
 
 
+def _grant_lifetime_plan(user_id: str, tier: str):
+    """
+    Update the account's plan to 'lifetime' and stripe_status to 'active'
+    after a successful one-time lifetime deal purchase.
+    """
+    try:
+        from sqlalchemy import text
+
+        with db.engine.connect() as conn:
+            result = conn.execute(
+                text("SELECT account_id FROM users WHERE id = :uid LIMIT 1"),
+                {"uid": user_id},
+            ).first()
+
+            if not result or not result[0]:
+                current_app.logger.warning(
+                    f"Cannot grant lifetime plan: user {user_id} has no account"
+                )
+                return
+
+            account_id = result[0]
+            _ALLOWED_TABLES = {"accounts", "users_accounts", "account"}
+            _ALLOWED_FIELDS = {"stripe_status", "subscription_status", "plan_status"}
+            _ALLOWED_PLAN_FIELDS = {"plan", "plan_name", "subscription_plan"}
+            table = current_app.config.get("ACCOUNT_TABLE_NAME", "accounts")
+            plan_field = current_app.config.get("ACCOUNT_PLAN_FIELD", "plan")
+            stripe_field = current_app.config.get("ACCOUNT_STRIPE_FIELD", "stripe_status")
+            if table not in _ALLOWED_TABLES or plan_field not in _ALLOWED_PLAN_FIELDS \
+                    or stripe_field not in _ALLOWED_FIELDS:
+                raise ValueError(f"Disallowed SQL identifier in grant_lifetime_plan")
+
+            conn.execute(
+                text(
+                    f"UPDATE {table} SET {plan_field} = 'lifetime', "
+                    f"{stripe_field} = 'active' WHERE id = :id"
+                ),
+                {"id": account_id},
+            )
+            conn.commit()
+
+            current_app.logger.info(
+                f"Granted lifetime plan (tier={tier}) to account {account_id} (user {user_id})",
+                extra={
+                    "metric": "account.lifetime_plan.granted",
+                    "account_id": account_id,
+                    "user_id": user_id,
+                    "tier": tier,
+                },
+            )
+    except Exception as exc:
+        current_app.logger.error(
+            f"Error granting lifetime plan to user {user_id}: {exc}",
+            exc_info=True,
+            extra={"metric": "account.lifetime_plan.error", "user_id": user_id},
+        )
+
+
 def handle_checkout_session_completed(event_data: Dict[str, Any]):
     """
     Handle checkout.session.completed webhook event.
 
-    Sends notification email when customer completes payment setup.
+    For lifetime deal purchases (mode='payment', plan_type metadata starts with
+    'lifetime_'), grants the lifetime plan to the user's account immediately.
+    Also sends a notification email to admin.
     """
     session = event_data["object"]
 
     customer_email = session.get("customer_email")
     customer_name = session.get("customer_details", {}).get("name", "Unknown")
     subscription_id = session.get("subscription")
+
+    # ── Lifetime deal: grant plan immediately on payment completion ───────
+    plan_type = session.get("metadata", {}).get("plan_type", "")
+    if plan_type.startswith("lifetime_") and session.get("payment_status") == "paid":
+        tier = plan_type.replace("lifetime_", "")  # '499' or '999'
+        uid = session.get("metadata", {}).get("user_id") or session.get("client_reference_id")
+        if uid:
+            _grant_lifetime_plan(str(uid), tier)
+        else:
+            current_app.logger.warning(
+                f"Lifetime purchase {session.get('id')} has no user_id in metadata"
+            )
 
     # Get user account details
     customer = StripeCustomer.query.filter_by(
@@ -922,7 +1086,7 @@ def handle_checkout_session_completed(event_data: Dict[str, Any]):
             """
 
             send_email(
-                to_email="mrbriancoheni@gmail.com",
+                to_email=current_app.config.get("ADMIN_NOTIFICATION_EMAIL", "mrbriancoheni@gmail.com"),
                 subject=subject,
                 body_html=body_html,
                 body_text=body_text

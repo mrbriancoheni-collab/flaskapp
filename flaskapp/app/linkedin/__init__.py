@@ -165,7 +165,7 @@ Format as a JSON object with:
 """
 
         response = client.chat.completions.create(
-            model="gpt-4-turbo-preview",
+            model="gpt-4o",
             max_tokens=1500,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -333,7 +333,7 @@ Write a compelling LinkedIn post that:
 
 Generate the post now:"""
 
-            model = "gpt-4-turbo-preview"
+            model = "gpt-4o"
             temperature = 0.7
             max_tokens = 1000
 

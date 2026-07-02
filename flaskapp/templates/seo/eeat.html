@@ -1,0 +1,113 @@
+{% extends "base_app.html" %}
+{% block title %}Trust signals check · {{ app_name }}{% endblock %}
+
+{% macro status_icon(status) %}
+  {% if status == 'pass' %}<i class="fa-solid fa-circle-check text-green-500"></i>
+  {% elif status == 'warn' %}<i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+  {% else %}<i class="fa-solid fa-circle-xmark text-red-500"></i>{% endif %}
+{% endmacro %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Trust signals: experience, expertise, authority, trust</h1>
+      <p class="text-gray-500 text-sm mt-1">Things that show Google (and your customers) that you're a real, trustworthy business — like licenses, reviews, photos, and clear contact info.</p>
+    </div>
+    {% if result %}
+    <div class="flex items-center gap-2">
+      {% set sc = result.score %}
+      <div class="relative w-14 h-14">
+        <svg viewBox="0 0 36 36" class="w-14 h-14 -rotate-90">
+          <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" stroke-width="3.5"/>
+          <circle cx="18" cy="18" r="15.9" fill="none"
+            stroke="{{ '#22c55e' if sc >= 80 else ('#f59e0b' if sc >= 50 else '#ef4444') }}"
+            stroke-width="3.5" stroke-dasharray="{{ sc }}, 100" stroke-linecap="round"/>
+        </svg>
+        <span class="absolute inset-0 flex items-center justify-center text-sm font-bold
+          {% if sc >= 80 %}text-green-700{% elif sc >= 50 %}text-amber-600{% else %}text-red-600{% endif %}">
+          {{ sc }}
+        </span>
+      </div>
+      <div>
+        <p class="text-sm font-semibold text-gray-800">Trust score</p>
+        <p class="text-xs text-gray-400">
+          {{ 'Strong trust signals' if sc >= 80 else ('Needs work' if sc >= 50 else 'Big gaps to fix') }}
+        </p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+    <div class="rounded-xl px-4 py-3 text-sm border
+      {% if cat == 'error' %}bg-red-50 border-red-200 text-red-800
+      {% else %}bg-yellow-50 border-yellow-200 text-yellow-800{% endif %}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- URL form -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <form method="POST" action="{{ url_for('seo_bp.eeat') }}" class="flex flex-wrap gap-3 items-end">
+      <div class="flex-1 min-w-64">
+        <label class="block text-xs font-medium text-gray-600 mb-1">URL to Audit</label>
+        <input type="url" name="url" value="{{ url_checked or site_url or '' }}" required
+               placeholder="https://example.com"
+               class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300 focus:outline-none">
+      </div>
+      <button type="submit"
+              class="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">
+        <i class="fa-solid fa-shield-halved mr-1"></i>Check trust signals
+      </button>
+    </form>
+  </div>
+
+  {% if result and result.by_dimension %}
+
+  {% set dim_icons = {'Experience': 'fa-star', 'Expertise': 'fa-graduation-cap',
+                      'Authoritativeness': 'fa-trophy', 'Trust': 'fa-lock'} %}
+  {% set dim_colors = {'Experience': 'blue', 'Expertise': 'purple',
+                       'Authoritativeness': 'amber', 'Trust': 'green'} %}
+
+  {% for dimension, checks in result.by_dimension.items() %}
+  {% set color = dim_colors.get(dimension, 'indigo') %}
+  {% set icon  = dim_icons.get(dimension, 'fa-check') %}
+  {% set passes = checks | selectattr('status', 'equalto', 'pass') | list | length %}
+  <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+    <div class="px-5 py-3 border-b bg-gray-50 flex items-center gap-3">
+      <i class="fa-solid {{ icon }} text-{{ color }}-500"></i>
+      <h2 class="font-semibold text-gray-800">{{ dimension }}</h2>
+      <span class="ml-auto text-xs text-gray-400">{{ passes }}/{{ checks | length }} passed</span>
+    </div>
+    <div class="divide-y">
+      {% for check in checks %}
+      <div class="px-5 py-4 flex items-start gap-4
+        {% if check.status == 'fail' %}bg-red-50{% elif check.status == 'warn' %}bg-amber-50{% endif %}">
+        <div class="text-base mt-0.5 flex-shrink-0">{{ status_icon(check.status) }}</div>
+        <div class="flex-1">
+          <p class="font-medium text-gray-900 text-sm">{{ check.label }}</p>
+          <p class="text-sm text-gray-600 mt-0.5">{{ check.detail }}</p>
+          {% if check.fix %}
+          <p class="text-xs text-indigo-700 mt-1.5 bg-indigo-50 rounded px-2 py-1 inline-block">
+            <i class="fa-solid fa-lightbulb mr-1"></i>{{ check.fix }}
+          </p>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+
+  {% elif not result %}
+  <div class="bg-white rounded-xl shadow-sm border p-12 text-center text-gray-400">
+    <i class="fa-solid fa-shield-halved text-5xl mb-4"></i>
+    <p class="text-gray-600 mb-1">Enter a page address to check its trust signals.</p>
+    <p class="text-xs text-gray-400">We check 13 things Google looks for to decide if your business is trustworthy.</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

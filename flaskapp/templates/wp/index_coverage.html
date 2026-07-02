@@ -1,0 +1,131 @@
+{% extends "base_app.html" %}
+{% block title %}Index Coverage · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Which of your pages are showing up on Google</h1>
+      <p class="text-gray-500 text-sm mt-1">See which pages Google has found and indexed, and which are still invisible to searchers</p>
+    </div>
+    {% if result %}
+    <div class="flex items-center gap-3 text-sm">
+      <span class="text-green-700 font-semibold">{{ result.indexed_count }} indexed</span>
+      <span class="text-gray-300">·</span>
+      <span class="{% if result.unindexed_count %}text-red-600 font-semibold{% else %}text-gray-500{% endif %}">{{ result.unindexed_count }} not visible</span>
+      <span class="text-gray-300">·</span>
+      <span class="text-gray-500">{{ result.pct_indexed }}% coverage</span>
+    </div>
+    {% endif %}
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+    <div class="rounded-xl px-4 py-3 text-sm border
+      {% if cat == 'error' %}bg-red-50 border-red-200 text-red-800{% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {% if not site %}
+  <div class="bg-white rounded-xl shadow-sm border p-12 text-center">
+    <i class="fa-brands fa-wordpress text-gray-300 text-5xl mb-4"></i>
+    <p class="text-gray-600 mb-4">Connect a WordPress site to check index coverage.</p>
+    <a href="{{ url_for('wp_bp.settings') }}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">Connect WordPress</a>
+  </div>
+  {% elif not gsc_connected %}
+  <div class="bg-white rounded-xl shadow-sm border p-12 text-center">
+    <i class="fa-brands fa-google text-gray-300 text-5xl mb-4"></i>
+    <p class="text-gray-600 mb-4">Connect Google Search Console to check which pages Google can see.</p>
+    <a href="{{ url_for('google_bp.connect') }}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">Connect GSC</a>
+  </div>
+  {% elif error %}
+  <div class="bg-red-50 border border-red-200 rounded-xl p-5 text-red-800 text-sm">{{ error }}</div>
+  {% elif result %}
+
+  <!-- Coverage bar -->
+  <div class="bg-white rounded-xl shadow-sm border p-5">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-sm font-medium text-gray-700">Index Coverage</span>
+      <span class="text-sm font-semibold text-gray-800">{{ result.pct_indexed }}%</span>
+    </div>
+    <div class="w-full bg-gray-200 rounded-full h-3">
+      <div class="h-3 rounded-full {% if result.pct_indexed >= 80 %}bg-green-500{% elif result.pct_indexed >= 50 %}bg-amber-400{% else %}bg-red-500{% endif %}"
+           style="width: {{ result.pct_indexed }}%"></div>
+    </div>
+    <div class="flex justify-between text-xs text-gray-400 mt-1">
+      <span>{{ result.indexed_count }} pages with GSC impressions</span>
+      <span>{{ result.total }} total published</span>
+    </div>
+  </div>
+
+  <!-- Summary stats -->
+  <div class="grid grid-cols-3 gap-4">
+    <div class="bg-white rounded-xl border shadow-sm p-4 text-center">
+      <p class="text-2xl font-bold text-gray-800">{{ result.total }}</p>
+      <p class="text-xs text-gray-500 mt-1">Published Pages</p>
+    </div>
+    <div class="bg-white rounded-xl border shadow-sm p-4 text-center">
+      <p class="text-2xl font-bold text-green-600">{{ result.indexed_count }}</p>
+      <p class="text-xs text-gray-500 mt-1">Visible in GSC</p>
+    </div>
+    <div class="bg-white rounded-xl border shadow-sm p-4 text-center">
+      <p class="text-2xl font-bold {% if result.unindexed_count %}text-red-600{% else %}text-green-600{% endif %}">{{ result.unindexed_count }}</p>
+      <p class="text-xs text-gray-500 mt-1">Not Visible</p>
+    </div>
+  </div>
+
+  {% if result.unindexed %}
+  <!-- Unindexed pages -->
+  <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+    <div class="px-5 py-3 border-b bg-red-50">
+      <h2 class="font-semibold text-red-800"><i class="fa-solid fa-eye-slash text-red-500 mr-2"></i>Not Visible in Google ({{ result.unindexed | length }})</h2>
+      <p class="text-xs text-red-600 mt-0.5">These pages have zero GSC impressions in the last 90 days — possibly not indexed, blocked, or not ranking.</p>
+    </div>
+    <div class="divide-y text-sm">
+      {% for p in result.unindexed %}
+      <div class="px-5 py-3 flex flex-wrap items-start gap-3">
+        <span class="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded flex-shrink-0 mt-0.5">{{ p.type }}</span>
+        <div class="flex-1 min-w-0">
+          <p class="font-medium text-gray-800 truncate">{{ p.title }}</p>
+          <a href="{{ p.url }}" target="_blank" rel="noopener"
+             class="text-xs font-mono text-gray-400 hover:text-indigo-500 truncate block">{{ p.url }}</a>
+          <p class="text-xs text-gray-400 mt-0.5">{{ p.reason }}</p>
+        </div>
+        <div class="flex gap-2 flex-shrink-0">
+          <a href="{{ url_for('wp_bp.edit_post', post_id=p.id) }}" class="text-xs text-indigo-600 hover:underline">Edit →</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Indexed pages (collapsed) -->
+  {% if result.indexed %}
+  <details class="bg-white rounded-xl shadow-sm border">
+    <summary class="px-5 py-3 cursor-pointer text-sm text-gray-500 hover:text-gray-700">
+      <i class="fa-solid fa-circle-check text-green-500 mr-2"></i>
+      {{ result.indexed | length }} page{{ 's' if result.indexed | length != 1 }} visible in Google
+    </summary>
+    <div class="divide-y text-xs">
+      {% for p in result.indexed %}
+      <div class="px-5 py-2.5 flex items-center gap-3">
+        <a href="{{ p.url }}" target="_blank" rel="noopener"
+           class="font-mono text-gray-500 hover:text-indigo-500 truncate flex-1 min-w-0">{{ p.url }}</a>
+        <span class="text-gray-400 flex-shrink-0">#{{ p.position }} · {{ p.impressions }} impr</span>
+      </div>
+      {% endfor %}
+    </div>
+  </details>
+  {% endif %}
+
+  {% else %}
+  <div class="bg-white rounded-xl shadow-sm border p-12 text-center text-gray-400">
+    <i class="fa-solid fa-magnifying-glass text-5xl mb-4"></i>
+    <p class="text-gray-600">Loading index coverage data…</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

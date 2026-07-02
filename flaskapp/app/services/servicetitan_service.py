@@ -79,12 +79,17 @@ class ServiceTitanService:
             return False
 
         try:
+            try:
+                from app.services.crypto import decrypt
+                _secret = decrypt(self.connection.client_secret)
+            except Exception:
+                _secret = self.connection.client_secret
             response = requests.post(
                 self.AUTH_URL,
                 data={
                     "grant_type": "client_credentials",
                     "client_id": self.connection.client_id,
-                    "client_secret": self.connection.client_secret,
+                    "client_secret": _secret,
                 },
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
                 timeout=30
@@ -115,12 +120,17 @@ class ServiceTitanService:
             return self._get_access_token()
 
         try:
+            try:
+                from app.services.crypto import decrypt
+                _secret = decrypt(self.connection.client_secret)
+            except Exception:
+                _secret = self.connection.client_secret
             response = requests.post(
                 self.AUTH_URL,
                 data={
                     "grant_type": "refresh_token",
                     "client_id": self.connection.client_id,
-                    "client_secret": self.connection.client_secret,
+                    "client_secret": _secret,
                     "refresh_token": self.connection.refresh_token,
                 },
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
@@ -408,16 +418,44 @@ class ServiceTitanService:
         if job_data.get("completedOn"):
             job.completed_date = datetime.fromisoformat(job_data["completedOn"].replace("Z", "+00:00"))
 
+        # Populate normalised CRMJob fields
+        if job_data.get("scheduledOn") and hasattr(job, "appointment_at") and not job.appointment_at:
+            try:
+                from app.models_crm import CRMJob as _CRMJob  # noqa: F401 — ensure table exists
+                job.appointment_at = datetime.fromisoformat(
+                    job_data["scheduledOn"].replace("Z", "+00:00")
+                )
+            except Exception:
+                pass
+
         db.session.commit()
 
-        # Fire review request when a job transitions to completed for the first time
         new_status = (job.job_status or "").lower()
-        if new_status == "completed" and (prev_status or "").lower() != "completed":
+        old_status = (prev_status or "").lower()
+
+        # Fire review request on first completion
+        if new_status == "completed" and old_status != "completed":
             try:
                 from app.services.review_request_service import on_crm_job_completed
                 on_crm_job_completed(self.account_id, job)
             except Exception:
-                pass  # never block the sync
+                pass
+
+        # Detect estimates in ServiceTitan job records
+        try:
+            from app.services.crm_normalizer import handle_servicetitan_job
+            if self.connection:
+                handle_servicetitan_job(self.account_id, self.connection.id, job_data)
+        except Exception:
+            pass
+
+        # Fire appointment hook when appointment_at is newly set
+        if job.appointment_at and not getattr(job, "_appt_notified", False):
+            try:
+                from app.services.crm_normalizer import on_appointment_booked
+                on_appointment_booked(self.account_id, job)
+            except Exception:
+                pass
 
         return job
 

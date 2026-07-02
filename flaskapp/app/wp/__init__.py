@@ -1,13 +1,14 @@
 # app/wp/__init__.py
 from __future__ import annotations
 
+import logging
 import os
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
 
 from flask import (
     Blueprint, render_template, request, redirect as _redirect, url_for,
-    flash, current_app, jsonify, g, session
+    flash, current_app, jsonify, g, session, abort
 )
 from sqlalchemy import text, inspect
 from sqlalchemy.exc import OperationalError
@@ -17,6 +18,8 @@ from app.wp.wp_client import WPClient
 
 from app import db
 from app.auth.utils import login_required, is_paid_account
+
+logger = logging.getLogger(__name__)
 
 bp = Blueprint("my_ai_bp", __name__, url_prefix="/account/my-ai")
 wp_bp = Blueprint("wp_bp", __name__)
@@ -101,15 +104,34 @@ def _wp_has_account_id() -> bool:
 
 def _site_query_for_account(aid: Optional[int]):
     q = WPSite.query
-    if _wp_has_account_id() and aid:
+    if aid:
         q = q.filter_by(account_id=aid)
     return q
 
 def _current_site() -> Optional[WPSite]:
-    """First try DB (preferred). If missing, fall back to env vars so the UI still works."""
+    """Return the WPSite for the current account. Ensures account_id column exists first."""
+    # Ensure the account_id column is present (safe no-op if already there)
     try:
-        aid = _account_id()
-        site = _site_query_for_account(aid).first()
+        WPSite.ensure_columns()
+    except Exception:
+        pass
+
+    aid = _account_id()
+    site = None
+    try:
+        if aid:
+            site = WPSite.query.filter_by(account_id=aid).first()
+            if not site:
+                # First access after migration: claim any unowned site for this account
+                unowned = WPSite.query.filter(
+                    (WPSite.account_id == None) | (WPSite.account_id == 0)  # noqa: E711
+                ).first()
+                if unowned:
+                    unowned.account_id = aid
+                    db.session.commit()
+                    site = unowned
+        else:
+            site = WPSite.query.first()
     except OperationalError:
         current_app.logger.warning("WPSite query failed (schema mismatch). Falling back to env settings only.")
         site = None
@@ -136,22 +158,35 @@ def _openai_key() -> Optional[str]:
 
 # ---------- queue processor ----------
 
-def _ai_generate_post(brief: Dict[str, Any]) -> Dict[str, Any]:
+def _ai_generate_post(brief: Dict[str, Any], site: Optional["WPSite"] = None) -> Dict[str, Any]:
     """
-    Produce {title, html, excerpt} from a brief. Uses analyzer (if URL given),
-    otherwise tries OpenAI, and finally falls back to a heuristic stub.
+    Produce {title, html, excerpt} from a brief.
+    Priority: 1) URL analyzer  2) Claude  3) OpenAI  4) heuristic stub
     """
+    import json as _json
     prompt = (brief.get("prompt") or "").strip()
     source_url = (brief.get("source_url") or "").strip() or None
-    tone = brief.get("tone") or ""
-    word_count = (brief.get("word_count") or "").strip()
+    tone = brief.get("tone") or "helpful and practical"
+    word_count = (brief.get("word_count") or "900").strip()
     outline = brief.get("outline") or ""
     primary_kw = brief.get("primary_keyword") or ""
     extra_kws = brief.get("extra_keywords") or []
     topics = brief.get("topics") or []
-    pov_ids = brief.get("pov_ids") or []
+    cluster_name = brief.get("cluster_name") or ""
+    supporting_context = brief.get("supporting_context") or ""
+    content_format = brief.get("content_format") or "standard"
+    include_schema = brief.get("include_schema") or []
+    aeo_signals = brief.get("aeo_signals") or {}
 
-    # 1) Analyzer if source URL provided
+    # Brand voice / language directives from site settings
+    _LANG_NAMES = {
+        "es": "Spanish", "fr": "French", "pt": "Portuguese", "de": "German",
+    }
+    brand_voice = getattr(site, "brand_voice", None) or ""
+    brand_avoid = getattr(site, "brand_avoid", None) or ""
+    content_language = getattr(site, "content_language", None) or "en"
+
+    # 1) Analyzer — scrape and rewrite from a source URL
     if source_url and analyze_url:
         try:
             rep = analyze_url(source_url)
@@ -163,50 +198,159 @@ def _ai_generate_post(brief: Dict[str, Any]) -> Dict[str, Any]:
         except Exception:
             current_app.logger.exception("Analyzer failed for %s", source_url)
 
-    # 2) OpenAI
+    # Build the shared content brief string used by Claude and OpenAI
+    kw_line = f"Primary keyword: {primary_kw}" if primary_kw else ""
+    extra_line = f"Secondary keywords: {', '.join(extra_kws)}" if extra_kws else ""
+    cluster_line = f"Topic cluster: {cluster_name}" if cluster_name else ""
+    context_line = f"Additional context: {supporting_context}" if supporting_context else ""
+    outline_line = f"Suggested outline:\n{outline}" if outline else ""
+    brief_block = "\n".join(filter(None, [kw_line, extra_line, cluster_line, context_line, outline_line, prompt]))
+
+    # Build brand voice directives
+    _brand_directives = []
+    if brand_voice:
+        _brand_directives.append(f"Write in this style: {brand_voice}")
+    if brand_avoid:
+        _brand_directives.append(f"Avoid: {brand_avoid}")
+    if content_language and content_language != "en":
+        _lang_name = _LANG_NAMES.get(content_language, content_language)
+        _brand_directives.append(
+            f"Write the entire post in {_lang_name}. All headings, body text, and meta description must be in {_lang_name}."
+        )
+    brand_directive_block = ("\n".join(_brand_directives) + "\n") if _brand_directives else ""
+
+    # 2) Claude (primary AI writer)
+    try:
+        from app.ai_clients import get_ai_client
+        client = get_ai_client()
+
+        if content_format == "aeo_optimized":
+            schema_list = ", ".join(include_schema) if include_schema else "FAQPage"
+            claude_prompt = f"""You are a senior SEO/AEO content strategist writing for a local field-service business blog (HVAC, plumbing, electrical, pest control, landscaping, etc.).
+
+Content brief:
+{brief_block}
+
+AEO (Answer Engine Optimization) requirements — follow ALL of these:
+- Tone: {tone}
+- Target length: {word_count} words
+- Title must be a natural-language question that a homeowner or business owner would ask (e.g. "How Much Does HVAC Maintenance Cost?")
+- First paragraph: give a direct, concise answer (30-60 words) before any elaboration — AI citation engines pull this
+- Every H2 heading must be a question (e.g. "What Does an HVAC Tune-Up Include?")
+- Immediately after each H2, write a 30-60 word direct answer paragraph before expanding with details
+- Use numbered lists for step-by-step processes, bullet lists for feature/benefit comparisons
+- Include a "Frequently Asked Questions" H2 section near the end with 3-5 Q&A pairs in HTML <details>/<summary> or plain <h3>/<p> format
+- Add structured data hint comment at the very end: <!-- Schema: {schema_list} -->
+- End with a CTA paragraph tailored to local field-service businesses (mention booking, free estimate, or emergency service)
+- Naturally incorporate the primary keyword in the title, first paragraph, first H2, and meta description
+- Write for E-E-A-T: include specific numbers, timeframes, or cost ranges wherever possible
+{brand_directive_block}
+Return ONLY valid JSON with these exact keys:
+{{"title": "...", "html": "...", "excerpt": "..."}}
+
+The html value must be full HTML article content (no <html>/<body> wrapper).
+The excerpt must be 145-155 characters and answer the title question directly — optimised as a meta description."""
+        else:
+            claude_prompt = f"""You are a senior SEO content writer. Write a complete, publish-ready blog post.
+
+Content brief:
+{brief_block}
+
+Requirements:
+- Tone: {tone}
+- Target length: {word_count} words
+- Use H2 and H3 headings for structure
+- Include short paragraphs and bullet lists where appropriate
+- Naturally incorporate the primary keyword in the title, first paragraph, and 2-3 subheadings
+- End with a clear call-to-action paragraph
+{brand_directive_block}
+Return ONLY valid JSON with these exact keys:
+{{"title": "...", "html": "...", "excerpt": "..."}}
+
+The html value must be full HTML article content (no <html>/<body> wrapper).
+The excerpt must be 145-155 characters optimised as a meta description."""
+
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=4000,
+            messages=[{"role": "user", "content": claude_prompt}],
+        )
+        raw = response.content[0].text.strip()
+        # Strip markdown code fences if present
+        import re as _re
+        raw = _re.sub(r'^```(?:json)?\s*', '', raw, flags=_re.MULTILINE)
+        raw = _re.sub(r'\s*```$', '', raw, flags=_re.MULTILINE)
+        obj = _json.loads(raw)
+        if obj.get("title") and obj.get("html"):
+            result = {
+                "title": obj["title"].strip(),
+                "html": obj["html"],
+                "excerpt": (obj.get("excerpt") or "")[:160],
+            }
+            # Try to find a featured image via Unsplash (best-effort)
+            unsplash_key = os.getenv("UNSPLASH_ACCESS_KEY")
+            if unsplash_key and (primary_kw or obj["title"]):
+                try:
+                    import requests as _req
+                    query = primary_kw or obj["title"]
+                    r = _req.get(
+                        "https://api.unsplash.com/search/photos",
+                        params={"query": query, "per_page": 1, "orientation": "landscape"},
+                        headers={"Authorization": f"Client-ID {unsplash_key}"},
+                        timeout=5,
+                    )
+                    if r.status_code == 200:
+                        items = r.json().get("results") or []
+                        if items:
+                            result["featured_image_url"] = items[0]["urls"]["regular"]
+                            result["featured_image_alt"] = items[0].get("alt_description") or query
+                except Exception:
+                    pass
+            return result
+    except Exception:
+        current_app.logger.exception("Claude post generation failed")
+
+    # 3) OpenAI fallback
     key = _openai_key()
     if key:
         try:
-            import json, requests
-            sys = (
+            import requests
+            _openai_brand = ""
+            if brand_voice:
+                _openai_brand += f" Write in this style: {brand_voice}."
+            if brand_avoid:
+                _openai_brand += f" Avoid: {brand_avoid}."
+            if content_language and content_language != "en":
+                _lang_name = _LANG_NAMES.get(content_language, content_language)
+                _openai_brand += f" Write the entire post in {_lang_name}."
+            sys_msg = (
                 "You are a senior content writer for a local services blog. "
                 "Write helpful, original, practical content with clear structure (H2/H3), "
-                "and a short meta-style excerpt. Return STRICT JSON: {title, html, excerpt}."
+                f"and a short meta-style excerpt. Return STRICT JSON: {{title, html, excerpt}}.{_openai_brand}"
             )
-            user = {
-                "brief": {
-                    "prompt": prompt,
-                    "tone": tone,
-                    "word_count": word_count,
-                    "outline": outline,
-                    "primary_keyword": primary_kw,
-                    "extra_keywords": extra_kws,
-                    "topics": topics,
-                    "pov_ids": pov_ids,
-                    "source_url": source_url,
-                },
+            user_msg = _json.dumps({
+                "brief": brief_block,
                 "rules": [
-                    "Prefer 800–1200 words unless word_count given.",
+                    f"Target {word_count} words.",
                     "Use short paragraphs and scannable subheads.",
                     "Add simple bullet lists where useful.",
                     "No commentary; JSON only.",
                 ],
-            }
+            })
             r = requests.post(
                 "https://api.openai.com/v1/chat/completions",
                 headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
                 json={
                     "model": (current_app.config or {}).get("OPENAI_MODEL", "gpt-4o-mini"),
                     "temperature": 0.5,
-                    "messages": [{"role": "system", "content": sys},
-                                 {"role": "user", "content": json.dumps(user)}],
+                    "messages": [{"role": "system", "content": sys_msg},
+                                 {"role": "user", "content": user_msg}],
                     "response_format": {"type": "json_object"},
                 },
                 timeout=60,
             )
             if r.status_code < 400:
-                data = r.json()["choices"][0]["message"]["content"]
-                obj = json.loads(data)
+                obj = _json.loads(r.json()["choices"][0]["message"]["content"])
                 return {
                     "title": (obj.get("title") or "New Post").strip(),
                     "html": obj.get("html") or "",
@@ -217,13 +361,11 @@ def _ai_generate_post(brief: Dict[str, Any]) -> Dict[str, Any]:
         except Exception:
             current_app.logger.exception("OpenAI generation failed")
 
-    # 3) Heuristic fallback
+    # 4) Heuristic fallback
     title = topics[0] if topics else (primary_kw or "New Post")
-    if prompt:
-        title = title or "New Post"
     html = f"""<h2>{title}</h2>
 <p>Looking for clear, practical guidance? This post covers {primary_kw or 'a key topic'} with simple steps you can use today.</p>
-<h3>What you’ll learn</h3>
+<h3>What you'll learn</h3>
 <ul>
 <li>How to spot common issues</li>
 <li>Quick fixes you can try</li>
@@ -233,17 +375,187 @@ def _ai_generate_post(brief: Dict[str, Any]) -> Dict[str, Any]:
     excerpt = "Clear, practical tips you can use today—plus when to call a pro."
     return {"title": title, "html": html, "excerpt": excerpt}
 
-def _process_queue(max_jobs: int = 5) -> dict:
-    site = _current_site()
+AUTOPILOT_HARD_CAP = 5  # absolute max ai_generate jobs per site per day from autopilot
+
+
+def _run_daily_content_queue(site: "WPSite") -> dict:
+    """
+    Autopilot content scheduler: queue `ai_generate` jobs for a site up to the
+    configured daily limit, with three safety gates:
+
+    1. Daily cap enforcement  — never exceed `autopilot_daily_new` today.
+    2. New site grace period  — sites < 7 days old always require approval.
+    3. Hard cap               — never queue more than AUTOPILOT_HARD_CAP (5) per day.
+
+    Returns a summary dict.
+    """
+    if not getattr(site, "autopilot_enabled", False):
+        return {"ok": True, "skipped": "autopilot_disabled", "queued": 0}
+
+    configured_daily = int(getattr(site, "autopilot_daily_new", 1) or 1)
+    require_approval = bool(getattr(site, "autopilot_require_approval", True))
+
+    # Gate 3: Hard cap check — warn if configured limit exceeds the hard cap
+    effective_daily = configured_daily
+    if configured_daily > AUTOPILOT_HARD_CAP:
+        current_app.logger.warning(
+            "Autopilot site %d: autopilot_daily_new=%d exceeds hard cap %d — capping at %d.",
+            site.id, configured_daily, AUTOPILOT_HARD_CAP, AUTOPILOT_HARD_CAP,
+        )
+        db.session.add(WPLog(
+            site_id=site.id,
+            level="warn",
+            message=(
+                f"Autopilot daily cap exceeded: configured={configured_daily}, "
+                f"hard cap={AUTOPILOT_HARD_CAP}. Capping to {AUTOPILOT_HARD_CAP}."
+            ),
+        ))
+        effective_daily = AUTOPILOT_HARD_CAP
+
+    # Gate 1: Count how many ai_generate jobs were already queued/published today
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    already_queued_today = WPJob.query.filter(
+        WPJob.site_id == site.id,
+        WPJob.kind == "ai_generate",
+        WPJob.status.in_(["queued", "running", "done"]),
+        WPJob.created_at >= today_start,
+    ).count()
+
+    if already_queued_today >= effective_daily:
+        return {
+            "ok": True,
+            "skipped": "daily_cap_reached",
+            "queued": 0,
+            "already_today": already_queued_today,
+            "effective_daily": effective_daily,
+        }
+
+    slots_remaining = effective_daily - already_queued_today
+
+    # Gate 2: New site grace period — first 7 days always require approval
+    grace_period_approval = False
+    site_created_at = getattr(site, "created_at", None)
+    if site_created_at:
+        age_days = (datetime.utcnow() - site_created_at).days
+        if age_days < 7 and not require_approval:
+            grace_period_approval = True
+            current_app.logger.info(
+                "Autopilot site %d: new site grace period (age=%d days) — forcing approval.",
+                site.id, age_days,
+            )
+            db.session.add(WPLog(
+                site_id=site.id,
+                level="info",
+                message=(
+                    f"New site: requiring approval for first 7 days of autopilot "
+                    f"(site age {age_days} day(s))."
+                ),
+            ))
+
+    force_approval = require_approval or grace_period_approval
+
+    queued = 0
+    for _ in range(slots_remaining):
+        payload = {
+            "source": "autopilot",
+            "require_approval": force_approval,
+            "needs_approval": force_approval,
+            "status": "draft" if force_approval else "publish",
+        }
+        job = WPJob(site_id=site.id, kind="ai_generate", payload=payload)
+        db.session.add(job)
+        queued += 1
+
+    if queued:
+        db.session.commit()
+
+    return {
+        "ok": True,
+        "queued": queued,
+        "already_today": already_queued_today,
+        "effective_daily": effective_daily,
+        "force_approval": force_approval,
+    }
+
+
+def _validate_post_quality(
+    title: str,
+    html_body: str,
+    target_keyword: str = "",
+    min_words: int = 600,
+) -> dict:
+    """
+    Lightweight quality gate for AI-generated posts.
+
+    Returns:
+        {
+            "ok": bool,          # True = no quality warnings
+            "warnings": [...],   # list of human-readable warning strings
+            "word_count": int,
+        }
+    """
+    import re as _re
+
+    warnings: list = []
+
+    # Strip tags to count words
+    plain = _re.sub(r"<[^>]+>", " ", html_body or "")
+    word_count = len(plain.split())
+
+    threshold = int(min_words * 0.85)
+    if word_count < threshold:
+        warnings.append(
+            f"Word count too low: {word_count} words (minimum threshold {threshold}, target {min_words})."
+        )
+
+    # Keyword presence
+    if target_keyword:
+        kw_lower = target_keyword.lower()
+        title_has_kw = kw_lower in (title or "").lower()
+        body_has_kw  = kw_lower in plain.lower()
+        if not title_has_kw:
+            warnings.append(f"Primary keyword '{target_keyword}' missing from title.")
+        if not body_has_kw:
+            warnings.append(f"Primary keyword '{target_keyword}' missing from post body.")
+
+    # Basic structure: at least one <h2>
+    if not _re.search(r"<h2[\s>]", html_body or "", _re.IGNORECASE):
+        warnings.append("Post body contains no <h2> headings — add subheadings for structure.")
+
+    return {
+        "ok": len(warnings) == 0,
+        "warnings": warnings,
+        "word_count": word_count,
+    }
+
+
+def _process_queue(max_jobs: int = 5, site: Optional[WPSite] = None, retry_errors: bool = False) -> dict:
+    if site is None:
+        site = _current_site()
     if not site:
         return {"ok": False, "processed": 0, "error": "No WordPress settings"}
 
     processed = 0
     now = datetime.utcnow()
 
+    # Reset recent error jobs back to queued so they get a retry
+    if retry_errors:
+        error_jobs = (
+            WPJob.query
+            .filter(WPJob.site_id == site.id,
+                    WPJob.status == "error")
+            .all()
+        )
+        for ej in error_jobs:
+            ej.status = "queued"
+            ej.last_error = None
+        if error_jobs:
+            db.session.commit()
+
     due_jobs = (
         WPJob.query
-        .filter(WPJob.status == "queued")
+        .filter(WPJob.site_id == site.id,
+                WPJob.status == "queued")
         .filter((WPJob.run_at == None) | (WPJob.run_at <= now))  # noqa: E711
         .order_by(WPJob.created_at.asc())
         .limit(max_jobs)
@@ -277,6 +589,40 @@ def _process_queue(max_jobs: int = 5) -> dict:
                 msg = f"Published post {res.get('id')} → {link}" if link else f"Published post {res.get('id')}"
                 db.session.add(WPLog(site_id=site.id, job_id=job.id, level="info", message=msg))
 
+                # Auto-generate social copy after a live publish (best-effort)
+                if res.get("id") and link and p.get("status", "draft") == "publish":
+                    try:
+                        from app.ai_clients import get_ai_client
+                        _sc = get_ai_client()
+                        _title = p.get("title") or ""
+                        _social_resp = _sc.messages.create(
+                            model="claude-haiku-4-5-20251001",
+                            max_tokens=300,
+                            messages=[{"role": "user", "content":
+                                f"Write a short social media post (2-3 sentences, no hashtags) "
+                                f"promoting this blog post: '{_title}'. URL: {link}. "
+                                f"Make it engaging and conversational. Plain text only."}],
+                        )
+                        _social_copy = _sc and _social_resp.content[0].text.strip()
+                        if _social_copy:
+                            db.session.add(WPLog(site_id=site.id, job_id=job.id, level="info",
+                                                 message=f"[SOCIAL] {_social_copy}"))
+                    except Exception:
+                        pass
+
+                # Auto-inject Article schema on publish (best-effort, never blocks the job)
+                wp_post_id = res.get("id")
+                if wp_post_id and p.get("status", "draft") == "publish":
+                    try:
+                        from app.wp.schema_gen import generate_from_wp_post, inject_schema_into_post
+                        schema_result = generate_from_wp_post(c, wp_post_id, include_article=True, include_faq=True)
+                        if schema_result and schema_result.get("schemas"):
+                            inject_schema_into_post(c, wp_post_id, schema_result["schemas"], replace_existing=True)
+                            db.session.add(WPLog(site_id=site.id, job_id=job.id, level="info",
+                                                 message=f"Auto-injected schema into post {wp_post_id}"))
+                    except Exception:
+                        pass  # schema injection is non-critical
+
             elif job.kind == "refresh":
                 p = job.payload or {}
                 post_id = int(p.get("post_id", 0))
@@ -299,10 +645,56 @@ def _process_queue(max_jobs: int = 5) -> dict:
 
             elif job.kind == "ai_generate":
                 brief = job.payload or {}
-                draft = _ai_generate_post(brief)
+                draft = _ai_generate_post(brief, site=site)
 
                 needs_approval = bool(brief.get("require_approval")) or bool(getattr(site, "autopilot_require_approval", False))
+
+                # AI post quality gate — only enforced for autopilot-queued jobs
+                _is_autopilot_job = brief.get("source") not in ("manual", "manual_queue")
+                _qa = _validate_post_quality(
+                    title=draft.get("title") or "",
+                    html_body=draft.get("html") or "",
+                    target_keyword=brief.get("primary_keyword") or "",
+                    min_words=600,
+                )
+                if not _qa["ok"]:
+                    for _warn in _qa["warnings"]:
+                        db.session.add(WPLog(
+                            site_id=site.id, job_id=job.id,
+                            level="warn",
+                            message=f"Quality warning: {_warn}",
+                        ))
+                    current_app.logger.warning(
+                        "ai_generate job %d quality warnings: %s (word_count=%d)",
+                        job.id, _qa["warnings"], _qa["word_count"],
+                    )
+                    # Force human review when autopilot would have published without approval
+                    if _is_autopilot_job and not needs_approval:
+                        needs_approval = True
+                        db.session.add(WPLog(
+                            site_id=site.id, job_id=job.id,
+                            level="warn",
+                            message=(
+                                "Quality gate: post flagged for human review "
+                                f"(word_count={_qa['word_count']}, warnings={len(_qa['warnings'])})."
+                            ),
+                        ))
+
                 status = "draft" if needs_approval else "publish"
+
+                # Upload featured image to WP media library before creating the post
+                featured_media_id = None
+                feat_url = draft.get("featured_image_url")
+                feat_alt = draft.get("featured_image_alt") or (draft.get("title") or "")
+                if feat_url:
+                    try:
+                        import re as _re
+                        slug = _re.sub(r"[^a-z0-9]+", "-", (brief.get("primary_keyword") or "featured").lower()).strip("-")
+                        featured_media_id = c.upload_image_from_url(feat_url, filename=f"{slug}.jpg", alt_text=feat_alt)
+                        db.session.add(WPLog(site_id=site.id, job_id=job.id, level="info",
+                                             message=f"Uploaded featured image (media #{featured_media_id})"))
+                    except Exception:
+                        current_app.logger.exception("Featured image upload failed for ai_generate job %d", job.id)
 
                 res = c.create_or_update_post(
                     title=draft.get("title") or "New Post",
@@ -312,9 +704,71 @@ def _process_queue(max_jobs: int = 5) -> dict:
                     publish_dt=None,
                     yoast_title=draft.get("title"),
                     yoast_desc=draft.get("excerpt"),
+                    featured_media=featured_media_id,
                 )
                 link = res.get("link")
                 msg = f"AI draft created {res.get('id')} → {link}" if link else f"AI draft created {res.get('id')}"
+                db.session.add(WPLog(site_id=site.id, job_id=job.id, level="info", message=msg))
+
+            elif job.kind == "seo_fix":
+                p = job.payload or {}
+                post_id = int(p.get("post_id", 0))
+                if not post_id:
+                    raise ValueError("seo_fix job missing post_id")
+                post_type = p.get("post_type", "post")
+
+                # Fetch current post/page to preserve content
+                try:
+                    existing = c.get_post(post_id, post_type=post_type)
+                except Exception as _fetch_err:
+                    _emsg = str(_fetch_err)
+                    if "404" in _emsg or "rest_post_invalid_id" in _emsg or "not found" in _emsg.lower():
+                        # Post was deleted from WordPress — skip gracefully
+                        job.status = "done"
+                        db.session.add(WPLog(site_id=site.id, job_id=job.id, level="warning",
+                                            message=f"Skipped seo_fix: post {post_id} no longer exists in WordPress"))
+                        db.session.commit()
+                        processed += 1
+                        continue
+                    raise
+                current_content = existing.get("content", {}).get("rendered", "")
+
+                # Inject/replace schema block at end of content
+                schema_html = p.get("schema_html", "")
+                if schema_html:
+                    import re as _re
+                    # Strip any existing JSON-LD blocks to avoid duplication
+                    current_content = _re.sub(
+                        r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>.*?</script>',
+                        "", current_content, flags=_re.DOTALL | _re.IGNORECASE,
+                    ).rstrip()
+                    current_content = current_content + "\n" + schema_html
+
+                fixes_applied = []
+                kwargs: Dict[str, Any] = dict(
+                    post_id=post_id,
+                    title=existing.get("title", {}).get("rendered", ""),
+                    html=current_content,
+                    status=existing.get("status", "publish"),
+                )
+                if p.get("yoast_title"):
+                    kwargs["yoast_title"] = p["yoast_title"]
+                    fixes_applied.append("Yoast title")
+                if p.get("yoast_desc"):
+                    kwargs["yoast_desc"] = p["yoast_desc"]
+                    fixes_applied.append("Yoast meta description")
+                if p.get("excerpt"):
+                    kwargs["excerpt"] = p["excerpt"]
+                    fixes_applied.append("Excerpt")
+                if schema_html:
+                    fixes_applied.append("JSON-LD schema")
+
+                c.create_or_update_post(post_type=post_type, **kwargs)
+                msg = (
+                    f"SEO auto-fix applied to post {post_id} "
+                    f"[{', '.join(fixes_applied) or 'no changes'}] "
+                    f"(SEO {p.get('seo_score','?')}, AEO {p.get('aeo_score','?')})"
+                )
                 db.session.add(WPLog(site_id=site.id, job_id=job.id, level="info", message=msg))
 
             elif job.kind == "edit":
@@ -350,6 +804,167 @@ def _process_queue(max_jobs: int = 5) -> dict:
             db.session.commit()
 
     return {"ok": True, "processed": processed}
+
+# ---------- SEO auto-fix helpers ----------
+
+def _build_seo_fix_payload(site, url: str, keyword: str = "",
+                            source: str = "autopilot") -> Optional[Dict[str, Any]]:
+    """
+    Audit a URL, generate schema, and return an seo_fix job payload.
+    Returns None if the post can't be found on the WP site or no fixes needed.
+    """
+    try:
+        from app.wp.seo_audit import audit_url
+        audit = audit_url(url, target_keyword=keyword)
+        if audit.get("error"):
+            return None
+
+        seo_score = audit.get("seo_score", 100)
+        aeo_score = audit.get("aeo_score", 100)
+
+        # Only fix pages that need it
+        if seo_score >= 80 and aeo_score >= 70 and source == "autopilot":
+            return None
+
+        c = WPClient(site.base_url, site.username, site.app_password)
+        post = c.find_post_by_url(url)
+
+        # For the homepage, try the WP settings front-page ID directly
+        if not post:
+            try:
+                base = site.base_url.rstrip("/")
+                url_stripped = url.rstrip("/")
+                if url_stripped in (base, base + "/"):
+                    settings = c._req("GET", "/wp/v2/settings").json()
+                    page_id = settings.get("page_on_front")
+                    if page_id:
+                        resp = c._req("GET", f"/wp/v2/pages/{page_id}").json()
+                        if resp.get("id"):
+                            post = resp
+            except Exception:
+                pass
+
+        if not post:
+            return None
+        post_id = int(post["id"])
+        post_type = post.get("type", "post")  # "post" or "page"
+
+        # Generate schema
+        schema_html = ""
+        schema_result = None
+        try:
+            from app.wp.schema_gen import generate_from_url
+            schema_result = generate_from_url(
+                url,
+                include_article=True,
+                include_faq=True,
+                include_howto=True,
+            )
+            if schema_result and schema_result.get("schema_json"):
+                import json as _json
+                schema_html = (
+                    '<script type="application/ld+json">\n'
+                    + _json.dumps(schema_result["schema_json"], indent=2)
+                    + "\n</script>"
+                )
+        except Exception:
+            pass
+
+        # Build Yoast meta from audit findings
+        yoast_desc = ""
+        for chk in audit.get("seo_checks", []):
+            if "meta description" in chk.get("label", "").lower() and chk.get("status") != "pass":
+                # Use first 155 chars of page description if available
+                yoast_desc = (schema_result or {}).get("description", "")[:155] if schema_result else ""
+                break
+
+        # For manual source always queue so the user gets feedback;
+        # for autopilot skip if there's genuinely nothing to apply.
+        if source != "manual" and not schema_html and not yoast_desc:
+            return None
+
+        return {
+            "post_id":   post_id,
+            "post_type": post_type,
+            "post_url":  url,
+            "schema_html": schema_html,
+            "yoast_desc":  yoast_desc,
+            "seo_score":   seo_score,
+            "aeo_score":   aeo_score,
+            "source":      source,
+        }
+    except Exception:
+        current_app.logger.exception("_build_seo_fix_payload failed for %s", url)
+        return None
+
+
+def _is_gsc_connected(aid: int | None) -> bool:
+    if not aid:
+        return False
+    try:
+        from app.google import _is_connected
+        return _is_connected(aid, "gsc")
+    except Exception:
+        return False
+
+
+def _auto_audit_and_fix(site, account_id: int) -> Dict[str, Any]:
+    """
+    Fetch top GSC pages, audit the lowest-scoring ones, and queue seo_fix jobs.
+    Throttled: skips any URL already fixed within the last 7 days.
+    """
+    import os
+    from datetime import date, timedelta as td
+
+    results: List[Dict] = []
+    try:
+        from app.google import _fetch_gsc_report, _get_gsc_selected_site, _is_connected
+        if not _is_connected(account_id, "gsc"):
+            return {"ok": True, "skipped": "GSC not connected", "fixed": 0}
+
+        site_url = _get_gsc_selected_site(account_id) or os.getenv("GSC_SITE")
+        if not site_url:
+            return {"ok": True, "skipped": "No GSC site URL", "fixed": 0}
+
+        end = date.today()
+        start = end - td(days=28)
+        data = _fetch_gsc_report(site_url, start.isoformat(), end.isoformat()) or {}
+        top_pages = (data.get("top_pages") or [])[:10]
+
+        # Collect recently-fixed URLs (last 7 days) to avoid re-fixing
+        cutoff = datetime.utcnow() - td(days=7)
+        recent_jobs = WPJob.query.filter(
+            WPJob.kind == "seo_fix",
+            WPJob.created_at >= cutoff,
+        ).all()
+        recent_urls = {j.payload.get("post_url") for j in recent_jobs if j.payload}
+
+        fixed = 0
+        for page in top_pages:
+            page_url = page.get("page", "")
+            if not page_url or page_url in recent_urls:
+                continue
+            # Only process pages on this WP site
+            if site.base_url.rstrip("/") not in page_url:
+                continue
+
+            payload = _build_seo_fix_payload(site, page_url, source="autopilot")
+            if payload:
+                job = WPJob(site_id=site.id, kind="seo_fix", payload=payload)
+                db.session.add(job)
+                fixed += 1
+                results.append({"url": page_url, "queued": True,
+                                 "seo": payload["seo_score"], "aeo": payload["aeo_score"]})
+
+        if fixed:
+            db.session.commit()
+
+        return {"ok": True, "fixed": fixed, "pages_checked": len(top_pages), "results": results}
+
+    except Exception as exc:
+        current_app.logger.exception("_auto_audit_and_fix failed")
+        return {"ok": False, "error": str(exc)}
+
 
 # ---------- email approve ----------
 
@@ -424,10 +1039,22 @@ def settings():
         site = None
 
     if request.method == "POST":
+        is_brand_voice_post = bool(request.form.get("brand_voice_form"))
         is_autopilot_post = any(k in request.form for k in (
             "autopilot_enabled", "autopilot_daily_new",
             "autopilot_daily_refresh", "autopilot_require_approval"
         ))
+
+        if is_brand_voice_post:
+            if not site:
+                flash("Please save your WordPress connection first.", "error")
+                return see_other("wp_bp.settings")
+            site.brand_voice = (request.form.get("brand_voice") or "").strip() or None
+            site.brand_avoid = (request.form.get("brand_avoid") or "").strip() or None
+            site.content_language = (request.form.get("content_language") or "en").strip()
+            db.session.commit()
+            flash("Brand voice settings saved.", "success")
+            return see_other("wp_bp.settings")
 
         if is_autopilot_post:
             if not site:
@@ -484,9 +1111,24 @@ def settings():
                 site.username = user
                 if pw != "********":
                     site.app_password = pw
+                if aid and not site.account_id:
+                    site.account_id = aid
 
             db.session.commit()
             flash("Saved WordPress settings.", "success")
+
+            # Auto-test connection immediately after saving
+            try:
+                _pw = pw if pw and pw != "********" else site.app_password
+                c = WPClient(base, user, _pw)
+                res = c.auth_check()
+                if res.get("ok"):
+                    flash(f"Connection verified — WordPress is reachable.", "success")
+                else:
+                    flash(f"Saved, but connection test failed: {res.get('error', 'could not verify')}. Check your credentials.", "warning")
+            except Exception as _te:
+                flash(f"Saved, but connection test failed: {_te}", "warning")
+
         except OperationalError:
             current_app.logger.exception("Saving WPSite failed (schema mismatch).")
             flash("Database schema is out of date for WordPress settings. Please run the migration to add wp_sites.account_id (you can keep using env vars meanwhile).", "error")
@@ -542,10 +1184,21 @@ def test():
             results["posts_endpoint"] = err_str[:200]
 
         # Summarize results
-        if results["posts_endpoint"] == "ok":
-            flash(f"Success! WordPress API is working. Auth: {results['auth']}", "success")
+        auth_ok = str(results.get("auth", "")).startswith("ok")
+        posts_ok = results["posts_endpoint"] == "ok"
+
+        if posts_ok and auth_ok:
+            flash(f"WordPress connected and authenticated. {results['auth']}", "success")
+        elif posts_ok and not auth_ok:
+            flash(
+                "WordPress REST API is reachable but authentication failed. "
+                "Your Application Password credentials are not working (401 rest_not_logged_in). "
+                "Fix: 1) In WP Admin → Users → Profile, delete and regenerate the Application Password. "
+                "2) If behind Cloudflare, add a WAF rule to pass the Authorization header for /wp-json/*. "
+                f"Auth error: {results['auth']}",
+                "error"
+            )
         elif "403" in str(results.get("posts_endpoint", "")):
-            # Posts endpoint blocked - this is the real problem
             flash(
                 "403 Forbidden on posts API. Your WordPress site is blocking REST API requests. "
                 "Check: 1) Security plugins (Wordfence, Sucuri) - whitelist your server IP, "
@@ -637,10 +1290,25 @@ def diagnose():
 @login_required
 def publisher():
     site = _current_site()
-    jobs_ = WPJob.query.order_by(WPJob.created_at.desc()).limit(50).all()
-    return render_template("wp/publisher.html", site=site, jobs=jobs_)
+    jobs_ = (WPJob.query
+             .filter_by(site_id=site.id)
+             .order_by(WPJob.created_at.desc()).limit(50).all()) if site else []
 
-# GET legacy “compose” just points at /new
+    # Build a map of job_id → social copy from WPLog [SOCIAL] entries
+    social_copy = {}
+    if site and jobs_:
+        job_ids = [j.id for j in jobs_]
+        logs = WPLog.query.filter(
+            WPLog.site_id == site.id,
+            WPLog.job_id.in_(job_ids),
+            WPLog.message.like("[SOCIAL]%"),
+        ).all()
+        for log in logs:
+            social_copy[log.job_id] = log.message[len("[SOCIAL]"):].strip()
+
+    return render_template("wp/publisher.html", site=site, jobs=jobs_, social_copy=social_copy)
+
+# GET legacy "compose" just points at /new
 @wp_bp.route("/compose", methods=["GET"], endpoint="compose")
 @login_required
 def compose_get_legacy():
@@ -737,11 +1405,39 @@ def run_now():
     except Exception:
         max_jobs = 5
 
-    result = _process_queue(max_jobs=max_jobs)
+    result = _process_queue(max_jobs=max(max_jobs, 20), retry_errors=True)
+    is_ajax = "application/json" in (request.accept_mimetypes.best or "")
+    if is_ajax:
+        return jsonify(result)
     if result.get("ok"):
         flash(f"Processed {result.get('processed', 0)} job(s).", "success")
     else:
         flash(result.get("error") or "Failed to process jobs.", "error")
+    return see_other("wp_bp.publisher")
+
+
+@wp_bp.route("/publisher/clear-errors", methods=["POST"], endpoint="clear_errors")
+@login_required
+def clear_errors():
+    """Directly dismiss all error jobs for the current site — no retry."""
+    site = _current_site()
+    if not site:
+        flash("No WordPress site configured.", "error")
+        return see_other("wp_bp.publisher")
+    try:
+        with db.engine.begin() as conn:
+            r = conn.execute(
+                text(
+                    "UPDATE wp_jobs SET status='done', last_error=NULL, updated_at=NOW() "
+                    "WHERE site_id=:sid AND status='error'"
+                ),
+                {"sid": site.id},
+            )
+            count = r.rowcount
+        flash(f"Cleared {count} error job(s).", "success")
+    except Exception as e:
+        current_app.logger.exception("clear_errors failed")
+        flash(f"Could not clear errors: {e}", "error")
     return see_other("wp_bp.publisher")
 
 @wp_bp.route("/analyze", methods=["GET", "POST"], endpoint="analyze")
@@ -894,14 +1590,342 @@ def approve():
     flash("Approved. It will publish on the next runner tick.", "success")
     return see_other("wp_bp.publisher")
 
+# ---------- approval inbox ----------
+
+@wp_bp.route("/approvals", methods=["GET"], endpoint="approvals")
+@login_required
+def approvals():
+    """In-app approval queue for AI-generated and human-drafted posts awaiting review."""
+    site = _current_site()
+    if not site:
+        return render_template("wp/approvals.html", pending=[])
+    pending_jobs = (WPJob.query
+                    .filter_by(site_id=site.id, status="queued")
+                    .order_by(WPJob.created_at.desc())
+                    .limit(200).all())
+    # Filter in Python — JSON field querying is dialect-dependent
+    pending = [j for j in pending_jobs if (j.payload or {}).get("needs_approval")]
+    return render_template("wp/approvals.html", pending=pending)
+
+
+@wp_bp.route("/approvals/<int:job_id>/approve", methods=["POST"], endpoint="approval_approve")
+@login_required
+def approval_approve(job_id: int):
+    site = _current_site()
+    job = WPJob.query.get_or_404(job_id)
+    if not site or job.site_id != site.id:
+        abort(403)
+    p = dict(job.payload or {})
+    p["needs_approval"] = False
+    p["status"] = "future" if p.get("status") == "future" else "publish"
+    job.payload = p
+    db.session.commit()
+    flash(f"Job #{job_id} approved — will publish on next cron tick.", "success")
+    return see_other("wp_bp.approvals")
+
+
+@wp_bp.route("/approvals/<int:job_id>/reject", methods=["POST"], endpoint="approval_reject")
+@login_required
+def approval_reject(job_id: int):
+    site = _current_site()
+    job = WPJob.query.get_or_404(job_id)
+    if not site or job.site_id != site.id:
+        abort(403)
+    job.status = "error"
+    job.last_error = "Rejected in approval inbox"
+    db.session.commit()
+    flash(f"Job #{job_id} rejected and removed from queue.", "info")
+    return see_other("wp_bp.approvals")
+
+
+@wp_bp.route("/approvals/bulk", methods=["POST"], endpoint="approval_bulk")
+@login_required
+def approval_bulk():
+    site = _current_site()
+    if not site:
+        abort(403)
+    action = request.form.get("bulk_action")  # "approve" or "reject"
+    job_ids = request.form.getlist("job_ids")
+    if not job_ids or action not in ("approve", "reject"):
+        flash("No jobs selected.", "warning")
+        return see_other("wp_bp.approvals")
+
+    count = 0
+    for jid in job_ids:
+        try:
+            job = WPJob.query.get(int(jid))
+            if not job or job.site_id != site.id:
+                continue
+            if action == "approve":
+                p = dict(job.payload or {})
+                p["needs_approval"] = False
+                p["status"] = "future" if p.get("status") == "future" else "publish"
+                job.payload = p
+            else:
+                job.status = "error"
+                job.last_error = "Bulk rejected"
+            count += 1
+        except Exception:
+            pass
+    db.session.commit()
+    flash(f"{'Approved' if action == 'approve' else 'Rejected'} {count} post(s).", "success")
+    return see_other("wp_bp.approvals")
+
+
+@wp_bp.route("/content-queue", methods=["GET", "POST"], endpoint="content_queue_review")
+@login_required
+def content_queue_review():
+    """Review pending topic cluster recommendations and selectively queue posts."""
+    site = _current_site()
+    aid = _account_id()
+    recommendations = []
+    last_updated = None
+    queued_keywords = set()
+
+    if aid:
+        try:
+            from app.models_seo import SEOScanResult
+            rec_row = SEOScanResult.latest(aid, "content_recommendations")
+            if rec_row and rec_row.data:
+                recommendations = rec_row.data.get("recommendations") or []
+                last_updated = rec_row.created_at
+        except Exception:
+            pass
+
+    if site:
+        existing = WPJob.query.filter(
+            WPJob.site_id == site.id,
+            WPJob.status.in_(["queued", "running", "done"]),
+            WPJob.kind == "ai_generate",
+        ).all()
+        queued_keywords = {(j.payload or {}).get("primary_keyword", "").lower().strip() for j in existing}
+
+    if request.method == "POST" and site:
+        selected = request.form.getlist("topics")
+        cluster_map = {}
+        for rec in recommendations:
+            cluster_map[rec.get("cluster_name", "")] = rec
+        queued = 0
+        for topic_str in selected:
+            # topic_str = "cluster_name|||topic_title|||is_pillar"
+            parts = topic_str.split("|||")
+            if len(parts) < 2:
+                continue
+            cluster_name, kw = parts[0], parts[1]
+            is_pillar = parts[2] == "1" if len(parts) > 2 else False
+            if kw.lower() in queued_keywords:
+                continue
+            rec = cluster_map.get(cluster_name, {})
+            all_topics = []
+            if rec.get("pillar_topic"):
+                all_topics.append(rec["pillar_topic"])
+            all_topics += [t if isinstance(t, str) else t.get("title", "") for t in (rec.get("supporting_topics") or [])]
+            payload = {
+                "primary_keyword": kw,
+                "cluster_name": cluster_name,
+                "is_pillar": is_pillar,
+                "supporting_context": (
+                    f"Part of the '{cluster_name}' topic cluster. "
+                    f"Related topics: {', '.join(t for t in all_topics if t != kw)}"
+                ),
+                "word_count": "1200" if is_pillar else "800",
+                "status": "draft" if getattr(site, "autopilot_require_approval", True) else "publish",
+                "needs_approval": bool(getattr(site, "autopilot_require_approval", True)),
+                "require_approval": bool(getattr(site, "autopilot_require_approval", True)),
+                "source": "manual_queue",
+            }
+            job = WPJob(site_id=site.id, kind="ai_generate", payload=payload)
+            db.session.add(job)
+            queued_keywords.add(kw.lower())
+            queued += 1
+        db.session.commit()
+        if queued:
+            flash(f"Queued {queued} post(s) for generation.", "success")
+        return see_other("wp_bp.content_queue_review")
+
+    return render_template(
+        "wp/content_queue_review.html",
+        site=site,
+        recommendations=recommendations,
+        last_updated=last_updated,
+        queued_keywords=queued_keywords,
+        gsc_connected=_is_gsc_connected(aid),
+    )
+
+
+
+# ---------- on-demand content recommendations ----------
+
+@wp_bp.route("/generate-recommendations", methods=["POST"], endpoint="generate_recommendations")
+@login_required
+def generate_recommendations():
+    """Run the SEO keyword-gap → AI content recommendations pipeline immediately for this account."""
+    import json
+    import re as _re
+
+    aid = _account_id()
+    if not aid:
+        flash("No account found.", "error")
+        return see_other("wp_bp.content_queue_review")
+
+    try:
+        from app.seo.keyword_gaps import run_keyword_gap_analysis
+        from app.google import _is_connected, _get_gsc_selected_site
+        from app.ai_clients import get_ai_client
+        from app.models_seo import SEOScanResult
+
+        if not _is_connected(aid, "gsc"):
+            flash("Google Search Console is not connected — connect it first so we can analyze your keyword gaps.", "error")
+            return see_other("wp_bp.content_queue_review")
+
+        gsc_url = _get_gsc_selected_site(aid)
+        if not gsc_url:
+            flash("No GSC property selected. Go to Google → Search Console to pick one.", "warning")
+            return see_other("wp_bp.content_queue_review")
+
+        gap = run_keyword_gap_analysis(aid, gsc_url)
+        if gap.get("error"):
+            flash(f"Keyword gap analysis failed: {gap['error']}", "error")
+            return see_other("wp_bp.content_queue_review")
+
+        missing  = gap.get("missing_content", [])[:10]
+        wins     = gap.get("quick_wins", [])[:10]
+        clusters = gap.get("clusters", [])[:8]
+        gap_context = (
+            f"Missing content opportunities: {json.dumps(missing)}\n"
+            f"Quick wins (positions 4-20): {json.dumps(wins)}\n"
+            f"Keyword clusters: {json.dumps(clusters)}"
+        )
+
+        try:
+            from app.models_ads import AIPrompt
+            p = AIPrompt.query.filter_by(prompt_key="seo_content_recommendations", is_active=True).first()
+            tmpl = p.prompt_template if p else None
+        except Exception:
+            tmpl = None
+
+        prompt = (tmpl or (
+            "Based on this keyword gap analysis data, recommend topic clusters.\n\n"
+            "{gap_context}\n\n"
+            "Return a JSON array of 6-8 topic cluster recommendations with: "
+            "cluster_name, pillar_topic, supporting_topics (3-5 titles), "
+            "monthly_searches_potential, rationale. JSON only."
+        )).replace("{gap_context}", gap_context)
+
+        client = get_ai_client()
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=1800,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = resp.content[0].text
+        match = _re.search(r'\[.*\]', raw, _re.DOTALL)
+        if not match:
+            flash("AI returned an unexpected format. Try again in a moment.", "error")
+            return see_other("wp_bp.content_queue_review")
+
+        recs = json.loads(match.group())
+        SEOScanResult.save_result(
+            account_id=aid,
+            site_id=None,
+            scan_type="content_recommendations",
+            issue_count=0,
+            item_count=len(recs),
+            data={
+                "recommendations": recs,
+                "generated_at": datetime.utcnow().isoformat(),
+            },
+        )
+        flash(f"Generated {len(recs)} topic cluster recommendations — select topics below to queue posts.", "success")
+
+    except Exception as exc:
+        current_app.logger.exception("generate_recommendations failed: %s", exc)
+        flash(f"Something went wrong: {exc}", "error")
+
+    return see_other("wp_bp.content_queue_review")
+
+
+# ---------- schedule view ----------
+
+@wp_bp.route("/schedule", methods=["GET"], endpoint="schedule")
+@login_required
+def schedule():
+    """Timeline view of scheduled and recently published posts."""
+    now = datetime.utcnow()
+    site = _current_site()
+    site_id = site.id if site else None
+
+    scheduled = (WPJob.query
+                 .filter(WPJob.site_id == site_id,
+                         WPJob.status == "queued",
+                         WPJob.run_at != None)  # noqa: E711
+                 .order_by(WPJob.run_at.asc())
+                 .all()) if site_id else []
+
+    # Queued without run_at (publish ASAP)
+    asap = (WPJob.query
+            .filter(WPJob.site_id == site_id,
+                    WPJob.status == "queued",
+                    WPJob.run_at == None)  # noqa: E711
+            .filter(WPJob.kind.in_(["publish", "ai_generate"]))
+            .order_by(WPJob.created_at.asc())
+            .limit(20).all()) if site_id else []
+
+    # Pending approval — these are scheduled but blocked
+    pending_approval = [j for j in asap if (j.payload or {}).get("needs_approval")]
+    asap_ready = [j for j in asap if not (j.payload or {}).get("needs_approval")]
+
+    recently_published = (WPJob.query
+                          .filter(WPJob.site_id == site_id,
+                                  WPJob.status == "done",
+                                  WPJob.kind.in_(["publish", "ai_generate"]))
+                          .order_by(WPJob.updated_at.desc())
+                          .limit(10).all()) if site_id else []
+
+    return render_template(
+        "wp/schedule.html",
+        scheduled=scheduled,
+        asap_ready=asap_ready,
+        pending_approval=pending_approval,
+        recently_published=recently_published,
+        now=now,
+    )
+
+
 # ---------- insights ----------
 
 @wp_bp.route("/insights", methods=["GET"], endpoint="insights")
 @login_required
 def insights():
+    site = _current_site()
+    from datetime import timedelta
+    cutoff = datetime.utcnow() - timedelta(days=90)
     jobs = (WPJob.query
+            .filter(
+                WPJob.site_id == site.id,
+                (WPJob.status != "error") | (WPJob.created_at >= cutoff),
+            )
             .order_by(WPJob.created_at.desc())
-            .limit(50).all())
+            .limit(50).all()) if site else []
+
+    # Fetch live published posts from the connected WP site
+    live_posts = []
+    if site and site.id:
+        try:
+            c = WPClient(site.base_url, site.username, site.app_password)
+            raw = c.list_posts(per_page=10, status="publish")
+            live_posts = [
+                {
+                    "id": p.get("id"),
+                    "title": (p.get("title") or {}).get("rendered") or f"Post {p.get('id')}",
+                    "link": p.get("link", ""),
+                    "date": p.get("date", "")[:10],
+                    "modified": p.get("modified", "")[:10],
+                }
+                for p in (raw or []) if p.get("link")
+            ]
+        except Exception:
+            pass
 
     ga = None
     gsc = None
@@ -914,6 +1938,7 @@ def insights():
 
     seo_alerts = []
     seo_unread = 0
+    aid = None
     try:
         from app.seo.monitor import get_unread_alerts
         aid = _account_id()
@@ -923,8 +1948,176 @@ def insights():
     except Exception:
         pass
 
+    autopilot_stats = {}
+    if site:
+        from datetime import timedelta
+        week_ago = datetime.utcnow() - timedelta(days=7)
+        queued_count = WPJob.query.filter(
+            WPJob.site_id == site.id, WPJob.status == "queued",
+            WPJob.kind.in_(["publish", "ai_generate"])
+        ).count()
+        done_this_week = WPJob.query.filter(
+            WPJob.site_id == site.id, WPJob.status == "done",
+            WPJob.kind.in_(["publish", "ai_generate"]),
+            WPJob.updated_at >= week_ago
+        ).count()
+        pending_jobs = WPJob.query.filter(
+            WPJob.site_id == site.id, WPJob.status == "queued"
+        ).all()
+        pending_approval_count = sum(1 for j in pending_jobs if (j.payload or {}).get("needs_approval"))
+        autopilot_stats = {
+            "enabled": bool(getattr(site, "autopilot_enabled", False)),
+            "daily_new": getattr(site, "autopilot_daily_new", 1),
+            "require_approval": bool(getattr(site, "autopilot_require_approval", True)),
+            "queued_count": queued_count,
+            "done_this_week": done_this_week,
+            "pending_approval_count": pending_approval_count,
+        }
+
+    post_gsc = {}
+    if live_posts and aid:
+        try:
+            from app.seo.keyword_gaps import _gsc_fetch, _rows_to_dicts, _date_range
+            from app.google import _is_connected, _get_gsc_selected_site
+            if _is_connected(aid, "gsc"):
+                gsc_site_url = _get_gsc_selected_site(aid)
+                if gsc_site_url:
+                    start, end = _date_range(28)
+                    rows = _gsc_fetch(aid, gsc_site_url, start, end, dimensions=["page"], row_limit=500)
+                    for row in (rows or []):
+                        url = (row.get("keys") or [""])[0]
+                        for lp in live_posts:
+                            if lp["link"] and (lp["link"].rstrip("/") == url.rstrip("/") or url in lp["link"]):
+                                post_gsc[lp["link"]] = {
+                                    "clicks": row.get("clicks", 0),
+                                    "impressions": row.get("impressions", 0),
+                                    "position": round(row.get("position", 0), 1),
+                                    "ctr": round(row.get("ctr", 0) * 100, 1),
+                                }
+        except Exception:
+            pass
+
     return render_template("wp/insights.html", jobs=jobs, ga=ga, gsc=gsc,
-                           seo_alerts=seo_alerts, seo_unread=seo_unread)
+                           seo_alerts=seo_alerts, seo_unread=seo_unread,
+                           site=site, live_posts=live_posts,
+                           autopilot_stats=autopilot_stats, post_gsc=post_gsc,
+                           aid=aid)
+
+# ---------- freshness auto-refresh ----------
+
+def _run_weekly_freshness_scan(site: "WPSite") -> Dict[str, Any]:
+    """
+    Scan all published posts for staleness (age > 365 days).
+    For each stale post with staleness_score >= 60 that has no queued/running
+    refresh or ai_generate job, queue a 'refresh' job (max 3 per run).
+    """
+    if not site or not site.id:
+        return {"ok": False, "error": "No site"}
+
+    queued_count = 0
+    stale_posts = []
+
+    try:
+        c = WPClient(site.base_url, site.username, site.app_password)
+        raw = c.list_posts(per_page=50, status="publish")
+
+        from datetime import timezone
+        import re as _re
+        now = datetime.now(timezone.utc)
+
+        for p in raw:
+            modified_str = p.get("modified_gmt") or p.get("modified", "")
+            try:
+                modified = datetime.fromisoformat(
+                    modified_str.replace("Z", "+00:00") if modified_str else ""
+                )
+                if modified.tzinfo is None:
+                    modified = modified.replace(tzinfo=timezone.utc)
+                days_old = (now - modified).days
+            except Exception:
+                days_old = 0
+
+            # Age score: over 365 days old → over 50 staleness; at 730 days → 100
+            age_score = min(days_old / 365 * 50, 50)
+            staleness = round(age_score)  # traffic decay not available in background
+
+            if days_old > 365 and staleness >= 60:
+                stale_posts.append({
+                    "id": p.get("id"),
+                    "title": _re.sub(r"<[^>]+>", "", p.get("title", {}).get("rendered", "")),
+                    "url": (p.get("link") or "").rstrip("/"),
+                    "days_old": days_old,
+                    "staleness": staleness,
+                })
+
+        # Save scan results
+        try:
+            from app.models_seo import SEOScanResult
+            aid = site.account_id
+            if aid:
+                SEOScanResult.save_result(
+                    account_id=aid, site_id=site.id,
+                    scan_type="freshness",
+                    issue_count=len(stale_posts),
+                    item_count=len(raw),
+                    data={
+                        "stale_count": len(stale_posts),
+                        "total": len(raw),
+                        "stale_posts": [
+                            {"url": sp["url"], "days_old": sp["days_old"], "staleness": sp["staleness"]}
+                            for sp in stale_posts[:20]
+                        ],
+                    },
+                )
+        except Exception:
+            pass
+
+        # Queue refresh jobs for stale posts (max 3 per run)
+        MAX_STALE_REFRESH = 3
+        for sp in stale_posts:
+            if queued_count >= MAX_STALE_REFRESH:
+                break
+
+            post_id = sp.get("id")
+            if not post_id:
+                continue
+
+            # Skip if there is already a queued or running refresh/ai_generate job for this post
+            existing = WPJob.query.filter(
+                WPJob.site_id == site.id,
+                WPJob.kind.in_(["refresh", "ai_generate"]),
+                WPJob.status.in_(["queued", "running"]),
+            ).all()
+            already_queued = any(
+                str((j.payload or {}).get("post_id")) == str(post_id)
+                for j in existing
+            )
+            if already_queued:
+                continue
+
+            job = WPJob(
+                site_id=site.id,
+                kind="refresh",
+                status="queued",
+                payload={
+                    "post_id": post_id,
+                    "url": sp["url"],
+                    "action": "refresh_stale",
+                    "reason": "Post is over 1 year old — refreshing title and meta to stay current",
+                },
+            )
+            db.session.add(job)
+            queued_count += 1
+
+        if queued_count:
+            db.session.commit()
+
+    except Exception as exc:
+        current_app.logger.exception("_run_weekly_freshness_scan failed for site %s", site.id)
+        return {"ok": False, "error": str(exc)}
+
+    return {"ok": True, "stale_found": len(stale_posts), "refresh_queued": queued_count}
+
 
 # ---------- cron (no login) ----------
 
@@ -945,7 +2138,15 @@ def cron_runner():
     ran_at = datetime.utcnow().isoformat() + "Z"
     current_app.logger.info("wp cron-runner: start at %s (max=%s)", ran_at, max_jobs)
 
-    result = _process_queue(max_jobs=max_jobs)
+    all_sites = WPSite.query.all()
+    total_processed = 0
+    queue_errors = []
+    for _site in all_sites:
+        r = _process_queue(max_jobs=max_jobs, site=_site)
+        total_processed += r.get("processed", 0)
+        if r.get("error"):
+            queue_errors.append(r["error"])
+    result = {"ok": True, "processed": total_processed, "errors": queue_errors}
 
     # Hook SEO monitor — runs at most once per 23 h per site (throttled inside)
     seo_monitor_results = []
@@ -963,8 +2164,33 @@ def cron_runner():
         current_app.logger.exception("SEO monitor hook failed in cron_runner")
         seo_monitor_results = [{"error": str(exc)}]
 
+    # Hook SEO auto-fix — audits top GSC pages and queues seo_fix jobs (7-day throttle per URL)
+    seo_fix_results = []
+    try:
+        sites = WPSite.query.all()
+        for site in sites:
+            if site.account_id:
+                r = _auto_audit_and_fix(site, site.account_id)
+                seo_fix_results.append({"site": site.base_url, **r})
+    except Exception as exc:
+        current_app.logger.exception("SEO auto-fix hook failed in cron_runner")
+        seo_fix_results = [{"error": str(exc)}]
+
+    # Hook freshness scan — auto-queues refresh jobs for posts > 1 year old
+    freshness_results = []
+    try:
+        sites = WPSite.query.all()
+        for site in sites:
+            r = _run_weekly_freshness_scan(site)
+            freshness_results.append({"site": site.base_url, **r})
+    except Exception as exc:
+        current_app.logger.exception("Freshness scan hook failed in cron_runner")
+        freshness_results = [{"error": str(exc)}]
+
     return jsonify({"ran_at": ran_at, **result,
-                    "seo_monitor": seo_monitor_results}), 200
+                    "seo_monitor": seo_monitor_results,
+                    "seo_auto_fix": seo_fix_results,
+                    "freshness_scan": freshness_results}), 200
 
 # ---------- legacy / compatibility aliases ----------
 
@@ -1072,26 +2298,387 @@ def tech_seo():
     return render_template("wp/tech_seo.html", site=site, result=result)
 
 
-@wp_bp.route("/seo-audit", methods=["GET", "POST"], endpoint="seo_audit")
+@wp_bp.route("/seo-audit", methods=["GET"], endpoint="seo_audit")
 @login_required
 def seo_audit():
+    site = _current_site()
+    wp_posts = []
+    if site:
+        try:
+            c = WPClient(site.base_url, site.username, site.app_password)
+
+            def _to_item(p, kind):
+                title = (p.get("title") or {}).get("rendered") or f"{kind.title()} {p.get('id')}"
+                return {"id": p.get("id"), "title": title, "link": p.get("link", ""), "kind": kind}
+
+            pages = [_to_item(p, "page") for p in (c.list_pages(per_page=100) or []) if p.get("link")]
+            posts = [_to_item(p, "post") for p in (c.list_posts(per_page=100, status="publish") or []) if p.get("link")]
+            wp_posts = pages + posts
+        except Exception:
+            current_app.logger.debug("seo_audit: could not fetch WP posts/pages")
+    return render_template("wp/seo_audit.html", site=site, wp_posts=wp_posts)
+
+
+@wp_bp.route("/seo-audit/scan", methods=["GET"], endpoint="seo_audit_scan")
+@login_required
+def seo_audit_scan():
+    """AJAX endpoint — audit a single URL and return JSON."""
+    from flask import jsonify
+    url = (request.args.get("url") or "").strip()
+    keyword = (request.args.get("keyword") or "").strip()
+    if not url:
+        return jsonify({"error": "url required"}), 400
+    try:
+        from app.wp.seo_audit import audit_url
+        result = audit_url(url, keyword)
+        return jsonify(result)
+    except Exception:
+        current_app.logger.exception("SEO audit scan failed for %s", url)
+        return jsonify({"error": "Audit failed"}), 500
+
+
+@wp_bp.route("/seo-audit/ai-review", methods=["GET", "POST"], endpoint="seo_audit_review")
+@login_required
+def seo_audit_review():
+    """
+    AI-powered SEO audit quality gate.
+    Runs the standard audit then passes every finding through Claude to:
+    - Validate it's a genuine issue (not a false positive)
+    - Add evidence and confidence score
+    - Generate a developer-ready ticket with exact fix instructions
+    Paid users only.
+    """
+    if not is_paid_account():
+        flash("AI Audit Review is available on paid plans.", "warning")
+        return redirect(url_for("main_bp.pricing"))
+
     result = None
+    url_checked = None
+
     if request.method == "POST":
         url = (request.form.get("url") or "").strip()
         keyword = (request.form.get("keyword") or "").strip()
         if not url:
             flash("URL is required.", "error")
-            return see_other("wp_bp.seo_audit")
+            return render_template("wp/seo_audit_review.html", result=None, site=_current_site())
+
+        url_checked = url
         try:
             from app.wp.seo_audit import audit_url
-            result = audit_url(url, keyword)
-            if result.get("error"):
-                flash(result["error"], "error")
-                result = None
-        except Exception:
-            current_app.logger.exception("SEO audit failed")
-            flash("Audit failed — please try again.", "error")
-    return render_template("wp/seo_audit.html", result=result)
+            raw = audit_url(url, keyword)
+            if raw.get("error"):
+                flash(raw["error"], "error")
+                return render_template("wp/seo_audit_review.html", result=None, site=_current_site())
+
+            issues = raw.get("issues") or []
+            if not issues:
+                flash("No issues found — nothing to review.", "info")
+                return render_template("wp/seo_audit_review.html", result=raw, site=_current_site(),
+                                       url_checked=url_checked)
+
+            # Build prompt for AI reviewer
+            issue_lines = []
+            for i, iss in enumerate(issues[:20], 1):
+                issue_lines.append(
+                    f"{i}. [{iss.get('severity','?').upper()}] {iss.get('issue','')}: {iss.get('detail','')}"
+                )
+
+            prompt = f"""You are a senior SEO engineer reviewing automated audit findings for: {url}
+{"Target keyword: " + keyword if keyword else ""}
+
+Audit findings to validate:
+{chr(10).join(issue_lines)}
+
+For each finding, apply the "Google engineer test": would a Google engineer confirm this is a genuine, correctly-diagnosed SEO problem?
+
+Return a JSON array with one object per finding (same order), each with:
+- finding_number: int (1-based)
+- valid: true | false
+- confidence: "high" | "medium" | "low"
+- false_positive_reason: string or null (why it might not be a real issue)
+- evidence: string (what to look for to confirm the issue)
+- priority: "critical" | "high" | "medium" | "low"
+- dev_ticket: string (exact developer-ready instruction: what file/element to change, what to change it to)
+- estimated_impact: string (brief description of ranking/UX benefit if fixed)"""
+
+            from app.ai_clients import get_ai_client
+            import json as _json, re as _re
+            client = get_ai_client()
+            response = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=2000,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            raw_text = response.content[0].text
+            match = _re.search(r'\[.*\]', raw_text, _re.DOTALL)
+            reviews = _json.loads(match.group()) if match else []
+
+            # Merge reviews back onto issues
+            review_map = {r.get("finding_number"): r for r in reviews}
+            reviewed_issues = []
+            for i, iss in enumerate(issues[:20], 1):
+                review = review_map.get(i, {})
+                reviewed_issues.append({**iss, "review": review})
+
+            result = {
+                **raw,
+                "reviewed_issues": reviewed_issues,
+                "valid_count":   sum(1 for r in reviews if r.get("valid")),
+                "invalid_count": sum(1 for r in reviews if not r.get("valid")),
+                "critical_count": sum(1 for r in reviews if r.get("priority") == "critical" and r.get("valid")),
+            }
+            flash(f"AI review complete — {result['valid_count']} confirmed issues, "
+                  f"{result['invalid_count']} possible false positives.", "success")
+
+        except Exception as exc:
+            current_app.logger.exception("SEO AI audit review failed")
+            flash(f"Review failed: {exc}", "error")
+
+    return render_template(
+        "wp/seo_audit_review.html",
+        result=result,
+        site=_current_site(),
+        url_checked=url_checked,
+    )
+
+
+@wp_bp.route("/internal-links", methods=["GET", "POST"], endpoint="internal_links")
+@login_required
+def internal_links():
+    """Find and insert internal link opportunities for a WordPress post."""
+    import html as _html_mod
+    site = _current_site()
+    posts: List[Dict] = []
+    suggestions: List[Dict] = []
+    source_post: Optional[Dict] = None
+    error = None
+
+    if site:
+        try:
+            c = WPClient(site.base_url, site.username, site.app_password)
+            posts = c.list_posts(per_page=100, status="publish")
+        except Exception as exc:
+            error = str(exc)
+
+    if request.method == "POST":
+        action  = (request.form.get("action") or "suggest").strip()
+        post_id = int(request.form.get("post_id") or 0)
+
+        if not site:
+            flash("Connect a WordPress site first.", "error")
+            return see_other("wp_bp.settings")
+        if not post_id:
+            flash("Select a post.", "error")
+            return render_template("wp/internal_links.html",
+                                   site=site, posts=posts, suggestions=[], source_post=None, error=error)
+        try:
+            c = WPClient(site.base_url, site.username, site.app_password)
+            source_post = c.get_post(post_id)
+            source_html  = source_post.get("content", {}).get("rendered", "")
+            source_title = _html_mod.unescape(source_post.get("title", {}).get("rendered", "") or "")
+
+            from app.wp.internal_links import find_link_opportunities, insert_links
+            suggestions = find_link_opportunities(post_id, source_html, source_title, posts)
+
+            if action == "apply" and suggestions:
+                selected_indices = [int(i) for i in request.form.getlist("link_idx") if i.isdigit()]
+                chosen = [suggestions[i] for i in selected_indices if i < len(suggestions)]
+
+                if not chosen:
+                    flash("Select at least one link to insert.", "warning")
+                else:
+                    new_html, count = insert_links(source_html, chosen)
+                    if count:
+                        payload = {
+                            "post_id":        post_id,
+                            "title":          source_title,
+                            "html":           new_html,
+                            "status":         source_post.get("status", "publish"),
+                            "source":         "internal_links",
+                            "links_inserted": count,
+                        }
+                        job = WPJob(site_id=site.id, kind="edit", payload=payload)
+                        db.session.add(job)
+                        db.session.commit()
+                        flash(f"Queued {count} internal link{'s' if count != 1 else ''} "
+                              f"for post #{post_id} (Job #{job.id}).", "success")
+                        return see_other("wp_bp.edits")
+                    else:
+                        flash("Anchor text not found verbatim in post content. "
+                              "Try editing the anchor text manually.", "warning")
+        except Exception as exc:
+            current_app.logger.exception("Internal links failed")
+            error = str(exc)
+
+    return render_template("wp/internal_links.html",
+                           site=site, posts=posts, suggestions=suggestions,
+                           source_post=source_post, error=error)
+
+
+@wp_bp.route("/content-brief", methods=["GET", "POST"], endpoint="content_brief")
+@login_required
+def content_brief():
+    """Generate a comprehensive content brief from a keyword + GSC data."""
+    if not is_paid_account():
+        flash("Content briefs are available on paid plans.", "warning")
+        return redirect(url_for("main_bp.pricing"))
+
+    brief = None
+    keyword = ""
+    error = None
+
+    if request.method == "POST":
+        keyword = (request.form.get("keyword") or "").strip()
+        if not keyword:
+            flash("Keyword is required.", "error")
+            return render_template("wp/content_brief.html", brief=None, keyword="", error=None)
+
+        try:
+            aid = _account_id()
+            gsc_data: Dict[str, Any] = {}
+            related_queries: List[str] = []
+
+            # Pull GSC data for this keyword
+            try:
+                from app.google import _is_connected, _get_gsc_selected_site
+                from app.seo.keyword_gaps import _gsc_fetch, _rows_to_dicts, _date_range
+                if aid and _is_connected(aid, "gsc"):
+                    site_url = _get_gsc_selected_site(aid) or os.getenv("GSC_SITE", "")
+                    if site_url:
+                        end, start = _date_range(3, 30)
+                        rows = _gsc_fetch(aid, site_url, start, end, ["query"], row_limit=200)
+                        all_q = _rows_to_dicts(rows, ["query"])
+                        for q in all_q:
+                            if keyword.lower() in q.get("query", "").lower():
+                                gsc_data = q
+                            elif any(w in q.get("query", "").lower()
+                                     for w in keyword.lower().split()):
+                                related_queries.append(q.get("query", ""))
+                        related_queries = related_queries[:10]
+            except Exception:
+                pass
+
+            pos_text = (f"currently ranking at position {round(gsc_data.get('position', 0), 1)}, "
+                        f"{int(gsc_data.get('impressions', 0))} impressions/month, "
+                        f"{int(gsc_data.get('clicks', 0))} clicks/month"
+                        if gsc_data else "no current ranking data")
+
+            prompt = f"""You are an expert SEO content strategist for local service businesses (HVAC, plumbing, electrical, roofing, landscaping).
+
+Target keyword: "{keyword}"
+GSC data: {pos_text}
+Related queries from GSC: {', '.join(related_queries) if related_queries else 'none available'}
+
+Generate a comprehensive content brief as a JSON object with exactly these keys:
+- recommended_title: SEO-optimized title (55-60 chars)
+- meta_description: compelling meta description (145-155 chars)
+- word_count_target: recommended word count as integer
+- h1: the exact H1 heading
+- outline: array of strings like ["H2: Section Name", "H3: Sub-section", ...]
+- semantic_terms: array of 12-15 semantically related terms to include naturally
+- questions_to_answer: array of 6-8 questions this post must answer
+- schema_types: array of schema markup types to include
+- tone: recommended tone (one of: informational, commercial, local, how-to)
+- cta: recommended call-to-action text
+- positioning: 2-sentence description of the content angle and why it will rank
+- estimated_difficulty: easy | medium | hard"""
+
+            from app.ai_clients import get_ai_client
+            import json as _json, re as _re
+            client = get_ai_client()
+            response = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=1500,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            raw = response.content[0].text
+            match = _re.search(r'\{.*\}', raw, _re.DOTALL)
+            if match:
+                brief = _json.loads(match.group())
+                brief["keyword"] = keyword
+                brief["gsc_data"] = gsc_data
+
+                # Enrich with AI-generated competitor content guidance
+                try:
+                    from app.ai_clients import get_ai_client
+                    _client = get_ai_client()
+                    _enrich_prompt = (
+                        f"You are an SEO content strategist. For the keyword '{keyword}', "
+                        f"describe what content the top-ranking pages typically include "
+                        f"(headings, subtopics, word count, content format, key entities to mention). "
+                        f"Return a JSON object with: "
+                        f"typical_word_count (int), "
+                        f"recommended_headings (list of 5-8 H2 titles), "
+                        f"key_entities (list of 5-10 important terms to mention), "
+                        f"content_format (e.g. 'how-to guide', 'listicle', 'comparison'), "
+                        f"unique_angle (1-sentence suggestion for differentiation). "
+                        f"JSON only."
+                    )
+                    _resp = _client.messages.create(
+                        model="claude-haiku-4-5-20251001",
+                        max_tokens=600,
+                        messages=[{"role": "user", "content": _enrich_prompt}],
+                    )
+                    import re as _re2, json as _json2
+                    _raw = _resp.content[0].text.strip()
+                    _raw = _re2.sub(r'^```(?:json)?\s*', '', _raw, flags=_re2.MULTILINE)
+                    _raw = _re2.sub(r'\s*```$', '', _raw, flags=_re2.MULTILINE)
+                    _enrichment = _json2.loads(_raw)
+                    if brief and isinstance(brief, dict):
+                        brief["serp_enrichment"] = _enrichment
+                except Exception:
+                    pass
+            else:
+                error = "Could not parse AI response. Please try again."
+
+        except Exception as exc:
+            current_app.logger.exception("Content brief generation failed")
+            error = f"Brief generation failed: {exc}"
+
+    return render_template("wp/content_brief.html", brief=brief, keyword=keyword, error=error)
+
+
+@wp_bp.route("/seo-audit/apply-fixes", methods=["POST"], endpoint="seo_apply_fixes")
+@login_required
+def seo_apply_fixes():
+    """
+    Run SEO/AEO audit on a URL, generate schema, and queue an seo_fix job
+    to apply implementable fixes directly to the WordPress post.
+    """
+    site = _current_site()
+    if not site:
+        flash("Connect a WordPress site first.", "error")
+        return see_other("wp_bp.seo_audit")
+
+    url     = (request.form.get("url")     or "").strip()
+    keyword = (request.form.get("keyword") or "").strip()
+
+    if not url:
+        flash("URL is required.", "error")
+        return see_other("wp_bp.seo_audit")
+
+    payload = _build_seo_fix_payload(site, url, keyword=keyword, source="manual")
+
+    if payload is None:
+        # Could not find post or no fixes to apply — re-run audit to show user
+        flash("Could not match that URL to a WordPress post, or no fixable issues found. "
+              "Make sure the URL belongs to your connected WP site.", "warning")
+        return see_other("wp_bp.seo_audit")
+
+    job = WPJob(site_id=site.id, kind="seo_fix", payload=payload)
+    db.session.add(job)
+    db.session.commit()
+
+    fixes = []
+    if payload.get("schema_html"):  fixes.append("JSON-LD schema")
+    if payload.get("yoast_desc"):   fixes.append("Yoast meta description")
+
+    flash(
+        f"SEO fix queued for post #{payload['post_id']} "
+        f"(Job #{job.id}) — will apply: {', '.join(fixes) or 'available fixes'}.",
+        "success",
+    )
+    return see_other("wp_bp.edits")
 
 
 @wp_bp.route("/analyze-page", methods=["GET"], endpoint="analyze_page")
@@ -1184,14 +2771,21 @@ def edit_post_submit(post_id: int):
     if needs_approval:
         status = "draft"
 
+    try:
+        existing_post = WPClient(site.base_url, site.username, site.app_password).get_post(post_id)
+    except Exception:
+        existing_post = {}
+
     payload = {
-        "post_id":      post_id,
-        "title":        title,
-        "html":         html_body,
-        "excerpt":      excerpt,
-        "yoast_desc":   yoast_desc,
-        "status":       status,
+        "post_id":        post_id,
+        "title":          title,
+        "html":           html_body,
+        "excerpt":        excerpt,
+        "yoast_desc":     yoast_desc,
+        "status":         status,
         "needs_approval": needs_approval,
+        "before_title":   (existing_post.get("title") or {}).get("rendered", ""),
+        "before_excerpt": (existing_post.get("excerpt") or {}).get("rendered", ""),
     }
     job = WPJob(site_id=site.id, kind="edit", payload=payload)
     db.session.add(job)
@@ -1204,8 +2798,16 @@ def edit_post_submit(post_id: int):
 @login_required
 def edits():
     """Dashboard of all pending / completed edit and refresh jobs."""
+    site = _current_site()
     status_filter = request.args.get("status", "").strip()
-    q = WPJob.query.filter(WPJob.kind.in_(["edit", "refresh"]))
+    EDIT_KINDS = ["edit", "refresh", "seo_fix"]
+
+    if not site:
+        return render_template("wp/edits.html",
+                               jobs=[], counts={s: 0 for s in ("queued", "running", "done", "error")},
+                               status_filter=status_filter)
+
+    q = WPJob.query.filter(WPJob.site_id == site.id, WPJob.kind.in_(EDIT_KINDS))
     if status_filter:
         q = q.filter_by(status=status_filter)
     jobs = q.order_by(WPJob.created_at.desc()).limit(200).all()
@@ -1213,12 +2815,1283 @@ def edits():
     counts: Dict[str, int] = {}
     for s in ("queued", "running", "done", "error"):
         counts[s] = WPJob.query.filter(
-            WPJob.kind.in_(["edit", "refresh"]),
+            WPJob.site_id == site.id,
+            WPJob.kind.in_(EDIT_KINDS),
             WPJob.status == s,
         ).count()
 
     return render_template("wp/edits.html",
                            jobs=jobs, counts=counts, status_filter=status_filter)
+
+@wp_bp.route("/freshness", methods=["GET"], endpoint="freshness")
+@login_required
+def freshness():
+    """Content Freshness Dashboard — ranks posts by staleness + traffic decay."""
+    aid = _account_id()
+    site = _current_site()
+    posts = []
+    error = None
+
+    if site:
+        try:
+            from app.wp.wp_client import WPClient
+            c = WPClient(site.base_url, site.username, site.app_password)
+            raw = c.list_posts(per_page=50, status="publish")
+
+            # Build a map of declining pages from GSC if available
+            declining_map: dict = {}
+            try:
+                from app.google import _is_connected, _get_gsc_selected_site
+                from app.seo.keyword_gaps import run_keyword_gap_analysis
+                import os
+                if aid and _is_connected(aid, "gsc"):
+                    gsc_url = _get_gsc_selected_site(aid) or os.getenv("GSC_SITE", "")
+                    if gsc_url:
+                        gap = run_keyword_gap_analysis(aid, gsc_url)
+                        for dp in (gap.get("declining_pages") or []):
+                            pg = dp.get("page", "").rstrip("/")
+                            declining_map[pg] = dp.get("change_pct", 0)
+            except Exception:
+                pass
+
+            from datetime import datetime, timezone
+            import re as _re
+            now = datetime.now(timezone.utc)
+
+            for p in raw:
+                modified_str = p.get("modified_gmt") or p.get("modified", "")
+                try:
+                    modified = datetime.fromisoformat(
+                        modified_str.replace("Z", "+00:00") if modified_str else ""
+                    )
+                    if modified.tzinfo is None:
+                        modified = modified.replace(tzinfo=timezone.utc)
+                    days_old = (now - modified).days
+                except Exception:
+                    days_old = 0
+
+                post_url = (p.get("link") or "").rstrip("/")
+                traffic_change = declining_map.get(post_url)
+
+                # Staleness score: 0-100 (higher = staler)
+                age_score = min(days_old / 365 * 50, 50)
+                decay_score = min(abs(traffic_change) / 2, 50) if traffic_change and traffic_change < 0 else 0
+                staleness = round(age_score + decay_score)
+
+                posts.append({
+                    "id":             p.get("id"),
+                    "title":          _re.sub(r"<[^>]+>", "", p.get("title", {}).get("rendered", "")),
+                    "url":            post_url,
+                    "days_old":       days_old,
+                    "modified":       modified_str[:10] if modified_str else "—",
+                    "traffic_change": round(traffic_change, 1) if traffic_change is not None else None,
+                    "staleness":      staleness,
+                })
+
+            posts.sort(key=lambda x: x["staleness"], reverse=True)
+        except Exception as exc:
+            logger.exception("Freshness dashboard failed")
+            error = f"Could not load posts: {exc}"
+
+    return render_template(
+        "wp/freshness.html",
+        site=site,
+        posts=posts,
+        error=error,
+    )
+
+
+@wp_bp.route("/freshness/ai-plan", methods=["POST"], endpoint="freshness_ai_plan")
+@login_required
+def freshness_ai_plan():
+    """Generate an AI-powered content refresh plan for stale posts."""
+    import json as _json
+    import re as _re
+    try:
+        data = request.get_json(force=True) or {}
+        posts = data.get("posts", [])
+
+        # Sort by staleness descending and take top 10
+        top_posts = sorted(posts, key=lambda p: p.get("staleness", 0), reverse=True)[:10]
+
+        post_lines = "\n".join(
+            f"{i+1}. \"{p.get('title','')}\" — URL: {p.get('url','')} | "
+            f"Days old: {p.get('days_old',0)} | Staleness score: {p.get('staleness',0)} | "
+            f"Traffic change: {p.get('traffic_change') if p.get('traffic_change') is not None else 'N/A'}%"
+            for i, p in enumerate(top_posts)
+        )
+
+        prompt = f"""You are a content strategist helping prioritise a content refresh plan for a WordPress site.
+
+Here are the top stale posts ranked by staleness score (higher = more urgent):
+
+{post_lines}
+
+Return a JSON array of recommendation objects — one per post above — with EXACTLY this structure:
+[
+  {{
+    "title": "post title",
+    "url": "post url",
+    "priority": <integer 1-10, 10 = most urgent>,
+    "action": "<one of: refresh | rewrite | consolidate | redirect>",
+    "reason": "<1-2 sentence explanation of why this action is recommended>",
+    "specific_changes": ["bullet 1", "bullet 2", "bullet 3"]
+  }},
+  ...
+]
+
+Rules:
+- priority should reflect how urgently the post needs attention (consider staleness + traffic decay together)
+- action meanings: refresh=update stats/links/copy; rewrite=full new content; consolidate=merge with another post; redirect=remove and redirect traffic
+- specific_changes must contain 2-3 concrete, actionable bullet points
+- Return ONLY the JSON array, no prose before or after."""
+
+        from app.ai_clients import get_ai_client
+        client = get_ai_client()
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=1500,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = response.content[0].text
+        match = _re.search(r'\[.*\]', raw, _re.DOTALL)
+        if not match:
+            return jsonify({"error": "Could not parse AI response. Please try again."})
+        recommendations = _json.loads(match.group())
+        return jsonify({"recommendations": recommendations})
+
+    except Exception as exc:
+        logger.exception("AI freshness plan failed")
+        return jsonify({"error": f"AI plan generation failed: {exc}"})
+
+
+@wp_bp.route("/broken-links", methods=["GET", "POST"], endpoint="broken_links")
+@login_required
+def broken_links():
+    """Scan published posts for broken links."""
+    site = _current_site()
+    report = None
+    error = None
+    scanning = False
+
+    if request.method == "POST" and site:
+        scanning = True
+        try:
+            from app.wp.wp_client import WPClient
+            from app.wp.broken_links import scan_broken_links
+            c = WPClient(site.base_url, site.username, site.app_password)
+            raw = c.list_posts(per_page=30, status="publish")
+            report = scan_broken_links(raw, site.base_url)
+            if report and site:
+                try:
+                    from app.models_seo import SEOScanResult
+                    SEOScanResult.save_result(
+                        account_id=_account_id(), site_id=site.id,
+                        scan_type="broken_links",
+                        issue_count=report.get("broken_count", 0),
+                        item_count=report.get("total_links_checked"),
+                        data={
+                            "broken_count": report.get("broken_count"),
+                            "total_links_checked": report.get("total_links_checked"),
+                            "broken": report.get("broken", [])[:30],
+                        },
+                    )
+                except Exception:
+                    pass
+        except Exception as exc:
+            logger.exception("Broken link scan failed")
+            error = f"Scan failed: {exc}"
+
+    return render_template(
+        "wp/broken_links.html",
+        site=site,
+        report=report,
+        error=error,
+        scanning=scanning,
+    )
+
+
+@wp_bp.route("/bulk-meta", methods=["GET", "POST"], endpoint="bulk_meta")
+@login_required
+def bulk_meta():
+    """Bulk meta editor — update titles and meta descriptions across multiple posts."""
+    site = _current_site()
+    posts = []
+    error = None
+    saved_count = 0
+
+    if site:
+        try:
+            from app.wp.wp_client import WPClient
+            import re as _re
+            c = WPClient(site.base_url, site.username, site.app_password)
+
+            if request.method == "POST":
+                action = request.form.get("action", "save")
+
+                if action == "ai_generate":
+                    # Generate AI title + meta for selected posts
+                    selected_ids = request.form.getlist("selected_ids")
+                    if not selected_ids:
+                        flash("Select at least one post to generate meta for.", "warning")
+                        return redirect(url_for("wp_bp.bulk_meta"))
+
+                    raw = c.list_posts(per_page=100, status="publish")
+                    sel_set = set(int(i) for i in selected_ids)
+                    to_generate = [p for p in raw if p.get("id") in sel_set]
+
+                    from app.ai_clients import get_ai_client
+                    import json as _json, re as _re2
+                    ai_client = get_ai_client()
+
+                    generated = {}
+                    for p in to_generate[:10]:
+                        pid = p.get("id")
+                        title_raw = _re.sub(r"<[^>]+>", "", p.get("title", {}).get("rendered", ""))
+                        snippet = _re.sub(r"<[^>]+>", " ", p.get("excerpt", {}).get("rendered", "") or "")[:300]
+                        prompt = (
+                            f"Write an SEO-optimised title tag (50-60 chars) and meta description (145-155 chars) "
+                            f"for this blog post.\n\nCurrent title: {title_raw}\nContent excerpt: {snippet}\n\n"
+                            f"Return JSON with keys: title, meta_description"
+                        )
+                        try:
+                            resp = ai_client.messages.create(
+                                model="claude-haiku-4-5-20251001",
+                                max_tokens=300,
+                                messages=[{"role": "user", "content": prompt}],
+                            )
+                            m = _re2.search(r'\{.*\}', resp.content[0].text, _re2.DOTALL)
+                            if m:
+                                data = _json.loads(m.group())
+                                generated[pid] = data
+                        except Exception:
+                            pass
+
+                    # Store generated values in session for pre-fill
+                    from flask import session as flask_session
+                    flask_session["bulk_meta_generated"] = generated
+                    flash(f"Generated meta for {len(generated)} post(s). Review and save below.", "success")
+                    return redirect(url_for("wp_bp.bulk_meta"))
+
+                elif action == "save":
+                    # Save changed titles and excerpts
+                    post_ids = request.form.getlist("post_id")
+                    for pid_str in post_ids:
+                        try:
+                            pid = int(pid_str)
+                            new_title = request.form.get(f"title_{pid}", "").strip()
+                            new_meta  = request.form.get(f"meta_{pid}", "").strip()
+                            if not new_title:
+                                continue
+                            payload = {"title": new_title}
+                            if new_meta:
+                                payload["excerpt"] = new_meta
+                                payload["meta"] = {"_yoast_wpseo_metadesc": new_meta}
+                            c._req("POST", f"/wp/v2/posts/{pid}", json_body=payload)
+                            saved_count += 1
+                        except Exception:
+                            pass
+                    flash(f"Saved {saved_count} post(s).", "success" if saved_count else "warning")
+
+            # Load posts for display
+            raw = c.list_posts(per_page=50, status="publish")
+            from flask import session as flask_session
+            generated = flask_session.pop("bulk_meta_generated", {})
+
+            for p in raw:
+                pid = p.get("id")
+                title = _re.sub(r"<[^>]+>", "", p.get("title", {}).get("rendered", ""))
+                excerpt = _re.sub(r"<[^>]+>", " ", p.get("excerpt", {}).get("rendered", "") or "").strip()
+                gen = generated.get(pid) or generated.get(str(pid)) or {}
+                posts.append({
+                    "id":      pid,
+                    "title":   gen.get("title") or title,
+                    "meta":    gen.get("meta_description") or excerpt[:160],
+                    "url":     p.get("link", ""),
+                    "ai_generated": bool(gen),
+                })
+
+        except Exception as exc:
+            logger.exception("Bulk meta editor failed")
+            error = f"Could not load posts: {exc}"
+
+    return render_template(
+        "wp/bulk_meta.html",
+        site=site,
+        posts=posts,
+        error=error,
+    )
+
+
+@wp_bp.route("/image-seo", methods=["GET", "POST"], endpoint="image_seo")
+@login_required
+def image_seo():
+    """Image SEO optimizer — audit alt texts across all posts, AI-generate missing ones."""
+    site = _current_site()
+    posts_data = []
+    error = None
+    saved_count = 0
+
+    if site:
+        try:
+            from app.wp.wp_client import WPClient
+            import re as _re
+            c = WPClient(site.base_url, site.username, site.app_password)
+
+            if request.method == "POST":
+                action = request.form.get("action", "")
+                if action == "save_alts":
+                    # Apply edited alt texts back to post content
+                    post_ids = request.form.getlist("post_id")
+                    for pid_str in post_ids:
+                        try:
+                            pid = int(pid_str)
+                            post = c.get_post(pid)
+                            content = post.get("content", {}).get("raw") or \
+                                      post.get("content", {}).get("rendered", "")
+                            # Find all img src → new alt mapping
+                            changed = False
+                            for key, val in request.form.items():
+                                if key.startswith(f"alt_{pid}_"):
+                                    img_idx = key[len(f"alt_{pid}_"):]
+                                    src_key = f"src_{pid}_{img_idx}"
+                                    src = request.form.get(src_key, "")
+                                    if src and val:
+                                        # Replace alt="" or add alt to matching img
+                                        pattern = (r'(<img[^>]*src=["\']' +
+                                                   _re.escape(src) +
+                                                   r'["\'][^>]*)(alt=["\'][^"\']*["\'])?([^>]*>)')
+                                        new_tag = rf'\1 alt="{val}"\3'
+                                        new_content, n = _re.subn(
+                                            pattern, new_tag, content,
+                                            flags=_re.IGNORECASE | _re.DOTALL,
+                                        )
+                                        if n:
+                                            content = new_content
+                                            changed = True
+                            if changed:
+                                c._req("POST", f"/wp/v2/posts/{pid}",
+                                       json_body={"content": content})
+                                saved_count += 1
+                        except Exception:
+                            pass
+                    flash(f"Saved alt texts for {saved_count} post(s).", "success")
+
+                elif action == "ai_generate":
+                    # AI-generate alt texts for selected images
+                    if not is_paid_account():
+                        flash("AI alt text generation is available on paid plans.", "warning")
+                        return redirect(url_for("wp_bp.image_seo"))
+
+                    selected = request.form.getlist("selected_img")
+                    if selected:
+                        from app.ai_clients import get_ai_client
+                        ai_client = get_ai_client()
+                        import json as _json, re as _re2
+
+                        generated: dict = {}
+                        for img_key in selected[:20]:
+                            src = request.form.get(f"src_val_{img_key}", img_key)
+                            filename = src.split("/")[-1].split("?")[0]
+                            post_title = request.form.get(f"post_title_{img_key}", "")
+                            context = f'in a blog post titled "{post_title}"' if post_title else "on a website"
+                            prompt = (
+                                f"Write a concise, descriptive SEO alt text (max 120 characters) "
+                                f"for an image {context}. "
+                                f"Image filename: {filename}. "
+                                f"Alt text should describe what's in the image and be relevant to the page topic. "
+                                f"Return only the alt text with no quotes, punctuation at end, or explanation."
+                            )
+                            try:
+                                resp = ai_client.messages.create(
+                                    model="claude-haiku-4-5-20251001",
+                                    max_tokens=60,
+                                    messages=[{"role": "user", "content": prompt}],
+                                )
+                                generated[img_key] = resp.content[0].text.strip().strip('"\'')
+                            except Exception:
+                                pass
+                        from flask import session as fs
+                        fs["img_seo_generated"] = generated
+                        flash(f"Generated {len(generated)} alt text(s). Review and save.", "success")
+                        return redirect(url_for("wp_bp.image_seo"))
+
+            # Load posts and extract image data
+            from flask import session as fs
+            generated = fs.pop("img_seo_generated", {})
+
+            raw = c.list_posts(per_page=30, status="publish")
+            IMG_RE = _re.compile(
+                r'<img([^>]*?)(?:src=["\']([^"\']+)["\'])([^>]*?)(?:alt=["\']([^"\']*)["\'])?([^>]*?)>',
+                _re.IGNORECASE | _re.DOTALL,
+            )
+            for p in raw:
+                pid = p.get("id")
+                title = _re.sub(r"<[^>]+>", "", p.get("title", {}).get("rendered", ""))
+                content = p.get("content", {}).get("rendered", "") or ""
+                images = []
+                for idx, m in enumerate(_re.finditer(
+                    r'<img[^>]*src=["\']([^"\']+)["\'][^>]*>',
+                    content, _re.IGNORECASE,
+                )):
+                    full_tag = m.group(0)
+                    src = m.group(1)
+                    alt_m = _re.search(r'alt=["\']([^"\']*)["\']', full_tag, _re.IGNORECASE)
+                    alt = alt_m.group(1) if alt_m else None
+                    img_key = f"{pid}_{idx}"
+                    filename = src.split("/")[-1].split("?")[0]
+                    is_decorative = bool(_re.match(r'(icon|logo|bg|background|divider)', filename, _re.I))
+                    suggested = generated.get(img_key, "")
+                    images.append({
+                        "idx":      idx,
+                        "src":      src,
+                        "filename": filename,
+                        "alt":      alt,
+                        "missing":  alt is None or alt.strip() == "",
+                        "generic":  alt and bool(_re.match(r'(image|img|photo|picture|\d+)', alt.strip(), _re.I)),
+                        "key":      img_key,
+                        "suggested": suggested,
+                        "decorative": is_decorative,
+                    })
+
+                if images:
+                    missing = sum(1 for i in images if i["missing"] and not i["decorative"])
+                    posts_data.append({
+                        "id": pid, "title": title,
+                        "url": p.get("link", ""),
+                        "images": images,
+                        "missing_count": missing,
+                        "total": len(images),
+                    })
+
+            posts_data.sort(key=lambda x: x["missing_count"], reverse=True)
+
+        except Exception as exc:
+            logger.exception("Image SEO failed")
+            error = f"Could not load posts: {exc}"
+
+    return render_template(
+        "wp/image_seo.html",
+        site=site,
+        posts_data=posts_data,
+        error=error,
+    )
+
+
+@wp_bp.route("/bulk-fix-alt-text", methods=["POST"], endpoint="bulk_fix_alt_text")
+@login_required
+def bulk_fix_alt_text():
+    """
+    Queue edit jobs for each image missing alt text (up to 20 per run).
+    Uses AI to generate descriptive alt text from the image filename/title.
+    Returns JSON: {"queued": N}
+    """
+    site = _current_site()
+    if not site:
+        return jsonify({"error": "No WordPress site configured"}), 400
+
+    import re as _re
+
+    queued = 0
+    try:
+        c = WPClient(site.base_url, site.username, site.app_password)
+        raw = c.list_posts(per_page=30, status="publish")
+
+        # Collect images missing alt text across all posts
+        missing_images: List[Dict[str, Any]] = []
+        for p in raw:
+            pid = p.get("id")
+            content = p.get("content", {}).get("rendered", "") or ""
+            for idx, m in enumerate(_re.finditer(
+                r'<img[^>]*src=["\']([^"\']+)["\'][^>]*>',
+                content, _re.IGNORECASE,
+            )):
+                full_tag = m.group(0)
+                src = m.group(1)
+                alt_m = _re.search(r'alt=["\']([^"\']*)["\']', full_tag, _re.IGNORECASE)
+                alt = alt_m.group(1) if alt_m else None
+                filename = src.split("/")[-1].split("?")[0]
+                is_decorative = bool(_re.match(r'(icon|logo|bg|background|divider)', filename, _re.I))
+                if (alt is None or alt.strip() == "") and not is_decorative:
+                    missing_images.append({
+                        "post_id": pid,
+                        "src": src,
+                        "filename": filename,
+                        "idx": idx,
+                    })
+            if len(missing_images) >= 20:
+                break
+
+        missing_images = missing_images[:20]
+
+        # Determine if AI is available
+        has_ai = bool(
+            current_app.config.get("OPENAI_API_KEY")
+            or current_app.config.get("ANTHROPIC_API_KEY")
+            or os.getenv("OPENAI_API_KEY")
+            or os.getenv("ANTHROPIC_API_KEY")
+        )
+
+        # Group by post_id so we can queue one edit job per post
+        from collections import defaultdict
+        posts_to_fix: Dict[int, List[Dict]] = defaultdict(list)
+        for img in missing_images:
+            posts_to_fix[img["post_id"]].append(img)
+
+        for pid, imgs in posts_to_fix.items():
+            # Build src → alt_text mapping for this post
+            alt_map: Dict[str, str] = {}
+            for img in imgs:
+                filename = img["filename"]
+                # Fallback alt text from filename
+                name_only = _re.sub(r'\.[^.]+$', '', filename)
+                fallback_alt = _re.sub(r'[-_]+', ' ', name_only).strip()
+
+                if has_ai:
+                    try:
+                        from app.ai_clients import get_ai_client
+                        ai_client = get_ai_client()
+                        resp = ai_client.messages.create(
+                            model="claude-haiku-4-5-20251001",
+                            max_tokens=60,
+                            messages=[{"role": "user", "content": (
+                                f"Write a 5-10 word descriptive alt text for a website image titled: "
+                                f"'{filename}'. Focus on describing what the image shows, not its "
+                                f"filename format. Return only the alt text, no quotes or punctuation at end."
+                            )}],
+                        )
+                        generated = resp.content[0].text.strip().strip('"\'')
+                        alt_map[img["src"]] = generated if generated else fallback_alt
+                    except Exception:
+                        alt_map[img["src"]] = fallback_alt
+                else:
+                    alt_map[img["src"]] = fallback_alt
+
+            payload = {
+                "post_id": pid,
+                "alt_updates": alt_map,
+                "action": "bulk_fix_alt_text",
+                "source": "bulk_fix_alt_text",
+            }
+            job = WPJob(site_id=site.id, kind="edit", payload=payload)
+            db.session.add(job)
+            queued += 1
+
+        if queued:
+            db.session.commit()
+
+    except Exception as exc:
+        current_app.logger.exception("bulk_fix_alt_text failed")
+        return jsonify({"error": str(exc)}), 500
+
+    return jsonify({"queued": queued})
+
+
+@wp_bp.route("/content-quality", methods=["GET"], endpoint="content_quality")
+@login_required
+def content_quality():
+    """Thin & duplicate content detector — word counts, duplicate metas, near-duplicate titles."""
+    site = _current_site()
+    issues = []
+    stats = {}
+    error = None
+
+    if site:
+        try:
+            from app.wp.wp_client import WPClient
+            import re as _re
+            from collections import defaultdict
+            c = WPClient(site.base_url, site.username, site.app_password)
+            raw = c.list_posts(per_page=100, status="publish")
+
+            titles = []
+            metas = defaultdict(list)
+            thin_threshold = 300
+
+            total = len(raw)
+            thin_count = 0
+            no_meta_count = 0
+
+            for p in raw:
+                pid = p.get("id")
+                title = _re.sub(r"<[^>]+>", "", p.get("title", {}).get("rendered", ""))
+                content_html = p.get("content", {}).get("rendered", "") or ""
+                content_text = _re.sub(r"<[^>]+>", " ", content_html)
+                word_count = len(content_text.split())
+                excerpt = _re.sub(r"<[^>]+>", " ", p.get("excerpt", {}).get("rendered", "") or "").strip()
+                url = p.get("link", "")
+
+                titles.append({"id": pid, "title": title, "url": url, "words": word_count})
+
+                # Track duplicate metas
+                meta_key = excerpt[:100].lower().strip()
+                if meta_key:
+                    metas[meta_key].append({"id": pid, "title": title, "url": url})
+                else:
+                    no_meta_count += 1
+                    issues.append({
+                        "type": "no_meta",
+                        "severity": "warn",
+                        "post_id": pid,
+                        "title": title,
+                        "url": url,
+                        "detail": "No meta description / excerpt set.",
+                        "fix": "Add a 145-155 character meta description.",
+                    })
+
+                if word_count < thin_threshold:
+                    thin_count += 1
+                    issues.append({
+                        "type": "thin",
+                        "severity": "fail" if word_count < 150 else "warn",
+                        "post_id": pid,
+                        "title": title,
+                        "url": url,
+                        "detail": f"Only {word_count} words — below the {thin_threshold}-word minimum.",
+                        "fix": "Expand the content to at least 500 words for better ranking potential.",
+                        "words": word_count,
+                    })
+
+            # Duplicate meta descriptions
+            for meta_key, posts in metas.items():
+                if len(posts) > 1:
+                    for post in posts:
+                        issues.append({
+                            "type": "dup_meta",
+                            "severity": "warn",
+                            "post_id": post["id"],
+                            "title": post["title"],
+                            "url": post["url"],
+                            "detail": f"Same meta description shared by {len(posts)} posts.",
+                            "fix": "Write a unique meta description for each post.",
+                            "duplicates": [p["title"] for p in posts if p["id"] != post["id"]][:3],
+                        })
+
+            # Near-duplicate titles (Jaccard similarity on word tokens)
+            def _tokens(t):
+                return set(_re.findall(r"[a-z]{3,}", t.lower()))
+
+            for i, a in enumerate(titles):
+                for b in titles[i + 1:]:
+                    ta, tb = _tokens(a["title"]), _tokens(b["title"])
+                    if not ta or not tb:
+                        continue
+                    jaccard = len(ta & tb) / len(ta | tb)
+                    if jaccard >= 0.7:
+                        issues.append({
+                            "type": "dup_title",
+                            "severity": "warn",
+                            "post_id": a["id"],
+                            "title": a["title"],
+                            "url": a["url"],
+                            "detail": f"Title is very similar to: \"{b['title']}\" (similarity {round(jaccard*100)}%).",
+                            "fix": "Differentiate titles to avoid keyword cannibalization.",
+                        })
+
+            stats = {
+                "total": total,
+                "thin": thin_count,
+                "no_meta": no_meta_count,
+                "issues": len(issues),
+            }
+
+            # Sort: fail first, then warn; within severity by type
+            severity_order = {"fail": 0, "warn": 1}
+            issues.sort(key=lambda x: severity_order.get(x["severity"], 2))
+
+            if site and issues is not None:
+                try:
+                    from app.models_seo import SEOScanResult
+                    SEOScanResult.save_result(
+                        account_id=_account_id(), site_id=site.id,
+                        scan_type="content_quality",
+                        issue_count=len(issues),
+                        item_count=total,
+                        data={
+                            "stats": stats,
+                            "issue_count": len(issues),
+                            "total": total,
+                            "issues_summary": [
+                                {"type": i["type"], "severity": i["severity"],
+                                 "url": i.get("url"), "title": i.get("title")}
+                                for i in issues[:50]
+                            ],
+                        },
+                    )
+                except Exception:
+                    pass
+
+        except Exception as exc:
+            logger.exception("Content quality check failed")
+            error = f"Could not analyse posts: {exc}"
+
+    return render_template(
+        "wp/content_quality.html",
+        site=site,
+        issues=issues,
+        stats=stats,
+        error=error,
+    )
+
+
+@wp_bp.route("/geo-pages", methods=["GET", "POST"], endpoint="geo_pages")
+@login_required
+def geo_pages():
+    """Geo Landing Page Generator — queue unique location pages per city × service."""
+    if not is_paid_account():
+        flash("Geo page generation is available on paid plans.", "warning")
+        return redirect(url_for("main_bp.pricing"))
+
+    site = _current_site()
+    queued_results = None
+    error = None
+
+    if request.method == "POST" and site:
+        business_name = (request.form.get("business_name") or "").strip()
+        phone         = (request.form.get("phone") or "").strip()
+        extra_context = (request.form.get("extra_context") or "").strip()
+        pairs_raw     = request.form.getlist("pairs")  # "Service|||City, ST"
+
+        if not pairs_raw:
+            flash("Select at least one service × city combination.", "error")
+        else:
+            services_set: dict[str, None] = {}
+            cities_by_service: dict[str, List[Dict]] = {}
+            for pair in pairs_raw:
+                if "|||" not in pair:
+                    continue
+                svc, city_st = pair.split("|||", 1)
+                svc = svc.strip()
+                city_st = city_st.strip()
+                parts = [p.strip() for p in city_st.split(",")]
+                city = parts[0]
+                state = parts[1] if len(parts) > 1 else ""
+                if not svc or not city:
+                    continue
+                services_set[svc] = None
+                cities_by_service.setdefault(svc, []).append({"city": city, "state": state})
+
+            if not services_set:
+                flash("No valid pairs found.", "error")
+            else:
+                try:
+                    from app.wp.geo_pages import generate_geo_pages_multi
+                    from app import db
+                    # Flatten: each service gets its own city list
+                    all_services = list(services_set.keys())
+                    # Build unified city list (deduplicated across services)
+                    all_cities: List[Dict] = []
+                    seen_cities: set = set()
+                    for svc_cities in cities_by_service.values():
+                        for c in svc_cities:
+                            key = (c["city"].lower(), c["state"].lower())
+                            if key not in seen_cities:
+                                seen_cities.add(key)
+                                all_cities.append(c)
+                    queued_results = generate_geo_pages_multi(
+                        services=all_services,
+                        cities=all_cities,
+                        business_name=business_name,
+                        phone=phone,
+                        extra_context=extra_context,
+                        site_id=site.id,
+                        db_session=db.session,
+                    )
+                    n = len(queued_results["queued"])
+                    s = len(queued_results["skipped"])
+                    msg = f"Queued {n} geo page{'s' if n != 1 else ''} for generation."
+                    if s:
+                        msg += f" {s} skipped (already exist)."
+                    flash(msg, "success" if n else "warning")
+                except Exception as exc:
+                    logger.exception("Geo page generation failed")
+                    error = f"Generation failed: {exc}"
+                    flash(error, "error")
+
+    # Pre-fill business name from WP site
+    prefill_name = ""
+    prefill_phone = ""
+    if site:
+        try:
+            from app.wp.wp_client import WPClient
+            c = WPClient(site.base_url, site.username, site.app_password)
+            info = c._req("GET", "/wp/v2/settings").json()
+            prefill_name = info.get("title", "")
+        except Exception:
+            pass
+
+    return render_template(
+        "wp/geo_pages.html",
+        site=site,
+        queued_results=queued_results,
+        prefill_name=prefill_name,
+        error=error,
+    )
+
+
+@wp_bp.route("/redirects", methods=["GET", "POST"], endpoint="redirects")
+@login_required
+def redirects():
+    """Redirect chain detector — find chains and 404s across all posts/pages."""
+    site = _current_site()
+    report = None
+    error = None
+
+    if request.method == "POST" and site:
+        try:
+            from app.wp.wp_client import WPClient
+            from app.wp.redirect_checker import check_redirects
+            c = WPClient(site.base_url, site.username, site.app_password)
+            posts = c.list_posts(per_page=60, status="publish")
+            # Also check pages
+            try:
+                pages_r = c._req("GET", "/wp/v2/pages",
+                                  params={"per_page": 20, "status": "publish"})
+                posts += (pages_r.json() if isinstance(pages_r.json(), list) else [])
+            except Exception:
+                pass
+            report = check_redirects(posts)
+            if report and site:
+                try:
+                    from app.models_seo import SEOScanResult
+                    SEOScanResult.save_result(
+                        account_id=_account_id(), site_id=site.id,
+                        scan_type="redirects",
+                        issue_count=(report.get("chains_count", 0) + report.get("broken_count", 0)),
+                        item_count=report.get("total"),
+                        data={
+                            "total": report.get("total"),
+                            "chains_count": report.get("chains_count"),
+                            "broken_count": report.get("broken_count"),
+                            "chains": report.get("chains", [])[:20],
+                            "broken": report.get("broken", [])[:20],
+                        },
+                    )
+                except Exception:
+                    pass
+        except Exception as exc:
+            logger.exception("Redirect check failed")
+            error = f"Check failed: {exc}"
+
+    return render_template(
+        "wp/redirects.html",
+        site=site,
+        report=report,
+        error=error,
+    )
+
+
+@wp_bp.route("/seo-foundation", methods=["GET", "POST"], endpoint="seo_foundation")
+@login_required
+def seo_foundation():
+    """WordPress SEO foundation checker — sitemap, robots.txt, indexing, Yoast, canonicals."""
+    site = _current_site()
+    checks = []
+    score = None
+    error = None
+    site_url_checked = None
+
+    if (request.method == "POST" or request.args.get("run")) and site:
+        import requests as _req
+        base = site.base_url.rstrip("/")
+        site_url_checked = base
+
+        def _chk(label: str, status: str, detail: str, fix: str = "") -> Dict:
+            return {"label": label, "status": status, "detail": detail, "fix": fix}
+
+        # 1. HTTPS
+        checks.append(_chk(
+            "HTTPS / SSL",
+            "pass" if base.startswith("https://") else "fail",
+            "Site uses HTTPS." if base.startswith("https://") else "Site is not HTTPS.",
+            "" if base.startswith("https://") else "Install an SSL certificate — required by Google since 2014.",
+        ))
+
+        # 2. Robots.txt
+        try:
+            from app.wp.wp_client import WPClient
+            c = WPClient(site.base_url, site.username, site.app_password)
+            r = _req.get(f"{base}/robots.txt", timeout=8,
+                         headers={"User-Agent": "FieldSprout/1.0"})
+            robots = r.text if r.status_code == 200 else ""
+            blocks_all = bool(re.search(r"Disallow:\s*/\s*$", robots, re.MULTILINE))
+            blocks_wp  = bool(re.search(r"Disallow:\s*/wp-admin", robots, re.MULTILINE))
+            checks.append(_chk(
+                "Robots.txt",
+                "fail" if blocks_all else "pass",
+                f"robots.txt returned {r.status_code}." + (" ⚠ Disallow: / found — blocking ALL crawlers!" if blocks_all else ""),
+                "" if not blocks_all else "Remove 'Disallow: /' from robots.txt immediately.",
+            ))
+        except Exception as e:
+            checks.append(_chk("Robots.txt", "warn", f"Could not fetch robots.txt: {e}", "Check your server config."))
+            c = None
+
+        # 3. XML Sitemap
+        sitemap_found = False
+        for path in ("/sitemap.xml", "/sitemap_index.xml", "/wp-sitemap.xml"):
+            try:
+                r = _req.get(f"{base}{path}", timeout=8,
+                             headers={"User-Agent": "FieldSprout/1.0"})
+                if r.status_code == 200 and "<urlset" in r.text or "<sitemapindex" in r.text:
+                    sitemap_found = True
+                    break
+            except Exception:
+                pass
+        checks.append(_chk(
+            "XML Sitemap",
+            "pass" if sitemap_found else "fail",
+            "XML sitemap found and accessible." if sitemap_found else "No XML sitemap found at /sitemap.xml or /wp-sitemap.xml.",
+            "" if sitemap_found else "Enable the Yoast SEO sitemap or the built-in WordPress sitemap (Settings → Reading).",
+        ))
+
+        # 4. WordPress search engine visibility (reading settings)
+        try:
+            if c:
+                settings = c._req("GET", "/wp/v2/settings").json()
+                # WordPress "blog_public" = 0 means "discourage search engines"
+                # The REST API doesn't expose this directly, but we can check the homepage
+                r2 = _req.get(base, timeout=8, headers={"User-Agent": "Googlebot"})
+                has_noindex = "noindex" in r2.text.lower() and "robots" in r2.text.lower()
+                checks.append(_chk(
+                    "Search Engine Indexing",
+                    "fail" if has_noindex else "pass",
+                    "Homepage is blocking search engines (noindex detected)!" if has_noindex
+                    else "Homepage is indexable.",
+                    "" if not has_noindex else
+                    "Go to Settings → Reading → uncheck 'Discourage search engines'.",
+                ))
+        except Exception:
+            checks.append(_chk("Search Engine Indexing", "warn", "Could not verify indexing status.", "Check Settings → Reading in WordPress admin."))
+
+        # 5. Yoast / RankMath / SEOPress active
+        seo_plugin = None
+        try:
+            if c:
+                # Check for Yoast meta tags on homepage
+                r3 = _req.get(base, timeout=8, headers={"User-Agent": "FieldSprout/1.0"})
+                if "yoast" in r3.text.lower() or "wpseo" in r3.text.lower():
+                    seo_plugin = "Yoast SEO"
+                elif "rank-math" in r3.text.lower() or "rankmath" in r3.text.lower():
+                    seo_plugin = "Rank Math"
+                elif "seopress" in r3.text.lower():
+                    seo_plugin = "SEOPress"
+                elif "all-in-one-seo" in r3.text.lower() or "aioseo" in r3.text.lower():
+                    seo_plugin = "All in One SEO"
+        except Exception:
+            pass
+        checks.append(_chk(
+            "SEO Plugin Active",
+            "pass" if seo_plugin else "warn",
+            f"{seo_plugin} detected." if seo_plugin else "No common SEO plugin detected (Yoast, Rank Math, SEOPress, AIOSEO).",
+            "" if seo_plugin else "Install and configure Yoast SEO or Rank Math for title/meta control.",
+        ))
+
+        # 6. Canonical tags on homepage
+        try:
+            r4 = _req.get(base, timeout=8, headers={"User-Agent": "FieldSprout/1.0"})
+            has_canonical = bool(re.search(r'<link[^>]+rel=["\']canonical["\']', r4.text, re.IGNORECASE))
+            checks.append(_chk(
+                "Canonical Tags",
+                "pass" if has_canonical else "warn",
+                "Canonical tag found on homepage." if has_canonical else "No canonical tag on homepage.",
+                "" if has_canonical else "Configure your SEO plugin to output canonical tags on every page.",
+            ))
+
+            # 7. Open Graph tags
+            has_og = bool(re.search(r'<meta[^>]+property=["\']og:', r4.text, re.IGNORECASE))
+            checks.append(_chk(
+                "Open Graph / Social Meta Tags",
+                "pass" if has_og else "warn",
+                "Open Graph tags found." if has_og else "No Open Graph meta tags on homepage.",
+                "" if has_og else "Enable social meta tags in your SEO plugin (improves social sharing previews).",
+            ))
+
+            # 8. Title tag present and non-empty
+            title_m = re.search(r"<title[^>]*>(.*?)</title>", r4.text, re.IGNORECASE | re.DOTALL)
+            title_text = re.sub(r"<[^>]+>", "", title_m.group(1)).strip() if title_m else ""
+            title_ok = bool(title_text and len(title_text) >= 20)
+            checks.append(_chk(
+                "Homepage Title Tag",
+                "pass" if title_ok else ("warn" if title_text else "fail"),
+                f"Title: \"{title_text[:70]}\"" if title_text else "No title tag found.",
+                "" if title_ok else "Set a descriptive 50-60 character title tag on your homepage.",
+            ))
+
+            # 9. Meta description
+            meta_m = re.search(r'<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']*)["\']',
+                                r4.text, re.IGNORECASE)
+            meta_desc = meta_m.group(1).strip() if meta_m else ""
+            meta_ok = bool(meta_desc and 70 <= len(meta_desc) <= 160)
+            checks.append(_chk(
+                "Homepage Meta Description",
+                "pass" if meta_ok else ("warn" if meta_desc else "fail"),
+                f"Meta desc ({len(meta_desc)} chars): \"{meta_desc[:100]}\"" if meta_desc else "No meta description found.",
+                "" if meta_ok else (
+                    "Meta description is too short or too long — aim for 145-155 chars." if meta_desc
+                    else "Add a 145-155 char meta description to your homepage."
+                ),
+            ))
+
+        except Exception as e:
+            checks.append(_chk("Homepage Checks", "warn", f"Could not fetch homepage: {e}", "Ensure the site is publicly accessible."))
+
+        # 10. Structured data on homepage
+        try:
+            has_schema = bool(re.search(r'application/ld\+json', r4.text if 'r4' in dir() else "", re.IGNORECASE))
+            checks.append(_chk(
+                "Structured Data (Schema)",
+                "pass" if has_schema else "warn",
+                "JSON-LD schema found on homepage." if has_schema else "No JSON-LD schema on homepage.",
+                "" if has_schema else "Add LocalBusiness or Organization schema. Use the Schema Generator tool.",
+            ))
+        except Exception:
+            pass
+
+        weights = {"pass": 2, "warn": 1, "fail": 0}
+        score = round(sum(weights[c["status"]] for c in checks) / (len(checks) * 2) * 100) if checks else 0
+
+        if checks and site:
+            try:
+                from app.models_seo import SEOScanResult
+                SEOScanResult.save_result(
+                    account_id=_account_id(), site_id=site.id,
+                    scan_type="seo_foundation", url=site_url_checked,
+                    score=score,
+                    pass_count=sum(1 for c in checks if c["status"] == "pass"),
+                    warn_count=sum(1 for c in checks if c["status"] == "warn"),
+                    fail_count=sum(1 for c in checks if c["status"] == "fail"),
+                    data={"checks": checks, "score": score},
+                )
+            except Exception:
+                pass
+
+    return render_template(
+        "wp/seo_foundation.html",
+        site=site,
+        checks=checks,
+        score=score,
+        site_url_checked=site_url_checked,
+        error=error,
+    )
+
+
+@wp_bp.route("/index-coverage", methods=["GET"], endpoint="index_coverage")
+@login_required
+def index_coverage():
+    """Index Coverage Monitor — find published pages with zero GSC presence."""
+    site = _current_site()
+    result = None
+    error = None
+    gsc_connected = False
+
+    aid = _account_id()
+    site_url = None
+
+    try:
+        from app.google import _is_connected, _get_gsc_selected_site
+        import os
+        gsc_connected = _is_connected(aid, "gsc")
+        site_url = _get_gsc_selected_site(aid) or os.getenv("GSC_SITE")
+    except Exception as exc:
+        error = str(exc)
+
+    if site and gsc_connected and site_url:
+        try:
+            from app.wp.wp_client import WPClient
+            from app.wp.index_coverage import check_index_coverage
+            c = WPClient(site.base_url, site.username, site.app_password)
+            posts = c.list_posts(per_page=100, status="publish")
+            pages = []
+            try:
+                pages = c.get(f"{site.base_url.rstrip('/')}/wp-json/wp/v2/pages",
+                              params={"per_page": 100, "status": "publish"}) or []
+            except Exception:
+                pass
+            all_content = posts + pages
+            result = check_index_coverage(all_content, aid, site_url)
+            if result:
+                try:
+                    from app.models_seo import SEOScanResult
+                    SEOScanResult.save_result(
+                        account_id=aid, site_id=site.id,
+                        scan_type="index_coverage",
+                        issue_count=result.get("unindexed_count"),
+                        item_count=result.get("total"),
+                        score=result.get("pct_indexed"),
+                        data={
+                            "indexed_count": result.get("indexed_count"),
+                            "unindexed_count": result.get("unindexed_count"),
+                            "total": result.get("total"),
+                            "pct_indexed": result.get("pct_indexed"),
+                            "unindexed_urls": [p["url"] for p in result.get("unindexed", [])],
+                        },
+                    )
+                except Exception:
+                    pass
+        except Exception as exc:
+            logger.exception("Index coverage check failed")
+            error = f"Check failed: {exc}"
+    elif not site:
+        pass  # template handles no-site state
+    elif not gsc_connected:
+        error = "Connect Google Search Console to check index coverage."
+    elif not site_url:
+        error = "Select a GSC property in your Google settings."
+
+    return render_template(
+        "wp/index_coverage.html",
+        site=site,
+        result=result,
+        gsc_connected=gsc_connected,
+        site_url=site_url,
+        error=error,
+    )
+
+
+@wp_bp.route("/orphan-pages", methods=["GET"], endpoint="orphan_pages")
+@login_required
+def orphan_pages():
+    """Orphan Page Detector — find published pages with no internal links pointing to them."""
+    site = _current_site()
+    result = None
+    error = None
+
+    if site:
+        try:
+            from app.wp.wp_client import WPClient
+            from app.wp.orphan_pages import detect_orphans
+            c = WPClient(site.base_url, site.username, site.app_password)
+            posts = c.list_posts(per_page=100, status="publish")
+            pages = []
+            try:
+                pages = c.get(f"{site.base_url.rstrip('/')}/wp-json/wp/v2/pages",
+                              params={"per_page": 100, "status": "publish"}) or []
+            except Exception:
+                pass
+            all_content = posts + pages
+            result = detect_orphans(all_content, site.base_url)
+            if result:
+                try:
+                    from app.models_seo import SEOScanResult
+                    SEOScanResult.save_result(
+                        account_id=_account_id(), site_id=site.id,
+                        scan_type="orphan_pages",
+                        issue_count=result.get("orphan_count"),
+                        item_count=result.get("total"),
+                        data={
+                            "orphan_count": result.get("orphan_count"),
+                            "linked_count": result.get("linked_count"),
+                            "total": result.get("total"),
+                            "pct_orphaned": result.get("pct_orphaned"),
+                            "orphan_urls": [p["url"] for p in result.get("orphans", [])],
+                        },
+                    )
+                except Exception:
+                    pass
+        except Exception as exc:
+            logger.exception("Orphan page detection failed")
+            error = f"Detection failed: {exc}"
+
+    return render_template(
+        "wp/orphan_pages.html",
+        site=site,
+        result=result,
+        error=error,
+    )
+
+
+@wp_bp.route("/seo-health", methods=["GET"], endpoint="seo_health")
+@login_required
+def seo_health():
+    """Consolidated SEO Health dashboard — last scan results for all diagnostic tools."""
+    site = _current_site()
+    aid = _account_id()
+
+    # Load last scan result for each tool that persists results to SEOScanResult
+    scans = {}
+    if aid:
+        try:
+            from app.models_seo import SEOScanResult
+            for scan_type in ["seo_foundation", "content_quality", "broken_links",
+                               "redirects", "index_coverage", "orphan_pages",
+                               "tech_seo", "aeo_audit", "image_seo", "freshness"]:
+                row = SEOScanResult.latest(aid, scan_type, site_id=site.id if site else None)
+                if row:
+                    scans[scan_type] = row
+        except Exception:
+            pass
+
+    return render_template(
+        "wp/seo_health.html",
+        site=site,
+        scans=scans,
+        now=datetime.utcnow(),
+    )
+
+
+@wp_bp.route("/keyword-rankings", methods=["GET"], endpoint="keyword_rankings")
+@login_required
+def keyword_rankings():
+    """Keyword Ranking History — weekly GSC position snapshots with trend view."""
+    site = _current_site()
+    aid = _account_id()
+
+    url_filter = request.args.get("url") or None
+    trends = []
+    first_run = True
+    last_updated = None
+    error = None
+
+    if aid:
+        try:
+            from app.services.keyword_rank_tracker import get_ranking_trends
+            from app.models_wp import KeywordRankSnapshot
+
+            trends = get_ranking_trends(aid, url=url_filter, days=90)
+            first_run = len(trends) == 0
+
+            # Find most recent snapshot date for the "Last updated" header
+            latest_snap = (
+                KeywordRankSnapshot.query
+                .filter_by(account_id=aid)
+                .order_by(KeywordRankSnapshot.snapshot_date.desc())
+                .first()
+            )
+            if latest_snap:
+                last_updated = latest_snap.snapshot_date
+        except Exception as exc:
+            logger.exception("Error loading keyword ranking trends")
+            error = str(exc)
+
+    return render_template(
+        "wp/keyword_rankings.html",
+        site=site,
+        trends=trends,
+        first_run=first_run,
+        last_updated=last_updated,
+        url_filter=url_filter,
+        error=error,
+    )
+
+
+@wp_bp.route("/snapshot-rankings", methods=["POST"], endpoint="snapshot_rankings")
+@login_required
+def snapshot_rankings_now():
+    """Manually trigger a GSC keyword ranking snapshot for the current account."""
+    aid = _account_id()
+    if not aid:
+        return jsonify({"ok": False, "error": "Not authenticated"}), 401
+
+    try:
+        from app.services.keyword_rank_tracker import snapshot_rankings
+        result = snapshot_rankings(aid)
+        if "error" in result:
+            return jsonify({"ok": False, "error": result["error"]}), 400
+        return jsonify({"ok": True, "snapshots": result.get("snapshots", 0), "urls": result.get("urls", 0)})
+    except Exception as exc:
+        logger.exception("Snapshot rankings failed")
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
 
 # allow WPLog(...).save() convenience
 def _save(self):

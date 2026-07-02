@@ -1,0 +1,178 @@
+{% extends "base_app.html" %}
+{% block title %}AI Audit Review · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">AI SEO Audit Quality Gate</h1>
+      <p class="text-gray-500 text-sm mt-1">Every finding validated by AI — confirmed issues only, with developer-ready fix tickets</p>
+    </div>
+    <a href="{{ url_for('wp_bp.seo_audit') }}"
+       class="text-sm text-indigo-600 hover:underline">← Standard Audit</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+    <div class="rounded-xl px-4 py-3 text-sm font-medium border
+      {% if cat == 'success' %}bg-green-50 border-green-300 text-green-800
+      {% elif cat == 'error' %}bg-red-50 border-red-300 text-red-800
+      {% elif cat == 'warning' %}bg-yellow-50 border-yellow-300 text-yellow-800
+      {% else %}bg-blue-50 border-blue-300 text-blue-800{% endif %}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- URL form -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <form method="POST" action="{{ url_for('wp_bp.seo_audit_review') }}">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Page URL</label>
+          <input type="url" name="url" value="{{ url_checked or '' }}" required
+                 placeholder="https://example.com/your-page"
+                 class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Target Keyword (optional)</label>
+          <input type="text" name="keyword" placeholder="e.g. HVAC repair"
+                 class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300 focus:outline-none">
+        </div>
+      </div>
+      <div class="mt-4 flex items-center justify-between">
+        <p class="text-xs text-gray-400">
+          <i class="fa-solid fa-robot mr-1 text-indigo-400"></i>
+          Runs the SEO audit then validates each finding through Claude AI. Takes ~10–20 seconds.
+        </p>
+        <button type="submit"
+                class="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">
+          <i class="fa-solid fa-shield-halved mr-1"></i>Run AI Review
+        </button>
+      </div>
+    </form>
+  </div>
+
+  {% if result %}
+
+  <!-- Summary cards -->
+  {% if result.reviewed_issues %}
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div class="bg-white rounded-xl border shadow-sm p-4 text-center">
+      <p class="text-2xl font-bold text-gray-800">{{ result.reviewed_issues | length }}</p>
+      <p class="text-xs text-gray-500 mt-1">Issues Found</p>
+    </div>
+    <div class="bg-white rounded-xl border shadow-sm p-4 text-center">
+      <p class="text-2xl font-bold text-red-600">{{ result.critical_count or 0 }}</p>
+      <p class="text-xs text-gray-500 mt-1">Critical (AI Confirmed)</p>
+    </div>
+    <div class="bg-white rounded-xl border shadow-sm p-4 text-center">
+      <p class="text-2xl font-bold text-green-600">{{ result.valid_count or 0 }}</p>
+      <p class="text-xs text-gray-500 mt-1">Confirmed Real</p>
+    </div>
+    <div class="bg-white rounded-xl border shadow-sm p-4 text-center">
+      <p class="text-2xl font-bold text-amber-500">{{ result.invalid_count or 0 }}</p>
+      <p class="text-xs text-gray-500 mt-1">Possible False Positives</p>
+    </div>
+  </div>
+
+  <!-- Confirmed issues first -->
+  {% set confirmed = result.reviewed_issues | selectattr('review.valid', 'equalto', true) | list %}
+  {% set unconfirmed = result.reviewed_issues | rejectattr('review.valid', 'equalto', true) | list %}
+
+  {% if confirmed %}
+  <div class="space-y-3">
+    <h2 class="text-base font-semibold text-gray-800">
+      <i class="fa-solid fa-circle-exclamation text-red-500 mr-2"></i>Confirmed Issues ({{ confirmed | length }})
+    </h2>
+    {% for item in confirmed %}
+    {% set r = item.review %}
+    <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+      <div class="px-5 py-3 border-b flex items-center gap-3
+        {% if r.priority == 'critical' %}bg-red-50 border-red-100
+        {% elif r.priority == 'high' %}bg-orange-50 border-orange-100
+        {% else %}bg-amber-50 border-amber-100{% endif %}">
+        <span class="text-xs font-bold uppercase px-2 py-0.5 rounded
+          {% if r.priority == 'critical' %}bg-red-100 text-red-700
+          {% elif r.priority == 'high' %}bg-orange-100 text-orange-700
+          {% else %}bg-amber-100 text-amber-700{% endif %}">
+          {{ r.priority or item.severity or '?' }}
+        </span>
+        <p class="font-semibold text-gray-900 flex-1">{{ item.issue }}</p>
+        <span class="text-xs text-gray-400">
+          Confidence: <strong>{{ r.confidence or '?' }}</strong>
+        </span>
+      </div>
+      <div class="px-5 py-4 space-y-3">
+        <p class="text-sm text-gray-700">{{ item.detail }}</p>
+        {% if r.evidence %}
+        <div class="bg-blue-50 rounded-lg p-3 text-xs text-blue-800">
+          <span class="font-semibold">Evidence:</span> {{ r.evidence }}
+        </div>
+        {% endif %}
+        {% if r.dev_ticket %}
+        <div class="bg-gray-900 rounded-lg p-3 text-xs text-green-300 font-mono">
+          <span class="text-gray-400 block mb-1">// Developer ticket</span>{{ r.dev_ticket }}
+        </div>
+        {% endif %}
+        {% if r.estimated_impact %}
+        <p class="text-xs text-gray-500">
+          <i class="fa-solid fa-chart-line text-green-500 mr-1"></i>
+          <strong>Expected impact:</strong> {{ r.estimated_impact }}
+        </p>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- False positives / unconfirmed -->
+  {% if unconfirmed %}
+  <details class="bg-white rounded-xl shadow-sm border">
+    <summary class="px-5 py-4 cursor-pointer flex items-center gap-3">
+      <i class="fa-solid fa-filter text-amber-400"></i>
+      <span class="font-medium text-gray-700">Possible False Positives ({{ unconfirmed | length }})</span>
+      <span class="text-xs text-gray-400 ml-auto">Click to expand</span>
+    </summary>
+    <div class="divide-y border-t">
+      {% for item in unconfirmed %}
+      {% set r = item.review %}
+      <div class="px-5 py-4 opacity-70">
+        <div class="flex items-start gap-3">
+          <i class="fa-solid fa-circle-question text-gray-400 mt-0.5 flex-shrink-0"></i>
+          <div>
+            <p class="font-medium text-gray-700">{{ item.issue }}</p>
+            <p class="text-sm text-gray-500 mt-0.5">{{ item.detail }}</p>
+            {% if r.false_positive_reason %}
+            <p class="text-xs text-amber-600 mt-2">
+              <i class="fa-solid fa-triangle-exclamation mr-1"></i>
+              {{ r.false_positive_reason }}
+            </p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </details>
+  {% endif %}
+
+  {% else %}
+  <!-- No issues found -->
+  <div class="bg-green-50 border border-green-200 rounded-xl p-8 text-center">
+    <i class="fa-solid fa-circle-check text-green-500 text-4xl mb-3"></i>
+    <p class="text-green-800 font-semibold">No SEO issues detected on this page.</p>
+  </div>
+  {% endif %}
+
+  {% elif not error %}
+  <!-- Intro empty state -->
+  <div class="bg-white rounded-xl shadow-sm border p-12 text-center text-gray-400">
+    <i class="fa-solid fa-shield-halved text-5xl mb-4"></i>
+    <p class="text-gray-600 mb-1">Enter a URL above to run an AI-reviewed SEO audit.</p>
+    <p class="text-xs text-gray-400">Findings are validated against the "Google engineer test" — only real issues with fix instructions are surfaced.</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -18,6 +18,52 @@ USER_AGENT = (
     "(KHTML, like Gecko) Chrome/124 Safari/537.36"
 )
 
+import logging as _logging
+_wp_client_log = _logging.getLogger(__name__)
+
+# Mapping of SEO plugin slug → (title_meta_key, description_meta_key)
+SEO_META_FIELDS: Dict[str, Tuple[str, str]] = {
+    "yoast":    ("_yoast_wpseo_title",       "_yoast_wpseo_metadesc"),
+    "rankmath": ("rank_math_title",           "rank_math_description"),
+    "seopress": ("_seopress_titles_title",    "_seopress_titles_desc"),
+    "aioseo":   ("_aioseo_title",             "_aioseo_description"),
+}
+
+
+def detect_active_seo_plugin(site_url: str, auth_header: Optional[Dict] = None) -> Optional[str]:
+    """
+    Fetch the site's homepage HTML and detect which SEO plugin is active.
+
+    Returns one of: "yoast" | "rankmath" | "seopress" | "aioseo" | None
+    """
+    try:
+        import requests as _req
+        headers = {"User-Agent": USER_AGENT, "Accept": "text/html"}
+        if auth_header:
+            headers.update(auth_header)
+        r = _req.get(site_url.rstrip("/") + "/", headers=headers, timeout=10, allow_redirects=True)
+        html = r.text or ""
+        html_lower = html.lower()
+
+        if "yoast-seo" in html_lower or "yoast seo" in html_lower or "wpseo" in html_lower:
+            _wp_client_log.info("SEO plugin detected: yoast (site=%s)", site_url)
+            return "yoast"
+        if "rank-math" in html_lower or "rankmath" in html_lower:
+            _wp_client_log.info("SEO plugin detected: rankmath (site=%s)", site_url)
+            return "rankmath"
+        if "seopress" in html_lower:
+            _wp_client_log.info("SEO plugin detected: seopress (site=%s)", site_url)
+            return "seopress"
+        if "aioseo" in html_lower or "all in one seo" in html_lower or "all-in-one-seo" in html_lower:
+            _wp_client_log.info("SEO plugin detected: aioseo (site=%s)", site_url)
+            return "aioseo"
+
+        _wp_client_log.info("No known SEO plugin detected for site=%s", site_url)
+        return None
+    except Exception as exc:
+        _wp_client_log.warning("detect_active_seo_plugin failed for %s: %s", site_url, exc)
+        return None
+
 
 class WPClient:
     """
@@ -218,12 +264,34 @@ class WPClient:
             self._req("POST", f"/wp/v2/media/{media['id']}", json_body={"alt_text": alt_text})
         return int(media["id"])
 
+    def upload_image_from_url(self, image_url: str, filename: str = "featured.jpg",
+                              alt_text: str = "") -> int:
+        """Download an image from a URL and upload it to the WP media library."""
+        import requests as _req
+        import io
+        r = _req.get(image_url, timeout=15, stream=True)
+        r.raise_for_status()
+        content_type = r.headers.get("Content-Type", "image/jpeg").split(";")[0].strip()
+        ext_map = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif"}
+        ext = ext_map.get(content_type, "jpg")
+        if not filename.endswith(f".{ext}"):
+            filename = filename.rsplit(".", 1)[0] + f".{ext}"
+
+        data = r.content
+        files = {"file": (filename, io.BytesIO(data), content_type)}
+        resp = self._req("POST", "/wp/v2/media", files=files)
+        media = resp.json()
+        if alt_text:
+            self._req("POST", f"/wp/v2/media/{media['id']}", json_body={"alt_text": alt_text})
+        return int(media["id"])
+
     # ---------- posts ----------
 
     def create_or_update_post(
         self,
         *,
         post_id: Optional[int] = None,
+        post_type: str = "post",
         title: str,
         html: str,
         excerpt: Optional[str] = None,
@@ -235,6 +303,7 @@ class WPClient:
         yoast_desc: Optional[str] = None,
         faq_jsonld: Optional[str] = None,
         featured_media: Optional[int] = None,
+        seo_plugin: Optional[str] = None,
     ) -> dict:
 
         cat_ids: Optional[list[int]] = None
@@ -267,26 +336,56 @@ class WPClient:
             else:
                 payload["date_gmt"] = publish_dt.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
 
-        # Yoast & custom meta
+        # SEO plugin meta — detect plugin if not supplied, map to correct field names
+        if seo_plugin is None and (yoast_title or yoast_desc):
+            seo_plugin = detect_active_seo_plugin(self.base, self._auth)
+
+        title_field, desc_field = SEO_META_FIELDS.get(
+            seo_plugin or "yoast", SEO_META_FIELDS["yoast"]
+        )
+
         meta = {}
         if yoast_title:
-            meta["_yoast_wpseo_title"] = yoast_title
+            meta[title_field] = yoast_title
         if yoast_desc:
-            meta["_yoast_wpseo_metadesc"] = yoast_desc
+            meta[desc_field] = yoast_desc
         if faq_jsonld:
             meta["_fs_faq_jsonld"] = faq_jsonld
         if meta:
             payload["meta"] = meta
 
+        collection = "pages" if post_type == "page" else "posts"
         if post_id:
-            r = self._req("POST", f"/wp/v2/posts/{post_id}", json_body=payload)  # WP accepts POST for update
+            r = self._req("POST", f"/wp/v2/{collection}/{post_id}", json_body=payload)
         else:
-            r = self._req("POST", "/wp/v2/posts", json_body=payload)
+            r = self._req("POST", f"/wp/v2/{collection}", json_body=payload)
         return r.json()
 
-    def get_post(self, post_id: int) -> dict:
-        r = self._req("GET", f"/wp/v2/posts/{int(post_id)}")
-        return r.json()
+    def get_post(self, post_id: int, post_type: str = "post") -> dict:
+        """Fetch a post or page by ID. Falls back to the other type on 404."""
+        def _try(pt: str):
+            endpoint = "/wp/v2/pages" if pt == "page" else "/wp/v2/posts"
+            return self._req("GET", f"{endpoint}/{int(post_id)}")
+
+        def _is_404(exc: Exception) -> bool:
+            msg = str(exc)
+            cause = getattr(exc, "__cause__", None)
+            status = getattr(getattr(cause, "response", None), "status_code", None)
+            return status == 404 or "WP API error 404" in msg or "rest_post_invalid_id" in msg
+
+        try:
+            return _try(post_type).json()
+        except Exception as e:
+            if not _is_404(e):
+                raise
+            # Try the other type before giving up
+            alt = "post" if post_type == "page" else "page"
+            try:
+                return _try(alt).json()
+            except Exception as e2:
+                if _is_404(e2):
+                    raise FileNotFoundError(f"Post/page {post_id} not found in WordPress") from e2
+                raise
 
     def list_posts(self, per_page: int = 20, search: str = "",
                    status: str = "any", page: int = 1) -> list:
@@ -296,6 +395,80 @@ class WPClient:
             params["search"] = search
         r = self._req("GET", "/wp/v2/posts", params=params)
         return r.json() if isinstance(r.json(), list) else []
+
+    def list_pages(self, per_page: int = 20, status: str = "publish") -> list:
+        params: dict = {"per_page": min(per_page, 100), "status": status,
+                        "orderby": "title", "order": "asc"}
+        r = self._req("GET", "/wp/v2/pages", params=params)
+        return r.json() if isinstance(r.json(), list) else []
+
+    def find_post_by_url(self, url: str) -> Optional[dict]:
+        """
+        Resolve a public URL to a WP post/page dict.
+        Handles: homepage, top-level slugs, nested slugs (parent/child).
+        """
+        from urllib.parse import urlparse
+        parsed = urlparse(url)
+        path = parsed.path.rstrip("/")
+
+        # ── Homepage ──────────────────────────────────────────────────────────
+        if not path or path == "":
+            # Check WP reading settings for a static front page
+            try:
+                settings = self._req("GET", "/wp/v2/settings").json()
+                page_on_front = settings.get("page_on_front")  # page ID or 0
+                if page_on_front:
+                    r = self._req("GET", f"/wp/v2/pages/{page_on_front}", params={"status": "any"})
+                    page = r.json()
+                    if page.get("id"):
+                        return page
+            except Exception:
+                pass
+            # Fall back: return first published page marked as front page
+            try:
+                r = self._req("GET", "/wp/v2/pages",
+                              params={"status": "any", "per_page": 100})
+                pages = r.json() if isinstance(r.json(), list) else []
+                for p in pages:
+                    if (p.get("link") or "").rstrip("/") == url.rstrip("/"):
+                        return p
+            except Exception:
+                pass
+            return None
+
+        slug = path.split("/")[-1]
+        if not slug:
+            return None
+
+        # ── Try posts by slug ─────────────────────────────────────────────────
+        try:
+            r = self._req("GET", "/wp/v2/posts",
+                          params={"slug": slug, "status": "any", "per_page": 1})
+            posts = r.json()
+            if isinstance(posts, list) and posts:
+                # Verify URL match (slug alone can collide across post types)
+                for p in posts:
+                    if (p.get("link") or "").rstrip("/") == url.rstrip("/"):
+                        return p
+                return posts[0]
+        except Exception:
+            pass
+
+        # ── Try pages by slug ─────────────────────────────────────────────────
+        try:
+            r = self._req("GET", "/wp/v2/pages",
+                          params={"slug": slug, "status": "any", "per_page": 5})
+            pages = r.json()
+            if isinstance(pages, list) and pages:
+                # For nested pages prefer exact URL match
+                for p in pages:
+                    if (p.get("link") or "").rstrip("/") == url.rstrip("/"):
+                        return p
+                return pages[0]
+        except Exception:
+            pass
+
+        return None
 
     # ---------- diagnostics bundle ----------
 

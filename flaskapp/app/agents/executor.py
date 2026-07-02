@@ -660,34 +660,41 @@ class GoogleAdsAgentExecutor:
             if not final_url:
                 return {'success': False, 'error': f'No final URL found for ad group {ad_group_id}'}
 
-            # 2. Generate new ad copy with Claude
+            # 2. Generate new ad copy with Claude using the structured category prompt
             from app.services.ai_client import generate_json
+            from app.google import (
+                _build_rsa_headline_prompt, _rsa_headline_counts, _flatten_rsa_headlines,
+                _HEADLINE_CATEGORIES,
+            )
+
+            counts = _rsa_headline_counts(6)  # ~1 per category for a small add-on batch
+            extra = f"Ad group: {ad_group_name}"
+            if existing_descriptions:
+                extra += f"\nExisting descriptions: {', '.join(existing_descriptions[:3])}"
 
             prompt_system = (
                 "You write Google Ads Responsive Search Ad copy. "
                 "Return valid JSON only — no markdown, no prose."
             )
-            context_lines = []
-            if business_description:
-                context_lines.append(f"Business: {business_description}")
-            if keyword_theme:
-                context_lines.append(f"Keyword theme: {keyword_theme}")
-            context_lines.append(f"Ad group: {ad_group_name}")
-            if existing_headlines:
-                context_lines.append(f"Existing headlines (do not duplicate): {', '.join(existing_headlines[:6])}")
-            if existing_descriptions:
-                context_lines.append(f"Existing descriptions: {', '.join(existing_descriptions[:3])}")
-
             prompt_user = (
-                "\n".join(context_lines) + "\n\n"
-                "Write 5 NEW headline variations (max 30 chars each) and "
-                "2 NEW description variations (max 90 chars each). "
-                'Return JSON: {"headlines": [...], "descriptions": [...]}'
+                _build_rsa_headline_prompt(
+                    business_description or ad_group_name,
+                    keyword_theme=keyword_theme,
+                    existing_headlines=existing_headlines,
+                    counts=counts,
+                    extra_context=extra,
+                )
+                + '\n\nAlso return 2 NEW descriptions (max 90 chars each) in a "descriptions" key.'
             )
 
             copy_data = generate_json(prompt_system, prompt_user)
-            new_headlines = (copy_data.get('headlines') or [])[:5]
-            new_descriptions = (copy_data.get('descriptions') or [])[:2]
+            new_headlines = _flatten_rsa_headlines(
+                {k: copy_data[k] for k in _HEADLINE_CATEGORIES if k in copy_data}, limit=6
+            )
+            # Fallback: old flat format
+            if not new_headlines and copy_data.get('headlines'):
+                new_headlines = [h[:30] for h in copy_data['headlines'][:6]]
+            new_descriptions = [d[:90] for d in (copy_data.get('descriptions') or [])[:2]]
 
             if len(new_headlines) < 3 or len(new_descriptions) < 2:
                 return {

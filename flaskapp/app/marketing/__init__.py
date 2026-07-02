@@ -1734,3 +1734,7 @@ def revenue_upsells():
         top_job_types=top_job_types,
         industry=industry,
     )
+"""Marketing Command Center blueprint."""
+from .routes import marketing_bp
+
+__all__ = ["marketing_bp"]

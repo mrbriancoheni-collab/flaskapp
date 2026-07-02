@@ -1,0 +1,482 @@
+{% extends "base_app.html" %}
+{% set SECTION = 'google' %}
+{% set gads_active = 'offline_conversions' %}
+{% block title %}Phone Call Tracking — Google Ads{% endblock %}
+
+{% block content %}
+{% include "google/components/gads_nav.html" %}
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 space-y-6">
+
+  {# ── Page header ──────────────────────────────────────────────────────── #}
+  <div class="flex items-start justify-between flex-wrap gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Phone Call Tracking</h1>
+      <p class="text-sm text-gray-500 mt-0.5">
+        Every call from your Google Ads gets tracked so we know which keywords are actually bringing in customers.
+      </p>
+    </div>
+    <button
+      id="upload-btn"
+      class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg flex items-center gap-2 transition">
+      <i class="fas fa-upload text-xs"></i> Upload Pending Now
+    </button>
+  </div>
+
+  {# ── Upload status banner ─────────────────────────────────────────────── #}
+  <div id="upload-status" class="hidden rounded-xl px-4 py-3 text-sm border"></div>
+
+  {# ── Stats row ────────────────────────────────────────────────────────── #}
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="bg-white rounded-xl border p-5">
+      <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">Calls This Month</div>
+      <div id="stat-this-month" class="text-3xl font-bold text-gray-900">
+        {{ stats.calls_this_month | default(0) }}
+      </div>
+      <div class="text-xs text-gray-400 mt-1">
+        vs {{ stats.calls_last_month | default(0) }} last month
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl border p-5">
+      <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">Uploaded to Google</div>
+      <div id="stat-uploaded" class="text-3xl font-bold text-green-600">
+        {{ stats.uploaded_count | default(0) }}
+      </div>
+      {% if stats.last_upload_at %}
+      <div class="text-xs text-gray-400 mt-1">
+        Last: {{ stats.last_upload_at[:10] }}
+      </div>
+      {% else %}
+      <div class="text-xs text-gray-400 mt-1">Never uploaded</div>
+      {% endif %}
+    </div>
+
+    <div class="bg-white rounded-xl border p-5">
+      <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">Pending Upload</div>
+      <div id="stat-pending" class="text-3xl font-bold text-amber-500">
+        {{ stats.pending_count | default(0) }}
+      </div>
+      <div class="text-xs text-gray-400 mt-1">Ready to send</div>
+    </div>
+
+    <div class="bg-white rounded-xl border p-5">
+      <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">Failed</div>
+      <div id="stat-failed" class="text-3xl font-bold {% if stats.failed_count | default(0) > 0 %}text-red-500{% else %}text-gray-400{% endif %}">
+        {{ stats.failed_count | default(0) }}
+      </div>
+      <div class="text-xs text-gray-400 mt-1">
+        {% if stats.total_conversion_value | default(0) > 0 %}
+          ${{ "%.2f" | format(stats.total_conversion_value) }} total value
+        {% else %}
+          —
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ── Why This Matters callout ─────────────────────────────────────────── #}
+  <div class="rounded-xl border border-blue-200 bg-blue-50 p-5 flex items-start gap-4">
+    <div class="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+      <i class="fas fa-lightbulb text-blue-600"></i>
+    </div>
+    <div>
+      <p class="font-semibold text-blue-900 text-base">Why This Matters</p>
+      <p class="text-sm text-blue-800 mt-1">
+        Without call tracking, Google thinks your ads aren't working — so it stops showing them. This fixes that.
+        Every qualified phone call gets sent back to Google as a conversion, giving the AI the signal it needs to
+        keep your ads in front of the right customers.
+      </p>
+    </div>
+  </div>
+
+  {# ── Setup section with tabs ──────────────────────────────────────────── #}
+  <div class="bg-white rounded-xl shadow-sm border">
+
+    {# Tab bar #}
+    <div class="border-b border-gray-200 px-6 pt-4 flex gap-1">
+      <button
+        id="tab-callrail"
+        onclick="switchTab('callrail')"
+        class="tab-btn px-4 py-2 text-sm font-medium rounded-t-md border-b-2 border-indigo-600 text-indigo-700 bg-indigo-50">
+        <i class="fas fa-phone-volume mr-1.5"></i> Automatic (CallRail)
+      </button>
+      <button
+        id="tab-manual"
+        onclick="switchTab('manual')"
+        class="tab-btn px-4 py-2 text-sm font-medium rounded-t-md border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+        <i class="fas fa-upload mr-1.5"></i> Manual Upload
+      </button>
+    </div>
+
+    {# Automatic / CallRail tab #}
+    <div id="panel-callrail" class="p-6 space-y-5">
+      <div>
+        <h2 class="text-base font-semibold text-gray-900 mb-1">Set up CallRail to send calls automatically</h2>
+        <p class="text-sm text-gray-500">Follow these steps in your CallRail account to start tracking calls.</p>
+      </div>
+
+      {# Step 1 #}
+      <div class="flex items-start gap-3">
+        <span class="flex-shrink-0 w-7 h-7 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center">1</span>
+        <div>
+          <p class="text-sm font-medium text-gray-900">Copy your unique webhook URL</p>
+          <p class="text-xs text-gray-500 mt-0.5 mb-2">This URL is specific to your account — it's where CallRail will send call data.</p>
+          <div class="flex items-center gap-2">
+            <input
+              id="webhook-url-input"
+              type="text"
+              readonly
+              value="{{ webhook_url }}"
+              class="flex-1 min-w-0 text-xs font-mono bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-700 focus:outline-none">
+            <button
+              onclick="copyWebhookUrl()"
+              id="copy-btn"
+              class="flex-shrink-0 px-3 py-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition flex items-center gap-1.5">
+              <i class="fas fa-copy"></i> Copy
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {# Step 2 #}
+      <div class="flex items-start gap-3">
+        <span class="flex-shrink-0 w-7 h-7 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center">2</span>
+        <div>
+          <p class="text-sm font-medium text-gray-900">In CallRail: go to <strong>Settings → Notifications</strong></p>
+          <p class="text-xs text-gray-500 mt-0.5">Click <em>Add Webhook</em> and paste the URL above. Select the <strong>Call</strong> event type.</p>
+        </div>
+      </div>
+
+      {# Step 3 #}
+      <div class="flex items-start gap-3">
+        <span class="flex-shrink-0 w-7 h-7 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center">3</span>
+        <div>
+          <p class="text-sm font-medium text-gray-900">Enable Google Ads tracking in CallRail</p>
+          <p class="text-xs text-gray-500 mt-0.5">
+            In CallRail go to <strong>Settings → Integrations → Google Ads</strong>.
+            Enable the integration so CallRail captures the <code class="bg-gray-100 px-1 rounded">gclid</code>
+            from each Google Ads click.
+          </p>
+        </div>
+      </div>
+
+      {# Step 4 #}
+      <div class="flex items-start gap-3">
+        <span class="flex-shrink-0 w-7 h-7 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center">4</span>
+        <div>
+          <p class="text-sm font-medium text-gray-900">Sync your Google Ads Conversion Actions</p>
+          <p class="text-xs text-gray-500 mt-0.5">
+            Make sure you have a conversion action named <strong>"Phone Call Lead"</strong> in Google Ads.
+            <a href="{{ url_for('gads_bp.conversions_page') }}" class="text-indigo-600 hover:underline">Sync conversion actions →</a>
+          </p>
+        </div>
+      </div>
+
+      {# Optional secret #}
+      <div class="rounded-lg border border-gray-100 bg-gray-50 p-4 text-xs text-gray-600">
+        <i class="fas fa-shield-halved text-gray-400 mr-1"></i>
+        <strong>Optional:</strong> Set the <code class="bg-white border border-gray-200 px-1 rounded">CALLRAIL_WEBHOOK_SECRET</code>
+        environment variable to the CallRail webhook signing secret for request validation.
+      </div>
+    </div>
+
+    {# Manual upload tab #}
+    <div id="panel-manual" class="p-6 space-y-4 hidden">
+      <div>
+        <h2 class="text-base font-semibold text-gray-900 mb-1">Upload conversions manually</h2>
+        <p class="text-sm text-gray-500">
+          Paste a JSON array of conversion records. Each item needs a <code class="bg-gray-100 px-1 rounded">gclid</code>
+          and optionally <code class="bg-gray-100 px-1 rounded">conversion_time</code>, <code class="bg-gray-100 px-1 rounded">value</code>,
+          and <code class="bg-gray-100 px-1 rounded">conversion_name</code>.
+        </p>
+      </div>
+
+      <div class="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs font-mono text-gray-600 select-all">
+[<br>
+&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"gclid": "TeSter-123abc",<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"conversion_time": "2024-01-15 14:30:00",<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"value": 0,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"conversion_name": "Phone Call Lead"<br>
+&nbsp;&nbsp;}<br>
+]
+      </div>
+
+      <textarea
+        id="manual-json"
+        rows="8"
+        placeholder='[{"gclid": "...", "conversion_time": "2024-01-15 14:30:00", "value": 0, "conversion_name": "Phone Call Lead"}]'
+        class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-y">
+      </textarea>
+
+      <div id="manual-status" class="hidden rounded-lg px-3 py-2 text-sm border"></div>
+
+      <button
+        id="manual-submit-btn"
+        onclick="submitManual()"
+        class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition flex items-center gap-2">
+        <i class="fas fa-upload text-xs"></i> Import Records
+      </button>
+    </div>
+  </div>
+
+  {# ── Recent imports table ─────────────────────────────────────────────── #}
+  <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+      <h2 class="text-base font-semibold text-gray-900">Recent Imports</h2>
+      <span class="text-xs text-gray-400">Last 50 records</span>
+    </div>
+
+    {% if not recent_imports %}
+    <div class="p-12 text-center">
+      <i class="fas fa-phone-slash text-gray-300 text-5xl mb-4"></i>
+      <p class="text-gray-500 text-sm">No call conversions recorded yet.</p>
+      <p class="text-xs text-gray-400 mt-1">Set up CallRail above or upload manually to get started.</p>
+    </div>
+    {% else %}
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+          <tr>
+            <th class="text-left px-4 py-3">Date / Time</th>
+            <th class="text-left px-4 py-3">Phone #</th>
+            <th class="text-left px-4 py-3">Conversion Name</th>
+            <th class="text-left px-4 py-3 w-24">Source</th>
+            <th class="text-center px-4 py-3 w-28">Status</th>
+            <th class="text-right px-4 py-3 w-24">Value</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for rec in recent_imports %}
+          <tr class="hover:bg-gray-50">
+            {# Date #}
+            <td class="px-4 py-3 text-gray-600 whitespace-nowrap">
+              {% if rec.conversion_time %}
+                {{ rec.conversion_time.strftime("%b %d, %Y %H:%M") }}
+              {% else %}
+                <span class="text-gray-400">—</span>
+              {% endif %}
+            </td>
+
+            {# Phone — masked from external_id if available, otherwise gclid prefix #}
+            <td class="px-4 py-3 text-gray-600 font-mono text-xs">
+              {% if rec.external_id %}
+                <span class="text-gray-400">{{ rec.external_id }}</span>
+              {% else %}
+                <span class="text-gray-400">—</span>
+              {% endif %}
+            </td>
+
+            {# Conversion name #}
+            <td class="px-4 py-3 text-gray-800">{{ rec.conversion_name }}</td>
+
+            {# Source badge #}
+            <td class="px-4 py-3">
+              {% if rec.source == 'callrail' %}
+                <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">CallRail</span>
+              {% elif rec.source == 'manual' %}
+                <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">Manual</span>
+              {% else %}
+                <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{{ rec.source }}</span>
+              {% endif %}
+            </td>
+
+            {# Status badge #}
+            <td class="px-4 py-3 text-center">
+              {% if rec.status == 'uploaded' %}
+                <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                  <i class="fas fa-check mr-0.5"></i> Uploaded
+                </span>
+              {% elif rec.status == 'pending' %}
+                <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+                  <i class="fas fa-clock mr-0.5"></i> Pending
+                </span>
+              {% elif rec.status == 'failed' %}
+                <span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full"
+                      title="{{ rec.error_message or '' }}">
+                  <i class="fas fa-xmark mr-0.5"></i> Failed
+                </span>
+              {% else %}
+                <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{{ rec.status }}</span>
+              {% endif %}
+            </td>
+
+            {# Value #}
+            <td class="px-4 py-3 text-right text-gray-700">
+              {% if rec.conversion_value and rec.conversion_value > 0 %}
+                ${{ "%.2f" | format(rec.conversion_value) }}
+              {% else %}
+                <span class="text-gray-400">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+
+</div>{# /max-w-7xl #}
+
+<script>
+(function () {
+  // ── Tab switcher ─────────────────────────────────────────────────────────
+  window.switchTab = function (name) {
+    ['callrail', 'manual'].forEach(function (t) {
+      document.getElementById('panel-' + t)?.classList.toggle('hidden', t !== name);
+      const btn = document.getElementById('tab-' + t);
+      if (btn) {
+        if (t === name) {
+          btn.classList.add('border-indigo-600', 'text-indigo-700', 'bg-indigo-50');
+          btn.classList.remove('border-transparent', 'text-gray-500');
+        } else {
+          btn.classList.remove('border-indigo-600', 'text-indigo-700', 'bg-indigo-50');
+          btn.classList.add('border-transparent', 'text-gray-500');
+        }
+      }
+    });
+  };
+
+  // ── Copy webhook URL ─────────────────────────────────────────────────────
+  window.copyWebhookUrl = function () {
+    const input = document.getElementById('webhook-url-input');
+    const btn = document.getElementById('copy-btn');
+    if (!input) return;
+    navigator.clipboard.writeText(input.value).then(function () {
+      if (btn) {
+        btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        btn.classList.replace('bg-indigo-600', 'bg-green-600');
+        setTimeout(function () {
+          btn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+          btn.classList.replace('bg-green-600', 'bg-indigo-600');
+        }, 2000);
+      }
+    }).catch(function () {
+      input.select();
+      document.execCommand('copy');
+    });
+  };
+
+  // ── Upload pending conversions ───────────────────────────────────────────
+  const uploadBtn = document.getElementById('upload-btn');
+  const uploadStatus = document.getElementById('upload-status');
+
+  uploadBtn?.addEventListener('click', async function () {
+    uploadBtn.disabled = true;
+    uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i> Uploading…';
+    uploadStatus?.classList.remove('hidden');
+    if (uploadStatus) {
+      uploadStatus.textContent = 'Uploading pending conversions to Google Ads…';
+      uploadStatus.className = 'rounded-xl px-4 py-3 text-sm border bg-blue-50 border-blue-200 text-blue-800';
+    }
+
+    try {
+      const resp = await fetch('/account/google/ads/offline-conversions/upload', {method: 'POST'});
+      if (window.handle402 && window.handle402(resp)) return;
+      const data = await resp.json();
+      if (uploadStatus) {
+        if (data.ok || (data.uploaded !== undefined && data.failed === 0)) {
+          uploadStatus.textContent = `Done! ${data.uploaded || 0} uploaded, ${data.failed || 0} failed.`;
+          uploadStatus.className = 'rounded-xl px-4 py-3 text-sm border bg-green-50 border-green-200 text-green-800';
+          // Refresh stats
+          refreshStats();
+        } else {
+          const errSummary = (data.errors || []).slice(0, 3).join(' | ');
+          uploadStatus.textContent = `Upload finished with issues: ${data.uploaded || 0} uploaded, ${data.failed || 0} failed. ${errSummary}`;
+          uploadStatus.className = 'rounded-xl px-4 py-3 text-sm border bg-amber-50 border-amber-200 text-amber-800';
+          refreshStats();
+        }
+      }
+    } catch (e) {
+      if (uploadStatus) {
+        uploadStatus.textContent = `Upload failed: ${e.message}`;
+        uploadStatus.className = 'rounded-xl px-4 py-3 text-sm border bg-red-50 border-red-200 text-red-800';
+      }
+    } finally {
+      uploadBtn.disabled = false;
+      uploadBtn.innerHTML = '<i class="fas fa-upload text-xs"></i> Upload Pending Now';
+    }
+  });
+
+  // ── Manual import ────────────────────────────────────────────────────────
+  window.submitManual = function () {
+    const textarea = document.getElementById('manual-json');
+    const status = document.getElementById('manual-status');
+    const btn = document.getElementById('manual-submit-btn');
+    if (!textarea) return;
+
+    let parsed;
+    try {
+      parsed = JSON.parse(textarea.value.trim());
+    } catch (e) {
+      if (status) {
+        status.textContent = 'Invalid JSON: ' + e.message;
+        status.className = 'rounded-lg px-3 py-2 text-sm border bg-red-50 border-red-200 text-red-800';
+        status.classList.remove('hidden');
+      }
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i> Importing…';
+    if (status) status.classList.add('hidden');
+
+    fetch('/account/google/ads/offline-conversions/manual', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(parsed),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (status) {
+          if (data.ok) {
+            status.textContent = `Imported ${data.created || 0} record(s). ${data.skipped ? data.skipped + ' skipped.' : ''}`;
+            status.className = 'rounded-lg px-3 py-2 text-sm border bg-green-50 border-green-200 text-green-800';
+            textarea.value = '';
+            refreshStats();
+          } else {
+            status.textContent = `Error: ${data.error || 'Unknown error'}`;
+            status.className = 'rounded-lg px-3 py-2 text-sm border bg-red-50 border-red-200 text-red-800';
+          }
+          status.classList.remove('hidden');
+        }
+      })
+      .catch(function (e) {
+        if (status) {
+          status.textContent = 'Request failed: ' + e.message;
+          status.className = 'rounded-lg px-3 py-2 text-sm border bg-red-50 border-red-200 text-red-800';
+          status.classList.remove('hidden');
+        }
+      })
+      .finally(function () {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-upload text-xs"></i> Import Records';
+      });
+  };
+
+  // ── Refresh stats from /stats.json ──────────────────────────────────────
+  function refreshStats() {
+    fetch('/account/google/ads/offline-conversions/stats.json')
+      .then(function (r) { return r.json(); })
+      .then(function (s) {
+        _setText('stat-this-month', s.calls_this_month ?? '—');
+        _setText('stat-uploaded', s.uploaded_count ?? '—');
+        _setText('stat-pending', s.pending_count ?? '—');
+        _setText('stat-failed', s.failed_count ?? '—');
+      })
+      .catch(function () {/* silently ignore */});
+  }
+
+  function _setText(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  }
+
+  // Auto-refresh on load to keep numbers current
+  refreshStats();
+})();
+</script>
+{% endblock %}

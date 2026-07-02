@@ -102,20 +102,104 @@ def pricing():
     return render_template("pricing.html")
 
 
-@main_bp.route("/robots.txt", methods=["GET"], endpoint="robots_txt")
+@main_bp.route("/robots.txt")
 def robots_txt():
+    content = """User-agent: *
+Allow: /
+Disallow: /account/
+Disallow: /admin/
+Disallow: /api/
+Disallow: /billing/
+Disallow: /ads-grader/connect/
+Disallow: /fb_ads_grader/
+Disallow: /_deploy_check
+Disallow: /test
+Disallow: /wsgi-check
+
+# Allow major AI crawlers to index public content
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Googlebot
+Allow: /
+
+Sitemap: https://fieldsprout.io/sitemap.xml
+"""
     from flask import Response
-    body = (
-        "User-agent: *\n"
-        "Allow: /\n"
-        "Disallow: /account/\n"
-        "Disallow: /admin/\n"
-        "Disallow: /api/\n"
-        "Disallow: /_deploy_check\n"
-        "Disallow: /test\n\n"
-        "Sitemap: https://fieldsprout.io/sitemap.xml\n"
-    )
-    return Response(body, mimetype="text/plain")
+    return Response(content, mimetype="text/plain")
+
+
+@main_bp.route("/llms.txt")
+def llms_txt():
+    content = """# FieldSprout
+
+> AI-powered Google Ads optimization and marketing automation for home service businesses.
+
+FieldSprout helps HVAC, plumbing, roofing, electrical, pool service, landscaping, pest control, and other home service companies get more leads from Google Ads by automatically optimizing campaigns, ad copy, bids, and conversion tracking.
+
+## Core Product
+
+- [Campaign Health Score](https://fieldsprout.io/): Free AI audit of your Google Ads account — no credit card required
+- [Google Ads Automation](https://fieldsprout.io/products/ads): AI agents that adjust bids, dayparting, negative keywords, and ad copy 24/7
+- [Offline Conversion Import](https://fieldsprout.io/products/ads): Track phone calls and CRM jobs back to the exact ad click that drove them
+- [Competitor Intelligence](https://fieldsprout.io/products/ads): Auction insights showing who's outbidding you and how to respond automatically
+- [Ad Copy Performance](https://fieldsprout.io/products/ads): Grade every headline and description — auto-promote winners, flag losers
+
+## Integrations
+
+- Google Ads (full read/write — bid adjustments, ad management, conversion upload)
+- Google Analytics, Search Console, Business Profile
+- Skimmer (pool service CRM), ServiceTitan, Housecall Pro
+- CallRail (phone tracking webhooks)
+- Stripe (billing)
+
+## Industries Served
+
+HVAC, plumbing, electrical, roofing, pool service, pest control, lawn care, landscaping, garage door, solar, concrete, fencing, irrigation, restoration, windows and doors
+
+## Pricing
+
+- Free: Campaign health score, Google Ads audit, performance dashboard — no credit card
+- Growth ($99/month): Full automation, CRM integration, offline conversion upload, review requests
+- Pro ($249/month): Multi-location dashboard, all CRM integrations, white-label reports, competitor intelligence
+- Managed ($997/month): Done-for-you campaign management with dedicated account manager
+
+## Key Pages
+
+- [Pricing](https://fieldsprout.io/pricing)
+- [How it works for HVAC](https://fieldsprout.io/industries/hvac)
+- [How it works for Plumbing](https://fieldsprout.io/industries/plumbing)
+- [How it works for Roofing](https://fieldsprout.io/industries/roofing)
+- [How it works for Electricians](https://fieldsprout.io/industries/electricians)
+- [Google Ads product](https://fieldsprout.io/products/ads)
+- [Get more reviews](https://fieldsprout.io/solutions/get-more-reviews)
+- [Reduce ad spend](https://fieldsprout.io/solutions/lower-ad-cost)
+- [Multi-location management](https://fieldsprout.io/solutions/multi-location)
+
+## Company
+
+FieldSprout is a US-based SaaS company serving home service businesses across the United States. All Google Ads integrations use official Google Ads API access with read/write permissions granted directly by the business owner.
+"""
+    from flask import Response
+    return Response(content, mimetype="text/plain")
 
 
 @main_bp.route("/sitemap.xml", methods=["GET"], endpoint="sitemap_xml")
@@ -123,6 +207,27 @@ def sitemap_xml():
     from flask import Response
     from datetime import date
     today = date.today().isoformat()
+
+    # Sub-route suffixes for industry pages
+    industry_sub_routes = [
+        "-google-ads",
+        "-local-service-ads",
+        "-meta-ads",
+        "-website-cro",
+    ]
+
+    # Main 9 industries (already in sitemap) — add sub-routes
+    main_industries = [
+        "hvac", "plumbing", "electricians", "roofing", "pest-control",
+        "landscaping", "garage-door", "pool-service", "solar",
+    ]
+
+    # Additional industries — add main page + sub-routes
+    additional_industries = [
+        "concrete", "fencing", "irrigation", "lawn-care", "restoration",
+        "windows-doors",
+    ]
+
     pages = [
         ("https://fieldsprout.io/", "1.0", "weekly"),
         ("https://fieldsprout.io/pricing", "0.9", "monthly"),
@@ -132,6 +237,7 @@ def sitemap_xml():
         ("https://fieldsprout.io/vs-agency", "0.8", "monthly"),
         ("https://fieldsprout.io/roadmap", "0.5", "monthly"),
         ("https://fieldsprout.io/products/ads-demo", "0.8", "monthly"),
+        # Main industry pages (existing)
         ("https://fieldsprout.io/industries/hvac", "0.9", "monthly"),
         ("https://fieldsprout.io/industries/plumbing", "0.9", "monthly"),
         ("https://fieldsprout.io/industries/electricians", "0.9", "monthly"),
@@ -141,6 +247,7 @@ def sitemap_xml():
         ("https://fieldsprout.io/industries/garage-door", "0.8", "monthly"),
         ("https://fieldsprout.io/industries/pool-service", "0.8", "monthly"),
         ("https://fieldsprout.io/industries/solar", "0.8", "monthly"),
+        # Product pages
         ("https://fieldsprout.io/products/ads", "0.8", "monthly"),
         ("https://fieldsprout.io/products/glsa", "0.8", "monthly"),
         ("https://fieldsprout.io/products/gbp", "0.8", "monthly"),
@@ -148,17 +255,34 @@ def sitemap_xml():
         ("https://fieldsprout.io/products/reviews", "0.8", "monthly"),
         ("https://fieldsprout.io/products/listings", "0.8", "monthly"),
         ("https://fieldsprout.io/products/forms-chat", "0.7", "monthly"),
+        # Solution pages
         ("https://fieldsprout.io/solutions/lead-generation", "0.8", "monthly"),
         ("https://fieldsprout.io/solutions/multi-location", "0.8", "monthly"),
         ("https://fieldsprout.io/solutions/lower-ad-cost", "0.8", "monthly"),
         ("https://fieldsprout.io/solutions/get-more-reviews", "0.7", "monthly"),
         ("https://fieldsprout.io/solutions/spend-when-open", "0.7", "monthly"),
         ("https://fieldsprout.io/solutions/see-what-works", "0.7", "monthly"),
+        # Tools & graders
         ("https://fieldsprout.io/ads-grader", "0.9", "weekly"),
+        # Legal
         ("https://fieldsprout.io/privacy-policy", "0.3", "yearly"),
         ("https://fieldsprout.io/terms-of-service", "0.3", "yearly"),
         ("https://fieldsprout.io/security", "0.4", "yearly"),
+        # llms.txt
+        ("https://fieldsprout.io/llms.txt", "0.3", "monthly"),
     ]
+
+    # Add sub-routes for main 9 industries
+    for industry in main_industries:
+        for sub in industry_sub_routes:
+            pages.append((f"https://fieldsprout.io/industries/{industry}{sub}", "0.7", "monthly"))
+
+    # Add main page + sub-routes for additional industries
+    for industry in additional_industries:
+        pages.append((f"https://fieldsprout.io/industries/{industry}", "0.8", "monthly"))
+        for sub in industry_sub_routes:
+            pages.append((f"https://fieldsprout.io/industries/{industry}{sub}", "0.7", "monthly"))
+
     urls = "\n".join(
         f"  <url>\n"
         f"    <loc>{loc}</loc>\n"

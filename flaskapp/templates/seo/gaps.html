@@ -1,5 +1,5 @@
 {% extends "base_app.html" %}
-{% block title %}Keyword Gaps & Opportunities · {{ app_name }}{% endblock %}
+{% block title %}Topics you should write about · {{ app_name }}{% endblock %}
 
 {% block content %}
 <div class="max-w-5xl space-y-8">
@@ -7,9 +7,9 @@
   {# ── Header ───────────────────────────────────────────────────────────── #}
   <div class="flex items-start justify-between">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">Keyword Gaps &amp; Opportunities</h1>
+      <h1 class="text-2xl font-bold text-gray-900">Topics you should write about but haven't</h1>
       <p class="text-sm text-gray-500 mt-1">
-        Powered by Google Search Console · Last 28 days
+        Built from your real Google data · Last 28 days
         {% if result %}<span class="text-gray-400 ml-1">({{ result.period_label }})</span>{% endif %}
       </p>
     </div>
@@ -28,8 +28,7 @@
     <i class="fa-brands fa-google text-4xl text-gray-300"></i>
     <div class="text-lg font-semibold text-gray-700">Connect Google Search Console</div>
     <p class="text-sm text-gray-500 max-w-md mx-auto">
-      Keyword gap analysis requires GSC data. Connect your site to unlock
-      quick wins, content gaps, cannibalization warnings, and declining page alerts.
+      We need Google data to find topics you should write about. Connect your site to see easy wins, missing topics, pages competing with each other, and pages losing traffic.
     </p>
     <a href="{{ url_for('google_bp.index') }}"
        class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700
@@ -50,12 +49,12 @@
   {% set s = result.summary %}
   <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
     {% set tiles = [
-      ('Quick Wins',     s.quick_wins_count,        'fa-bolt',          'text-yellow-500', 'quick-wins'),
-      ('Content Gaps',   s.content_gaps_count,      'fa-arrow-up-right-dots', 'text-blue-500', 'content-gaps'),
-      ('Missing Pages',  s.missing_count,           'fa-file-circle-plus', 'text-green-500', 'missing'),
-      ('Cannibalization',s.cannibalization_count,   'fa-code-fork',     'text-orange-500', 'cannibalization'),
-      ('Declining',      s.declining_count,         'fa-arrow-trend-down','text-red-500',  'declining'),
-      ('Clusters',       s.clusters_count,          'fa-layer-group',   'text-purple-500', 'clusters'),
+      ('Easy wins',     s.quick_wins_count,        'fa-bolt',          'text-yellow-500', 'quick-wins'),
+      ('Pages not getting clicks',   s.content_gaps_count,      'fa-arrow-up-right-dots', 'text-blue-500', 'content-gaps'),
+      ('Pages you don\'t have yet',  s.missing_count,           'fa-file-circle-plus', 'text-green-500', 'missing'),
+      ('Pages competing with each other',s.cannibalization_count,   'fa-code-fork',     'text-orange-500', 'cannibalization'),
+      ('Losing traffic',      s.declining_count,         'fa-arrow-trend-down','text-red-500',  'declining'),
+      ('Topic groups',       s.clusters_count,          'fa-layer-group',   'text-purple-500', 'clusters'),
     ] %}
     {% for label, count, icon, color, anchor in tiles %}
     <a href="#{{ anchor }}"
@@ -74,10 +73,10 @@
     <i class="fa-solid fa-bolt text-yellow-500 text-xl flex-shrink-0"></i>
     <div>
       <span class="font-semibold text-yellow-900">
-        {{ "{:,}".format(s.opportunity_impressions) }} monthly impressions
+        {{ "{:,}".format(s.opportunity_impressions) }} times people saw you each month
       </span>
       <span class="text-yellow-800 text-sm ml-1">
-        on quick-win queries — these could become clicks with targeted optimisation.
+        on searches where you're close to the top — small tweaks could turn these into actual clicks.
       </span>
     </div>
   </div>
@@ -88,11 +87,10 @@
   {# ═══════════════════════════════════════════════════════════════════════ #}
   <div id="quick-wins">
     <h2 class="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
-      <i class="fa-solid fa-bolt text-yellow-500"></i> Quick Wins
+      <i class="fa-solid fa-bolt text-yellow-500"></i> Easy wins
     </h2>
     <p class="text-sm text-gray-500 mb-4">
-      Queries ranking position 4–20 with solid impression volume. A title/content
-      improvement could push these into top 3 and multiply clicks.
+      Searches where your page shows up on page 1 or 2 of Google but isn't quite at the top yet. A few small fixes could push these into the top 3 and get a lot more clicks.
     </p>
 
     {% if result.quick_wins %}
@@ -156,11 +154,10 @@
   {# ═══════════════════════════════════════════════════════════════════════ #}
   <div id="content-gaps">
     <h2 class="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
-      <i class="fa-solid fa-arrow-up-right-dots text-blue-500"></i> Content Gaps
+      <i class="fa-solid fa-arrow-up-right-dots text-blue-500"></i> Pages people see but don't click
     </h2>
     <p class="text-sm text-gray-500 mb-4">
-      Queries with 100+ impressions but CTR under 3%. Your page is ranking but not
-      earning clicks — likely a title/meta intent mismatch.
+      Your page shows up on Google often but hardly anyone clicks it. Usually the title or description doesn't match what people are looking for.
     </p>
 
     {% if result.content_gaps %}

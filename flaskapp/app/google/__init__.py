@@ -32,6 +32,9 @@ from enum import Enum
 
 google_bp = Blueprint("google_bp", __name__, url_prefix="/account/google")
 
+import time as _time
+_ads_perf_cache: dict = {}  # in-process TTL cache keyed by account_id
+
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 
 class EnumEncoder(json.JSONEncoder):
@@ -536,7 +539,12 @@ def _get_gsc_user_tokens(aid: int) -> dict | None:
             ).mappings().first()
         if not row:
             return None
-        return json.loads(row["credentials_json"])
+        data = json.loads(row["credentials_json"])
+        # google-auth Credentials.to_json() uses "token" key; normalize here
+        # so all callers can rely on "access_token"
+        if "token" in data and "access_token" not in data:
+            data["access_token"] = data.pop("token")
+        return data
     except Exception:
         current_app.logger.exception("Failed reading GSC user tokens")
         return None
@@ -663,7 +671,10 @@ def _fetch_gsc_report(site_url: str, start_date: str, end_date: str) -> dict | N
         current_app.logger.warning("GSC: no user access token")
         return None
 
-    base = f"https://searchconsole.googleapis.com/webmasters/v3/sites/{site_url}/searchAnalytics/query"
+    # GSC API requires the site URL to be percent-encoded in the path
+    from urllib.parse import quote
+    encoded_site = quote(site_url, safe="")
+    base = f"https://searchconsole.googleapis.com/webmasters/v3/sites/{encoded_site}/searchAnalytics/query"
     hdrs = {"Authorization": f"Bearer {at}", "Content-Type": "application/json"}
 
     def _post(payload: dict) -> requests.Response:
@@ -853,7 +864,7 @@ def get_gsc_insights(gsc: dict) -> str:
             )
 
             text = response.choices[0].message.content.strip()
-            return text or ""
+            return _format_gsc_insights(text)
 
         else:
             # Fallback to old inline prompt
@@ -882,11 +893,72 @@ def get_gsc_insights(gsc: dict) -> str:
                                 parts.append(block.text)
                 text = "\n".join(parts).strip()
 
-            return text or ""
+            return _format_gsc_insights(text)
 
     except Exception as e:
         current_app.logger.exception("OpenAI insights failed: %s", e)
         return ""
+
+
+def _format_gsc_insights(text: str) -> str:
+    """Convert AI insight output (JSON array or plain text) to rendered HTML."""
+    if not text:
+        return ""
+
+    # Strip markdown code fences the model sometimes adds
+    stripped = text.strip()
+    if stripped.startswith("```"):
+        inner = stripped.split("```", 2)
+        stripped = inner[1].lstrip("json").strip() if len(inner) >= 3 else stripped
+
+    try:
+        import json as _j
+        data = _j.loads(stripped)
+        if not isinstance(data, list):
+            raise ValueError
+    except Exception:
+        import html
+        return f'<p class="whitespace-pre-line text-gray-700">{html.escape(text)}</p>'
+
+    severity_color = {1: "red", 2: "yellow", 3: "blue"}
+    severity_label = {1: "High priority", 2: "Medium priority", 3: "Low priority"}
+
+    parts = []
+    for item in data:
+        title       = item.get("title", "")
+        description = item.get("description", "")
+        impact      = item.get("expected_impact", "")
+        sev         = int(item.get("severity") or 2)
+        steps       = (item.get("action") or {}).get("steps") or []
+        color       = severity_color.get(sev, "gray")
+        label       = severity_label.get(sev, "")
+
+        import html as _html
+        steps_html = ""
+        if steps:
+            lis = "".join(f"<li>{_html.escape(str(s))}</li>" for s in steps)
+            steps_html = (
+                f'<ol class="list-decimal list-inside mt-2 space-y-1 text-gray-600 text-xs">'
+                f"{lis}</ol>"
+            )
+
+        impact_html = (
+            f'<span class="mt-1 inline-block text-xs text-green-700 font-medium">↑ {_html.escape(str(impact))}</span>'
+            if impact else ""
+        )
+
+        parts.append(
+            f'<div class="border-l-4 border-{color}-400 pl-3 py-1">'
+            f'<div class="flex items-start justify-between gap-2">'
+            f'<span class="font-medium text-gray-800 text-sm">{_html.escape(str(title))}</span>'
+            f'<span class="text-xs text-{color}-600 whitespace-nowrap shrink-0">{label}</span>'
+            f"</div>"
+            f'<p class="text-sm text-gray-600 mt-1">{_html.escape(str(description))}</p>'
+            f"{impact_html}{steps_html}"
+            f"</div>"
+        )
+
+    return '<div class="space-y-4">' + "\n".join(parts) + "</div>"
 
 
 # ------------------------- Misc helpers -------------------------
@@ -1225,7 +1297,10 @@ def _sample_ads() -> dict:
     return _SAMPLE_ADS
 
 def _save_ads_state(aid: int, data: dict):
-    session[f"ads_state_{aid}"] = data
+    if aid not in _ads_perf_cache:
+        _ads_perf_cache[aid] = {}
+    _ads_perf_cache[aid]['ads_state'] = data
+    _ads_perf_cache[aid]['ads_state_ts'] = _time.time()
 
 def _own_hostnames() -> set[str]:
     """Get hostnames we should treat as 'self', from EXTERNAL_BASE_URL and GA_EXCLUDE_HOSTS."""
@@ -1631,22 +1706,29 @@ def _fetch_ads_live(aid: int) -> dict | None:
         return None
 
 def _get_ads_state(aid: int) -> dict:
-    sess_key = f"ads_state_{aid}"
     connected = _is_connected(aid, "ads")
-    state = session.get(sess_key)
+    _cache_entry = _ads_perf_cache.get(aid, {})
+    _state = _cache_entry.get('ads_state')
+    _state_age = _time.time() - _cache_entry.get('ads_state_ts', 0)
     if connected:
-        if state and state.get("__source") == "live":
-            return state
+        if _state and _state.get("__source") == "live" and _state_age < 300:
+            return _state
         live = _fetch_ads_live(aid)
         if live:
-            session[sess_key] = live
+            if aid not in _ads_perf_cache:
+                _ads_perf_cache[aid] = {}
+            _ads_perf_cache[aid]['ads_state'] = live
+            _ads_perf_cache[aid]['ads_state_ts'] = _time.time()
             return live
-        return state or {"account_name": "Google Ads Account", "campaigns": [], "ad_groups": [],
+        return _state or {"account_name": "Google Ads Account", "campaigns": [], "ad_groups": [],
                          "keywords": [], "negatives": [], "ads": [], "extensions": [], "landing_pages": []}
-    if not state:
-        state = json.loads(json.dumps(_sample_ads()))
-        session[sess_key] = state
-    return state
+    if not _state:
+        _state = json.loads(json.dumps(_sample_ads()))
+        if aid not in _ads_perf_cache:
+            _ads_perf_cache[aid] = {}
+        _ads_perf_cache[aid]['ads_state'] = _state
+        _ads_perf_cache[aid]['ads_state_ts'] = _time.time()
+    return _state
 
 # ------------------------- Ads AI summary (placeholder JSON) -------------------------
 
@@ -1670,15 +1752,15 @@ def ads_ai_summary_json():
 @google_bp.route("/", methods=["GET"], endpoint="index")
 @login_required
 def index():
-    """Google integrations index with session caching to prevent OOM."""
+    """Google integrations overview dashboard."""
     from datetime import datetime, timedelta
 
     aid = current_account_id()
-
-    # Use session cache to prevent repeated DB calls (1 hour cache)
     force_refresh = request.args.get('refresh') == '1'
     cache_key = f"google_connected_{aid}"
 
+    # ── Connection status (cached 1 h, busted on ?refresh=1) ──────────────
+    connected = {}
     try:
         if not force_refresh and cache_key in session:
             cached = session.get(cache_key)
@@ -1686,63 +1768,139 @@ def index():
                 try:
                     cache_time = datetime.fromisoformat(cached["__cached_at"])
                     if datetime.utcnow() - cache_time < timedelta(hours=1):
-                        current_app.logger.info(f"Using cached connection status for account {aid}")
                         connected = {k: v for k, v in cached.items() if k != "__cached_at"}
-                        return render_template("google/index.html", connected=connected, epn=request.endpoint)
                 except (ValueError, TypeError):
                     pass
 
-        # Fetch fresh connection status with error handling for each check
-        connected = {}
-        try:
-            connected["ga"] = _is_connected(aid, "ga")
-        except Exception as e:
-            current_app.logger.error(f"Error checking GA connection: {e}")
-            connected["ga"] = False
-
-        try:
-            connected["ads"] = _is_connected(aid, "ads")
-        except Exception as e:
-            current_app.logger.error(f"Error checking Ads connection: {e}")
-            connected["ads"] = False
-
-        try:
-            connected["gsc"] = _is_connected(aid, "gsc")
-        except Exception as e:
-            current_app.logger.error(f"Error checking GSC connection: {e}")
-            connected["gsc"] = False
-
-        try:
-            connected["gmb"] = _is_connected(aid, "gmb")
-        except Exception as e:
-            current_app.logger.error(f"Error checking GMB connection: {e}")
-            connected["gmb"] = False
-
-        try:
-            connected["lsa"] = _is_connected(aid, "lsa")
-        except Exception as e:
-            current_app.logger.error(f"Error checking LSA connection: {e}")
-            connected["lsa"] = False
-
-        # Cache the result
-        connected["__cached_at"] = datetime.utcnow().isoformat()
-        session[cache_key] = connected
-
-        # Remove timestamp before rendering
-        display_connected = {k: v for k, v in connected.items() if k != "__cached_at"}
-
-        return render_template("google/index.html", connected=display_connected, epn=request.endpoint)
-
+        if not connected:
+            for prod in ("ads", "ga", "gsc", "gmb", "lsa"):
+                try:
+                    connected[prod] = _is_connected(aid, prod)
+                except Exception:
+                    connected[prod] = False
+            session[cache_key] = {**connected, "__cached_at": datetime.utcnow().isoformat()}
     except Exception as e:
-        current_app.logger.error(f"Error in Google index route: {e}", exc_info=True)
-        # Fallback to all disconnected
-        return render_template("google/index.html", connected={
-            "ga": False,
-            "ads": False,
-            "gsc": False,
-            "gmb": False,
-            "lsa": False
-        }, epn=request.endpoint)
+        current_app.logger.error(f"Error checking connections: {e}")
+        connected = {p: False for p in ("ads", "ga", "gsc", "gmb", "lsa")}
+
+    # ── Token health: last updated timestamp per product ──────────────────
+    token_health = {}
+    try:
+        rows = db.session.execute(text("""
+            SELECT product, updated_at
+            FROM google_oauth_tokens
+            WHERE account_id = :aid
+        """), {"aid": aid}).mappings().all()
+        now = datetime.utcnow()
+        for r in rows:
+            age = now - r["updated_at"] if r["updated_at"] else None
+            token_health[r["product"]] = {
+                "updated_at": r["updated_at"],
+                "age_days": age.days if age else None,
+                "stale": age.days > 45 if age else False,  # refresh tokens typically last 60d
+            }
+    except Exception:
+        pass
+
+    # ── Mini-KPIs per product from local DB ───────────────────────────────
+    kpis = {}
+
+    # Ads: 30d spend + conversions from GadsStatsDaily (join via ads_campaigns for account scoping)
+    if connected.get("ads"):
+        try:
+            r = db.session.execute(text("""
+                SELECT
+                    SUM(gs.cost_micros) / 1000000.0 AS spend,
+                    SUM(gs.conversions)              AS conversions,
+                    SUM(gs.clicks)                   AS clicks,
+                    MAX(gs.date)                     AS last_date
+                FROM gads_stats_daily gs
+                JOIN ads_campaigns ac ON ac.id = gs.entity_id
+                WHERE ac.account_id = :aid
+                  AND gs.entity_type = 'campaign'
+                  AND gs.date >= (CURRENT_DATE - INTERVAL 30 DAY)
+            """), {"aid": aid}).mappings().first()
+            if r and r["last_date"]:
+                kpis["ads"] = {
+                    "spend": round(float(r["spend"] or 0), 2),
+                    "conversions": round(float(r["conversions"] or 0), 1),
+                    "clicks": int(r["clicks"] or 0),
+                    "last_sync": str(r["last_date"]) if r["last_date"] else None,
+                }
+        except Exception:
+            pass
+
+    # GSC: 30d clicks + impressions from seo_keyword_positions or gads fallback
+    if connected.get("gsc"):
+        try:
+            r = db.session.execute(text("""
+                SELECT SUM(clicks) AS clicks, SUM(impressions) AS impressions,
+                       ROUND(AVG(position), 1) AS avg_pos, MAX(date_end) AS last_date
+                FROM seo_keyword_positions
+                WHERE account_id = :aid
+                  AND date_end >= (CURRENT_DATE - INTERVAL 30 DAY)
+            """), {"aid": aid}).mappings().first()
+            if r and r["clicks"]:
+                kpis["gsc"] = {
+                    "clicks": int(r["clicks"] or 0),
+                    "impressions": int(r["impressions"] or 0),
+                    "avg_pos": float(r["avg_pos"] or 0),
+                    "last_sync": str(r["last_date"]) if r["last_date"] else None,
+                }
+        except Exception:
+            pass
+
+    # Optimizer: open recommendation count
+    optimizer_count = 0
+    try:
+        optimizer_count = db.session.execute(text(
+            "SELECT COUNT(*) FROM optimizer_recommendations WHERE account_id=:aid AND status='open'"
+        ), {"aid": aid}).scalar() or 0
+    except Exception:
+        pass
+
+    # Automation rules: enabled count + actions today
+    rules_count = 0
+    actions_today = 0
+    try:
+        rules_count = db.session.execute(text(
+            "SELECT COUNT(*) FROM ai_action_rules WHERE account_id=:aid AND enabled=1"
+        ), {"aid": aid}).scalar() or 0
+        actions_today = db.session.execute(text(
+            "SELECT COUNT(*) FROM ai_actions WHERE account_id=:aid AND DATE(created_at)=CURDATE()"
+        ), {"aid": aid}).scalar() or 0
+    except Exception:
+        pass
+
+    # Last sync timestamp (most recent GadsStatsDaily date, joined via ads_campaigns)
+    last_ads_sync = None
+    try:
+        r = db.session.execute(text(
+            "SELECT MAX(gs.date) AS d FROM gads_stats_daily gs "
+            "JOIN ads_campaigns ac ON ac.id = gs.entity_id "
+            "WHERE ac.account_id = :aid AND gs.entity_type = 'campaign'"
+        ), {"aid": aid}).mappings().first()
+        last_ads_sync = str(r["d"]) if r and r["d"] else None
+    except Exception:
+        pass
+
+    # Connected count for progress bar
+    connected_count = sum(1 for v in connected.values() if v)
+    total_products = len(connected)
+
+    return render_template(
+        "google/index.html",
+        connected=connected,
+        token_health=token_health,
+        kpis=kpis,
+        optimizer_count=optimizer_count,
+        rules_count=rules_count,
+        actions_today=actions_today,
+        last_ads_sync=last_ads_sync,
+        connected_count=connected_count,
+        total_products=total_products,
+        epn=request.endpoint,
+    )
 
 # ------------------------- GA Insights (ChatGPT) -------------------------
 
@@ -3127,6 +3285,7 @@ def ads_performance():
     from datetime import datetime, timedelta
 
     aid = current_account_id()
+    current_app.logger.info(f"[ads_performance] route entered for account_id={aid}")
 
     # Check connection status
     connected = False
@@ -3339,15 +3498,33 @@ def ads_performance():
     account_performance = None
     prior_performance = None
     auth_error = False
+    _perf_cache_entry = _ads_perf_cache.get(aid, {})
+    _perf_cache_age = _time.time() - _perf_cache_entry.get('perf_ts', 0)
     if connected:
         from app.google.utils_ads import fetch_account_performance_stats
         try:
-            current_app.logger.info(f"Fetching account performance stats for account {aid}")
-            account_performance = fetch_account_performance_stats(aid, days=30)
-            current_app.logger.info(f"[DECISION] Account performance fetched: has_data={account_performance.get('has_data') if account_performance else 'None'}")
+            # Use in-process cache (5-min TTL) to avoid slow API call on every page load
+            if _perf_cache_age < 300 and _perf_cache_entry.get('perf30'):
+                account_performance = _perf_cache_entry['perf30']
+                prior_performance = _perf_cache_entry.get('perf60')
+                current_app.logger.info(f"[DECISION] Account performance from cache: has_data={account_performance.get('has_data') if account_performance else 'None'}")
+            else:
+                current_app.logger.info(f"Fetching account performance stats for account {aid}")
+                account_performance = fetch_account_performance_stats(aid, days=30)
+                current_app.logger.info(f"[DECISION] Account performance fetched: has_data={account_performance.get('has_data') if account_performance else 'None'}")
+                if aid not in _ads_perf_cache:
+                    _ads_perf_cache[aid] = {}
+                _ads_perf_cache[aid]['perf30'] = account_performance
+                _ads_perf_cache[aid]['perf_ts'] = _time.time()
 
-            # Also fetch prior 30 days (days 31-60) for comparison
-            prior_performance = fetch_account_performance_stats(aid, days=60)
+            # Also fetch prior 30 days (days 31-60) for comparison — only on fresh fetch
+            if _perf_cache_age >= 300 or not _perf_cache_entry.get('perf60'):
+                prior_performance = fetch_account_performance_stats(aid, days=60)
+                if aid not in _ads_perf_cache:
+                    _ads_perf_cache[aid] = {}
+                _ads_perf_cache[aid]['perf60'] = prior_performance
+            else:
+                prior_performance = _perf_cache_entry.get('perf60')
             if prior_performance and prior_performance.get('has_data') and account_performance and account_performance.get('has_data'):
                 # Subtract current period from 60-day totals to get prior period
                 prior_impressions = max(0, (prior_performance.get('impressions', 0) or 0) - (account_performance.get('impressions', 0) or 0))
@@ -3438,8 +3615,15 @@ def ads_performance():
         historical_improvement = _get_demo_improvement_data()
 
     # Fetch daily performance data for the graph (last 30 days)
+    # Try live API first; fall back to GadsStatsDaily (local DB) if unavailable.
     daily_performance = []
-    if connected and account_performance and account_performance.get('has_data'):
+    daily_performance_error = None
+
+    _dp_cache_age = _time.time() - _ads_perf_cache.get(aid, {}).get('daily_ts', 0)
+    if connected and _dp_cache_age < 600 and _ads_perf_cache.get(aid, {}).get('daily'):
+        daily_performance = _ads_perf_cache[aid]['daily']
+        current_app.logger.info(f"[ads_performance] daily_performance from cache ({len(daily_performance)} rows)")
+    elif connected:
         try:
             from app.google.utils_ads import (
                 google_ads_search, resolve_ads_context
@@ -3478,53 +3662,99 @@ def ads_performance():
                             "clicks": int(m.get("clicks", 0)),
                             "impressions": int(m.get("impressions", 0)),
                         })
+                    if daily_performance:
+                        if aid not in _ads_perf_cache:
+                            _ads_perf_cache[aid] = {}
+                        _ads_perf_cache[aid]['daily'] = daily_performance
+                        _ads_perf_cache[aid]['daily_ts'] = _time.time()
         except Exception as e:
-            current_app.logger.warning(f"Could not fetch daily performance for graph: {e}")
+            current_app.logger.warning(f"Could not fetch daily performance from API: {e}")
+            daily_performance_error = "Live data unavailable — showing cached data"
+
+    # Fallback: pull from GadsStatsDaily (populated by sync) if API returned nothing
+    if not daily_performance:
+        try:
+            fallback_rows = db.session.execute(text("""
+                SELECT date,
+                       SUM(cost_micros) / 1000000.0 AS cost,
+                       SUM(conversions)              AS conversions,
+                       SUM(clicks)                   AS clicks,
+                       SUM(impressions)              AS impressions
+                FROM gads_stats_daily
+                WHERE account_id = :aid
+                  AND entity_type = 'campaign'
+                  AND date >= (CURRENT_DATE - INTERVAL 30 DAY)
+                GROUP BY date
+                ORDER BY date ASC
+            """), {"aid": aid}).mappings().all()
+
+            for r in fallback_rows:
+                daily_performance.append({
+                    "date": str(r["date"]),
+                    "cost": round(float(r["cost"] or 0), 2),
+                    "conversions": round(float(r["conversions"] or 0), 1),
+                    "clicks": int(r["clicks"] or 0),
+                    "impressions": int(r["impressions"] or 0),
+                })
+            if daily_performance and daily_performance_error:
+                daily_performance_error = "Showing synced data (live API unavailable)"
+            elif not daily_performance:
+                daily_performance_error = None  # let template show "sync your account"
+        except Exception as e:
+            current_app.logger.warning(f"GadsStatsDaily fallback failed: {e}")
 
     # Transform actions into timeline format
     recent_changes = []
-    for action in recent_actions:
-        # Determine icon and color based on action type
-        if action.action_type == 'negative_keyword_added':
-            icon = 'fa-ban'
-            color = 'red'
-        elif action.action_type in ['bid_adjusted', 'budget_reallocated']:
-            icon = 'fa-arrows-rotate'
-            color = 'green'
-        elif action.action_type in ['keyword_paused', 'ad_paused']:
-            icon = 'fa-pause-circle'
-            color = 'yellow'
-        else:
-            icon = 'fa-robot'
-            color = 'blue'
-
-        # Format time — include date for older items
-        action_dt = action.executed_at
-        if action_dt:
-            now = datetime.utcnow()
-            if action_dt.date() == now.date():
-                time_str = action_dt.strftime('%-I:%M %p')
+    try:
+        for action in recent_actions:
+            # Determine icon and color based on action type
+            if action.action_type == 'negative_keyword_added':
+                icon = 'fa-ban'
+                color = 'red'
+            elif action.action_type in ['bid_adjusted', 'budget_reallocated']:
+                icon = 'fa-arrows-rotate'
+                color = 'green'
+            elif action.action_type in ['keyword_paused', 'ad_paused']:
+                icon = 'fa-pause-circle'
+                color = 'yellow'
             else:
-                time_str = action_dt.strftime('%b %-d, %-I:%M %p')
-        else:
-            time_str = 'Unknown'
+                icon = 'fa-robot'
+                color = 'blue'
 
-        action_status = getattr(action, 'status', 'pending')
+            # Format time — include date for older items
+            action_dt = action.executed_at
+            if action_dt:
+                now = datetime.utcnow()
+                if action_dt.date() == now.date():
+                    time_str = action_dt.strftime('%-I:%M %p')
+                else:
+                    time_str = action_dt.strftime('%b %-d, %-I:%M %p')
+            else:
+                time_str = 'Unknown'
 
-        recent_changes.append({
-            'type': action.action_type,
-            'icon': icon,
-            'color': color,
-            'title': action.title,
-            'time': time_str,
-            'description': action.description,
-            'reasoning': action.reasoning,
-            'saved': action.estimated_monthly_savings or 0,
-            'confidence': action.confidence_score,
-            'can_undo': action.is_undoable,
-            'action_id': action.id,
-            'status': action_status,
-        })
+            action_status = getattr(action, 'status', 'pending')
+            saved_val = action.estimated_monthly_savings
+            saved_val = float(saved_val) if saved_val is not None else 0
+
+            recent_changes.append({
+                'type': action.action_type,
+                'icon': icon,
+                'color': color,
+                'title': action.title,
+                'time': time_str,
+                'description': action.description,
+                'reasoning': action.reasoning,
+                'saved': saved_val,
+                'confidence': action.confidence_score,
+                'can_undo': action.is_undoable,
+                'action_id': action.id,
+                'status': action_status,
+            })
+    except Exception as e:
+        current_app.logger.error(f"Error building recent_changes timeline: {e}")
+        import traceback as _tb
+        current_app.logger.error(_tb.format_exc())
+        recent_changes = []
 
     # Campaigns data for the performance table
     campaigns_data = []
@@ -3534,6 +3764,7 @@ def ads_performance():
             campaigns_data = ads_state.get('campaigns', []) or []
     except Exception:
         pass
+    current_app.logger.info(f"[ads_performance] campaigns_data loaded ({len(campaigns_data)} campaigns)")
 
     # Target CPL from account settings
     target_cpl = 80.0
@@ -3566,36 +3797,131 @@ def ads_performance():
     except Exception:
         pass
 
-    return render_template(
-        "google/performance_dashboard.html",
-        connected=connected,
-        status=status,
-        wasted_spend_prevented=round(wasted_spend_prevented, 2),
-        calls_generated=calls_generated,
-        qualified_leads=qualified_leads,
-        booked_jobs=booked_jobs,
-        ai_actions_taken=ai_actions_taken,
-        blocked_searches_count=blocked_searches_count,
-        budget_reallocations=budget_reallocations,
-        bids_optimized=bids_optimized,
-        irrelevant_blocked_count=irrelevant_count,
-        job_blocked_count=job_count,
-        low_quality_count=low_quality_count,
-        lsa_missed_calls=lsa_missed_calls,
-        recent_changes=recent_changes,
-        historical_improvement=historical_improvement,
-        account_performance=account_performance,
-        daily_performance=daily_performance,
-        auth_error=auth_error,
-        epn=request.endpoint,
-        pending_decisions_count=pending_decisions_count,
-        pending_savings=round(pending_savings, 2),
-        savings_are_pending=savings_are_pending,
-        campaigns_data=campaigns_data,
-        target_cpl=target_cpl,
-        has_conversion_tracking=has_conversion_tracking,
-        unreviewed_search_terms_count=unreviewed_search_terms_count,
-    )
+    # ── Device & Daypart segmentation (GAQL, best-effort) ──────────────────
+    device_data = []
+    daypart_data = []
+    try:
+        if connected:
+            from app.google.utils_ads import google_ads_search, resolve_ads_context
+            from app.google.token_utils import ensure_access_token
+            _seg_tok, _seg_prod = ensure_access_token(aid, ("ads", "lsa"))
+            if _seg_tok:
+                _seg_ctx = resolve_ads_context(aid)
+                cid = _seg_ctx.get("customer_id")
+                login_cid = _seg_ctx.get("login_customer_id")
+                if cid:
+                    # Device performance
+                    dev_rows = google_ads_search(
+                        access_token=_seg_tok,
+                        customer_id=cid,
+                        query="""
+                        SELECT segments.device,
+                               metrics.impressions, metrics.clicks,
+                               metrics.cost_micros, metrics.conversions
+                        FROM campaign
+                        WHERE segments.date DURING LAST_30_DAYS
+                    """,
+                        login_customer_id=login_cid,
+                    ) or []
+                    dev_agg = {}
+                    for r in dev_rows:
+                        seg = r.get("segments", {})
+                        m = r.get("metrics", {})
+                        dev = seg.get("device", "UNKNOWN")
+                        dev_agg.setdefault(dev, {"device": dev, "impressions": 0, "clicks": 0, "cost": 0.0, "conversions": 0.0})
+                        dev_agg[dev]["impressions"] += int(m.get("impressions", 0) or 0)
+                        dev_agg[dev]["clicks"] += int(m.get("clicks", 0) or 0)
+                        dev_agg[dev]["cost"] += int(m.get("costMicros", 0) or 0) / 1e6
+                        dev_agg[dev]["conversions"] += float(m.get("conversions", 0) or 0)
+                    for v in dev_agg.values():
+                        v["ctr"] = round(v["clicks"] / v["impressions"] * 100, 2) if v["impressions"] else 0
+                        v["cpa"] = round(v["cost"] / v["conversions"], 2) if v["conversions"] else None
+                        v["cost"] = round(v["cost"], 2)
+                    device_data = sorted(dev_agg.values(), key=lambda x: x["cost"], reverse=True)
+
+                    # Daypart (by hour) performance
+                    hour_rows = google_ads_search(
+                        access_token=_seg_tok,
+                        customer_id=cid,
+                        query="""
+                        SELECT segments.hour, segments.day_of_week,
+                               metrics.impressions, metrics.clicks,
+                               metrics.cost_micros, metrics.conversions
+                        FROM campaign
+                        WHERE segments.date DURING LAST_30_DAYS
+                    """,
+                        login_customer_id=login_cid,
+                    ) or []
+                    hour_agg = {}
+                    dow_agg = {}
+                    for r in hour_rows:
+                        seg = r.get("segments", {})
+                        m = r.get("metrics", {})
+                        h = int(seg.get("hour", 0) or 0)
+                        dow = seg.get("dayOfWeek", "UNKNOWN")
+                        impr = int(m.get("impressions", 0) or 0)
+                        clks = int(m.get("clicks", 0) or 0)
+                        cost = int(m.get("costMicros", 0) or 0) / 1e6
+                        conv = float(m.get("conversions", 0) or 0)
+                        hour_agg.setdefault(h, {"hour": h, "impressions": 0, "clicks": 0, "cost": 0.0, "conversions": 0.0})
+                        hour_agg[h]["impressions"] += impr; hour_agg[h]["clicks"] += clks
+                        hour_agg[h]["cost"] += cost; hour_agg[h]["conversions"] += conv
+                        dow_agg.setdefault(dow, {"dow": dow, "impressions": 0, "clicks": 0, "cost": 0.0, "conversions": 0.0})
+                        dow_agg[dow]["impressions"] += impr; dow_agg[dow]["clicks"] += clks
+                        dow_agg[dow]["cost"] += cost; dow_agg[dow]["conversions"] += conv
+                    for v in list(hour_agg.values()) + list(dow_agg.values()):
+                        v["ctr"] = round(v["clicks"] / v["impressions"] * 100, 2) if v["impressions"] else 0
+                        v["cost"] = round(v["cost"], 2)
+                    daypart_data = {
+                        "hours": [hour_agg[h] for h in range(24) if h in hour_agg],
+                        "days": sorted(dow_agg.values(), key=lambda x: ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"].index(x["dow"]) if x["dow"] in ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"] else 99),
+                    }
+    except Exception:
+        current_app.logger.debug("Device/daypart GAQL query skipped")
+
+    current_app.logger.info(f"[ads_performance] reaching render_template")
+    try:
+        _rendered = render_template(
+            "google/performance_dashboard.html",
+            device_data=device_data,
+            daypart_data=daypart_data,
+            connected=connected,
+            status=status,
+            wasted_spend_prevented=round(wasted_spend_prevented, 2),
+            calls_generated=calls_generated,
+            qualified_leads=qualified_leads,
+            booked_jobs=booked_jobs,
+            ai_actions_taken=ai_actions_taken,
+            blocked_searches_count=blocked_searches_count,
+            budget_reallocations=budget_reallocations,
+            bids_optimized=bids_optimized,
+            irrelevant_blocked_count=irrelevant_count,
+            job_blocked_count=job_count,
+            low_quality_count=low_quality_count,
+            lsa_missed_calls=lsa_missed_calls,
+            recent_changes=recent_changes,
+            historical_improvement=historical_improvement,
+            account_performance=account_performance,
+            daily_performance=daily_performance,
+            daily_performance_error=daily_performance_error,
+            auth_error=auth_error,
+            epn=request.endpoint,
+            pending_decisions_count=pending_decisions_count,
+            pending_savings=round(pending_savings, 2),
+            savings_are_pending=savings_are_pending,
+            campaigns_data=campaigns_data,
+            target_cpl=target_cpl,
+            has_conversion_tracking=has_conversion_tracking,
+            unreviewed_search_terms_count=unreviewed_search_terms_count,
+        )
+        current_app.logger.info(f"[ads_performance] render_template COMPLETED OK")
+        return _rendered
+    except Exception as _render_err:
+        import traceback as _tb
+        current_app.logger.error(
+            f"ads_performance render_template FAILED: {_render_err}\n{_tb.format_exc()}"
+        )
+        raise
 
 
 @google_bp.route("/ads/ai-change-log", methods=["GET"], endpoint="ai_change_log")
@@ -3608,27 +3934,17 @@ def ai_change_log():
 @google_bp.route("/analytics/data", methods=["GET"], endpoint="ga_data")
 @login_required
 def ga_data():
-    # Detect if this is being accessed directly in a browser (not AJAX)
-    # If so, redirect to the main analytics page
-    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-    accepts_json = 'application/json' in request.headers.get('Accept', '')
-
-    if not is_ajax and not accepts_json:
-        # User is accessing this directly - redirect to main analytics page
-        timeframe = request.args.get("timeframe", "28d")
-        return redirect(url_for("google_bp.ga_ui", timeframe=timeframe))
-
     timeframe = request.args.get("timeframe", "28d")
-    start_date, end_date, label = _resolve_timeframe(timeframe)
-
-    aid = current_account_id()
-    env_pid_raw = os.getenv("GA_PROPERTY_ID")
-    prop_id, prop_name = _get_ga_selected_property(aid)
-    effective_prop = prop_id or (_norm_prop_id(env_pid_raw) if env_pid_raw else None)
-    connected_name = prop_name or (_ga_property_name_any(env_pid_raw, aid) if env_pid_raw else None) or os.getenv("GA_PROPERTY_LABEL")
-
+    label = timeframe
     ga = None
     try:
+        start_date, end_date, label = _resolve_timeframe(timeframe)
+        aid = current_account_id()
+        env_pid_raw = os.getenv("GA_PROPERTY_ID")
+        prop_id, prop_name = _get_ga_selected_property(aid)
+        effective_prop = prop_id or (_norm_prop_id(env_pid_raw) if env_pid_raw else None)
+        connected_name = prop_name or (_ga_property_name_any(env_pid_raw, aid) if env_pid_raw else None) or os.getenv("GA_PROPERTY_LABEL")
+
         if effective_prop:
             ga = _fetch_ga_report(effective_prop, start_date, end_date)
             if ga:
@@ -3923,7 +4239,7 @@ def get_ai_actions_summary():
     """
     try:
         from app.models_ai_actions import AIAction
-        from sqlalchemy import func
+        from sqlalchemy import func, desc
         from datetime import datetime, timedelta
 
         aid = current_account_id()
@@ -4331,7 +4647,7 @@ def ads_opportunities():
     }
     try:
         from datetime import timedelta
-        from sqlalchemy import func
+        from sqlalchemy import func, text
 
         # Get last execution time from agent_execution_log
         last_run_query = text("""
@@ -5009,10 +5325,10 @@ def _check_competitive_tables_exist():
 # SEARCH TERM REPORT ROUTES
 # ==============================================================================
 
-@google_bp.route("/ads/search-terms", methods=["GET"], endpoint="search_terms")
+@google_bp.route("/ads/search-terms-v1", methods=["GET"], endpoint="search_terms")
 @login_required
 def search_terms():
-    """Search term report — see what queries triggered ads, add bad ones as negatives."""
+    """Legacy search term report — superseded by gads_bp.search_terms."""
     aid = current_account_id()
     days = request.args.get("days", 30, type=int)
     campaign_filter = request.args.get("campaign_id", type=int)
@@ -5036,6 +5352,22 @@ def search_terms():
     terms = []
     total_wasted = 0.0
     unreviewed_count = 0
+    irrelevant_count = 0
+
+    # Infer service type for relevance classification
+    service_type = "generic"
+    try:
+        from app.google.forecasting_routes import _infer_service_type
+        service_type = _infer_service_type(aid)
+    except Exception:
+        pass
+
+    try:
+        from app.google.ads import _classify_term
+    except Exception:
+        def _classify_term(term, st):
+            return "relevant"
+
     try:
         q = text("""
             SELECT st.id, st.search_term, st.clicks, st.impressions,
@@ -5058,7 +5390,11 @@ def search_terms():
             cost = r["cost_micros"] / 1_000_000
             conv = float(r["conversions"] or 0)
             cpl = cost / conv if conv > 0 else 0
-            is_wasted = cost > 5 and conv == 0 and not r["added_as_negative"]
+            relevance = _classify_term(r["search_term"], service_type)
+            is_irrelevant = relevance == "irrelevant" and not r["added_as_negative"]
+            is_wasted = is_irrelevant or (cost > 5 and conv == 0 and not r["added_as_negative"])
+            if is_irrelevant:
+                irrelevant_count += 1
             if is_wasted:
                 total_wasted += cost
             if not r["added_as_negative"] and not r["added_as_keyword"]:
@@ -5076,6 +5412,8 @@ def search_terms():
                 "added_as_negative": bool(r["added_as_negative"]),
                 "added_as_keyword": bool(r["added_as_keyword"]),
                 "is_wasted": is_wasted,
+                "relevance": relevance,
+                "is_irrelevant": is_irrelevant,
             })
     except Exception as e:
         current_app.logger.warning(f"search_terms query failed: {e}")
@@ -5088,6 +5426,8 @@ def search_terms():
         campaign_filter=campaign_filter,
         total_wasted=round(total_wasted, 2),
         unreviewed_count=unreviewed_count,
+        irrelevant_count=irrelevant_count,
+        service_type=service_type,
         total_terms=len(terms),
         blocked_count=sum(1 for t in terms if t["added_as_negative"]),
     )
@@ -5625,57 +5965,189 @@ def _apply_mobile_bid_adjustment(aid: int, customer_id: str, opt_data: dict, acc
         return {"success": False, "error": str(e)}
 
 
+# ---------------------------------------------------------------------------
+# Shared headline/description prompt builder
+# ---------------------------------------------------------------------------
+#
+# We ask the LLM to produce headlines in six named categories so that every
+# ad is guaranteed to cover each angle.  The response is a dict keyed by
+# category; callers flatten it with _flatten_rsa_headlines().
+#
+# Category definitions:
+#   service       — what the service IS  ("Pool Cleaning Service")
+#   keyword       — mirrors the user's search  ("Pool Cleaning Near Me")
+#   result        — outcome the customer gets  ("Crystal Clear Water All Season")
+#   cta           — next-step action  ("Call Now – Free Quote")
+#   trust         — objection-handling credibility  ("Licensed & Insured")
+#   differentiator— specific reason to choose you  ("No Contracts Required")
+
+_HEADLINE_CATEGORIES = ["service", "keyword", "result", "cta", "trust", "differentiator"]
+
+# Default per-category counts that sum to 15 (full RSA)
+_HEADLINE_COUNTS_FULL = {
+    "service": 3, "keyword": 3, "result": 3,
+    "cta": 2, "trust": 2, "differentiator": 2,
+}
+
+
+def _rsa_headline_counts(total: int) -> dict[str, int]:
+    """Scale per-category counts to approximate `total` headlines."""
+    base = {k: max(1, round(v * total / 15)) for k, v in _HEADLINE_COUNTS_FULL.items()}
+    # Adjust to hit total exactly
+    diff = total - sum(base.values())
+    for cat in _HEADLINE_CATEGORIES:
+        if diff == 0:
+            break
+        base[cat] += 1 if diff > 0 else -1
+        diff += -1 if diff > 0 else 1
+    return base
+
+
+def _build_rsa_headline_prompt(
+    business_name: str,
+    *,
+    keywords: list[str] | None = None,
+    keyword_theme: str | None = None,
+    existing_headlines: list[str] | None = None,
+    counts: dict[str, int] | None = None,
+    extra_context: str | None = None,
+) -> str:
+    """
+    Build the LLM prompt for structured RSA headline generation.
+
+    Returns a prompt string.  The expected response is JSON with one key per
+    category, each holding a list of headline strings (≤ 30 chars each).
+    """
+    counts = counts or _HEADLINE_COUNTS_FULL
+    kw_text = ", ".join(keywords[:10]) if keywords else keyword_theme or ""
+
+    lines = [f"Business: {business_name}"]
+    if kw_text:
+        lines.append(f"Keywords / theme: {kw_text}")
+    if extra_context:
+        lines.append(extra_context)
+    if existing_headlines:
+        sample = ", ".join(existing_headlines[:8])
+        lines.append(f"Do NOT duplicate these existing headlines: {sample}")
+
+    context = "\n".join(lines)
+
+    category_specs = "\n".join(
+        f'  "{cat}": {n} headlines  —  '
+        + {
+            "service":       "name the service clearly (what you do)",
+            "keyword":       "mirror the user's search query naturally",
+            "result":        "the outcome / transformation the customer gets",
+            "cta":           "next-step action (call, book, get a quote)",
+            "trust":         "credibility signal (license, reviews, years of experience)",
+            "differentiator": "why choose you over the competition (unique policy, speed, etc.)",
+        }[cat]
+        for cat, n in counts.items()
+    )
+
+    total = sum(counts.values())
+    return f"""{context}
+
+Write {total} Google Ads RSA headlines (max 30 chars each) spread across
+these six categories:
+
+{category_specs}
+
+Rules:
+- Every headline ≤ 30 characters (hard limit — truncation kills meaning)
+- No headline repeated across categories
+- Capitalize like a title (not ALL CAPS)
+- No punctuation at the very end (Google strips it)
+- Prefer concrete specifics over vague filler ("500+ Reviews" not "Great Reviews")
+
+Return ONLY valid JSON — no prose, no markdown fences:
+{{
+  "service": [...],
+  "keyword": [...],
+  "result": [...],
+  "cta": [...],
+  "trust": [...],
+  "differentiator": [...]
+}}"""
+
+
+def _flatten_rsa_headlines(parsed: dict, limit: int = 15) -> list[str]:
+    """Flatten categorized headline dict to ordered list, preserving category interleave."""
+    result: list[str] = []
+    # Copy each bucket so we don't mutate the caller's dict
+    buckets = [list(parsed.get(cat, [])) for cat in _HEADLINE_CATEGORIES]
+    while len(result) < limit and any(buckets):
+        for bucket in buckets:
+            if bucket and len(result) < limit:
+                result.append(bucket.pop(0)[:30])
+    return result
+
+
+def _parse_rsa_response(response: str, limit: int = 15) -> list[str]:
+    """Parse a categorized headline JSON response into a flat list."""
+    import json as _json
+    raw = response
+    if "```json" in raw:
+        raw = raw.split("```json")[1].split("```")[0]
+    elif "```" in raw:
+        raw = raw.split("```")[1].split("```")[0]
+    raw = raw.strip()
+    data = _json.loads(raw)
+    if isinstance(data, dict) and any(k in data for k in _HEADLINE_CATEGORIES):
+        return _flatten_rsa_headlines(data, limit)
+    # Fallback: old flat format
+    if "headlines" in data:
+        return [h[:30] for h in data["headlines"][:limit]]
+    raise ValueError(f"Unexpected response shape: {list(data.keys())}")
+
+
+# ---------------------------------------------------------------------------
+
+
 def _generate_mobile_ad_copy(business_name: str, keywords: list, website_url: str = "") -> dict:
     """Generate mobile-optimized RSA ad copy using AI."""
     try:
         from app.ai_clients import chatgpt_response
         import json
 
-        # Get top keywords for context (limit to 10)
-        keyword_text = ", ".join([k.get("text", "") for k in keywords[:10] if k.get("text")])
+        kw_list = [k.get("text", "") for k in keywords[:10] if k.get("text")]
+        prompt = _build_rsa_headline_prompt(
+            business_name,
+            keywords=kw_list,
+            extra_context="Optimise for mobile: favour short punchy text and tap-to-call CTAs.",
+        )
 
-        prompt = f"""Generate mobile-optimized Google RSA ad copy for a business.
+        # Append description request to the same call
+        prompt += """
 
-Business: {business_name}
-Keywords: {keyword_text}
-Website: {website_url}
-
-Requirements:
-- Headlines: 10-15 short, punchy headlines (max 30 chars each)
-- Descriptions: 3-4 concise descriptions (max 90 chars each)
-- Focus on mobile users: urgency, tap-to-call CTAs, "Call Now", "Same Day", etc.
-- Include numbers, benefits, and action words
-- Make headlines scan-friendly for mobile
-
-Return ONLY valid JSON in this format:
-{{
-  "headlines": ["Call Now - Fast Service", "Same Day Repair Available", ...],
-  "descriptions": ["Get a free estimate today. Licensed professionals ready to help.", ...]
-}}"""
+Also return 4 descriptions (max 90 chars each) in a "descriptions" key.
+Each description should cover a different angle: benefits, speed, trust, and a CTA."""
 
         response = chatgpt_response(prompt)
 
-        # Try to parse JSON from response
         try:
-            # Extract JSON if it's wrapped in markdown code blocks
-            if "```json" in response:
-                response = response.split("```json")[1].split("```")[0].strip()
-            elif "```" in response:
-                response = response.split("```")[1].split("```")[0].strip()
+            raw = response
+            if "```json" in raw:
+                raw = raw.split("```json")[1].split("```")[0]
+            elif "```" in raw:
+                raw = raw.split("```")[1].split("```")[0]
+            data = json.loads(raw.strip())
 
-            ad_copy = json.loads(response)
+            headlines = _flatten_rsa_headlines(
+                {k: data[k] for k in _HEADLINE_CATEGORIES if k in data}, limit=15
+            )
+            # Fallback to flat format if categories missing
+            if not headlines and "headlines" in data:
+                headlines = [h[:30] for h in data["headlines"][:15]]
 
-            # Validate required fields
-            if "headlines" not in ad_copy or "descriptions" not in ad_copy:
-                raise ValueError("Missing required fields")
+            descriptions = [d[:90] for d in (data.get("descriptions") or [])[:4]]
 
-            # Trim headlines to 30 chars and descriptions to 90 chars
-            ad_copy["headlines"] = [h[:30] for h in ad_copy["headlines"][:15]]
-            ad_copy["descriptions"] = [d[:90] for d in ad_copy["descriptions"][:4]]
+            if not headlines or not descriptions:
+                raise ValueError("Missing headlines or descriptions in response")
 
-            return {"success": True, "ad_copy": ad_copy}
+            return {"success": True, "ad_copy": {"headlines": headlines, "descriptions": descriptions}}
 
-        except json.JSONDecodeError as e:
+        except (json.JSONDecodeError, ValueError) as e:
             current_app.logger.error(f"Failed to parse AI response as JSON: {e}")
             return {"success": False, "error": f"AI returned invalid JSON: {str(e)}"}
 
@@ -5848,50 +6320,22 @@ def _generate_rsa_headline_variations(business_name: str, existing_headlines: li
     """Generate additional RSA headline variations using AI."""
     try:
         from app.ai_clients import chatgpt_response
-        import json
 
-        existing_text = "\n".join([f"- {h}" for h in existing_headlines if h]) if existing_headlines else "None yet"
-
-        prompt = f"""Generate {needed} RSA headline variations for a Google Search campaign.
-
-Business: {business_name}
-
-Existing Headlines (for context - don't duplicate):
-{existing_text}
-
-Requirements:
-- Headlines: {needed} NEW headlines (max 30 chars each)
-- Make them complementary to existing headlines
-- Mix of benefit-focused, action-oriented, and trust-building
-- Include numbers, urgency, and local appeal where appropriate
-- Examples: "24/7 Emergency Service", "Licensed Professionals", "Same Day Appointments"
-
-Return ONLY valid JSON:
-{{"headlines": ["Fast Service - Call Now", "Licensed Professionals", ...]}}"""
+        counts = _rsa_headline_counts(needed)
+        prompt = _build_rsa_headline_prompt(
+            business_name,
+            existing_headlines=existing_headlines,
+            counts=counts,
+        )
 
         response = chatgpt_response(prompt)
 
-        # Parse JSON from response
         try:
-            # Extract JSON if it's wrapped in markdown code blocks
-            if "```json" in response:
-                response = response.split("```json")[1].split("```")[0].strip()
-            elif "```" in response:
-                response = response.split("```")[1].split("```")[0].strip()
-
-            result = json.loads(response)
-
-            # Validate and trim
-            if "headlines" not in result:
-                raise ValueError("Missing headlines field")
-
-            headlines = [h[:30] for h in result["headlines"][:needed]]
-
+            headlines = _parse_rsa_response(response, limit=needed)
             return {"success": True, "headlines": headlines}
-
-        except json.JSONDecodeError as e:
-            current_app.logger.error(f"Failed to parse AI response as JSON: {e}")
-            return {"success": False, "error": f"AI returned invalid JSON: {str(e)}"}
+        except (ValueError, Exception) as e:
+            current_app.logger.error(f"Failed to parse AI response: {e}")
+            return {"success": False, "error": str(e)}
 
     except Exception as e:
         current_app.logger.error(f"Error generating RSA headline variations: {e}")
@@ -6056,45 +6500,22 @@ def _generate_pmax_headlines(business_name: str, existing_headlines: list, neede
     """Generate Performance Max headlines using AI."""
     try:
         from app.ai_clients import chatgpt_response
-        import json
 
-        existing_text = "\n".join([f"- {h}" for h in existing_headlines if h]) if existing_headlines else "None yet"
-
-        prompt = f"""Generate {needed} Performance Max headline variations for a business.
-
-Business: {business_name}
-
-Existing Headlines:
-{existing_text}
-
-Requirements:
-- Headlines: {needed} NEW headlines (max 30 chars each, don't duplicate existing)
-- Make them punchy, benefit-focused, and action-oriented
-- Include variety: some with urgency, some with benefits, some with credibility
-- Avoid duplicating existing headlines
-
-Return ONLY valid JSON in this format:
-{{
-  "headlines": ["Fast Service - Call Now", "Licensed Professionals", ...]
-}}"""
+        counts = _rsa_headline_counts(needed)
+        prompt = _build_rsa_headline_prompt(
+            business_name,
+            existing_headlines=existing_headlines,
+            counts=counts,
+            extra_context="These are for a Performance Max campaign — keep copy broad and benefit-led.",
+        )
 
         response = chatgpt_response(prompt)
 
         try:
-            if "```json" in response:
-                response = response.split("```json")[1].split("```")[0].strip()
-            elif "```" in response:
-                response = response.split("```")[1].split("```")[0].strip()
-
-            result = json.loads(response)
-            if "headlines" not in result:
-                raise ValueError("Missing headlines field")
-
-            headlines = [h[:30] for h in result["headlines"][:needed]]
+            headlines = _parse_rsa_response(response, limit=needed)
             return {"success": True, "headlines": headlines}
-
-        except json.JSONDecodeError as e:
-            return {"success": False, "error": f"AI returned invalid JSON: {str(e)}"}
+        except (ValueError, Exception) as e:
+            return {"success": False, "error": str(e)}
 
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -7657,49 +8078,42 @@ def _generate_complete_rsa_ad(business_name: str, ad_group_name: str, keywords: 
 
         keywords_text = ", ".join(keywords[:10])  # Use first 10 keywords
 
-        prompt = f"""Generate a complete Responsive Search Ad for Google Ads.
+        prompt = _build_rsa_headline_prompt(
+            business_name,
+            keywords=keywords[:10],
+            extra_context=f"Ad group: {ad_group_name}",
+        )
+        prompt += """
 
-Business: {business_name}
-Ad Group: {ad_group_name}
-Keywords: {keywords_text}
-
-Requirements:
-- Headlines: 15 unique headlines (max 30 chars each)
-- Descriptions: 4 unique descriptions (max 90 chars each)
-- Make them relevant to the keywords
-- Include variety: urgency, benefits, credibility, action-oriented
-- Focus on what makes this business stand out
-
-Return ONLY valid JSON in this format:
-{{
-  "headlines": ["Fast Service - Call Now", "Licensed Professionals", ...],
-  "descriptions": ["Get professional service from licensed experts. Same-day appointments available.", ...]
-}}"""
+Also return 4 descriptions (max 90 chars each) in a "descriptions" key.
+Cover four angles: (1) benefits + social proof, (2) speed/availability,
+(3) trust/credentials, (4) CTA with offer or urgency."""
 
         response = chatgpt_response(prompt)
 
         try:
-            if "```json" in response:
-                response = response.split("```json")[1].split("```")[0].strip()
-            elif "```" in response:
-                response = response.split("```")[1].split("```")[0].strip()
+            import json as _json
+            raw = response
+            if "```json" in raw:
+                raw = raw.split("```json")[1].split("```")[0]
+            elif "```" in raw:
+                raw = raw.split("```")[1].split("```")[0]
+            result = _json.loads(raw.strip())
 
-            result = json.loads(response)
+            headlines = _flatten_rsa_headlines(
+                {k: result[k] for k in _HEADLINE_CATEGORIES if k in result}, limit=15
+            )
+            if not headlines and "headlines" in result:
+                headlines = [h[:30] for h in result["headlines"][:15]]
 
-            if "headlines" not in result or "descriptions" not in result:
+            descriptions = [d[:90] for d in (result.get("descriptions") or [])[:4]]
+
+            if not headlines or not descriptions:
                 raise ValueError("Missing headlines or descriptions field")
 
-            # Truncate to character limits
-            headlines = [h[:30] for h in result["headlines"][:15]]
-            descriptions = [d[:90] for d in result["descriptions"][:4]]
+            return {"success": True, "headlines": headlines, "descriptions": descriptions}
 
-            return {
-                "success": True,
-                "headlines": headlines,
-                "descriptions": descriptions
-            }
-
-        except json.JSONDecodeError as e:
+        except _json.JSONDecodeError as e:
             return {"success": False, "error": f"AI returned invalid JSON: {str(e)}"}
 
     except Exception as e:
@@ -10298,17 +10712,34 @@ def connect_gsc():
 @google_bp.route("/gsc/callback")
 def gsc_callback():
     """
-    Handles Google's redirect back to us. Exchanges code for tokens, stores flags,
-    and sends the user to the GSC UI page.
+    Handles Google's redirect back to us. Exchanges code for tokens, stores them
+    in the DB, and sends the user to the GSC UI page.
     """
     try:
+        aid = current_account_id()
         redirect_uri = url_for("google_bp.gsc_callback", _external=True)
-        creds = _exchange_code_for_creds(redirect_uri)   # must exist
+        creds = _exchange_code_for_creds(redirect_uri)
 
-        # Optional: pick a property/site to save for display
+        # google-auth Credentials.to_json() uses key "token"; normalize to
+        # "access_token" so our readers (_gsc_user_access_token etc.) find it.
+        token_json = json.loads(creds.to_json())
+        if "token" in token_json and "access_token" not in token_json:
+            token_json["access_token"] = token_json.pop("token")
+
+        # Persist using the ORM model directly — avoids _store_tokens which
+        # references columns (access_token, refresh_token, token_expiry) that
+        # don't exist in the google_oauth_tokens table schema.
+        from app.models_google import GoogleOAuthToken
+        tok = GoogleOAuthToken.query.filter_by(account_id=aid, product="gsc").first()
+        if tok is None:
+            tok = GoogleOAuthToken(account_id=aid, product="gsc")
+            db.session.add(tok)
+        tok.credentials_json = json.dumps(token_json)
+
+        # Pick the first accessible site and store on the same row
         site_url = ""
         try:
-            svc = _build_gsc_service(creds)              # must exist
+            svc = _build_gsc_service(creds)
             sites = (svc.sites().list().execute() or {})
             for s in (sites.get("siteEntry") or []):
                 if s.get("permissionLevel") in (
@@ -10317,97 +10748,93 @@ def gsc_callback():
                     site_url = s.get("siteUrl") or ""
                     break
         except Exception:
-            # If listing sites fails, we still consider the account "connected"
             current_app.logger.info("GSC list sites failed; proceeding as connected", exc_info=True)
 
-        # --- Always mirror state into the session so the UI updates instantly ---
-        session["gsc_connected"] = True
         if site_url:
-            session["gsc_site_url"] = site_url
-            session["gsc_property_id"] = site_url  # if you store property_id == site_url
+            tok.gsc_site = site_url
 
-        # --- Persist on the user, if authenticated (nice-to-have, not required for UI) ---
-        if getattr(current_user, "is_authenticated", False):
-            try:
-                setattr(current_user, "gsc_connected", True)
-                if site_url:
-                    setattr(current_user, "gsc_site_url", site_url)
-                    setattr(current_user, "gsc_property_id", site_url)
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-                current_app.logger.exception("Failed to persist GSC flags on user")
-        else:
-            flash("Connected to Google. Please sign in again to finalize linking.", "warning")
+        db.session.commit()
 
         flash("Google Search Console connected.", "success")
         return redirect(url_for("google_bp.gsc_ui"))
 
     except Exception as e:
         current_app.logger.exception("GSC OAuth callback failed: %s", e)
+        db.session.rollback()
         flash("Could not complete Search Console connection. Please try again.", "error")
         return redirect(url_for("google_bp.gsc_ui"))
 
 
 @google_bp.route("/gsc")
 def gsc_ui():
-    # Connection flag: session OR user model
-    connected = bool(session.get("gsc_connected"))
-    try:
-        connected = connected or bool(getattr(current_user, "gsc_connected", False))
-    except Exception:
-        pass
+    aid = current_account_id()
 
-    # Property/Site values (session first, then user model)
-    site_url = session.get("gsc_site_url") or getattr(current_user, "gsc_site_url", None)
-    property_id = session.get("gsc_property_id") or getattr(current_user, "gsc_property_id", None)
+    # Use the DB token table as the authoritative connection check
+    connected = _is_connected(aid, "gsc")
+
+    site_url = _get_gsc_selected_site(aid) if connected else None
+
+    # If connected but no site saved yet, try to auto-select one
+    if connected and not site_url:
+        try:
+            _ensure_default_gsc_site_selected(aid)
+            site_url = _get_gsc_selected_site(aid)
+        except Exception:
+            current_app.logger.info("gsc_ui: could not auto-select site", exc_info=True)
 
     gsc = {}
+    insights = ""
 
     if connected:
-        # TODO: replace with your real fetchers
-        # summary_raw = fetch_gsc_summary(property_id, start, end)
-        # top_queries_raw = fetch_gsc_queries(property_id, start, end)
-        # top_pages_raw = fetch_gsc_pages(property_id, start, end)
+        from datetime import date, timedelta
+        end_dt = date.today() - timedelta(days=3)   # GSC has ~3 day lag
+        start_dt = end_dt - timedelta(days=27)
+        start_date = start_dt.isoformat()
+        end_date = end_dt.isoformat()
 
-        # For now: minimal structure so template renders the "real" block
-        # Structure compatible with new insights system
-        clicks = 0
-        impressions = 0
-        ctr_pct = 0.0
-        avg_position = 0.0
+        data = None
+        try:
+            if site_url:
+                data = _fetch_gsc_report(site_url, start_date, end_date)
+        except Exception:
+            current_app.logger.exception("gsc_ui: fetch failed")
+
+        if data:
+            clicks = data.get("clicks", 0)
+            impressions = data.get("impressions", 0)
+            ctr_pct = data.get("ctr_pct", 0.0)
+            avg_position = data.get("avg_position", 0.0)
+        else:
+            clicks = impressions = 0
+            ctr_pct = avg_position = 0.0
 
         gsc = {
-            "property": site_url or property_id or "Search Console property",
+            "property": site_url or "Search Console property",
             "site_url": site_url,
             "period": "Last 28 days",
             "clicks": clicks,
             "impressions": impressions,
             "ctr_pct": ctr_pct,
             "avg_position": avg_position,
-            "top_queries": [],
-            "top_pages": [],
-            # Add summary dict for new insights system compatibility
+            "top_queries": (data or {}).get("top_queries", []),
+            "top_pages": (data or {}).get("top_pages", []),
             "summary": {
                 "clicks": clicks,
                 "impressions": impressions,
                 "ctr_pct": ctr_pct,
                 "avg_position": avg_position,
-                "avg_ctr": ctr_pct / 100.0  # Convert percentage to decimal
-            }
+                "avg_ctr": ctr_pct / 100.0,
+            },
         }
 
-        # Only call AI when we actually have real numbers
-        has_real = (gsc.get("clicks", 0) or 0) > 0 or (gsc.get("impressions", 0) or 0) > 0
+        has_real = clicks > 0 or impressions > 0
         insights = get_gsc_insights(gsc) if has_real else ""
-    else:
-        insights = ""  # keep empty on demo
 
     return render_template(
         "google/gsc.html",
         gsc=gsc,
         connected_gsc=connected,
-        insights=insights,   # <— NEW
+        insights=insights,
         epn=request.endpoint
     )
 
@@ -11018,8 +11445,10 @@ def connect_ads():
 @google_bp.route("/connect/gmb", methods=["GET"], endpoint="connect_gmb")
 @login_required
 def connect_gmb():
-    session["google_oauth_product"] = "gmb"
-    return redirect(url_for("google_bp.start", product="gmb"))
+    # GMB uses its own OAuth client (GOOGLE_GMB_CLIENT_ID) and its own callback
+    # at /account/gmb/callback — delegate to gmb_bp.start instead of google_bp.start
+    # to avoid redirect_uri_mismatch (google_bp uses /account/google/callback)
+    return redirect(url_for("gmb_bp.start"))
 
 @google_bp.route("/connect/lsa", methods=["GET"], endpoint="connect_lsa")
 @login_required
@@ -11145,15 +11574,64 @@ def start():
     return redirect(f"{GOOGLE_AUTH_URL}?{urlencode(params)}")
 
 @google_bp.route("/callback", methods=["GET"], endpoint="oauth_callback")
-@login_required
 def oauth_callback():
     err = request.args.get("error")
+    state_raw = request.args.get("state") or ""
+
+    # ── Public grader flow — no login required ────────────────────────────────
+    # Anonymous users can connect Google Ads to run the free Health Grader
+    # without creating a FieldSprout account. Tokens are stored in session only.
+    if state_raw == "ads_grader_public":
+        if err:
+            flash(f"Google authorization failed: {err}", "error")
+            return redirect(url_for("ads_grader_bp.strength_test"))
+        code = request.args.get("code")
+        if not code:
+            flash("Invalid Google callback.", "error")
+            return redirect(url_for("ads_grader_bp.strength_test"))
+        client_id, client_secret = _client_info("ads")
+        if not client_id or not client_secret:
+            flash("Google OAuth is not configured.", "error")
+            return redirect(url_for("ads_grader_bp.strength_test"))
+        try:
+            resp = requests.post(GOOGLE_TOKEN_URL, data={
+                "code": code,
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "redirect_uri": _redirect_uri(),
+                "grant_type": "authorization_code",
+            }, timeout=10)
+            resp.raise_for_status()
+            token_json = resp.json()
+        except Exception as e:
+            current_app.logger.exception("Public grader token exchange failed")
+            flash(f"Could not complete Google sign-in: {e}", "error")
+            return redirect(url_for("ads_grader_bp.strength_test"))
+        session["grader_public_token"] = token_json
+        session.permanent = True
+        try:
+            info_resp = requests.get(
+                "https://www.googleapis.com/oauth2/v3/userinfo",
+                headers={"Authorization": f"Bearer {token_json.get('access_token')}"},
+                timeout=5,
+            )
+            if info_resp.ok:
+                session["grader_public_email"] = info_resp.json().get("email", "")
+        except Exception:
+            pass
+        return redirect(url_for("ads_grader_bp.public_analyze"))
+    # ── End public grader flow ────────────────────────────────────────────────
+
+    # All other flows require a logged-in FieldSprout account
+    if not current_user.is_authenticated:
+        return redirect(url_for("auth_bp.login", next=request.url))
+
     if err:
         flash(f"Google authorization failed: {err}", "error")
         return redirect(url_for("google_bp.index"))
 
     code = request.args.get("code")
-    product = _normalize_product(request.args.get("state") or session.get("google_oauth_product") or "")
+    product = _normalize_product(state_raw or session.get("google_oauth_product") or "")
     if not code or product not in SCOPES:
         flash("Invalid Google callback.", "error")
         return redirect(url_for("google_bp.index"))
@@ -11181,7 +11659,16 @@ def oauth_callback():
         return redirect(url_for("google_bp.index"))
 
     aid = current_account_id()
-    _store_tokens(aid, product, token_json)
+
+    # Persist using the ORM model directly — _store_tokens() references columns
+    # (access_token, refresh_token, token_expiry) that don't exist in the table.
+    from app.models_google import GoogleOAuthToken
+    _tok = GoogleOAuthToken.query.filter_by(account_id=aid, product=product).first()
+    if _tok is None:
+        _tok = GoogleOAuthToken(account_id=aid, product=product)
+        db.session.add(_tok)
+    _tok.credentials_json = json.dumps(token_json)
+    db.session.commit()
 
     if product == "ga":
         try:

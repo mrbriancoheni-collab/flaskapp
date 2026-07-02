@@ -1,0 +1,233 @@
+{% extends "base_app.html" %}
+{% block title %}SEO Roadmap · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+  {# ── Header ────────────────────────────────────────────────────────────── #}
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Your 90-day plan to rank higher on Google</h1>
+      <p class="text-gray-500 text-sm mt-1">
+        A step-by-step action plan built from what's missing on your site right now
+      </p>
+    </div>
+    {% if phases %}
+    <form method="POST" action="{{ url_for('seo_bp.roadmap') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit"
+              class="inline-flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 text-sm text-gray-600">
+        <i class="fa-solid fa-rotate"></i> Regenerate
+      </button>
+    </form>
+    {% endif %}
+  </div>
+
+  {# ── Error state ───────────────────────────────────────────────────────── #}
+  {% if error %}
+  <div class="bg-yellow-50 border border-yellow-300 rounded-xl p-5 flex items-start gap-4">
+    <i class="fa-solid fa-triangle-exclamation text-yellow-500 text-xl mt-0.5 flex-shrink-0"></i>
+    <div>
+      <p class="font-semibold text-yellow-900">{{ error }}</p>
+      {% if not gsc_connected %}
+      <a href="{{ url_for('google_bp.index') }}"
+         class="inline-block mt-3 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">
+        Connect Google Search Console
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Generate prompt (no results yet) ─────────────────────────────────── #}
+  {% if not phases %}
+  <div class="bg-white border rounded-xl p-8 text-center space-y-4">
+    <i class="fa-solid fa-map-location-dot text-indigo-400 text-5xl"></i>
+    <div>
+      <p class="text-lg font-semibold text-gray-800">Generate Your 90-Day SEO Plan</p>
+      <p class="text-sm text-gray-500 mt-1 max-w-lg mx-auto">
+        Claude will analyse your keyword gaps and site metrics to build a phased, actionable
+        90-day SEO strategy with priorities, goals, and KPIs.
+      </p>
+    </div>
+
+    {% if gap_result %}
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 max-w-2xl mx-auto">
+      {% set s = gap_result.summary %}
+      <div class="bg-gray-50 rounded-xl border p-3 text-center">
+        <p class="text-lg font-bold text-yellow-600">{{ s.quick_wins_count }}</p>
+        <p class="text-xs text-gray-500 mt-0.5">Quick Wins</p>
+      </div>
+      <div class="bg-gray-50 rounded-xl border p-3 text-center">
+        <p class="text-lg font-bold text-green-600">{{ s.missing_count }}</p>
+        <p class="text-xs text-gray-500 mt-0.5">Missing Pages</p>
+      </div>
+      <div class="bg-gray-50 rounded-xl border p-3 text-center">
+        <p class="text-lg font-bold text-blue-600">{{ s.content_gaps_count }}</p>
+        <p class="text-xs text-gray-500 mt-0.5">Content Gaps</p>
+      </div>
+      <div class="bg-gray-50 rounded-xl border p-3 text-center">
+        <p class="text-lg font-bold text-red-500">{{ s.declining_count }}</p>
+        <p class="text-xs text-gray-500 mt-0.5">Declining</p>
+      </div>
+      <div class="bg-gray-50 rounded-xl border p-3 text-center">
+        <p class="text-lg font-bold text-orange-500">{{ s.cannibalization_count }}</p>
+        <p class="text-xs text-gray-500 mt-0.5">Cannibal.</p>
+      </div>
+      <div class="bg-gray-50 rounded-xl border p-3 text-center">
+        <p class="text-lg font-bold text-purple-600">{{ s.clusters_count }}</p>
+        <p class="text-xs text-gray-500 mt-0.5">Clusters</p>
+      </div>
+    </div>
+    {% elif not gsc_connected %}
+    <p class="text-sm text-gray-400">
+      Connect Google Search Console for a data-driven roadmap, or generate a
+      general recommendation now.
+    </p>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('seo_bp.roadmap') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit"
+              class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700
+                     text-white rounded-lg font-medium text-sm transition-colors">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Roadmap
+      </button>
+    </form>
+  </div>
+
+  {% else %}
+  {# ════════════════════════════════════════════════════════════════════════ #}
+  {# Phase cards                                                              #}
+  {# ════════════════════════════════════════════════════════════════════════ #}
+  {% set phase_colors = [
+    ('bg-blue-50',   'border-blue-200',  'bg-blue-600',  'text-blue-700',  'bg-blue-100',  'text-blue-900'),
+    ('bg-indigo-50', 'border-indigo-200','bg-indigo-600','text-indigo-700','bg-indigo-100','text-indigo-900'),
+    ('bg-purple-50', 'border-purple-200','bg-purple-600','text-purple-700','bg-purple-100','text-purple-900'),
+  ] %}
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+    {% for phase in phases %}
+    {% set ci = loop.index0 if loop.index0 < 3 else 0 %}
+    {% set bg, border, hdr_bg, text_col, badge_bg, badge_text = phase_colors[ci] %}
+    <div class="rounded-xl border {{ border }} {{ bg }} overflow-hidden flex flex-col">
+
+      {# Phase header #}
+      <div class="{{ hdr_bg }} px-5 py-4 text-white">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-widest opacity-80">Phase {{ phase.phase }}</span>
+          <span class="text-xs bg-white bg-opacity-20 px-2 py-0.5 rounded-full">
+            Days {{ (phase.phase - 1) * 30 + 1 }}–{{ phase.phase * 30 }}
+          </span>
+        </div>
+        <p class="font-bold text-lg mt-1 leading-tight">{{ phase.focus }}</p>
+      </div>
+
+      <div class="p-5 flex-1 flex flex-col gap-4">
+
+        {# Goals #}
+        <div>
+          <p class="text-xs font-semibold {{ text_col }} uppercase tracking-wide mb-2">Goals</p>
+          <ul class="space-y-1.5">
+            {% for goal in phase.goals %}
+            <li class="flex items-start gap-2 text-sm text-gray-700">
+              <i class="fa-solid fa-circle-check {{ text_col }} mt-0.5 flex-shrink-0"></i>
+              {{ goal }}
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+
+        {# Actions #}
+        <div>
+          <p class="text-xs font-semibold {{ text_col }} uppercase tracking-wide mb-2">Actions</p>
+          <ol class="space-y-1.5 list-none">
+            {% for action in phase.actions %}
+            <li class="flex items-start gap-2 text-sm text-gray-600">
+              <span class="{{ badge_bg }} {{ badge_text }} text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 mt-0.5">
+                {{ loop.index }}
+              </span>
+              {{ action }}
+            </li>
+            {% endfor %}
+          </ol>
+        </div>
+
+        {# KPI #}
+        <div class="mt-auto pt-4 border-t border-gray-200">
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Key Metric</p>
+          <p class="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+            <i class="fa-solid fa-gauge {{ text_col }}"></i>
+            {{ phase.kpi }}
+          </p>
+        </div>
+
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# ════════════════════════════════════════════════════════════════════════ #}
+  {# Priorities table                                                         #}
+  {# ════════════════════════════════════════════════════════════════════════ #}
+  {% if priorities %}
+  <div>
+    <h2 class="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+      <i class="fa-solid fa-list-check text-indigo-500"></i> Strategic Priorities
+    </h2>
+    <p class="text-sm text-gray-500 mb-4">
+      The five highest-leverage areas for your site, ranked by impact and effort.
+    </p>
+    <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+            <th class="px-4 py-3 text-left">Area</th>
+            <th class="px-4 py-3 text-left">Why It Matters</th>
+            <th class="px-4 py-3 text-center">Impact</th>
+            <th class="px-4 py-3 text-center">Effort</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          {% for p in priorities %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">
+              {{ p.area }}
+            </td>
+            <td class="px-4 py-3 text-gray-600 text-xs max-w-sm">{{ p.why }}</td>
+            <td class="px-4 py-3 text-center">
+              {% if p.impact == 'high' %}
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                <i class="fa-solid fa-arrow-trend-up text-xs"></i> High
+              </span>
+              {% else %}
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
+                <i class="fa-solid fa-minus text-xs"></i> Medium
+              </span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-center">
+              {% if p.effort == 'low' %}
+              <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-50 text-green-700">Low</span>
+              {% elif p.effort == 'medium' %}
+              <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-50 text-yellow-700">Medium</span>
+              {% else %}
+              <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700">High</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <p class="text-xs text-gray-400 text-center">
+    Roadmap generated from your Google Search Console data. Regenerate anytime as your SEO position evolves.
+  </p>
+
+  {% endif %}
+
+</div>
+{% endblock %}

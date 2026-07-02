@@ -6,7 +6,7 @@ from sqlalchemy.sql import func
 class WPSite(db.Model):
     __tablename__ = "wp_sites"
     id = db.Column(db.Integer, primary_key=True)
-    account_id = db.Column(db.Integer, nullable=True)
+    account_id = db.Column(db.Integer, nullable=True, index=True)
     base_url = db.Column(db.String(255), nullable=False)
     username = db.Column(db.String(190), nullable=False)
     app_password = db.Column(db.String(255), nullable=False)
@@ -16,8 +16,46 @@ class WPSite(db.Model):
     autopilot_daily_new = db.Column(db.Integer, default=1, nullable=False)
     autopilot_daily_refresh = db.Column(db.Integer, default=1, nullable=False)
     autopilot_require_approval = db.Column(db.Boolean, default=True, nullable=False)
+    brand_voice = db.Column(db.Text, nullable=True)
+    brand_avoid = db.Column(db.Text, nullable=True)
+    content_language = db.Column(db.String(10), nullable=True, default="en")
     created_at = db.Column(db.DateTime)
     updated_at = db.Column(db.DateTime)
+
+    @classmethod
+    def ensure_columns(cls):
+        """Add account_id column to wp_sites if it doesn't exist yet."""
+        from sqlalchemy import text, inspect as sa_inspect
+        from app import db as _db
+        try:
+            insp = sa_inspect(_db.engine)
+            existing = [c["name"] for c in insp.get_columns("wp_sites")]
+            if "account_id" not in existing:
+                _db.session.execute(text(
+                    "ALTER TABLE wp_sites ADD COLUMN account_id INT NULL"
+                ))
+                _db.session.commit()
+            if "brand_voice" not in existing:
+                _db.session.execute(text(
+                    "ALTER TABLE wp_sites ADD COLUMN brand_voice TEXT NULL"
+                ))
+                _db.session.commit()
+            if "brand_avoid" not in existing:
+                _db.session.execute(text(
+                    "ALTER TABLE wp_sites ADD COLUMN brand_avoid TEXT NULL"
+                ))
+                _db.session.commit()
+            if "content_language" not in existing:
+                _db.session.execute(text(
+                    "ALTER TABLE wp_sites ADD COLUMN content_language VARCHAR(10) NULL DEFAULT 'en'"
+                ))
+                _db.session.commit()
+        except Exception:
+            try:
+                _db.session.rollback()
+            except Exception:
+                pass
+
 
 class WPJob(db.Model):
     __tablename__ = "wp_jobs"
@@ -39,3 +77,21 @@ class WPLog(db.Model):
     level = db.Column(db.String(16), default="info", nullable=False)  # info|warn|error
     message = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
+class KeywordRankSnapshot(db.Model):
+    __tablename__ = 'wp_keyword_rank_snapshots'
+    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    account_id = db.Column(db.Integer, db.ForeignKey('accounts.id'), nullable=False, index=True)
+    wp_site_id = db.Column(db.Integer, nullable=True)  # FK to wp_sites if multi-site
+    url = db.Column(db.String(512), nullable=False)
+    keyword = db.Column(db.String(255), nullable=False)
+    position = db.Column(db.Numeric(6, 2))   # Google's average position
+    impressions = db.Column(db.Integer)
+    clicks = db.Column(db.Integer)
+    ctr = db.Column(db.Numeric(6, 4))
+    snapshot_date = db.Column(db.Date, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    __table_args__ = (
+        db.UniqueConstraint('account_id', 'url', 'keyword', 'snapshot_date', name='uq_kw_snapshot'),
+    )

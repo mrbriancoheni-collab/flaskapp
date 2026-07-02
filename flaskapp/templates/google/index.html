@@ -1,89 +1,513 @@
 {% extends "base_app.html" %}
 {% set SECTION = 'google' %}
-{% block title %}Google Connections{% endblock %}
+{% block title %}Google Overview · FieldSprout{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto space-y-6">
-  <div class="flex items-center justify-between">
+<div class="max-w-6xl mx-auto space-y-6 pb-12">
+
+  {# ── Header ── #}
+  <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-semibold">Google Connections</h1>
-      <p class="text-gray-500">Connect Ads, Local Services Ads, Analytics, and Search Console.</p>
+      <h1 class="text-2xl font-bold text-gray-900">All your Google tools</h1>
+      <p class="text-sm text-gray-500 mt-0.5">Google Ads, Analytics, Search Console, Business Profile and Local Services Ads — all in one place.</p>
     </div>
-    <a href="{{ url_for('account_bp.dashboard') }}" class="rounded-md border px-3 py-2 text-gray-700 hover:bg-gray-50">Back to Dashboard</a>
+    <div class="flex items-center gap-2">
+      <a href="{{ url_for('account_bp.dashboard') }}"
+         class="inline-flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg hover:bg-gray-50 text-gray-600 transition">
+        ← Dashboard
+      </a>
+      <a href="{{ url_for('google_bp.index', refresh=1) }}"
+         class="inline-flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg hover:bg-gray-50 text-gray-600 transition">
+        <i class="fa-solid fa-rotate text-xs"></i> Refresh
+      </a>
+      {% if connected.get('ads') %}
+      <button id="sync-all-btn"
+              class="inline-flex items-center gap-1.5 px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+        <i class="fa-solid fa-rotate"></i> Sync All Data
+      </button>
+      {% endif %}
+    </div>
   </div>
 
-  {# key, label, connect_ep, manage_ep (optional) #}
-  {% set items = [
-      ('ads', 'Google Ads',         'google_bp.connect_ads', 'google_bp.ads_ui'),
-      ('ga',  'Google Analytics',   'google_bp.connect_ga',  'google_bp.ga_ui'),
-      ('gsc', 'Search Console',     'google_bp.connect_search_console', 'google_bp.gsc_ui')
-  ] %}
+  {# ── Sync feedback ── #}
+  <div id="sync-status" class="hidden rounded-xl px-4 py-3 text-sm border bg-blue-50 border-blue-200 text-blue-800"></div>
 
-  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-    {# --- LSA card (explicit start link with product=lsa) --- #}
-    <div class="rounded-lg border bg-white p-5 flex flex-col gap-3">
-      <div class="font-medium">Local Services Ads</div>
-      {% if connected['lsa'] %}
-        <div class="text-green-700 text-sm">Connected</div>
-        <div class="flex items-center gap-2">
-          {% if has_endpoint('glsa_bp.index') %}
-            <a class="inline-flex items-center rounded-md bg-indigo-600 text-white px-3 py-2 text-sm hover:bg-indigo-500"
-               href="{{ url_for('glsa_bp.index') }}">
-              Review / Manage
+  {# ── Integration progress bar ── #}
+  <div class="bg-white rounded-xl border p-4">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-sm font-medium text-gray-700">Integrations connected</span>
+      <span class="text-sm font-semibold text-indigo-700">{{ connected_count }} / {{ total_products }}</span>
+    </div>
+    <div class="w-full bg-gray-100 rounded-full h-2">
+      <div class="bg-indigo-500 h-2 rounded-full transition-all duration-500"
+           style="width: {{ (connected_count / total_products * 100) | int if total_products else 0 }}%"></div>
+    </div>
+    {% if connected_count == total_products %}
+    <p class="text-xs text-green-600 mt-1.5"><i class="fa-solid fa-check-circle mr-1"></i>All integrations active</p>
+    {% elif connected_count == 0 %}
+    <p class="text-xs text-gray-400 mt-1.5">Connect at least one product to start pulling data</p>
+    {% else %}
+    <p class="text-xs text-amber-600 mt-1.5">
+      {{ total_products - connected_count }} integration{{ 's' if (total_products - connected_count) != 1 else '' }} not yet connected
+    </p>
+    {% endif %}
+  </div>
+
+  {# ── Quick action shortcuts (Ads connected) ── #}
+  {% if connected.get('ads') %}
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    {% set shortcuts = [
+      ('fa-wand-magic-sparkles', 'Review suggestions' ~ (' (' ~ optimizer_count ~ ')' if optimizer_count else ''), url_for('gads_bp.optimize', tab='optimizer'), 'indigo'),
+      ('fa-robot', ('Automation rules · ' ~ rules_count ~ ' active') if rules_count else 'Automation rules', url_for('gads_bp.rules_list'), 'purple'),
+      ('fa-magnifying-glass', 'Block wasted searches', url_for('gads_bp.search_terms'), 'red'),
+      ('fa-flask', 'A/B test new ads', url_for('gads_bp.ab_tests'), 'green'),
+    ] %}
+    {% for icon, label, href, color in shortcuts %}
+    <a href="{{ href }}"
+       class="flex items-center gap-3 bg-white border rounded-xl p-4 hover:shadow-sm transition group">
+      <span class="w-9 h-9 rounded-lg bg-{{ color }}-50 text-{{ color }}-600 flex items-center justify-center flex-shrink-0 transition">
+        <i class="fa-solid {{ icon }} text-sm"></i>
+      </span>
+      <span class="text-sm font-medium text-gray-700 truncate">{{ label }}</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# ── Product cards ── #}
+  <div class="space-y-4">
+
+    {# GOOGLE ADS #}
+    {% set ads_kpi = kpis.get('ads', {}) %}
+    {% set ads_health = token_health.get('ads', {}) %}
+    <div class="bg-white rounded-xl border {{ '' if connected.get('ads') else 'border-dashed border-gray-300' }} overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-4 {{ 'border-b' if connected.get('ads') and ads_kpi else '' }}">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+            <i class="fa-solid fa-bullhorn text-blue-600 text-sm"></i>
+          </div>
+          <div>
+            <div class="font-semibold text-gray-900">Google Ads</div>
+            <div class="text-xs text-gray-400 mt-0.5">
+              {% if connected.get('ads') %}
+                {% if ads_health.get('age_days') is not none %}
+                  Token updated {{ ads_health.age_days }}d ago
+                  {% if ads_health.get('stale') %} · <span class="text-amber-500 font-medium">expires soon</span>{% endif %}
+                {% else %}Connected{% endif %}
+                {% if last_ads_sync %} · Last sync: {{ last_ads_sync }}{% endif %}
+              {% else %}Not connected{% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          {% if connected.get('ads') %}
+            <span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span>
+            <span class="text-xs text-green-600 font-medium">Connected</span>
+            <a href="{{ url_for('gads_bp.optimize') }}"
+               class="ml-2 px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+              Manage →
             </a>
+            <a href="{{ url_for('google_bp.ads_performance') if has_endpoint('google_bp.ads_performance') else '#' }}"
+               class="px-3 py-1.5 text-xs border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition">
+              Performance →
+            </a>
+            {% if ads_health.get('stale') %}
+            <a href="{{ url_for('google_bp.connect_ads') if has_endpoint('google_bp.connect_ads') else '#' }}"
+               class="px-3 py-1.5 text-xs border border-amber-300 text-amber-700 rounded-lg hover:bg-amber-50 transition">
+              Re-auth
+            </a>
+            {% endif %}
+          {% else %}
+            <span class="w-2 h-2 rounded-full bg-gray-300 inline-block"></span>
+            <span class="text-xs text-gray-400">Not connected</span>
+            {% if has_endpoint('google_bp.connect_ads') %}
+            <a href="{{ url_for('google_bp.connect_ads') }}"
+               class="ml-2 px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+              Connect
+            </a>
+            {% endif %}
           {% endif %}
-          <form method="post" action="{{ url_for('google_bp.disconnect', product='lsa') }}">
+          {% if connected.get('ads') %}
+          <form method="post" action="{{ url_for('google_bp.disconnect', product='ads') }}" class="ml-1">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50" type="submit">
-              Disconnect
+            <button type="submit" class="text-xs text-gray-300 hover:text-red-400 transition" title="Disconnect">
+              <i class="fa-solid fa-xmark"></i>
             </button>
           </form>
+          {% endif %}
         </div>
-      {% else %}
-        <div class="text-gray-500 text-sm">Not connected</div>
-        <a class="inline-flex items-center rounded-md bg-indigo-600 text-white px-3 py-2 text-sm hover:bg-indigo-500"
-           href="{{ url_for('google_bp.start', product='lsa', next=url_for('glsa_bp.optimize')) }}">
-          Connect Local Services Ads
-        </a>
+      </div>
+
+      {# Ads KPI row #}
+      {% if connected.get('ads') and ads_kpi %}
+      <div class="grid grid-cols-3 divide-x text-center">
+        <div class="py-4">
+          <div class="text-xs text-gray-500 mb-1">Money spent (30d)</div>
+          <div class="text-xl font-bold text-gray-900">${{ "%.0f" | format(ads_kpi.spend) }}</div>
+        </div>
+        <div class="py-4">
+          <div class="text-xs text-gray-500 mb-1">New leads (30d)</div>
+          <div class="text-xl font-bold text-green-600">{{ ads_kpi.conversions | int }}</div>
+          <div class="text-[10px] text-gray-400 mt-0.5">calls + form fills</div>
+        </div>
+        <div class="py-4">
+          <div class="text-xs text-gray-500 mb-1">Ad clicks (30d)</div>
+          <div class="text-xl font-bold text-gray-700">{{ ads_kpi.clicks | int }}</div>
+        </div>
+      </div>
+      <div class="px-5 py-3 bg-gray-50 border-t flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
+        <span>
+          {% if optimizer_count > 0 %}
+          <a href="{{ url_for('gads_bp.optimize', tab='optimizer') }}" class="text-amber-700 font-semibold hover:underline">
+            <i class="fa-solid fa-triangle-exclamation mr-1"></i>{{ optimizer_count }} suggestion{{ 's' if optimizer_count != 1 else '' }} waiting for you
+          </a>
+          {% else %}
+          <span class="text-green-600 font-medium"><i class="fa-solid fa-check-circle mr-1"></i>No suggestions right now — you're caught up</span>
+          {% endif %}
+        </span>
+        {% if actions_today > 0 %}
+        <span class="text-indigo-600 font-medium">
+          <i class="fa-solid fa-bolt mr-1"></i>AI made {{ actions_today }} change{{ 's' if actions_today != 1 else '' }} today
+        </span>
+        {% endif %}
+      </div>
+      {% elif connected.get('ads') %}
+      <div class="px-5 py-4 text-sm text-gray-400 flex items-center gap-3">
+        <span>No synced data yet.</span>
+        <button id="quick-sync-btn" class="text-indigo-600 hover:underline text-sm">Sync now →</button>
+      </div>
       {% endif %}
     </div>
 
-    {# --- The rest (Ads, GA, GSC) using your loop --- #}
-    {% for key, label, connect_ep, manage_ep in items %}
-      <div class="rounded-lg border bg-white p-5 flex flex-col gap-3">
-        <div class="font-medium">{{ label }}</div>
-
-        {% if connected[key] %}
-          <div class="text-green-700 text-sm">Connected</div>
-          <div class="flex items-center gap-2">
-            {% if manage_ep and has_endpoint(manage_ep) %}
-              <a class="inline-flex items-center rounded-md bg-indigo-600 text-white px-3 py-2 text-sm hover:bg-indigo-500"
-                 href="{{ url_for(manage_ep) }}">
-                Review / Manage
-              </a>
+    {# GOOGLE ANALYTICS #}
+    {% set ga_health = token_health.get('ga', {}) %}
+    <div class="bg-white rounded-xl border {{ '' if connected.get('ga') else 'border-dashed border-gray-300' }} overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-4">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
+            <i class="fa-solid fa-chart-line text-orange-500 text-sm"></i>
+          </div>
+          <div>
+            <div class="font-semibold text-gray-900">Google Analytics</div>
+            <div class="text-xs text-gray-400 mt-0.5">
+              {% if connected.get('ga') %}
+                Token updated {{ ga_health.age_days }}d ago{% if ga_health.get('stale') %} · <span class="text-amber-500">expires soon</span>{% endif %}
+              {% else %}Not connected{% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          {% if connected.get('ga') %}
+            <span class="w-2 h-2 rounded-full bg-green-400"></span>
+            <span class="text-xs text-green-600 font-medium">Connected</span>
+            {% if has_endpoint('google_bp.ga_ui') %}
+            <a href="{{ url_for('google_bp.ga_ui') }}"
+               class="ml-2 px-3 py-1.5 text-xs bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition">
+              Analytics →
+            </a>
             {% endif %}
-            <form method="post" action="{{ url_for('google_bp.disconnect', product=key) }}">
+            <form method="post" action="{{ url_for('google_bp.disconnect', product='ga') }}" class="ml-1">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50" type="submit">
-                Disconnect
+              <button type="submit" class="text-xs text-gray-300 hover:text-red-400 transition" title="Disconnect">
+                <i class="fa-solid fa-xmark"></i>
               </button>
             </form>
-          </div>
-        {% else %}
-          <div class="text-gray-500 text-sm">Not connected</div>
-          {% if has_endpoint(connect_ep) %}
-            <a class="inline-flex items-center rounded-md bg-indigo-600 text-white px-3 py-2 text-sm hover:bg-indigo-500"
-               href="{{ url_for(connect_ep, next=request.args.get('next')) }}">
-              Connect {{ label }}
+          {% else %}
+            <span class="w-2 h-2 rounded-full bg-gray-300"></span>
+            <span class="text-xs text-gray-400">Not connected</span>
+            {% if has_endpoint('google_bp.connect_ga') %}
+            <a href="{{ url_for('google_bp.connect_ga') }}"
+               class="ml-2 px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+              Connect
             </a>
+            {% endif %}
           {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# SEARCH CONSOLE #}
+    {% set gsc_kpi = kpis.get('gsc', {}) %}
+    {% set gsc_health = token_health.get('gsc', {}) %}
+    <div class="bg-white rounded-xl border {{ '' if connected.get('gsc') else 'border-dashed border-gray-300' }} overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-4 {{ 'border-b' if connected.get('gsc') and gsc_kpi else '' }}">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
+            <i class="fa-solid fa-magnifying-glass-chart text-green-600 text-sm"></i>
+          </div>
+          <div>
+            <div class="font-semibold text-gray-900">Search Console</div>
+            <div class="text-xs text-gray-400 mt-0.5">
+              {% if connected.get('gsc') %}
+                Token updated {{ gsc_health.age_days }}d ago{% if gsc_health.get('stale') %} · <span class="text-amber-500">expires soon</span>{% endif %}
+              {% else %}Not connected{% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          {% if connected.get('gsc') %}
+            <span class="w-2 h-2 rounded-full bg-green-400"></span>
+            <span class="text-xs text-green-600 font-medium">Connected</span>
+            {% if has_endpoint('google_bp.gsc_ui') %}
+            <a href="{{ url_for('google_bp.gsc_ui') }}"
+               class="ml-2 px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+              Console →
+            </a>
+            {% endif %}
+            <form method="post" action="{{ url_for('google_bp.disconnect', product='gsc') }}" class="ml-1">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="text-xs text-gray-300 hover:text-red-400 transition" title="Disconnect">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </form>
+          {% else %}
+            <span class="w-2 h-2 rounded-full bg-gray-300"></span>
+            <span class="text-xs text-gray-400">Not connected</span>
+            {% if has_endpoint('google_bp.connect_search_console') %}
+            <a href="{{ url_for('google_bp.connect_search_console') }}"
+               class="ml-2 px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+              Connect
+            </a>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+      {% if connected.get('gsc') and gsc_kpi %}
+      <div class="grid grid-cols-3 divide-x text-center">
+        <div class="py-4">
+          <div class="text-xs text-gray-500 mb-1">Free clicks (30d)</div>
+          <div class="text-xl font-bold text-gray-900">{{ gsc_kpi.clicks | int }}</div>
+          <div class="text-[10px] text-gray-400 mt-0.5">from Google search</div>
+        </div>
+        <div class="py-4">
+          <div class="text-xs text-gray-500 mb-1">Times shown</div>
+          <div class="text-xl font-bold text-gray-700">{{ gsc_kpi.impressions | int }}</div>
+          <div class="text-[10px] text-gray-400 mt-0.5">in search results</div>
+        </div>
+        <div class="py-4">
+          <div class="text-xs text-gray-500 mb-1">Avg ranking</div>
+          <div class="text-xl font-bold {{ 'text-green-600' if gsc_kpi.avg_pos <= 10 else 'text-amber-600' }}">
+            #{{ "%.1f" | format(gsc_kpi.avg_pos) }}
+          </div>
+          <div class="text-[10px] text-gray-400 mt-0.5">{{ 'on page 1 ✓' if gsc_kpi.avg_pos <= 10 else 'page 2+' }}</div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    {# LOCAL SERVICES ADS #}
+    <div class="bg-white rounded-xl border {{ '' if connected.get('lsa') else 'border-dashed border-gray-300' }} overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-4">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-yellow-50 flex items-center justify-center flex-shrink-0">
+            <i class="fa-solid fa-map-location-dot text-yellow-500 text-sm"></i>
+          </div>
+          <div>
+            <div class="font-semibold text-gray-900">Local Services Ads</div>
+            <div class="text-xs text-gray-400 mt-0.5">
+              {% if connected.get('lsa') %}Connected{% else %}Not connected{% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          {% if connected.get('lsa') %}
+            <span class="w-2 h-2 rounded-full bg-green-400"></span>
+            <span class="text-xs text-green-600 font-medium">Connected</span>
+            {% if has_endpoint('glsa_bp.index') %}
+            <a href="{{ url_for('glsa_bp.index') }}"
+               class="ml-2 px-3 py-1.5 text-xs bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition">
+              Review →
+            </a>
+            {% endif %}
+            <form method="post" action="{{ url_for('google_bp.disconnect', product='lsa') }}" class="ml-1">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="text-xs text-gray-300 hover:text-red-400 transition" title="Disconnect">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </form>
+          {% else %}
+            <span class="w-2 h-2 rounded-full bg-gray-300"></span>
+            <span class="text-xs text-gray-400">Not connected</span>
+            {% if has_endpoint('google_bp.start') %}
+            <a href="{{ url_for('google_bp.start', product='lsa') }}"
+               class="ml-2 px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+              Connect
+            </a>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# GOOGLE BUSINESS PROFILE #}
+    <div class="bg-white rounded-xl border {{ '' if connected.get('gmb') else 'border-dashed border-gray-300' }} overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-4">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
+            <i class="fa-solid fa-store text-red-500 text-sm"></i>
+          </div>
+          <div>
+            <div class="font-semibold text-gray-900">Google Business Profile</div>
+            <div class="text-xs text-gray-400 mt-0.5">
+              {% if connected.get('gmb') %}Connected{% else %}Not connected{% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          {% if connected.get('gmb') %}
+            <span class="w-2 h-2 rounded-full bg-green-400"></span>
+            <span class="text-xs text-green-600 font-medium">Connected</span>
+            <form method="post" action="{{ url_for('google_bp.disconnect', product='gmb') }}" class="ml-1">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="text-xs text-gray-300 hover:text-red-400 transition" title="Disconnect">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </form>
+          {% else %}
+            <span class="w-2 h-2 rounded-full bg-gray-300"></span>
+            <span class="text-xs text-gray-400">Not connected</span>
+            {% if has_endpoint('gmb_bp.start') %}
+            <a href="{{ url_for('gmb_bp.start') }}"
+               class="ml-2 px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+              Connect
+            </a>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+  </div>{# /product cards #}
+
+  {# ── Onboarding checklist ── #}
+  {% if not (connected.get('ads') and connected.get('gsc')) or not last_ads_sync %}
+  <div class="bg-white rounded-xl border p-5">
+    <h2 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+      <i class="fa-solid fa-list-check text-indigo-500"></i> Setup Checklist
+    </h2>
+    <div class="space-y-3">
+      {% set checklist = [
+        (connected.get('ads'), 'Connect Google Ads', 'Connect →',
+            url_for('google_bp.connect_ads') if has_endpoint('google_bp.connect_ads') else '#'),
+        (connected.get('gsc'), 'Connect Search Console', 'Connect →',
+            url_for('google_bp.connect_search_console') if has_endpoint('google_bp.connect_search_console') else '#'),
+        (last_ads_sync, 'Sync your first data', 'Sync now →', '#'),
+        (last_ads_sync, 'Review optimizer recommendations', 'Open optimizer →',
+            url_for('gads_bp.optimize', tab='optimizer') if has_endpoint('gads_bp.optimize') else '#'),
+      ] %}
+      {% for done, label, cta, href in checklist %}
+      <div class="flex items-center gap-3">
+        <span class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0
+                     {{ 'bg-green-100 text-green-600' if done else 'bg-gray-100 text-gray-400' }}">
+          <i class="fa-solid {{ 'fa-check' if done else 'fa-circle' }} text-xs"></i>
+        </span>
+        <span class="flex-1 text-sm {{ 'line-through text-gray-400' if done else 'text-gray-700' }}">{{ label }}</span>
+        {% if not done %}
+        <a href="{{ href }}" class="text-xs text-indigo-600 hover:underline flex-shrink-0">{{ cta }}</a>
         {% endif %}
       </div>
-    {% endfor %}
+      {% endfor %}
+    </div>
   </div>
+  {% endif %}
 
-  <div class="rounded-lg border bg-gray-50 p-4 text-sm text-gray-600">
-    After connecting, data will populate on your Dashboard cards. You can always return here to disconnect a product.
+  {# ── Cross-platform insight — paid vs free traffic ── #}
+  {% set ads_kpi2 = kpis.get('ads', {}) %}
+  {% set gsc_kpi2 = kpis.get('gsc', {}) %}
+  {% if connected.get('ads') and connected.get('gsc') and ads_kpi2 and gsc_kpi2 %}
+  {% set ads_cpl = (ads_kpi2.spend / ads_kpi2.conversions) if ads_kpi2.conversions > 0 else 0 %}
+  {% set gsc_ctr = (gsc_kpi2.clicks / gsc_kpi2.impressions * 100) if gsc_kpi2.impressions > 0 else 0 %}
+  <div class="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-5">
+    <h2 class="font-semibold text-indigo-900 mb-1 flex items-center gap-2">
+      <i class="fa-solid fa-lightbulb text-indigo-500"></i> Paid vs. free traffic
+    </h2>
+    <p class="text-xs text-indigo-700 mb-4">A quick comparison of what you pay for clicks vs. how much free traffic you're getting from Google search.</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+      <div class="bg-white rounded-lg p-4 border">
+        <div class="text-xs text-gray-500 mb-1 font-semibold uppercase tracking-wide">Paid: cost per new lead</div>
+        <div class="text-2xl font-bold text-gray-900">{{ '$%.0f' | format(ads_cpl) if ads_cpl > 0 else '—' }}</div>
+        <div class="text-xs text-gray-500 mt-1">How much you pay Google Ads for each call/form fill</div>
+      </div>
+      <div class="bg-white rounded-lg p-4 border">
+        <div class="text-xs text-gray-500 mb-1 font-semibold uppercase tracking-wide">Free: % of viewers clicking</div>
+        <div class="text-2xl font-bold text-gray-900">{{ "%.1f" | format(gsc_ctr) }}%</div>
+        <div class="text-xs text-gray-500 mt-1">Of {{ "{:,}".format(gsc_kpi2.impressions|int) }} people who saw you in search results</div>
+      </div>
+    </div>
+    {% if gsc_ctr < 3 and gsc_kpi2.impressions > 1000 %}
+    <div class="text-sm text-indigo-900 mt-4 bg-white border border-indigo-200 rounded-lg p-4">
+      <p class="font-semibold mb-1"><i class="fa-solid fa-lightbulb text-amber-500 mr-1"></i>Heads up</p>
+      <p>Your business appears in Google search {{ "{:,}".format(gsc_kpi2.impressions|int) }} times a month, but only {{ "%.1f" | format(gsc_ctr) }}% of those people click through (typical is 3%+). Better page titles and descriptions could pull in more free clicks — which means you'd rely less on paid ads.</p>
+    </div>
+    {% endif %}
   </div>
+  {% endif %}
+
+  {# ── Footer ── #}
+  <p class="text-xs text-gray-400 text-center">
+    Connection status cached for 1 hour. Use
+    <a href="{{ url_for('google_bp.index', refresh=1) }}" class="underline hover:text-gray-600">force refresh</a>
+    to check immediately.
+  </p>
+
 </div>
+
+<script nonce="{{ g.csp_nonce }}">
+(function () {
+  const syncStatus = document.getElementById('sync-status');
+
+  async function doSync(btn, originalHtml) {
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Syncing…'; }
+    syncStatus?.classList.remove('hidden');
+    if (syncStatus) syncStatus.textContent = 'Pulling data from Google Ads…';
+
+    try {
+      const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+      const r = await fetch('/account/google/ads/sync', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' },
+      });
+      let d;
+      try { d = await r.json(); } catch (_) { d = {}; }
+      if (!r.ok) {
+        throw new Error(d.error || d.message || `HTTP ${r.status}`);
+      }
+      const s = d.sync || {};
+      const errs = (d.errors || []).concat(s.errors || []);
+      if (syncStatus) {
+        if (errs.length) {
+          syncStatus.className = 'rounded-xl px-4 py-3 text-sm border bg-amber-50 border-amber-200 text-amber-800';
+          syncStatus.textContent = 'Sync completed with errors: ' + errs.join(' | ');
+        } else {
+          syncStatus.className = 'rounded-xl px-4 py-3 text-sm border bg-green-50 border-green-200 text-green-800';
+          syncStatus.textContent =
+            `Sync complete — ${s.campaigns_synced || 0} campaign rows, ` +
+            `${s.keywords_synced || 0} keyword rows, ${s.search_terms_synced || 0} search terms, ` +
+            `${d.optimizer?.created || 0} recommendations. Refreshing…`;
+        }
+      }
+      setTimeout(() => {
+        window.location.href = '{{ url_for("google_bp.index", refresh=1) }}';
+      }, 1800);
+    } catch (e) {
+      if (syncStatus) {
+        syncStatus.className = 'rounded-xl px-4 py-3 text-sm border bg-red-50 border-red-200 text-red-800';
+        syncStatus.textContent = 'Sync failed: ' + e.message;
+      }
+      if (btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
+    }
+  }
+
+  const syncBtn = document.getElementById('sync-all-btn');
+  syncBtn?.addEventListener('click', () =>
+    doSync(syncBtn, '<i class="fa-solid fa-rotate mr-1"></i>Sync All Data')
+  );
+
+  const quickBtn = document.getElementById('quick-sync-btn');
+  quickBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    doSync(quickBtn, 'Sync now →');
+  });
+})();
+</script>
 {% endblock %}

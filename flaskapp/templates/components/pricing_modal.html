@@ -2,142 +2,167 @@
 <!-- Can be included in any template and triggered via JavaScript -->
 
 <div id="pricingModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4" onclick="if(event.target.id==='pricingModal') closePricingModal()">
-  <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl" onclick="event.stopPropagation()">
+  <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl" onclick="event.stopPropagation()">
+
     <!-- Header -->
-    <div class="relative bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 text-white p-8">
-      <button onclick="closePricingModal()" class="absolute top-4 right-4 text-white hover:text-gray-200 text-2xl font-bold">
+    <div class="relative bg-indigo-600 text-white p-8">
+      <button onclick="closePricingModal()" class="absolute top-4 right-4 text-white hover:text-indigo-200 text-2xl font-bold leading-none">
         <i class="fa-solid fa-times"></i>
       </button>
-
       <div class="text-center">
-        <h2 class="text-3xl md:text-4xl font-extrabold mb-3">
-          Unlock Premium Features 🚀
-        </h2>
-        <p class="text-lg text-indigo-100 max-w-2xl mx-auto">
-          Get full access to AI-powered insights, unlimited reports, and priority support
+        <h2 class="text-2xl md:text-3xl font-extrabold mb-2">Unlock Automation</h2>
+        <p class="text-indigo-100 max-w-xl mx-auto">
+          Your Google Ads account has issues we've already found. Here's what fixes them automatically.
         </p>
       </div>
     </div>
 
+    <!-- Billing Toggle -->
+    <div class="flex items-center justify-center gap-3 pt-6 pb-2 px-8">
+      <span id="modal-toggle-label-monthly" class="text-sm font-semibold text-gray-900">Monthly</span>
+      <button
+        id="modal-billing-toggle"
+        onclick="setModalBilling('annual')"
+        aria-pressed="false"
+        class="relative inline-flex items-center w-14 h-7 rounded-full bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      >
+        <span id="modal-toggle-knob" class="absolute left-1 w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
+      </button>
+      <span id="modal-toggle-label-annual" class="text-sm font-medium text-gray-500">
+        Annual
+        <span class="ml-1.5 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700">Save 20%</span>
+      </span>
+    </div>
+
     <!-- Pricing Cards -->
-    <div class="p-8">
-      <div class="grid md:grid-cols-2 gap-6 mb-6">
-        <!-- Annual Plan (Recommended) -->
-        <div class="relative border-4 border-indigo-500 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-shadow">
-          <!-- Recommended Badge -->
-          <div class="absolute top-0 right-0 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-1 text-sm font-bold rounded-bl-lg">
-            ⭐ BEST VALUE
+    <div class="p-6 pt-4">
+      <div class="grid md:grid-cols-2 gap-5 mb-6">
+
+        <!-- Growth Card (Most Popular) -->
+        <div class="relative border-4 border-indigo-500 rounded-xl overflow-hidden">
+          <div class="absolute top-0 left-0 bg-indigo-600 text-white px-3 py-1 text-xs font-bold rounded-br-lg">
+            MOST POPULAR
           </div>
 
-          <div class="bg-gradient-to-br from-indigo-50 to-purple-50 p-6">
-            <h3 class="text-2xl font-bold text-gray-900 mb-2">Annual Plan</h3>
-            <div class="flex items-baseline gap-2 mb-1">
-              <span class="text-5xl font-black text-indigo-600">$497</span>
-              <span class="text-gray-600">/year</span>
-            </div>
-            <p class="text-sm text-green-600 font-semibold mb-4">
-              Save $191 vs monthly ($41/month)
-            </p>
+          <div class="bg-indigo-50 p-6 pt-8">
+            <h3 class="text-xl font-bold text-gray-900 mb-1">Growth</h3>
+            <p class="text-xs text-gray-500 mb-3">Full automation, 1 CRM, 2 seats</p>
 
-            <button onclick="upgradeToPlan('annual', this)" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-4 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg mb-4">
-              Start Annual Plan →
+            <div class="flex items-baseline gap-1 mb-1">
+              <span class="text-4xl font-black text-indigo-600 modal-price-monthly">$99</span>
+              <span class="text-4xl font-black text-indigo-600 modal-price-annual hidden">$79</span>
+              <span class="text-gray-600">/mo</span>
+            </div>
+            <p class="text-xs text-gray-500 mb-4 modal-price-monthly">Billed monthly · cancel anytime</p>
+            <p class="text-xs text-gray-500 mb-4 modal-price-annual hidden">Billed $948/year · 20% off</p>
+
+            <button onclick="upgradeToPlan('growth', currentModalBilling, this)" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transition-all shadow mb-4">
+              Get Growth
+              <span class="modal-price-monthly"> — $99/mo</span>
+              <span class="modal-price-annual hidden"> — $79/mo</span>
             </button>
 
-            <div class="space-y-3 text-sm">
+            <div class="space-y-2 text-sm text-gray-700">
               <div class="flex items-start gap-2">
-                <i class="fa-solid fa-check text-green-600 mt-1"></i>
-                <span class="text-gray-700"><strong>Unlimited</strong> Google Ads reports</span>
+                <i class="fa-solid fa-check text-indigo-500 mt-0.5"></i>
+                <span><strong>Full automation</strong> — dayparting, RSA auto-promote, negative keywords</span>
               </div>
               <div class="flex items-start gap-2">
-                <i class="fa-solid fa-check text-green-600 mt-1"></i>
-                <span class="text-gray-700"><strong>Full optimization recommendations</strong> with action steps</span>
+                <i class="fa-solid fa-check text-indigo-500 mt-0.5"></i>
+                <span><strong>Offline conversion upload</strong></span>
               </div>
               <div class="flex items-start gap-2">
-                <i class="fa-solid fa-check text-green-600 mt-1"></i>
-                <span class="text-gray-700"><strong>Historical performance charts</strong> & trend analysis</span>
+                <i class="fa-solid fa-check text-indigo-500 mt-0.5"></i>
+                <span><strong>1 CRM integration</strong> (Skimmer, ServiceTitan, or Housecall Pro)</span>
               </div>
               <div class="flex items-start gap-2">
-                <i class="fa-solid fa-check text-green-600 mt-1"></i>
-                <span class="text-gray-700"><strong>AI campaign suggestions</strong> & keyword ideas</span>
+                <i class="fa-solid fa-check text-indigo-500 mt-0.5"></i>
+                <span><strong>Review request emails</strong> + call/lead tracking</span>
               </div>
               <div class="flex items-start gap-2">
-                <i class="fa-solid fa-check text-green-600 mt-1"></i>
-                <span class="text-gray-700"><strong>Lead quality insights</strong> & CRM integration</span>
-              </div>
-              <div class="flex items-start gap-2">
-                <i class="fa-solid fa-check text-green-600 mt-1"></i>
-                <span class="text-gray-700"><strong>Team collaboration</strong> (up to 10 members)</span>
-              </div>
-              <div class="flex items-start gap-2">
-                <i class="fa-solid fa-check text-green-600 mt-1"></i>
-                <span class="text-gray-700"><strong>Priority email support</strong></span>
-              </div>
-              <div class="flex items-start gap-2">
-                <i class="fa-solid fa-check text-green-600 mt-1"></i>
-                <span class="text-gray-700"><strong>White-label PDF reports</strong></span>
+                <i class="fa-solid fa-check text-indigo-500 mt-0.5"></i>
+                <span><strong>2 user seats</strong> + unlimited history</span>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Monthly Plan -->
-        <div class="border-2 border-gray-300 rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow">
-          <div class="bg-gray-50 p-6">
-            <h3 class="text-2xl font-bold text-gray-900 mb-2">Monthly Plan</h3>
-            <div class="flex items-baseline gap-2 mb-1">
-              <span class="text-5xl font-black text-gray-900">$57</span>
-              <span class="text-gray-600">/month</span>
-            </div>
-            <p class="text-sm text-gray-500 mb-4">
-              Billed monthly • Cancel anytime
-            </p>
+        <!-- Pro Card -->
+        <div class="border-2 border-purple-400 rounded-xl overflow-hidden">
+          <div class="bg-purple-50 p-6">
+            <h3 class="text-xl font-bold text-gray-900 mb-1">Pro</h3>
+            <p class="text-xs text-gray-500 mb-3">All CRMs, multi-location, 5 seats</p>
 
-            <button onclick="upgradeToPlan('monthly', this)" class="w-full bg-gray-900 text-white font-bold py-4 rounded-lg hover:bg-gray-800 transition-all mb-4">
-              Start Monthly Plan →
+            <div class="flex items-baseline gap-1 mb-1">
+              <span class="text-4xl font-black text-purple-700 modal-price-monthly">$249</span>
+              <span class="text-4xl font-black text-purple-700 modal-price-annual hidden">$199</span>
+              <span class="text-gray-600">/mo</span>
+            </div>
+            <p class="text-xs text-gray-500 mb-4 modal-price-monthly">Billed monthly · cancel anytime</p>
+            <p class="text-xs text-gray-500 mb-4 modal-price-annual hidden">Billed $2,388/year · 20% off</p>
+
+            <button onclick="upgradeToPlan('pro', currentModalBilling, this)" class="w-full bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-700 transition-all shadow mb-4">
+              Get Pro
+              <span class="modal-price-monthly"> — $249/mo</span>
+              <span class="modal-price-annual hidden"> — $199/mo</span>
             </button>
 
-            <div class="space-y-3 text-sm text-gray-600">
+            <div class="space-y-2 text-sm text-gray-700">
               <div class="flex items-start gap-2">
-                <i class="fa-solid fa-check text-gray-500 mt-1"></i>
-                <span>Everything in Annual Plan</span>
+                <i class="fa-solid fa-check text-purple-500 mt-0.5"></i>
+                <span>All Growth features, plus:</span>
               </div>
               <div class="flex items-start gap-2">
-                <i class="fa-solid fa-check text-gray-500 mt-1"></i>
-                <span>Pay month-to-month</span>
+                <i class="fa-solid fa-check text-purple-500 mt-0.5"></i>
+                <span><strong>All CRM integrations</strong></span>
               </div>
               <div class="flex items-start gap-2">
-                <i class="fa-solid fa-check text-gray-500 mt-1"></i>
-                <span>Cancel anytime</span>
+                <i class="fa-solid fa-check text-purple-500 mt-0.5"></i>
+                <span><strong>Multi-location dashboard</strong> (+$49/mo add-on included)</span>
+              </div>
+              <div class="flex items-start gap-2">
+                <i class="fa-solid fa-check text-purple-500 mt-0.5"></i>
+                <span><strong>White-label PDF reports</strong></span>
+              </div>
+              <div class="flex items-start gap-2">
+                <i class="fa-solid fa-check text-purple-500 mt-0.5"></i>
+                <span><strong>Competitor intelligence</strong> + 5 user seats</span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Continue Without Plan -->
+      <!-- Continue with Free -->
       <div class="text-center pt-4 border-t border-gray-200">
         <button onclick="closePricingModal()" class="text-sm text-gray-500 hover:text-gray-700 underline">
-          Continue with free plan
+          Continue with Free
         </button>
-        <p class="text-xs text-gray-400 mt-2">
-          Limited to 1 report per month • Basic recommendations only
+        <p class="text-xs text-gray-400 mt-1">
+          Read-only audit &amp; health score — upgrade when ready
         </p>
       </div>
 
       <!-- Trust Signals -->
-      <div class="grid md:grid-cols-3 gap-4 mt-8 pt-6 border-t border-gray-200">
+      <div class="grid md:grid-cols-3 gap-4 mt-6 pt-5 border-t border-gray-200">
         <div class="text-center">
-          <div class="text-3xl mb-2">🔒</div>
+          <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-2">
+            <i class="fa-solid fa-lock text-gray-600"></i>
+          </div>
           <div class="text-xs font-semibold text-gray-700">Secure Checkout</div>
           <div class="text-xs text-gray-500">Powered by Stripe</div>
         </div>
         <div class="text-center">
-          <div class="text-3xl mb-2">↩️</div>
+          <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-2">
+            <i class="fa-solid fa-shield-halved text-gray-600"></i>
+          </div>
           <div class="text-xs font-semibold text-gray-700">30-Day Guarantee</div>
           <div class="text-xs text-gray-500">Full refund, no questions</div>
         </div>
         <div class="text-center">
-          <div class="text-3xl mb-2">⚡</div>
+          <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-2">
+            <i class="fa-solid fa-bolt text-gray-600"></i>
+          </div>
           <div class="text-xs font-semibold text-gray-700">Instant Access</div>
           <div class="text-xs text-gray-500">Upgrade immediately</div>
         </div>
@@ -147,10 +172,62 @@
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
-// Pricing Modal Functions
+var currentModalBilling = 'monthly';
+
+// ── Modal billing toggle ──────────────────────────────────────────────────────
+function setModalBilling(mode) {
+  currentModalBilling = mode;
+  var isAnnual = (mode === 'annual');
+
+  var toggle       = document.getElementById('modal-billing-toggle');
+  var knob         = document.getElementById('modal-toggle-knob');
+  var labelMonthly = document.getElementById('modal-toggle-label-monthly');
+  var labelAnnual  = document.getElementById('modal-toggle-label-annual');
+
+  if (isAnnual) {
+    toggle.setAttribute('aria-pressed', 'true');
+    toggle.classList.remove('bg-gray-200');
+    toggle.classList.add('bg-indigo-600');
+    knob.classList.add('translate-x-7');
+    labelMonthly.classList.remove('font-semibold', 'text-gray-900');
+    labelMonthly.classList.add('font-medium', 'text-gray-500');
+    labelAnnual.classList.remove('font-medium', 'text-gray-500');
+    labelAnnual.classList.add('font-semibold', 'text-gray-900');
+    toggle.onclick = function() { setModalBilling('monthly'); };
+  } else {
+    toggle.setAttribute('aria-pressed', 'false');
+    toggle.classList.remove('bg-indigo-600');
+    toggle.classList.add('bg-gray-200');
+    knob.classList.remove('translate-x-7');
+    labelMonthly.classList.remove('font-medium', 'text-gray-500');
+    labelMonthly.classList.add('font-semibold', 'text-gray-900');
+    labelAnnual.classList.remove('font-semibold', 'text-gray-900');
+    labelAnnual.classList.add('font-medium', 'text-gray-500');
+    toggle.onclick = function() { setModalBilling('annual'); };
+  }
+
+  document.querySelectorAll('.modal-price-monthly').forEach(function(el) {
+    el.classList.toggle('hidden', isAnnual);
+  });
+  document.querySelectorAll('.modal-price-annual').forEach(function(el) {
+    el.classList.toggle('hidden', !isAnnual);
+  });
+}
+
+// ── Toast helper ──────────────────────────────────────────────────────────────
+function showToast(msg, kind) {
+  var colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  var t = document.createElement('div');
+  t.className = 'fixed top-6 right-6 z-[99999] px-4 py-3 rounded-lg shadow-lg text-sm text-white ' + (colors[kind] || colors.info);
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function() { t.remove(); }, 4000);
+}
+
+// ── Modal open / close ────────────────────────────────────────────────────────
 function openPricingModal() {
   document.getElementById('pricingModal').classList.remove('hidden');
-  document.body.style.overflow = 'hidden'; // Prevent background scrolling
+  document.body.style.overflow = 'hidden';
 }
 
 function closePricingModal() {
@@ -158,129 +235,125 @@ function closePricingModal() {
   document.body.style.overflow = 'auto';
 }
 
-async function upgradeToPlan(planType, buttonElement) {
-  console.log('upgradeToPlan called with:', planType);
-
-  // Get Stripe price IDs and direct payment links from the backend
-  const priceIds = {
-    'annual': '{{ config.STRIPE_YEARLY_PRICE_ID | default("", true) }}',
-    'monthly': '{{ config.STRIPE_MONTHLY_PRICE_ID | default("", true) }}'
-  };
-
-  // Direct Stripe payment links as fallback (with user metadata for webhook identification)
-  const userEmail = '{{ current_user.email | default("", true) if current_user and current_user.is_authenticated else "" }}';
-  const userId = '{{ current_user.id | default("", true) if current_user and current_user.is_authenticated else "" }}';
-
-  const baseLinks = {
-    'annual': '{{ config.STRIPE_YEARLY_LINK | default("", true) }}',
-    'monthly': '{{ config.STRIPE_MONTHLY_LINK | default("", true) }}'
-  };
-
-  // Build direct link with user metadata for webhook identification
-  function buildDirectLink(baseLink) {
-    if (!baseLink) return '';
-    const params = new URLSearchParams();
-    if (userId) params.set('client_reference_id', userId);
-    if (userEmail) params.set('prefilled_email', userEmail);
-    const paramStr = params.toString();
-    return paramStr ? `${baseLink}?${paramStr}` : baseLink;
-  }
-
-  const priceId = priceIds[planType];
-  const directLink = buildDirectLink(baseLinks[planType]);
-
-  console.log('priceId:', priceId);
-  console.log('directLink:', directLink);
-
-  // If no price ID configured, try direct link
-  if (!priceId) {
-    console.log('No priceId, trying direct link');
-    if (directLink) {
-      console.log('Redirecting to direct link:', directLink);
-      window.location.href = directLink;
-      return;
+// ── Stripe config vars ────────────────────────────────────────────────────────
+var modalStripeConfig = {
+  growth: {
+    monthly: {
+      priceId: '{{ config.STRIPE_GROWTH_MONTHLY_PRICE_ID | default("", true) }}',
+      link:    '{{ config.STRIPE_GROWTH_MONTHLY_LINK    | default("", true) }}'
+    },
+    annual: {
+      priceId: '{{ config.STRIPE_GROWTH_YEARLY_PRICE_ID | default("", true) }}',
+      link:    '{{ config.STRIPE_GROWTH_YEARLY_LINK    | default("", true) }}'
     }
-    alert('Pricing configuration error. Please contact support.');
+  },
+  pro: {
+    monthly: {
+      priceId: '{{ config.STRIPE_PRO_MONTHLY_PRICE_ID | default("", true) }}',
+      link:    '{{ config.STRIPE_PRO_MONTHLY_LINK    | default("", true) }}'
+    },
+    annual: {
+      priceId: '{{ config.STRIPE_PRO_YEARLY_PRICE_ID | default("", true) }}',
+      link:    '{{ config.STRIPE_PRO_YEARLY_LINK    | default("", true) }}'
+    }
+  }
+};
+
+var modalUserEmail = '{{ current_user.email | default("", true) if current_user and current_user.is_authenticated else "" }}';
+var modalUserId    = '{{ current_user.id    | default("", true) if current_user and current_user.is_authenticated else "" }}';
+
+function buildModalDirectLink(baseLink) {
+  if (!baseLink) return '';
+  var params = new URLSearchParams();
+  if (modalUserId)    params.set('client_reference_id', modalUserId);
+  if (modalUserEmail) params.set('prefilled_email', modalUserEmail);
+  var paramStr = params.toString();
+  return paramStr ? (baseLink + '?' + paramStr) : baseLink;
+}
+
+// ── Upgrade function ──────────────────────────────────────────────────────────
+// tier: 'growth' | 'pro'
+// billing: 'monthly' | 'annual'
+// buttonElement: the button DOM element
+async function upgradeToPlan(tier, billing, buttonElement) {
+  var tierConfig = modalStripeConfig[tier];
+  if (!tierConfig) {
+    showToast('Unknown plan. Please contact support.', 'error');
     return;
   }
 
-  // Show loading state - buttonElement is passed directly from onclick
-  const button = buttonElement;
-  const originalText = planType === 'annual' ? 'Start Annual Plan →' : 'Start Monthly Plan →';
-  button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading checkout...';
-  button.disabled = true;
+  var billingConfig = tierConfig[billing] || tierConfig['monthly'];
+  var priceId    = billingConfig.priceId;
+  var directLink = buildModalDirectLink(billingConfig.link);
 
-  // Retry logic with exponential backoff
-  const maxRetries = 3;
-  const baseDelay = 1000; // 1 second
+  if (!priceId) {
+    if (directLink) {
+      window.location.href = directLink;
+      return;
+    }
+    showToast('Pricing configuration error. Please contact support.', 'error');
+    return;
+  }
 
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
+  var button = buttonElement;
+  var originalHTML = button ? button.innerHTML : '';
+  if (button) {
+    button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading checkout...';
+    button.disabled = true;
+  }
+
+  var maxRetries = 3;
+  var baseDelay  = 1000;
+
+  for (var attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      console.log(`Attempt ${attempt + 1}: fetching checkout session`);
-      const response = await fetch('/billing/create-checkout-session', {
+      var response = await fetch('/billing/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-CSRFToken': '{{ csrf_token() }}'
         },
         body: JSON.stringify({
-          price_id: priceId,
-          plan_type: planType,
+          price_id:    priceId,
+          plan_type:   tier + '_' + billing,
           success_url: window.location.origin + '/account/dashboard?upgrade=success',
-          cancel_url: window.location.href
+          cancel_url:  window.location.href
         })
       });
 
-      const data = await response.json();
-
-      console.log('Response received:', response.status, data);
+      var data = await response.json();
 
       if (data.error) {
-        // Server returned an error - try direct link fallback
-        console.error('Server error:', data.error);
         if (directLink) {
-          console.log('Server error, falling back to direct Stripe link:', directLink);
           window.location.href = directLink;
           return;
         }
-        alert('Error: ' + data.error);
-        button.disabled = false;
-        button.innerHTML = originalText;
+        showToast('Error: ' + data.error, 'error');
+        if (button) { button.disabled = false; button.innerHTML = originalHTML; }
         return;
       } else if (data.checkout_url) {
-        // Success - redirect to Stripe Checkout
-        console.log('Success! Redirecting to checkout:', data.checkout_url);
         window.location.href = data.checkout_url;
         return;
       } else {
-        console.error('Unexpected response format:', data);
-        alert('Unexpected response. Please try again.');
-        button.disabled = false;
-        button.innerHTML = originalText;
+        showToast('Unexpected response. Please try again.', 'error');
+        if (button) { button.disabled = false; button.innerHTML = originalHTML; }
         return;
       }
-    } catch (error) {
-      console.error(`Attempt ${attempt + 1} failed:`, error);
-
-      // If this was the last attempt, try direct link fallback
+    } catch (err) {
       if (attempt === maxRetries - 1) {
         if (directLink) {
-          console.log('API failed, using direct Stripe link:', directLink);
           window.location.href = directLink;
           return;
         }
-        alert('Network error after ' + maxRetries + ' attempts. Please check your connection and try again.');
-        button.disabled = false;
-        button.innerHTML = originalText;
+        showToast('Network error after ' + maxRetries + ' attempts. Please check your connection.', 'error');
+        if (button) { button.disabled = false; button.innerHTML = originalHTML; }
         return;
       }
-
-      // Calculate exponential backoff delay: 1s, 2s, 4s
-      const delay = baseDelay * Math.pow(2, attempt);
-      button.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>Retrying (${attempt + 1}/${maxRetries})...`;
-
-      // Wait before retrying
-      await new Promise(resolve => setTimeout(resolve, delay));
+      var delay = baseDelay * Math.pow(2, attempt);
+      if (button) {
+        button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Retrying (' + (attempt + 1) + '/' + maxRetries + ')...';
+      }
+      await new Promise(function(resolve) { setTimeout(resolve, delay); });
     }
   }
 }
@@ -288,7 +361,7 @@ async function upgradeToPlan(planType, buttonElement) {
 // Auto-show modal on registration completion (if enabled)
 {% if show_pricing_modal %}
 document.addEventListener('DOMContentLoaded', function() {
-  setTimeout(openPricingModal, 500); // Small delay for smooth appearance
+  setTimeout(openPricingModal, 500);
 });
 {% endif %}
 </script>
@@ -301,20 +374,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /* Smooth fade-in animation */
 #pricingModal:not(.hidden) {
-  animation: fadeIn 0.2s ease-out;
+  animation: pricingModalFadeIn 0.2s ease-out;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* Prevent scrolling when modal is open */
-body.modal-open {
-  overflow: hidden;
+@keyframes pricingModalFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 </style>

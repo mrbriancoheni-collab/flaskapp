@@ -31,9 +31,18 @@ class AdsCampaign(db.Model):
     start_date = db.Column(db.Date, nullable=True)
     end_date = db.Column(db.Date, nullable=True)
 
+    # Bid strategy (item 9)
+    bid_strategy = db.Column(db.String(32), nullable=True, default="manual_cpc")
+    # manual_cpc | target_cpa | target_roas | maximize_conversions | maximize_conversion_value | enhanced_cpc
+    target_cpa_micros = db.Column(db.BigInteger, nullable=True)   # e.g. 5000000 = $5 CPA
+    target_roas = db.Column(db.Float, nullable=True)              # e.g. 4.0 = 400% ROAS
+
     # External IDs (optional)
     google_customer_id = db.Column(db.String(32), nullable=True, index=True)
     google_campaign_id = db.Column(db.String(64), nullable=True, index=True)
+
+    # Budget group assignment (FK to budget_groups.id, nullable)
+    budget_group_id = db.Column(db.Integer, nullable=True, index=True)
 
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
@@ -47,6 +56,37 @@ class AdsCampaign(db.Model):
 
     def __repr__(self):
         return f"<AdsCampaign {self.id} {self.name!r}>"
+
+    @classmethod
+    def ensure_columns(cls) -> None:
+        """Add any model columns that are missing from the live table (safe no-op if up to date)."""
+        from flask import current_app
+        from sqlalchemy import text, inspect
+        needed = {
+            # columns added after initial table creation — order matters for readability, not execution
+            "account_id":        "INT NULL",
+            "google_campaign_id": "VARCHAR(64) NULL",
+            "google_customer_id": "VARCHAR(32) NULL",
+            "bid_strategy":      "VARCHAR(32) NULL DEFAULT 'manual_cpc'",
+            "target_cpa_micros": "BIGINT NULL",
+            "target_roas":       "FLOAT NULL",
+            "budget_group_id":   "INT NULL",
+            "objective":         "VARCHAR(50) NULL",
+            "network":           "VARCHAR(40) NULL",
+            "start_date":        "DATE NULL",
+            "end_date":          "DATE NULL",
+        }
+        try:
+            existing = {c["name"] for c in inspect(db.engine).get_columns("ads_campaigns")}
+            missing = [c for c in needed if c not in existing]
+            if not missing:
+                return
+            clauses = ", ".join(f"ADD COLUMN {c} {needed[c]}" for c in missing)
+            with db.engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE ads_campaigns {clauses}"))
+            current_app.logger.info("ads_campaigns: added missing columns: %s", missing)
+        except Exception as exc:
+            current_app.logger.warning("ads_campaigns ensure_columns failed: %s", exc)
 
 
 class AdsAdGroup(db.Model):
@@ -102,11 +142,38 @@ class AdsAd(db.Model):
 
     google_ad_id = db.Column(db.String(64), nullable=True, index=True)
 
+    # A/B testing (item 10)
+    variant_group = db.Column(db.String(64), nullable=True, index=True)  # shared test identifier
+    is_control = db.Column(db.Boolean, nullable=False, default=False)    # True = control ad
+    test_name = db.Column(db.String(128), nullable=True)                 # human label for the test
+
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
 
     def __repr__(self):
         return f"<AdsAd {self.id} {self.headline1!r}>"
+
+    @classmethod
+    def ensure_columns(cls) -> None:
+        """Add A/B testing columns to the ads table if missing."""
+        from flask import current_app
+        from sqlalchemy import text, inspect
+        needed = {
+            "variant_group": "VARCHAR(64) NULL",
+            "is_control":    "TINYINT(1) NOT NULL DEFAULT 0",
+            "test_name":     "VARCHAR(128) NULL",
+        }
+        try:
+            existing = {c["name"] for c in inspect(db.engine).get_columns("ads")}
+            missing = [c for c in needed if c not in existing]
+            if not missing:
+                return
+            clauses = ", ".join(f"ADD COLUMN {c} {needed[c]}" for c in missing)
+            with db.engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE ads {clauses}"))
+            current_app.logger.info("ads: added missing columns: %s", missing)
+        except Exception as exc:
+            current_app.logger.warning("ads ensure_columns failed: %s", exc)
 
 
 class AdsKeyword(db.Model):
@@ -211,23 +278,67 @@ class GadsStatsDaily(db.Model):
     __tablename__ = "gads_stats_daily"
 
     id = db.Column(db.BigInteger, primary_key=True)
-    entity_type = db.Column(db.String(32), nullable=False, index=True)  # account|campaign|ad_group|ad|keyword
-    entity_id = db.Column(db.BigInteger, nullable=False, index=True)
-    date = db.Column(db.Date, nullable=False, index=True)
+    account_id   = db.Column(db.Integer, nullable=True, index=True)  # local accounts.id
+    entity_type  = db.Column(db.String(32), nullable=False, index=True)  # account|campaign|ad_group|keyword
+    entity_id    = db.Column(db.BigInteger, nullable=False, index=True)  # local DB id
+    google_entity_id = db.Column(db.BigInteger, nullable=True, index=True)  # raw Google Ads resource ID
+    date         = db.Column(db.Date, nullable=False, index=True)
 
-    impressions = db.Column(db.BigInteger, nullable=False, default=0)
-    clicks = db.Column(db.BigInteger, nullable=False, default=0)
-    cost_micros = db.Column(db.BigInteger, nullable=False, default=0)
-    conversions = db.Column(db.Float, nullable=False, default=0.0)
+    impressions      = db.Column(db.BigInteger, nullable=False, default=0)
+    clicks           = db.Column(db.BigInteger, nullable=False, default=0)
+    cost_micros      = db.Column(db.BigInteger, nullable=False, default=0)
+    conversions      = db.Column(db.Float, nullable=False, default=0.0)
     conversion_value = db.Column(db.Float, nullable=False, default=0.0)
-    avg_cpc = db.Column(db.Float, nullable=True)
+    avg_cpc          = db.Column(db.Float, nullable=True)
     search_impr_share = db.Column(db.Float, nullable=True)
-    lost_is_budget = db.Column(db.Float, nullable=True)
-    lost_is_rank = db.Column(db.Float, nullable=True)
+    lost_is_budget   = db.Column(db.Float, nullable=True)
+    lost_is_rank     = db.Column(db.Float, nullable=True)
+
+    # Quality Score — populated for entity_type='keyword' rows
+    quality_score    = db.Column(db.Integer, nullable=True)   # 1-10
+    landing_page_exp = db.Column(db.String(32), nullable=True)  # BELOW_AVERAGE|AVERAGE|ABOVE_AVERAGE
+    ad_relevance     = db.Column(db.String(32), nullable=True)
+    expected_ctr     = db.Column(db.String(32), nullable=True)
 
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
 
-    __table_args__ = (db.Index("ix_stats_entity_date", "entity_type", "entity_id", "date"),)
+    __table_args__ = (
+        db.Index("ix_stats_entity_date", "entity_type", "entity_id", "date"),
+        db.Index("ix_stats_account_date", "account_id", "date"),
+        db.UniqueConstraint("account_id", "entity_type", "google_entity_id", "date",
+                            name="uq_gads_stats_daily"),
+        {"extend_existing": True},
+    )
+
+    @classmethod
+    def ensure_columns(cls) -> None:
+        """Add columns that may be missing from older table schemas."""
+        from flask import current_app
+        from sqlalchemy import text, inspect
+        needed = {
+            "account_id":        "INT NULL",
+            "google_entity_id":  "BIGINT NULL",
+            "search_impr_share": "FLOAT NULL",
+            "lost_is_budget":    "FLOAT NULL",
+            "lost_is_rank":      "FLOAT NULL",
+            "quality_score":     "INT NULL",
+            "landing_page_exp":  "VARCHAR(32) NULL",
+            "ad_relevance":      "VARCHAR(32) NULL",
+            "expected_ctr":      "VARCHAR(32) NULL",
+            "avg_cpc":           "FLOAT NULL",
+            "conversion_value":  "FLOAT NULL",
+        }
+        try:
+            existing = {c["name"] for c in inspect(db.engine).get_columns("gads_stats_daily")}
+            missing = [c for c in needed if c not in existing]
+            if not missing:
+                return
+            clauses = ", ".join(f"ADD COLUMN {c} {needed[c]}" for c in missing)
+            with db.engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE gads_stats_daily {clauses}"))
+            current_app.logger.info("gads_stats_daily: added missing columns: %s", missing)
+        except Exception as exc:
+            current_app.logger.warning("gads_stats_daily ensure_columns failed: %s", exc)
 
 
 class SearchTerm(db.Model):
@@ -266,6 +377,40 @@ class LabelMap(db.Model):
     entity_id = db.Column(db.BigInteger, nullable=False)
 
     __table_args__ = (db.UniqueConstraint("label_id", "entity_type", "entity_id", name="uq_label_entity"),)
+
+
+class ConversionAction(db.Model):
+    """Google Ads conversion actions synced from the API (item 6)."""
+    __tablename__ = "conversion_actions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, nullable=False, index=True)
+
+    google_conversion_id = db.Column(db.String(64), nullable=True, index=True)
+    name = db.Column(db.String(255), nullable=False)
+    category = db.Column(db.String(64), nullable=True)       # PURCHASE, LEAD, SIGNUP, PAGE_VIEW, etc.
+    type_ = db.Column("type", db.String(64), nullable=True)  # WEBPAGE, PHONE_CALL, IMPORT, etc.
+    status = db.Column(db.String(32), nullable=True)         # ENABLED | REMOVED | HIDDEN
+    counting_type = db.Column(db.String(32), nullable=True)  # ONE_PER_CLICK | MANY_PER_CLICK
+    value_settings_default = db.Column(db.Float, nullable=True)
+    value_settings_currency = db.Column(db.String(8), nullable=True)
+    include_in_conversions = db.Column(db.Boolean, nullable=True, default=True)
+    click_through_window_days = db.Column(db.Integer, nullable=True)
+    view_through_window_days = db.Column(db.Integer, nullable=True)
+
+    # 30-day aggregate totals refreshed on each sync
+    conversions_30d = db.Column(db.Float, nullable=True, default=0.0)
+    conversion_value_30d = db.Column(db.Float, nullable=True, default=0.0)
+
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("account_id", "google_conversion_id", name="uq_conversion_action"),
+    )
+
+    def __repr__(self):
+        return f"<ConversionAction {self.id} {self.name!r}>"
 
 
 class Snapshot(db.Model):
@@ -450,3 +595,277 @@ class AIPrompt(db.Model):
 
     def __repr__(self):
         return f"<AIPrompt {self.prompt_key} ({self.name})>"
+
+
+# ---------------------------------------------------------------------------
+# Onboarding & Goals
+# ---------------------------------------------------------------------------
+
+class AdsAccountGoal(db.Model):
+    __tablename__ = "ads_account_goals"
+
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, nullable=False, index=True)
+
+    target_monthly_leads = db.Column(db.Integer, nullable=True)
+    target_cpa_cents = db.Column(db.Integer, nullable=True)
+    customer_lifetime_value_cents = db.Column(db.Integer, nullable=True)
+    monthly_budget_cents = db.Column(db.Integer, nullable=True)
+    business_type = db.Column(db.String(64), nullable=True)
+    onboarding_completed = db.Column(db.Boolean, nullable=False, default=False)
+
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("account_id", name="uq_ads_account_goal"),
+    )
+
+    def __repr__(self):
+        return f"<AdsAccountGoal account_id={self.account_id}>"
+
+
+# ---------------------------------------------------------------------------
+# Hourly Stats
+# ---------------------------------------------------------------------------
+
+class GadsHourlyStats(db.Model):
+    __tablename__ = "gads_hourly_stats"
+
+    id = db.Column(db.BigInteger, primary_key=True)
+    account_id = db.Column(db.Integer, nullable=True, index=True)
+    entity_type = db.Column(db.String(32), nullable=False)
+    entity_id = db.Column(db.BigInteger, nullable=False)
+    google_entity_id = db.Column(db.BigInteger, nullable=True)
+    date = db.Column(db.Date, nullable=False, index=True)
+    hour = db.Column(db.Integer, nullable=False)
+
+    impressions = db.Column(db.BigInteger, nullable=False, default=0)
+    clicks = db.Column(db.BigInteger, nullable=False, default=0)
+    cost_micros = db.Column(db.BigInteger, nullable=False, default=0)
+    conversions = db.Column(db.Float, nullable=False, default=0.0)
+
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "account_id", "entity_type", "google_entity_id", "date", "hour",
+            name="uq_gads_hourly",
+        ),
+        db.Index("ix_gads_hourly_entity_date", "entity_type", "entity_id", "date"),
+    )
+
+    @classmethod
+    def ensure_columns(cls) -> None:
+        from flask import current_app
+        from sqlalchemy import text, inspect
+        needed = {
+            "account_id":      "INT NULL",
+            "google_entity_id": "BIGINT NULL",
+        }
+        try:
+            existing = {c["name"] for c in inspect(db.engine).get_columns("gads_hourly_stats")}
+            missing = [c for c in needed if c not in existing]
+            if not missing:
+                return
+            clauses = ", ".join(f"ADD COLUMN {c} {needed[c]}" for c in missing)
+            with db.engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE gads_hourly_stats {clauses}"))
+            current_app.logger.info("gads_hourly_stats: added missing columns: %s", missing)
+        except Exception as exc:
+            current_app.logger.warning("gads_hourly_stats ensure_columns failed: %s", exc)
+
+
+# ---------------------------------------------------------------------------
+# Auction Insights
+# ---------------------------------------------------------------------------
+
+class AuctionInsight(db.Model):
+    __tablename__ = "auction_insights"
+
+    id = db.Column(db.BigInteger, primary_key=True)
+    account_id = db.Column(db.Integer, nullable=False, index=True)
+    campaign_id = db.Column(
+        db.Integer,
+        db.ForeignKey("ads_campaigns.id"),
+        nullable=True,
+        index=True,
+    )
+    date = db.Column(db.Date, nullable=False, index=True)
+    domain = db.Column(db.String(255), nullable=False)
+
+    impression_share = db.Column(db.Float, nullable=True)
+    overlap_rate = db.Column(db.Float, nullable=True)
+    position_above_rate = db.Column(db.Float, nullable=True)
+    top_of_page_rate = db.Column(db.Float, nullable=True)
+    abs_top_of_page_rate = db.Column(db.Float, nullable=True)
+    outranking_share = db.Column(db.Float, nullable=True)
+
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "account_id", "campaign_id", "date", "domain",
+            name="uq_auction_insight",
+        ),
+    )
+
+    @classmethod
+    def ensure_columns(cls) -> None:
+        from flask import current_app
+        from sqlalchemy import text, inspect
+        needed = {
+            "impression_share":    "FLOAT NULL",
+            "overlap_rate":        "FLOAT NULL",
+            "position_above_rate": "FLOAT NULL",
+            "top_of_page_rate":    "FLOAT NULL",
+            "abs_top_of_page_rate": "FLOAT NULL",
+            "outranking_share":    "FLOAT NULL",
+        }
+        try:
+            existing = {c["name"] for c in inspect(db.engine).get_columns("auction_insights")}
+            missing = [c for c in needed if c not in existing]
+            if not missing:
+                return
+            clauses = ", ".join(f"ADD COLUMN {c} {needed[c]}" for c in missing)
+            with db.engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE auction_insights {clauses}"))
+            current_app.logger.info("auction_insights: added missing columns: %s", missing)
+        except Exception as exc:
+            current_app.logger.warning("auction_insights ensure_columns failed: %s", exc)
+
+
+# ---------------------------------------------------------------------------
+# RSA Assets
+# ---------------------------------------------------------------------------
+
+class RsaAsset(db.Model):
+    __tablename__ = "rsa_assets"
+
+    id = db.Column(db.BigInteger, primary_key=True)
+    account_id = db.Column(db.Integer, nullable=False, index=True)
+    ad_id = db.Column(db.Integer, db.ForeignKey("ads.id"), nullable=True, index=True)
+    google_ad_id = db.Column(db.String(64), nullable=True, index=True)
+
+    asset_type = db.Column(db.String(16), nullable=False)
+    asset_text = db.Column(db.String(255), nullable=False)
+    pinned_field = db.Column(db.String(32), nullable=True)
+    performance_label = db.Column(db.String(32), nullable=True)
+
+    impressions = db.Column(db.BigInteger, nullable=False, default=0)
+    clicks = db.Column(db.BigInteger, nullable=False, default=0)
+    conversions = db.Column(db.Float, nullable=False, default=0.0)
+
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("google_ad_id", "asset_type", "asset_text", name="uq_rsa_asset"),
+    )
+
+    @classmethod
+    def ensure_columns(cls) -> None:
+        from flask import current_app
+        from sqlalchemy import text, inspect
+        needed = {
+            "impressions":         "BIGINT NOT NULL DEFAULT 0",
+            "clicks":              "BIGINT NOT NULL DEFAULT 0",
+            "conversions":         "FLOAT NOT NULL DEFAULT 0.0",
+            "pinned_field":        "VARCHAR(32) NULL",
+            "performance_label":   "VARCHAR(32) NULL",
+        }
+        try:
+            existing = {c["name"] for c in inspect(db.engine).get_columns("rsa_assets")}
+            missing = [c for c in needed if c not in existing]
+            if not missing:
+                return
+            clauses = ", ".join(f"ADD COLUMN {c} {needed[c]}" for c in missing)
+            with db.engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE rsa_assets {clauses}"))
+            current_app.logger.info("rsa_assets: added missing columns: %s", missing)
+        except Exception as exc:
+            current_app.logger.warning("rsa_assets ensure_columns failed: %s", exc)
+
+
+# ---------------------------------------------------------------------------
+# Offline Conversion Imports
+# ---------------------------------------------------------------------------
+
+class OfflineConversionImport(db.Model):
+    __tablename__ = "offline_conversion_imports"
+
+    id = db.Column(db.BigInteger, primary_key=True)
+    account_id = db.Column(db.Integer, nullable=False, index=True)
+
+    source = db.Column(db.String(32), nullable=False)
+    external_id = db.Column(db.String(255), nullable=True)
+    gclid = db.Column(db.String(255), nullable=True, index=True)
+    conversion_name = db.Column(db.String(255), nullable=False)
+    conversion_time = db.Column(db.DateTime, nullable=True)
+    conversion_value = db.Column(db.Float, nullable=True, default=0.0)
+    currency_code = db.Column(db.String(8), nullable=False, default="USD")
+    status = db.Column(db.String(16), nullable=False, default="pending")
+    google_response_json = db.Column(db.Text, nullable=True)
+    error_message = db.Column(db.Text, nullable=True)
+
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+    __table_args__ = (
+        db.Index("ix_offline_conv_account_status", "account_id", "status"),
+    )
+
+    @classmethod
+    def ensure_columns(cls) -> None:
+        from flask import current_app
+        from sqlalchemy import text, inspect
+        needed = {
+            "gclid":                "VARCHAR(255) NULL",
+            "status":               "VARCHAR(16) NOT NULL DEFAULT 'pending'",
+            "google_response_json": "TEXT NULL",
+            "error_message":        "TEXT NULL",
+        }
+        try:
+            existing = {c["name"] for c in inspect(db.engine).get_columns("offline_conversion_imports")}
+            missing = [c for c in needed if c not in existing]
+            if not missing:
+                return
+            clauses = ", ".join(f"ADD COLUMN {c} {needed[c]}" for c in missing)
+            with db.engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE offline_conversion_imports {clauses}"))
+            current_app.logger.info("offline_conversion_imports: added missing columns: %s", missing)
+        except Exception as exc:
+            current_app.logger.warning("offline_conversion_imports ensure_columns failed: %s", exc)
+
+
+# ---------------------------------------------------------------------------
+# Daypart Bid Adjustments
+# ---------------------------------------------------------------------------
+
+class DaypartBidAdjustment(db.Model):
+    __tablename__ = "daypart_bid_adjustments"
+
+    id = db.Column(db.BigInteger, primary_key=True)
+    account_id = db.Column(db.Integer, nullable=False, index=True)
+    campaign_id = db.Column(
+        db.Integer,
+        db.ForeignKey("ads_campaigns.id"),
+        nullable=False,
+        index=True,
+    )
+    google_campaign_id = db.Column(db.String(64), nullable=True)
+
+    day_of_week = db.Column(db.Integer, nullable=False)
+    hour = db.Column(db.Integer, nullable=False)
+    bid_modifier = db.Column(db.Float, nullable=False)
+    data_source = db.Column(db.String(16), nullable=False, default="auto")
+    applied_at = db.Column(db.DateTime, nullable=True)
+
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("campaign_id", "day_of_week", "hour", name="uq_daypart_adj"),
+    )
+
+    def __repr__(self):
+        return f"<DaypartBidAdjustment campaign_id={self.campaign_id} dow={self.day_of_week} hour={self.hour}>"

@@ -1,0 +1,356 @@
+{% extends "base_app.html" %}
+{% block title %}Automatic Actions · Google Ads{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Automatic actions</h1>
+      <p class="text-gray-500 text-sm mt-1">Set things that should happen automatically (like pausing keywords that waste money) so you don't have to babysit your account</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <button id="run-btn" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 flex items-center gap-2">
+        <i class="fa-solid fa-play"></i>Check now
+      </button>
+      <button id="create-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 flex items-center gap-2">
+        <i class="fa-solid fa-plus"></i>New automatic action
+      </button>
+      <a href="{{ url_for('gads_bp.optimize', tab='campaigns') }}" class="text-sm text-gray-500 hover:text-indigo-600">
+        ← Back to Optimizer
+      </a>
+    </div>
+  </div>
+
+  <div id="run-status" class="hidden rounded-xl px-4 py-3 text-sm border bg-blue-50 border-blue-200 text-blue-800"></div>
+
+  <!-- Rules list -->
+  <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+    <div class="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
+      <h2 class="font-semibold text-gray-700">Active automatic actions</h2>
+      <span class="text-xs text-gray-400">{{ rules | length }} action{{ 's' if rules | length != 1 else '' }}</span>
+    </div>
+
+    {% if not rules %}
+    <div class="p-12 text-center text-gray-400">
+      <i class="fa-solid fa-robot text-5xl mb-4"></i>
+      <p>No automatic actions yet. Create your first one to let the system tune your campaigns for you.</p>
+    </div>
+    {% else %}
+    <table class="min-w-full text-sm">
+      <thead class="text-xs text-gray-500 uppercase tracking-wide border-b">
+        <tr>
+          <th class="text-left px-4 py-3">Name</th>
+          <th class="text-left px-4 py-3 w-40">What it does</th>
+          <th class="text-left px-4 py-3 w-48">When it runs</th>
+          <th class="text-center px-4 py-3 w-24">Runs automatically</th>
+          <th class="text-center px-4 py-3 w-24">On / Off</th>
+          <th class="text-center px-4 py-3 w-36">Delete</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y" id="rules-tbody">
+        {% for rule in rules %}
+        <tr class="hover:bg-gray-50" id="rule-row-{{ rule.id }}">
+          <td class="px-4 py-3 font-medium text-gray-900">{{ rule.rule_name }}</td>
+          <td class="px-4 py-3 text-gray-600 text-xs">
+            {{ rule.action_type | replace('_', ' ') | title }}
+          </td>
+          <td class="px-4 py-3 text-gray-500 text-xs">
+            {% for k, v in (rule.conditions or {}).items() %}
+              <div>{{ k | replace('_', ' ') }}: <span class="font-mono">{{ v }}</span></div>
+            {% endfor %}
+          </td>
+          <td class="px-4 py-3 text-center">
+            {% if rule.auto_execute %}
+              <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Auto</span>
+            {% else %}
+              <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Suggest</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 text-center">
+            <button class="toggle-btn text-xs px-3 py-1 rounded-full border transition
+                           {{ 'bg-green-600 text-white border-green-600 hover:bg-green-700' if rule.enabled else 'bg-gray-100 text-gray-500 border-gray-300 hover:bg-gray-200' }}"
+                    data-id="{{ rule.id }}">
+              {{ 'Enabled' if rule.enabled else 'Disabled' }}
+            </button>
+          </td>
+          <td class="px-4 py-3 text-center">
+            <button class="delete-btn text-xs text-red-500 hover:text-red-700 px-2"
+                    data-id="{{ rule.id }}">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </div>
+
+  <!-- Recent action log -->
+  <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+    <div class="px-4 py-3 border-b bg-gray-50">
+      <h2 class="font-semibold text-gray-700">What's been done recently</h2>
+    </div>
+    {% if not recent_actions %}
+    <div class="p-8 text-center text-gray-400 text-sm">No actions logged yet.</div>
+    {% else %}
+    <div class="divide-y max-h-96 overflow-y-auto">
+      {% for action in recent_actions %}
+      <div class="px-4 py-3 flex items-start gap-3">
+        <div class="mt-0.5">
+          {% if action.status == 'executed' %}
+            <span class="inline-block w-2 h-2 rounded-full bg-green-500 mt-1"></span>
+          {% elif action.status == 'failed' %}
+            <span class="inline-block w-2 h-2 rounded-full bg-red-500 mt-1"></span>
+          {% elif action.status == 'pending' %}
+            <span class="inline-block w-2 h-2 rounded-full bg-amber-500 mt-1"></span>
+          {% else %}
+            <span class="inline-block w-2 h-2 rounded-full bg-gray-300 mt-1"></span>
+          {% endif %}
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-medium text-gray-900 truncate">{{ action.title }}</div>
+          <div class="text-xs text-gray-500 mt-0.5">
+            {{ action.action_type | replace('_', ' ') | title }} ·
+            {{ action.status | title }} ·
+            {{ action.created_at.strftime('%b %d %H:%M') if action.created_at else '' }}
+          </div>
+          {% if action.reasoning %}
+          <div class="text-xs text-gray-400 mt-0.5 italic">{{ action.reasoning }}</div>
+          {% endif %}
+        </div>
+        <div class="text-xs text-gray-400 flex-shrink-0">
+          {% if action.confidence_score %}
+            {{ (action.confidence_score * 100) | int }}% conf.
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Confirm delete modal -->
+<div id="confirm-delete-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+    <h3 class="font-semibold text-gray-900 mb-2">Delete this automatic action?</h3>
+    <p class="text-sm text-gray-600 mb-5">It won't run anymore. You can recreate it later if you change your mind.</p>
+    <div class="flex justify-end gap-3">
+      <button type="button" data-action="cancel" class="px-4 py-2 text-sm border rounded-lg hover:bg-gray-50">Cancel</button>
+      <button type="button" data-action="ok" class="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create rule modal -->
+<div id="create-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+    <div class="flex items-center justify-between px-6 py-4 border-b">
+      <h2 class="font-semibold text-gray-900">New automatic action</h2>
+      <button id="close-modal" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+    </div>
+    <div class="px-6 py-4 space-y-4">
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">Name <span class="text-red-500">*</span></label>
+        <input id="rule-name" type="text" placeholder="e.g. Pause keywords that waste money"
+               class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">What should happen <span class="text-red-500">*</span></label>
+        <select id="rule-action" class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" onchange="updateConditionFields()">
+          <option value="pause_wasted_keywords">Pause keywords that waste money</option>
+          <option value="add_negative_search_terms">Block bad search terms</option>
+          <option value="increase_budget">Raise budget (when missing out due to budget)</option>
+          <option value="adjust_bid_up">Pay more per click (when leads are good)</option>
+          <option value="adjust_bid_down">Pay less per click (when leads are weak)</option>
+        </select>
+      </div>
+
+      <!-- Dynamic condition fields -->
+      <div id="condition-fields" class="space-y-3 border rounded-lg p-3 bg-gray-50"></div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">Max changes per day</label>
+          <input id="rule-max-day" type="number" value="50" min="1"
+                 class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">Max changes per campaign</label>
+          <input id="rule-max-camp" type="number" value="10" min="1"
+                 class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input id="rule-auto" type="checkbox" class="h-4 w-4 text-indigo-600 rounded border-gray-300">
+          <span class="text-sm text-gray-700">Run automatically (no confirmation needed)</span>
+        </label>
+      </div>
+    </div>
+    <div class="px-6 py-4 border-t flex justify-end gap-3">
+      <button id="cancel-modal" class="px-4 py-2 text-sm border rounded-lg hover:bg-gray-50">Cancel</button>
+      <button id="save-rule" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+        <i class="fa-solid fa-check mr-1"></i>Create
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+(function () {
+  const CONDITION_TEMPLATES = {
+    pause_wasted_keywords: [
+      {key: 'spend_above_dollars', label: 'Spend above ($)', type: 'number', default: 5, step: 1},
+      {key: 'conversions_below', label: 'Conversions below', type: 'number', default: 0, step: 0.1},
+      {key: 'lookback_days', label: 'Lookback days', type: 'number', default: 30, step: 1},
+    ],
+    add_negative_search_terms: [
+      {key: 'spend_above_dollars', label: 'Spend above ($)', type: 'number', default: 10, step: 1},
+      {key: 'ctr_below', label: 'Click rate below (e.g. 0.02 = 2%)', type: 'number', default: 0.02, step: 0.01},
+      {key: 'lookback_days', label: 'Lookback days', type: 'number', default: 30, step: 1},
+    ],
+    increase_budget: [
+      {key: 'lost_is_budget_above', label: 'Share of searches missed due to budget above (e.g. 0.25 = 25%)', type: 'number', default: 0.20, step: 0.01},
+      {key: 'lookback_days', label: 'Lookback days', type: 'number', default: 14, step: 1},
+    ],
+    adjust_bid_up: [
+      {key: 'conversion_rate_above', label: '% that became leads above (e.g. 0.10 = 10%)', type: 'number', default: 0.10, step: 0.01},
+      {key: 'bid_increase_pct', label: 'Raise max-per-click by % (e.g. 0.15 = 15%)', type: 'number', default: 0.15, step: 0.01},
+      {key: 'lookback_days', label: 'Lookback days', type: 'number', default: 14, step: 1},
+    ],
+    adjust_bid_down: [
+      {key: 'conversion_rate_below', label: '% that became leads below (e.g. 0.02 = 2%)', type: 'number', default: 0.02, step: 0.01},
+      {key: 'spend_above_dollars', label: 'Spend above ($)', type: 'number', default: 20, step: 1},
+      {key: 'bid_decrease_pct', label: 'Lower max-per-click by % (e.g. 0.10 = 10%)', type: 'number', default: 0.10, step: 0.01},
+      {key: 'lookback_days', label: 'Lookback days', type: 'number', default: 14, step: 1},
+    ],
+  };
+
+  window.updateConditionFields = function () {
+    const action = document.getElementById('rule-action').value;
+    const container = document.getElementById('condition-fields');
+    const fields = CONDITION_TEMPLATES[action] || [];
+    container.innerHTML = fields.map(f => `
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">${f.label}</label>
+        <input data-key="${f.key}" type="${f.type}" value="${f.default}" step="${f.step}"
+               class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+      </div>
+    `).join('');
+  };
+  updateConditionFields();
+
+  // Modal
+  const modal = document.getElementById('create-modal');
+  document.getElementById('create-btn').addEventListener('click', () => modal.classList.remove('hidden'));
+  document.getElementById('close-modal').addEventListener('click', () => modal.classList.add('hidden'));
+  document.getElementById('cancel-modal').addEventListener('click', () => modal.classList.add('hidden'));
+
+  document.getElementById('save-rule').addEventListener('click', async () => {
+    const name = document.getElementById('rule-name').value.trim();
+    const action = document.getElementById('rule-action').value;
+    if (!name) { showToast('Name is required', 'error'); return; }
+
+    const conditions = {};
+    document.querySelectorAll('#condition-fields [data-key]').forEach(el => {
+      conditions[el.dataset.key] = parseFloat(el.value) || el.value;
+    });
+
+    const body = {
+      rule_name: name,
+      action_type: action,
+      conditions,
+      auto_execute: document.getElementById('rule-auto').checked,
+      max_actions_per_day: parseInt(document.getElementById('rule-max-day').value) || 50,
+      max_actions_per_campaign: parseInt(document.getElementById('rule-max-camp').value) || 10,
+    };
+
+    const r = await fetch('/account/google/ads/rules', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    const data = await r.json();
+    if (data.ok) {
+      window.location.reload();
+    } else {
+      showToast('Error: ' + data.error, 'error');
+    }
+  });
+
+  // Toggle
+  document.querySelectorAll('.toggle-btn').forEach(btn => {
+    btn.addEventListener('click', async function () {
+      const id = this.dataset.id;
+      const r = await fetch(`/account/google/ads/rules/${id}/toggle`, {method: 'POST'});
+      const data = await r.json();
+      if (data.ok) {
+        this.textContent = data.enabled ? 'Enabled' : 'Disabled';
+        this.className = 'toggle-btn text-xs px-3 py-1 rounded-full border transition ' +
+          (data.enabled
+            ? 'bg-green-600 text-white border-green-600 hover:bg-green-700'
+            : 'bg-gray-100 text-gray-500 border-gray-300 hover:bg-gray-200');
+      }
+    });
+  });
+
+  // Delete
+  document.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', async function () {
+      const modal = document.getElementById('confirm-delete-modal');
+      const ok = await new Promise(resolve => {
+        modal.classList.remove('hidden');
+        modal.querySelector('[data-action="ok"]').onclick = () => { modal.classList.add('hidden'); resolve(true); };
+        modal.querySelector('[data-action="cancel"]').onclick = () => { modal.classList.add('hidden'); resolve(false); };
+      });
+      if (!ok) return;
+      const id = this.dataset.id;
+      const r = await fetch(`/account/google/ads/rules/${id}`, {method: 'DELETE'});
+      const data = await r.json();
+      if (data.ok) document.getElementById(`rule-row-${id}`)?.remove();
+    });
+  });
+
+  // Run rules
+  const runBtn = document.getElementById('run-btn');
+  const runStatus = document.getElementById('run-status');
+  runBtn?.addEventListener('click', async () => {
+    runBtn.disabled = true;
+    runBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Running…';
+    runStatus?.classList.remove('hidden');
+    if (runStatus) runStatus.textContent = 'Evaluating rules against account data…';
+    try {
+      const r = await fetch('/account/google/ads/rules/run', {method: 'POST'});
+      const data = await r.json();
+      if (runStatus) {
+        runStatus.textContent = `Rules run — ${data.evaluated || 0} evaluated, ${data.created || 0} actions created, ${data.executed || 0} auto-executed.` +
+          (data.errors?.length ? ` Errors: ${data.errors.join('; ')}` : '');
+        runStatus.className = 'rounded-xl px-4 py-3 text-sm border ' +
+          (data.errors?.length ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-green-50 border-green-200 text-green-800');
+      }
+    } catch (e) {
+      if (runStatus) {
+        runStatus.textContent = `Error: ${e.message}`;
+        runStatus.className = 'rounded-xl px-4 py-3 text-sm border bg-red-50 border-red-200 text-red-800';
+      }
+    } finally {
+      runBtn.disabled = false;
+      runBtn.innerHTML = '<i class="fa-solid fa-play mr-2"></i>Check now';
+      setTimeout(() => window.location.reload(), 2500);
+    }
+  });
+})();
+</script>
+{% endblock %}

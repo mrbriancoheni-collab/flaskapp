@@ -112,6 +112,14 @@
     .dark .skeleton-card {
       background: #1f2937;
     }
+
+    /* Mobile card-style tables */
+    @media (max-width: 640px) {
+      .mobile-card-table thead { display: none; }
+      .mobile-card-table tbody tr { display: block; border: 1px solid #e5e7eb; border-radius: 0.75rem; margin-bottom: 0.75rem; padding: 0.75rem; background: white; }
+      .mobile-card-table tbody td { display: flex; justify-content: space-between; align-items: center; padding: 0.25rem 0; border: none; font-size: 0.875rem; }
+      .mobile-card-table tbody td::before { content: attr(data-label); font-size: 0.75rem; color: #6b7280; font-weight: 500; margin-right: 0.5rem; flex-shrink: 0; }
+    }
   </style>
 
   <script defer src="{{ url_for('static', filename='js/app_shell.js') }}"></script>
@@ -166,8 +174,14 @@
     {% set SECTION = 'google' %}
   {% elif bp == 'linkedin_bp' or path.startswith('/account/linkedin') %}
     {% set SECTION = 'linkedin' %}
+  {% elif bp == 'social_calendar_bp' or path.startswith('/account/social-calendar') %}
+    {% set SECTION = 'social_calendar' %}
   {% elif bp == 'ads_grader_bp' or path.startswith('/ads-grader') %}
     {% set SECTION = 'ads_grader' %}
+  {% elif bp == 'integrations_hub_bp' or path.startswith('/account/integrations') or path.startswith('/track/snippet') or path.startswith('/account/integrations/lead-forms') %}
+    {% set SECTION = 'integrations' %}
+  {% elif bp == 'multiloc_bp' or path.startswith('/account/locations') %}
+    {% set SECTION = 'locations' %}
   {% elif 'account_bp.' in epn or path.startswith('/account') %}
     {% set SECTION = 'account' %}
   {% endif %}
@@ -176,7 +190,7 @@
   <header class="md:hidden bg-white border-b border-gray-200">
     <div class="h-14 px-4 flex items-center justify-between">
       <a href="{{ url_for(ep('home')) }}" class="flex items-center space-x-2 font-semibold">
-        <img src="{{ url_for('static', filename='brand/logos/fieldsprout-wordmark.svg') }}" alt="FieldSprout" style="height:40px;width:auto;">
+        <img src="{{ url_for('static', filename='brand/logos/fieldsprout-wordmark.svg') }}" alt="FieldSprout" style="height:36px;width:auto;">
       </a>
       <div class="flex items-center gap-2">
         {% if not is_paid and has_endpoint('pricing') %}
@@ -257,7 +271,7 @@
           </a>
         {% endif %}
         {% if has_endpoint('glsa_bp.optimize') %}
-          <a href="{{ url_for('glsa_bp.optimize') if is_paid else '#' }}" class="block pl-6 pr-3 py-3 nav-link min-h-12 {% if not is_paid %}opacity-40 cursor-not-allowed{% endif %}" {% if not is_paid %}onclick="alert('This feature requires a paid plan. Please upgrade.'); return false;"{% endif %}>
+          <a href="{{ url_for('glsa_bp.optimize') if is_paid else '#' }}" class="block pl-6 pr-3 py-3 nav-link min-h-12 {% if not is_paid %}opacity-40 cursor-not-allowed{% endif %}" {% if not is_paid %}onclick="showToast('This feature requires a paid plan. Please upgrade.', 'info'); return false;"{% endif %}>
             <i class="fa-solid fa-wand-magic-sparkles"></i><span>Optimize</span>
             {% if not is_paid %}<i class="fa-solid fa-lock ml-auto text-xs"></i>{% endif %}
           </a>
@@ -312,9 +326,39 @@
             <i class="fa-solid fa-paper-plane"></i><span>Publisher</span>
           </a>
         {% endif %}
+        {% if has_endpoint('wp_bp.approvals') %}
+          <a href="{{ url_for('wp_bp.approvals') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-inbox"></i><span>Approvals</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.schedule') %}
+          <a href="{{ url_for('wp_bp.schedule') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-calendar-days"></i><span>Schedule</span>
+          </a>
+        {% endif %}
         {% if has_endpoint('wp_bp.new_post') %}
           <a href="{{ url_for('wp_bp.new_post') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
             <i class="fa-solid fa-pen-to-square"></i><span>New Post</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.content_queue_review') %}
+          <a href="{{ url_for('wp_bp.content_queue_review') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-layer-group"></i><span>Content Queue</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.seo_health') %}
+          <a href="{{ url_for('wp_bp.seo_health') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-heart-pulse"></i><span>SEO Health</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.content_brief') %}
+          <a href="{{ url_for('wp_bp.content_brief') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-file-pen"></i><span>Content Brief</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.geo_pages') %}
+          <a href="{{ url_for('wp_bp.geo_pages') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-location-dot"></i><span>Geo Pages</span>
           </a>
         {% endif %}
         {% if has_endpoint('wp_bp.edit_lookup') %}
@@ -325,21 +369,6 @@
         {% if has_endpoint('wp_bp.edits') %}
           <a href="{{ url_for('wp_bp.edits') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
             <i class="fa-solid fa-list-check"></i><span>Edits Dashboard</span>
-          </a>
-        {% endif %}
-        {% if has_endpoint('wp_bp.seo_audit') %}
-          <a href="{{ url_for('wp_bp.seo_audit') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
-            <i class="fa-solid fa-magnifying-glass-chart"></i><span>SEO &amp; AEO Audit</span>
-          </a>
-        {% endif %}
-        {% if has_endpoint('wp_bp.tech_seo') %}
-          <a href="{{ url_for('wp_bp.tech_seo') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
-            <i class="fa-solid fa-spider"></i><span>Technical SEO</span>
-          </a>
-        {% endif %}
-        {% if has_endpoint('wp_bp.schema_gen') %}
-          <a href="{{ url_for('wp_bp.schema_gen') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
-            <i class="fa-solid fa-code"></i><span>Schema Generator</span>
           </a>
         {% endif %}
       {% endif %}
@@ -368,6 +397,61 @@
         {% if has_endpoint('seo_bp.optimize') %}
           <a href="{{ url_for('seo_bp.optimize') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
             <i class="fa-solid fa-wand-magic-sparkles"></i><span>AI Recommendations</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.snippets') %}
+          <a href="{{ url_for('seo_bp.snippets') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-award"></i><span>Snippet Optimizer</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.pagespeed') %}
+          <a href="{{ url_for('seo_bp.pagespeed') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-gauge-high"></i><span>Page Speed</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.local_seo') %}
+          <a href="{{ url_for('seo_bp.local_seo') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-location-dot"></i><span>Local SEO</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.content_calendar') %}
+          <a href="{{ url_for('seo_bp.content_calendar') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-calendar-days"></i><span>Content Calendar</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.page_performance') %}
+          <a href="{{ url_for('seo_bp.page_performance') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-chart-bar"></i><span>Page Performance</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.eeat') %}
+          <a href="{{ url_for('seo_bp.eeat') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-shield-halved"></i><span>E-E-A-T Checker</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.aeo_optimizer') %}
+          <a href="{{ url_for('seo_bp.aeo_optimizer') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-robot"></i><span>AEO Optimizer</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.cannibalization') %}
+          <a href="{{ url_for('seo_bp.cannibalization') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-code-fork"></i><span>Cannibalization</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.llm_citations') %}
+          <a href="{{ url_for('seo_bp.llm_citations') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-comments"></i><span>LLM Citations</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.content_recommendations') %}
+          <a href="{{ url_for('seo_bp.content_recommendations') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-lightbulb"></i><span>Content Recommendations</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.roadmap') %}
+          <a href="{{ url_for('seo_bp.roadmap') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-map"></i><span>SEO Roadmap</span>
           </a>
         {% endif %}
       {% endif %}
@@ -406,9 +490,14 @@
           <i class="fa-brands fa-linkedin"></i><span>Overview</span>
         </a>
         {% if has_endpoint('linkedin_bp.ads') %}
-          <a href="{{ url_for('linkedin_bp.ads') if is_paid else '#' }}" class="block px-3 py-3 nav-link min-h-12 {% if not is_paid %}opacity-40 cursor-not-allowed{% endif %}" {% if not is_paid %}onclick="alert('This feature requires a paid plan. Please upgrade.'); return false;"{% endif %}>
+          <a href="{{ url_for('linkedin_bp.ads') if is_paid else '#' }}" class="block px-3 py-3 nav-link min-h-12 {% if not is_paid %}opacity-40 cursor-not-allowed{% endif %}" {% if not is_paid %}onclick="showToast('This feature requires a paid plan. Please upgrade.', 'info'); return false;"{% endif %}>
             <i class="fa-solid fa-bullseye"></i><span>Ads Optimizer</span>
             {% if not is_paid %}<i class="fa-solid fa-lock ml-auto text-xs"></i>{% endif %}
+          </a>
+        {% endif %}
+        {% if has_endpoint('linkedin_bp.schedule') %}
+          <a href="{{ url_for('linkedin_bp.schedule') }}" class="block px-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-calendar-days"></i><span>Schedule</span>
           </a>
         {% endif %}
         {% if has_endpoint('linkedin_bp.post_generator') %}
@@ -477,6 +566,42 @@
         <a class="block px-3 py-3 nav-link min-h-12" href="{{ url_for('digest_bp.preview') }}">
           <i class="fa-solid fa-sun"></i><span>Daily Digest</span>
         </a>
+      {% if has_endpoint('social_calendar_bp.index') %}
+        <div class="pt-2 text-sm font-semibold text-gray-600 uppercase"><i class="fa-solid fa-calendar-days mr-1"></i>Social Calendar</div>
+        <a href="{{ url_for('social_calendar_bp.index') }}" class="block px-3 py-3 nav-link min-h-12">
+          <i class="fa-solid fa-calendar-week"></i><span>All Platforms</span>
+        </a>
+        <a href="{{ url_for('social_calendar_bp.index', platform='facebook') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+          <i class="fa-brands fa-facebook text-blue-600"></i><span>Facebook</span>
+        </a>
+        <a href="{{ url_for('social_calendar_bp.index', platform='instagram') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+          <i class="fa-brands fa-instagram text-pink-600"></i><span>Instagram</span>
+        </a>
+        <a href="{{ url_for('social_calendar_bp.index', platform='youtube') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+          <i class="fa-brands fa-youtube text-red-600"></i><span>YouTube</span>
+        </a>
+        <a href="{{ url_for('social_calendar_bp.index', platform='linkedin') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+          <i class="fa-brands fa-linkedin text-sky-700"></i><span>LinkedIn</span>
+        </a>
+      {% endif %}
+
+      {% if has_endpoint('reports_bp.overview') or has_endpoint('reports_bp.index') %}
+        <div class="pt-2 text-sm font-semibold text-gray-600 uppercase"><i class="fa-solid fa-heart-pulse mr-1"></i>Reports</div>
+        {% if has_endpoint('reports_bp.overview') %}
+          <a href="{{ url_for('reports_bp.overview') }}" class="block px-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-heart-pulse"></i><span>Business Pulse</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('reports_bp.index') %}
+          <a href="{{ url_for('reports_bp.index') }}" class="block px-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-gauge"></i><span>Channel Overview</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('reports_bp.cpl_dashboard') %}
+          <a href="{{ url_for('reports_bp.cpl_dashboard') }}" class="block px-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-dollar-sign"></i><span>Cost per Lead</span>
+          </a>
+        {% endif %}
       {% endif %}
 
       {% if has_endpoint('ads_grader_bp.index') %}
@@ -490,11 +615,25 @@
         </a>
       {% endif %}
 
+      {% if has_endpoint('integrations_hub_bp.hub') %}
+        <a href="{{ url_for('integrations_hub_bp.hub') }}" class="block px-3 py-3 nav-link min-h-12 {% if SECTION=='integrations' %}font-semibold text-indigo-600{% endif %}">
+          <i class="fa-solid fa-plug"></i><span>Integrations</span>
+        </a>
+      {% endif %}
+
+      {% if has_endpoint('multiloc_bp.dashboard') %}
+        <a href="/account/locations/"
+           class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors min-h-12
+                  {% if SECTION == 'locations' %}bg-indigo-50 text-indigo-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}">
+          <i class="fa-solid fa-map-location-dot w-4 text-center"></i>
+          <span>Locations</span>
+        </a>
+      {% endif %}
+
       <div class="pt-3 mt-3 border-t"></div>
       {% if g.user and g.user.is_admin %}
         <a href="{{ url_for('admin_bp.dashboard') }}" class="block px-3 py-3 nav-link min-h-12"><i class="fa-solid fa-shield-halved"></i><span>Admin Dashboard</span></a>
       {% endif %}
-      <a href="{{ url_for('account_bp.dashboard') }}" class="block px-3 py-3 nav-link min-h-12"><i class="fa-solid fa-gauge-high"></i><span>Account Dashboard</span></a>
       <a href="{{ url_for(ep('pricing')) if has_endpoint('pricing') else '#' }}" class="block px-3 py-3 nav-link min-h-12"><i class="fa-solid fa-tags"></i><span>Upgrade</span></a>
       {% if is_logged_in() and has_endpoint('account_profile') %}
         <a href="{{ url_for(ep('account_profile')) }}" class="block px-3 py-3 nav-link min-h-12"><i class="fa-solid fa-user"></i><span>Account</span></a>
@@ -531,7 +670,16 @@
       {% if has_endpoint('linkedin_bp.index') %}
         <a href="{{ url_for('linkedin_bp.index') }}" class="primary-btn {% if SECTION=='linkedin' %}active{% endif %}" title="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
       {% endif %}
-      <a href="{{ url_for('reports_bp.index') }}" class="primary-btn {% if SECTION=='reports' %}active{% endif %}" title="Reporting"><i class="fa-solid fa-gauge-high"></i></a>
+      {% if has_endpoint('social_calendar_bp.index') %}
+        <a href="{{ url_for('social_calendar_bp.index') }}" class="primary-btn {% if SECTION=='social_calendar' %}active{% endif %}" title="Social Calendar"><i class="fa-solid fa-calendar-days"></i></a>
+      {% endif %}
+      <a href="{{ url_for('reports_bp.overview') if has_endpoint('reports_bp.overview') else url_for('reports_bp.index') }}" class="primary-btn {% if SECTION=='reports' %}active{% endif %}" title="Business Pulse"><i class="fa-solid fa-heart-pulse"></i></a>
+      {% if has_endpoint('integrations_hub_bp.hub') %}
+        <a href="{{ url_for('integrations_hub_bp.hub') }}" class="primary-btn {% if SECTION=='integrations' %}active{% endif %}" title="Integrations"><i class="fa-solid fa-plug"></i></a>
+      {% endif %}
+      {% if has_endpoint('multiloc_bp.dashboard') %}
+        <a href="/account/locations/" class="primary-btn {% if SECTION=='locations' %}active{% endif %}" title="Locations"><i class="fa-solid fa-map-location-dot"></i></a>
+      {% endif %}
 
       <div class="mt-auto flex flex-col items-center space-y-1.5 pt-2">
         {% if g.user and g.user.is_admin %}
@@ -553,7 +701,7 @@
     <!-- SECONDARY SIDEBAR (contextual menu) -->
     <aside class="w-64 bg-white border-r px-3 py-4 overflow-y-auto flex flex-col">
       <a href="{{ url_for(ep('home')) }}" class="hidden lg:flex items-center gap-2 px-2 py-2 mb-2 hover:text-indigo-600">
-        <img src="{{ url_for('static', filename='brand/logos/fieldsprout-wordmark.svg') }}" alt="FieldSprout" style="height:32px;width:auto;">
+        <img src="{{ url_for('static', filename='brand/logos/fieldsprout-wordmark.svg') }}" alt="FieldSprout" style="height:28px;width:auto;">
       </a>
 
       {# Finish Setup Section - Commented out, will bring back later
@@ -634,15 +782,33 @@
 
         {# Google Ads — single entry point; in-page tab bar handles sub-navigation #}
         {% if has_endpoint('google_bp.ads_performance') %}
-        {% set _gads_active = epn in ['google_bp.ads_performance','google_bp.ads_campaigns',
+        {% set _gads_active = epn in [
+          'google_bp.ads_performance','google_bp.ads_campaigns',
           'google_bp.ads_budget','google_bp.ads_forecasting',
           'google_bp.ads_opportunities','google_bp.get_ai_actions',
+          'google_bp.search_terms',
           'competitive_bp.competitive_dashboard',
           'consolidated_bp.ai_control','consolidated_bp.budget_planning',
-          'consolidated_bp.intelligence','gads_bp.optimize'] %}
+          'consolidated_bp.intelligence',
+          'gads_bp.optimize','gads_bp.search_terms','gads_bp.conversions',
+          'gads_bp.ab_tests','gads_bp.analysis_doc','gads_bp.goals_page',
+          'gads_bp.rules_list',
+          'rsa_bp.rsa_page',
+          'auction_insights_bp.competitors_page',
+          'offline_conv_bp.imports_page',
+        ] or path.startswith('/account/google/ads') %}
         <a class="secondary-link {% if _gads_active %}active{% endif %}" href="{{ url_for('google_bp.ads_performance') }}">
           <i class="fa-brands fa-google text-blue-600"></i><span>Google Ads</span>
         </a>
+        {% endif %}
+
+        {# Strategy Setup — opens wizard modal; visible whenever Google Ads section is active #}
+        {% if has_endpoint('gads_bp.optimize') %}
+        <button type="button"
+                onclick="if(window.FSStrategy){FSStrategy.open();}else{window.location='/account/google/ads/?_open_strategy=1'}"
+                class="secondary-link w-full text-left {% if epn=='gads_bp.strategy_setup_get' %}active{% endif %}">
+          <i class="fa-solid fa-sliders text-indigo-500"></i><span>Strategy Setup</span>
+        </button>
         {% endif %}
 
         {# Local Services Ads #}
@@ -681,26 +847,33 @@
         {% if has_endpoint('wp_bp.publisher') %}
           <a class="secondary-link {% if epn=='wp_bp.publisher' %}active{% endif %}" href="{{ url_for('wp_bp.publisher') }}"><i class="fa-solid fa-paper-plane"></i><span>Publisher</span></a>
         {% endif %}
+        {% if has_endpoint('wp_bp.approvals') %}
+          <a class="secondary-link {% if epn=='wp_bp.approvals' %}active{% endif %}" href="{{ url_for('wp_bp.approvals') }}"><i class="fa-solid fa-inbox"></i><span>Approvals</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.schedule') %}
+          <a class="secondary-link {% if epn=='wp_bp.schedule' %}active{% endif %}" href="{{ url_for('wp_bp.schedule') }}"><i class="fa-solid fa-calendar-days"></i><span>Schedule</span></a>
+        {% endif %}
         {% if has_endpoint('wp_bp.new_post') %}
           <a class="secondary-link {% if epn=='wp_bp.new_post' %}active{% endif %}" href="{{ url_for('wp_bp.new_post') }}"><i class="fa-solid fa-pen-to-square"></i><span>New Post</span></a>
         {% endif %}
-        {% if has_endpoint('wp_bp.seo_audit') %}
-          <a class="secondary-link {% if epn=='wp_bp.seo_audit' %}active{% endif %}" href="{{ url_for('wp_bp.seo_audit') }}"><i class="fa-solid fa-magnifying-glass-chart"></i><span>SEO &amp; AEO Audit</span></a>
+        {% if has_endpoint('wp_bp.content_queue_review') %}
+          <a class="secondary-link {% if epn=='wp_bp.content_queue_review' %}active{% endif %}" href="{{ url_for('wp_bp.content_queue_review') }}"><i class="fa-solid fa-layer-group"></i><span>Content Queue</span></a>
         {% endif %}
-        {% if has_endpoint('wp_bp.tech_seo') %}
-          <a class="secondary-link {% if epn=='wp_bp.tech_seo' %}active{% endif %}" href="{{ url_for('wp_bp.tech_seo') }}"><i class="fa-solid fa-spider"></i><span>Technical SEO</span></a>
+        {% if has_endpoint('wp_bp.seo_health') %}
+          <a class="secondary-link {% if epn=='wp_bp.seo_health' %}active{% endif %}" href="{{ url_for('wp_bp.seo_health') }}"><i class="fa-solid fa-heart-pulse"></i><span>SEO Health</span></a>
         {% endif %}
-        {% if has_endpoint('wp_bp.schema_gen') %}
-          <a class="secondary-link {% if epn=='wp_bp.schema_gen' %}active{% endif %}" href="{{ url_for('wp_bp.schema_gen') }}"><i class="fa-solid fa-code"></i><span>Schema Generator</span></a>
+        <div class="sidebar-label mt-2">Content Tools</div>
+        {% if has_endpoint('wp_bp.content_brief') %}
+          <a class="secondary-link {% if epn=='wp_bp.content_brief' %}active{% endif %}" href="{{ url_for('wp_bp.content_brief') }}"><i class="fa-solid fa-file-pen"></i><span>Content Brief</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.geo_pages') %}
+          <a class="secondary-link {% if epn=='wp_bp.geo_pages' %}active{% endif %}" href="{{ url_for('wp_bp.geo_pages') }}"><i class="fa-solid fa-location-dot"></i><span>Geo Pages</span></a>
         {% endif %}
         {% if has_endpoint('wp_bp.edit_lookup') %}
-          <a class="secondary-link {% if epn in ('wp_bp.edit_lookup','wp_bp.edit_post','wp_bp.edit_post_submit') %}active{% endif %}" href="{{ url_for('wp_bp.edit_lookup') }}"><i class="fa-solid fa-pen-to-square"></i><span>Edit Post</span></a>
+          <a class="secondary-link {% if epn in ('wp_bp.edit_lookup','wp_bp.edit_post','wp_bp.edit_post_submit') %}active{% endif %}" href="{{ url_for('wp_bp.edit_lookup') }}"><i class="fa-solid fa-pencil"></i><span>Edit Post</span></a>
         {% endif %}
         {% if has_endpoint('wp_bp.edits') %}
           <a class="secondary-link {% if epn=='wp_bp.edits' %}active{% endif %}" href="{{ url_for('wp_bp.edits') }}"><i class="fa-solid fa-list-check"></i><span>Edits Dashboard</span></a>
-        {% endif %}
-        {% if has_endpoint('wp_bp.analyze') %}
-          <a class="secondary-link {% if epn=='wp_bp.analyze' %}active{% endif %}" href="{{ url_for('wp_bp.analyze') }}"><i class="fa-solid fa-microscope"></i><span>Analyze Page</span></a>
         {% endif %}
         {% if has_endpoint('seo_bp.monitor') %}
           <a class="secondary-link {% if epn=='seo_bp.monitor' %}active{% endif %}" href="{{ url_for('seo_bp.monitor') }}"><i class="fa-solid fa-bell"></i><span>SEO Monitor</span></a>
@@ -734,6 +907,33 @@
         {% if has_endpoint('seo_bp.monitor') %}
           <a class="secondary-link {% if epn=='seo_bp.monitor' %}active{% endif %}" href="{{ url_for('seo_bp.monitor') }}"><i class="fa-solid fa-bell"></i><span>Monitor &amp; Alerts</span></a>
         {% endif %}
+        {% if has_endpoint('seo_bp.snippets') %}
+          <a class="secondary-link {% if epn=='seo_bp.snippets' %}active{% endif %}" href="{{ url_for('seo_bp.snippets') }}"><i class="fa-solid fa-award"></i><span>Snippet Optimizer</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.pagespeed') %}
+          <a class="secondary-link {% if epn=='seo_bp.pagespeed' %}active{% endif %}" href="{{ url_for('seo_bp.pagespeed') }}"><i class="fa-solid fa-gauge-high"></i><span>Page Speed</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.local_seo') %}
+          <a class="secondary-link {% if epn=='seo_bp.local_seo' %}active{% endif %}" href="{{ url_for('seo_bp.local_seo') }}"><i class="fa-solid fa-location-dot"></i><span>Local SEO</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.content_calendar') %}
+          <a class="secondary-link {% if epn=='seo_bp.content_calendar' %}active{% endif %}" href="{{ url_for('seo_bp.content_calendar') }}"><i class="fa-solid fa-calendar-days"></i><span>Content Calendar</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.page_performance') %}
+          <a class="secondary-link {% if epn=='seo_bp.page_performance' %}active{% endif %}" href="{{ url_for('seo_bp.page_performance') }}"><i class="fa-solid fa-chart-bar"></i><span>Page Performance</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.eeat') %}
+          <a class="secondary-link {% if epn=='seo_bp.eeat' %}active{% endif %}" href="{{ url_for('seo_bp.eeat') }}"><i class="fa-solid fa-shield-halved"></i><span>E-E-A-T Checker</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.aeo_optimizer') %}
+          <a class="secondary-link {% if epn=='seo_bp.aeo_optimizer' %}active{% endif %}" href="{{ url_for('seo_bp.aeo_optimizer') }}"><i class="fa-solid fa-robot"></i><span>AEO Optimizer</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.cannibalization') %}
+          <a class="secondary-link {% if epn=='seo_bp.cannibalization' %}active{% endif %}" href="{{ url_for('seo_bp.cannibalization') }}"><i class="fa-solid fa-code-fork"></i><span>Cannibalization</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.llm_citations') %}
+          <a class="secondary-link {% if epn=='seo_bp.llm_citations' %}active{% endif %}" href="{{ url_for('seo_bp.llm_citations') }}"><i class="fa-solid fa-comments"></i><span>LLM Citations</span></a>
+        {% endif %}
       {% elif SECTION == 'strategy' %}
         <!-- strategy links placeholder -->
       {% elif SECTION == 'fbads' %}
@@ -755,17 +955,110 @@
         <div class="sidebar-label"><i class="fa-brands fa-linkedin"></i>LinkedIn</div>
         <a class="secondary-link {% if epn=='linkedin_bp.index' %}active{% endif %}" href="{{ url_for('linkedin_bp.index') }}"><i class="fa-solid fa-gauge"></i><span>Overview</span></a>
         {% if has_endpoint('linkedin_bp.ads') %}
-          <a class="secondary-link {% if epn=='linkedin_bp.ads' %}active{% endif %} {% if not is_paid %}opacity-40 cursor-not-allowed{% endif %}" href="{{ url_for('linkedin_bp.ads') if is_paid else '#' }}" {% if not is_paid %}onclick="alert('This feature requires a paid plan. Please upgrade.'); return false;"{% endif %}><i class="fa-solid fa-bullseye"></i><span>Ads Optimizer</span>{% if not is_paid %}<i class="fa-solid fa-lock ml-1 text-xs"></i>{% endif %}</a>
+          <a class="secondary-link {% if epn=='linkedin_bp.ads' %}active{% endif %} {% if not is_paid %}opacity-40 cursor-not-allowed{% endif %}" href="{{ url_for('linkedin_bp.ads') if is_paid else '#' }}" {% if not is_paid %}onclick="showToast('This feature requires a paid plan. Please upgrade.', 'info'); return false;"{% endif %}><i class="fa-solid fa-bullseye"></i><span>Ads Optimizer</span>{% if not is_paid %}<i class="fa-solid fa-lock ml-1 text-xs"></i>{% endif %}</a>
+        {% endif %}
+        {% if has_endpoint('linkedin_bp.schedule') %}
+          <a class="secondary-link {% if epn=='linkedin_bp.schedule' %}active{% endif %}" href="{{ url_for('linkedin_bp.schedule') }}"><i class="fa-solid fa-calendar-days"></i><span>Schedule</span></a>
         {% endif %}
         {% if has_endpoint('linkedin_bp.post_generator') %}
           <a class="secondary-link {% if epn=='linkedin_bp.post_generator' %}active{% endif %}" href="{{ url_for('linkedin_bp.post_generator') }}"><i class="fa-solid fa-pen-to-square"></i><span>Post Generator</span></a>
         {% endif %}
+      {% elif SECTION == 'social_calendar' %}
+        <div class="sidebar-label"><i class="fa-solid fa-calendar-days"></i>Social Calendar</div>
+        {% if has_endpoint('social_calendar_bp.index') %}
+          <a class="secondary-link {% if epn=='social_calendar_bp.index' %}active{% endif %}" href="{{ url_for('social_calendar_bp.index') }}"><i class="fa-solid fa-calendar-week"></i><span>All Platforms</span></a>
+          <a class="secondary-link {% if request.args.get('platform')=='facebook' %}active{% endif %}" href="{{ url_for('social_calendar_bp.index', platform='facebook') }}"><i class="fa-brands fa-facebook text-blue-600"></i><span>Facebook</span></a>
+          <a class="secondary-link {% if request.args.get('platform')=='instagram' %}active{% endif %}" href="{{ url_for('social_calendar_bp.index', platform='instagram') }}"><i class="fa-brands fa-instagram text-pink-600"></i><span>Instagram</span></a>
+          <a class="secondary-link {% if request.args.get('platform')=='youtube' %}active{% endif %}" href="{{ url_for('social_calendar_bp.index', platform='youtube') }}"><i class="fa-brands fa-youtube text-red-600"></i><span>YouTube</span></a>
+          <a class="secondary-link {% if request.args.get('platform')=='linkedin' %}active{% endif %}" href="{{ url_for('social_calendar_bp.index', platform='linkedin') }}"><i class="fa-brands fa-linkedin text-sky-700"></i><span>LinkedIn</span></a>
+        {% endif %}
       {% elif SECTION == 'reports' %}
         <div class="sidebar-label"><i class="fa-solid fa-gauge-high"></i>Reporting</div>
-        <a class="secondary-link {% if epn=='reports_bp.index' %}active{% endif %}" href="{{ url_for('reports_bp.index') }}"><i class="fa-solid fa-gauge"></i><span>Overview</span></a>
+        {% if has_endpoint('reports_bp.overview') %}
+        <a class="secondary-link {% if epn=='reports_bp.overview' %}active{% endif %}" href="{{ url_for('reports_bp.overview') }}">
+          <i class="fa-solid fa-heart-pulse"></i><span>Business Pulse</span>
+        </a>
+        {% endif %}
+        <a class="secondary-link {% if epn=='reports_bp.index' %}active{% endif %}" href="{{ url_for('reports_bp.index') }}"><i class="fa-solid fa-gauge"></i><span>Channel Overview</span></a>
         <a class="secondary-link {% if epn=='reports_bp.cpl_dashboard' %}active{% endif %}" href="{{ url_for('reports_bp.cpl_dashboard') }}"><i class="fa-solid fa-dollar-sign"></i><span>Cost per Lead/Customer</span></a>
+      {% elif SECTION == 'servicetitan' %}
+        <div class="sidebar-label"><i class="fa-solid fa-plug"></i>ServiceTitan</div>
+        {% if has_endpoint('servicetitan_bp.dashboard') %}
+        <a class="secondary-link {% if epn=='servicetitan_bp.dashboard' %}active{% endif %}" href="{{ url_for('servicetitan_bp.dashboard') }}">
+          <i class="fa-solid fa-gauge"></i><span>Dashboard</span>
+        </a>
+        {% endif %}
+        {% if has_endpoint('servicetitan_bp.view_capacity') %}
+        <a class="secondary-link {% if epn=='servicetitan_bp.view_capacity' %}active{% endif %}" href="{{ url_for('servicetitan_bp.view_capacity') }}">
+          <i class="fa-solid fa-chart-bar"></i><span>Capacity Forecast</span>
+        </a>
+        {% endif %}
+        {% if has_endpoint('servicetitan_bp.list_customers') %}
+        <a class="secondary-link {% if epn=='servicetitan_bp.list_customers' %}active{% endif %}" href="{{ url_for('servicetitan_bp.list_customers') }}">
+          <i class="fa-solid fa-users"></i><span>Customers</span>
+        </a>
+        {% endif %}
+        {% if has_endpoint('servicetitan_bp.list_jobs') %}
+        <a class="secondary-link {% if epn=='servicetitan_bp.list_jobs' %}active{% endif %}" href="{{ url_for('servicetitan_bp.list_jobs') }}">
+          <i class="fa-solid fa-briefcase"></i><span>Jobs</span>
+        </a>
+        {% endif %}
+        {% if has_endpoint('servicetitan_bp.sync_logs') %}
+        <a class="secondary-link {% if epn=='servicetitan_bp.sync_logs' %}active{% endif %}" href="{{ url_for('servicetitan_bp.sync_logs') }}">
+          <i class="fa-solid fa-clock-rotate-left"></i><span>Sync Logs</span>
+        </a>
+        {% endif %}
+        {% if has_endpoint('servicetitan_bp.settings') %}
+        <a class="secondary-link {% if epn=='servicetitan_bp.settings' %}active{% endif %}" href="{{ url_for('servicetitan_bp.settings') }}">
+          <i class="fa-solid fa-cog"></i><span>Settings</span>
+        </a>
+        {% endif %}
+      {% elif SECTION == 'integrations' %}
+        <div class="sidebar-label"><i class="fa-solid fa-plug"></i>Integrations</div>
+        {% if has_endpoint('integrations_hub_bp.hub') %}
+        <a class="secondary-link {% if epn=='integrations_hub_bp.hub' %}active{% endif %}" href="{{ url_for('integrations_hub_bp.hub') }}">
+          <i class="fa-solid fa-grid-2"></i><span>All Integrations</span>
+        </a>
+        {% endif %}
+        <div class="sidebar-label mt-3">CRM</div>
+        <a class="secondary-link {% if path.startswith('/account/integrations/skimmer') %}active{% endif %}" href="/account/integrations/skimmer">
+          <i class="fa-solid fa-water"></i><span>Skimmer</span>
+        </a>
+        <div class="sidebar-label mt-3">Lead Tracking</div>
+        <a class="secondary-link {% if path.startswith('/account/google/ads/offline-conversions') %}active{% endif %}" href="/account/google/ads/offline-conversions">
+          <i class="fa-solid fa-phone"></i><span>Phone Call Tracking</span>
+        </a>
+        <a class="secondary-link {% if path.startswith('/track/snippet') %}active{% endif %}" href="/track/snippet">
+          <i class="fa-solid fa-code"></i><span>Website Click Capture</span>
+        </a>
+        <a class="secondary-link {% if path.startswith('/account/integrations/lead-forms') %}active{% endif %}" href="/account/integrations/lead-forms">
+          <i class="fa-solid fa-file-lines"></i><span>Google Lead Forms</span>
+        </a>
+      {% elif SECTION == 'locations' %}
+        <div class="sidebar-label"><i class="fa-solid fa-map-location-dot"></i>Locations</div>
+        {% if has_endpoint('multiloc_bp.dashboard') %}
+        <a class="secondary-link {% if epn=='multiloc_bp.dashboard' %}active{% endif %}" href="/account/locations/">
+          <i class="fa-solid fa-gauge"></i><span>Dashboard</span>
+        </a>
+        {% endif %}
+        {% if has_endpoint('multiloc_bp.setup') %}
+        <a class="secondary-link {% if epn=='multiloc_bp.setup' %}active{% endif %}" href="/account/locations/setup">
+          <i class="fa-solid fa-plus-circle"></i><span>Create Group</span>
+        </a>
+        {% endif %}
+        {% if has_endpoint('multiloc_bp.overlap') %}
+        <a class="secondary-link {% if epn=='multiloc_bp.overlap' %}active{% endif %}" href="/account/locations/overlap">
+          <i class="fa-solid fa-code-fork"></i><span>Keyword Overlap</span>
+        </a>
+        {% endif %}
       {% elif SECTION == 'account' %}
-        <div class="sidebar-label"><i class="fa-solid fa-user"></i>Account</div>
+        {% if has_endpoint('google_bp.ads_performance') %}
+        <div class="sidebar-label"><i class="fa-brands fa-google"></i>Quick Links</div>
+        <a class="secondary-link" href="{{ url_for('google_bp.ads_performance') }}">
+          <i class="fa-brands fa-google text-blue-600"></i><span>Google Ads</span>
+        </a>
+        {% endif %}
+        <div class="sidebar-label mt-2"><i class="fa-solid fa-user"></i>Account</div>
         {% if has_endpoint('settings_business') %}
           <a class="secondary-link" href="{{ url_for(ep('settings_business')) }}"><i class="fa-solid fa-briefcase"></i><span>Business Profile</span></a>
         {% endif %}
@@ -913,6 +1206,14 @@
   </footer>
 
   <script nonce="{{ g.csp_nonce }}">
+    function showToast(msg, kind) {
+      const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+      const t = document.createElement('div');
+      t.className = `fixed top-6 right-6 z-[99999] px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 4000);
+    }
     (function(){
       var btn=document.getElementById('mobile-menu-btn');
       var menu=document.getElementById('mobile-menu');
@@ -1737,6 +2038,22 @@
   </script>
 
   {% block body_extra %}{% endblock %}
+
+  {% include "components/pricing_modal.html" %}
+
+  <script nonce="{{ g.csp_nonce }}">
+  window.handle402 = function(response) {
+    if (response && response.status === 402) {
+      if (typeof openPricingModal === 'function') {
+        openPricingModal();
+      } else {
+        window.location.href = '/pricing';
+      }
+      return true;
+    }
+    return false;
+  };
+  </script>
 
   {% if is_logged_in() and has_endpoint('google_bp.get_ai_actions_summary') %}
   <script nonce="{{ g.csp_nonce }}">

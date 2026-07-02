@@ -4,708 +4,514 @@
 {% block title %}Dashboard · {{ app_name }}{% endblock %}
 
 {% block content %}
-{% set ads_connected = cards.get('ads', {}).get('connected', False) %}
-{% set any_connected = connected_count > 0 %}
-{% set checklist_done = ads_connected and is_paid %}
-<div class="max-w-6xl mx-auto space-y-8">
+{% set ads_connected = (cards or {}).get('ads', {}).get('connected', False) %}
 
-  {# ── Greeting ────────────────────────────────────────────────────────────── #}
-  <div class="flex items-center justify-between">
-    <div>
-      <h1 class="text-2xl font-semibold text-gray-900">
-        Welcome{% if user and user.name %}, {{ user.name.split()[0] }}{% endif %} 👋
-      </h1>
-      <p class="text-gray-500 mt-1">
-        {{ connected_count }}/{{ total_count }} connections active
-        {% if not checklist_done %} — complete the steps below to unlock your full ROI{% endif %}.
-      </p>
+<div class="max-w-5xl mx-auto space-y-6">
+
+  {# ── Lifetime purchase success banner ────────────────────────────────────── #}
+  {% if request.args.get('payment') == 'success' and request.args.get('plan') == 'lifetime' %}
+  <div class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-300 rounded-xl px-6 py-5 flex items-start gap-4 shadow-sm">
+    <div class="flex-shrink-0 w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+      <i class="fa-solid fa-crown text-white text-xl"></i>
     </div>
-    <a href="{{ request.url }}?refresh=1"
-       class="text-sm text-gray-400 hover:text-gray-600 flex items-center gap-1">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-      </svg>
-      Refresh
-    </a>
+    <div>
+      <h3 class="font-bold text-green-800 text-lg">Welcome to FieldSprout Lifetime Access!</h3>
+      <p class="text-green-700 text-sm mt-1">Your account has been upgraded. No more monthly bills — you're locked in forever. Connect your Google Ads account below to get started.</p>
+    </div>
+    <button onclick="this.closest('div.bg-gradient-to-r').remove()" class="ml-auto flex-shrink-0 text-green-400 hover:text-green-600 transition p-1">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  </div>
+  {% endif %}
+
+  {# ── Page heading ─────────────────────────────────────────────────────────── #}
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+      <p class="text-sm text-gray-500 mt-0.5">Your account overview and connected tools.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      {% if has_endpoint('reports_bp.overview') %}
+      <a href="{{ url_for('reports_bp.overview') }}"
+         class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition">
+        <i class="fa-solid fa-heart-pulse text-xs"></i>
+        Business Pulse
+      </a>
+      {% endif %}
+      <a href="{{ url_for('account_bp.dashboard', refresh=1) }}"
+         class="inline-flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg hover:bg-gray-50 text-gray-600 transition">
+        <i class="fa-solid fa-rotate text-xs"></i> Refresh
+      </a>
+    </div>
   </div>
 
-  {# ── AI Agent Requirements Warning ─────────────────────────────────────── #}
-  {% if ai_warnings %}
-  <div id="ai-warning-banner" class="rounded-xl border border-amber-300 bg-amber-50 px-5 py-4 space-y-3">
-    <div class="flex items-start justify-between gap-3">
-      <div class="flex items-center gap-2">
-        <svg class="w-5 h-5 text-amber-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/>
-        </svg>
-        <span class="font-semibold text-amber-800">AI Agent Setup Required</span>
-      </div>
-      <button onclick="document.getElementById('ai-warning-banner').remove()" class="text-amber-500 hover:text-amber-700 text-lg leading-none">&times;</button>
-    </div>
-    <ul class="space-y-2 text-sm">
-      {% for w in ai_warnings %}
-      <li class="flex items-start gap-2">
-        {% if w.severity == 'error' %}
-        <span class="inline-block w-2 h-2 mt-1.5 rounded-full bg-red-500 shrink-0"></span>
-        {% elif w.severity == 'warning' %}
-        <span class="inline-block w-2 h-2 mt-1.5 rounded-full bg-amber-500 shrink-0"></span>
-        {% else %}
-        <span class="inline-block w-2 h-2 mt-1.5 rounded-full bg-blue-400 shrink-0"></span>
-        {% endif %}
+  {# ── Greeting + This Month Snapshot ──────────────────────────────────────── #}
+  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="flex items-stretch min-h-[110px]">
+
+      {# Left: greeting + numbers #}
+      <div class="flex-1 px-6 py-5">
         <div>
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-0.5">This Month</p>
+          <p class="text-lg font-semibold text-gray-900">
+            {% if user and user.name %}Hey {{ user.name.split()[0] }} —{% else %}Here's{% endif %}
+            where things stand.
+          </p>
+        </div>
+
+        {% if pulse %}
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5">
+          <div>
+            <div class="text-2xl font-black text-gray-900">${{ '{:,.0f}'.format(pulse.get('revenue', 0) | float) }}</div>
+            <div class="text-xs text-gray-400 mt-0.5">revenue earned{% if pulse.get('is_sample') %} <span class="text-amber-500">(sample)</span>{% endif %}</div>
+          </div>
+          <div>
+            <div class="text-2xl font-black text-gray-900">{{ pulse.get('jobs', 0) }}</div>
+            <div class="text-xs text-gray-400 mt-0.5">jobs completed</div>
+          </div>
+          <div>
+            <div class="text-2xl font-black text-gray-900">{{ pulse.get('leads', 0) }}</div>
+            <div class="text-xs text-gray-400 mt-0.5">leads came in</div>
+          </div>
+          <div>
+            <div class="text-2xl font-black text-gray-900">${{ '{:,.0f}'.format(pulse.get('spend', 0) | float) }}</div>
+            <div class="text-xs text-gray-400 mt-0.5">marketing spend</div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      {# Right: connection count #}
+      <div class="flex-shrink-0 flex flex-col items-center justify-center px-6 border-l border-gray-100 bg-gray-50 gap-1 w-24">
+        <div class="text-3xl font-black {% if connected_count == total_count %}text-green-600{% elif connected_count > 0 %}text-blue-600{% else %}text-gray-400{% endif %}">
+          {{ connected_count }}<span class="text-base font-normal text-gray-300">/{{ total_count }}</span>
+        </div>
+        <div class="text-xs text-gray-400 text-center leading-tight">connected</div>
+      </div>
+    </div>
+  </div>
+
+  {# ── AI Agent Warnings ────────────────────────────────────────────────────── #}
+  {% if ai_warnings %}
+  <div id="ai-warning-banner" class="rounded-xl border border-amber-300 bg-amber-50 px-5 py-4">
+    <div class="flex items-start justify-between gap-3 mb-2">
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-triangle-exclamation text-amber-600"></i>
+        <span class="text-sm font-semibold text-amber-800">Setup Required</span>
+      </div>
+      <button onclick="document.getElementById('ai-warning-banner').remove()"
+              class="text-amber-400 hover:text-amber-700 leading-none text-lg">&times;</button>
+    </div>
+    <ul class="space-y-1.5">
+      {% for w in ai_warnings %}
+      <li class="flex items-start gap-2 text-sm">
+        <span class="inline-block w-1.5 h-1.5 mt-1.5 rounded-full shrink-0
+          {{ 'bg-red-500' if w.severity == 'error' else ('bg-amber-500' if w.severity == 'warning' else 'bg-blue-400') }}"></span>
+        <span>
           <span class="font-medium text-gray-800">{{ w.title }}</span>
           <span class="text-gray-600"> — {{ w.detail }}</span>
-          {% if w.fix_url %}
-          <a href="{{ w.fix_url }}" class="ml-1 text-indigo-600 hover:underline font-medium">{{ w.fix_label }}</a>
-          {% endif %}
-        </div>
+          {% if w.fix_url %}<a href="{{ w.fix_url }}" class="ml-1 text-indigo-600 hover:underline font-medium">{{ w.fix_label }}</a>{% endif %}
+        </span>
       </li>
       {% endfor %}
     </ul>
   </div>
   {% endif %}
 
-  {# ── Activation Checklist (hidden once all done) ─────────────────────────── #}
-  {% if not checklist_done %}
-  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-    <div class="flex items-center justify-between mb-5">
-      <div>
-        <h2 class="text-base font-semibold text-gray-900">Get started — 4 steps to your first report</h2>
-        <p class="text-sm text-gray-500 mt-0.5">Complete these to start saving on ad spend.</p>
-      </div>
-      <div class="text-right">
-        {% set steps_done = (1 if ads_connected else 0) + (1 if is_paid else 0) + (1 if any_connected else 0) + 1 %}
-        <span class="text-2xl font-bold text-green-600">{{ steps_done }}/4</span>
-        <p class="text-xs text-gray-400">complete</p>
-      </div>
+  {# ── YOUR CONNECTIONS ─────────────────────────────────────────────────────── #}
+  {% if integrations %}
+  <div>
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Your Connections</h2>
+      <span class="text-xs text-gray-400">{{ connected_count }} of {{ total_count }} active</span>
     </div>
 
-    <div class="space-y-3">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      {% for itg in integrations %}
+      <div class="bg-white rounded-xl border shadow-sm p-4 flex items-start gap-3
+           {{ 'opacity-50' if itg.is_soon else '' }}
+           {{ 'border-gray-200' if itg.is_on else 'border-dashed border-gray-200' }}
+           hover:shadow-md transition-shadow">
 
-      {# Step 1 — always done (they're here) #}
-      <div class="flex items-center gap-4 p-3 rounded-xl bg-green-50 border border-green-200">
-        <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center shrink-0">
-          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-          </svg>
-        </div>
-        <div class="flex-1">
-          <p class="text-sm font-semibold text-green-800">Create your account</p>
-          <p class="text-xs text-green-600">Done! Welcome aboard.</p>
-        </div>
-      </div>
-
-      {# Step 2 — Connect Google Ads #}
-      {% set ads_card = cards.get('ads', {}) %}
-      <a href="{{ ads_card.connect_url if not ads_connected else url_for('google_bp.ads_ui') }}"
-         class="flex items-center gap-4 p-3 rounded-xl border transition
-                {% if ads_connected %}bg-green-50 border-green-200{% else %}bg-white border-gray-200 hover:border-green-300 hover:bg-green-50{% endif %}">
-        <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0
-                    {% if ads_connected %}bg-green-500{% else %}bg-gray-100 border-2 border-dashed border-gray-300{% endif %}">
-          {% if ads_connected %}
-          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-          </svg>
-          {% else %}
-          <span class="text-xs font-bold text-gray-400">2</span>
-          {% endif %}
-        </div>
-        <div class="flex-1">
-          <p class="text-sm font-semibold {% if ads_connected %}text-green-800{% else %}text-gray-800{% endif %}">
-            Connect Google Ads
-          </p>
-          <p class="text-xs {% if ads_connected %}text-green-600{% else %}text-gray-500{% endif %}">
-            {% if ads_connected %}Connected — click to view your data{% else %}See where your budget is going and get AI recommendations{% endif %}
-          </p>
-        </div>
-        {% if not ads_connected %}
-        <span class="text-xs font-semibold text-green-600 bg-green-50 border border-green-200 px-2 py-1 rounded-full shrink-0">Start here →</span>
-        {% endif %}
-      </a>
-
-      {# Step 3 — Run Ads Grader #}
-      <a href="{{ url_for('ads_grader_bp.index') }}"
-         class="flex items-center gap-4 p-3 rounded-xl border border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50 transition">
-        <div class="w-8 h-8 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center shrink-0">
-          <span class="text-xs font-bold text-gray-400">3</span>
-        </div>
-        <div class="flex-1">
-          <p class="text-sm font-semibold text-gray-800">Run your free Ads Grader report</p>
-          <p class="text-xs text-gray-500">60-second audit — find wasted spend instantly</p>
-        </div>
-        <span class="text-xs text-indigo-600 font-medium shrink-0">Run now →</span>
-      </a>
-
-      {# Step 4 — Upgrade #}
-      {% if not is_paid %}
-      <div class="flex items-center gap-4 p-3 rounded-xl border border-gray-200 bg-white">
-        <div class="w-8 h-8 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center shrink-0">
-          <span class="text-xs font-bold text-gray-400">4</span>
-        </div>
-        <div class="flex-1">
-          <p class="text-sm font-semibold text-gray-800">Unlock full reports &amp; AI optimization</p>
-          <p class="text-xs text-gray-500">$57/mo or $497/yr — cancel anytime</p>
-        </div>
-        <button onclick="openPricingModal()"
-                class="text-xs font-semibold text-white bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded-lg shrink-0 transition">
-          Upgrade
-        </button>
-      </div>
-      {% else %}
-      <div class="flex items-center gap-4 p-3 rounded-xl bg-green-50 border border-green-200">
-        <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center shrink-0">
-          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-          </svg>
-        </div>
-        <div class="flex-1">
-          <p class="text-sm font-semibold text-green-800">Full access unlocked</p>
-          <p class="text-xs text-green-600">All reports and AI features are active.</p>
-        </div>
-      </div>
-      {% endif %}
-
-    </div>
-  </div>
-  {% endif %}
-
-  {# ── Pricing modal include (needed for upgrade button) ───────────────────── #}
-  {% if not is_paid %}
-  {% include 'components/pricing_modal.html' %}
-  {% endif %}
-
-  <!-- Google Ads - Featured Section (Full Width) -->
-  {% set ads_card = cards.get('ads') %}
-  {% if ads_card %}
-    {% set clickable = (ads_card.connected and not ads_card.get('disabled') and not ads_card.get('coming_soon')) %}
-    {% set connect_url = ads_card.connect_url if ads_card.connect_url else url_for('google_bp.connect_ads') %}
-    {% set href = url_for('google_bp.ads_ui') if clickable else '#' %}
-    {% set wrapper_tag = 'a' if clickable else 'div' %}
-
-    <div class="mb-6">
-      <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">
-        <i class="fa-brands fa-google text-blue-600"></i>
-        Google Ads - Start Here
-      </h2>
-      <{{ wrapper_tag }} {% if clickable %}href="{{ href }}"{% endif %}
-        class="relative block rounded-xl border-2 border-green-400 bg-gradient-to-br from-green-50 to-emerald-50 p-6 shadow-lg hover:shadow-xl transition ring-2 ring-green-200">
-
-        <div class="flex items-start justify-between">
-          <div class="flex-1">
-            <div class="flex items-center gap-2">
-              <div class="text-xl font-bold text-green-700">{{ ads_card.name }}</div>
-              {% if not ads_card.connected %}
-                <span class="text-xs bg-green-500 text-white px-2 py-1 rounded-full font-bold">START HERE</span>
-              {% endif %}
-            </div>
-            <div class="mt-1 text-sm {% if ads_card.connected %}text-green-600{% else %}text-gray-600{% endif %}">
-              {% if ads_card.connected %}
-                ✓ Connected{% if ads_card.last_sync %} • last sync {{ ads_card.last_sync.strftime('%Y-%m-%d %H:%M') }}{% endif %}
-              {% else %}
-                Not connected - Connect to see ROI estimates and start optimizing
-              {% endif %}
-            </div>
-          </div>
-
-          {% if (not ads_card.connected) and (not ads_card.get('coming_soon')) and connect_url and connect_url != '#' %}
-            <a href="{{ connect_url }}"
-               class="ml-4 rounded-lg bg-green-600 text-white border-green-600 hover:bg-green-700 font-semibold px-5 py-3 text-base shadow-md hover:shadow-lg transition">
-              Connect Google Ads
-            </a>
-          {% endif %}
+        <div class="flex-shrink-0 w-10 h-10 rounded-xl bg-{{ itg.color }}-100 flex items-center justify-center">
+          <i class="{{ itg.icon }} text-{{ itg.color }}-600 text-base"></i>
         </div>
 
-        {% if ads_card.get('coming_soon') %}
-          <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div class="-rotate-12 text-3xl font-extrabold uppercase tracking-widest opacity-50 bg-white/80 px-6 py-2 border-2 border-gray-400">
-              Coming Soon
-            </div>
-          </div>
-        {% else %}
-          <!-- BODY -->
-          <div class="mt-4 min-h-[120px] relative rounded-lg bg-white/60 p-5">
-            {% if ads_card.data and ads_card.data.get('sample') %}
-              <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div class="-rotate-12 text-4xl font-extrabold uppercase tracking-widest opacity-50 bg-white/70 px-8 py-2 border-2 border-gray-400">
-                  Sample
-                </div>
-              </div>
-            {% endif %}
-
-            {% if not ads_card.connected %}
-              <div class="space-y-2">
-                <p class="font-semibold text-green-700">🚀 Get started in 3 easy steps:</p>
-                <ol class="text-sm space-y-1 ml-4 list-decimal text-gray-700">
-                  <li>Click "Connect Google Ads" to link your account</li>
-                  <li>See instant ROI estimates and optimization tips</li>
-                  <li>Apply AI recommendations to save money</li>
-                </ol>
-                <div class="mt-4 pt-4 border-t border-green-200">
-                  <p class="text-sm text-green-600 font-medium">
-                    💰 Typical clients save $2,000+/month on wasted ad spend
-                  </p>
-                </div>
-              </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-0.5 flex-wrap">
+            <span class="text-sm font-semibold text-gray-900">{{ itg.label }}</span>
+            {% if itg.is_soon %}
+              <span class="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded font-medium">Soon</span>
+            {% elif itg.is_on %}
+              <span class="inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+                <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>On
+              </span>
             {% else %}
-              <div class="text-sm text-gray-600">
-                {{ ads_card.data.label if ads_card.data and ads_card.data.label else 'Connected — data population is handled by the provider page.' }}
-              </div>
+              <span class="inline-flex items-center gap-1 text-xs font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>Off
+              </span>
             {% endif %}
           </div>
+          <p class="text-xs text-gray-500 leading-snug">{{ itg.detail }}</p>
+          {% if itg.is_on and itg.last_sync %}
+            <p class="text-xs text-gray-300 mt-1">Synced {{ itg.last_sync }}</p>
+          {% endif %}
+        </div>
+
+        {% if not itg.is_soon %}
+          {% if itg.is_on %}
+            <a href="{{ itg.manage_url }}" class="flex-shrink-0 self-center text-xs font-semibold text-indigo-600 hover:text-indigo-800 whitespace-nowrap">Manage →</a>
+          {% elif itg.connect_url != '#' %}
+            <a href="{{ itg.connect_url }}" class="flex-shrink-0 self-center text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg transition whitespace-nowrap">Connect</a>
+          {% endif %}
         {% endif %}
-      </{{ wrapper_tag }}>
+      </div>
+      {% endfor %}
     </div>
+  </div>
   {% endif %}
 
-  <!-- Other Connections -->
-  <h2 class="text-lg font-semibold mb-3">Other Connections</h2>
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-    {% for key in ['ga','lsa','gsc','gmb','wp'] %}
-      {% set card = cards.get(key) %}
-      {% if card %}
-        {% set clickable = (card.connected and not card.get('disabled') and not card.get('coming_soon')) %}
-        {% set is_google_ads = False %}
-
-        {# Decide destination when the card is clickable #}
-        {% if clickable %}
-          {% if key == 'ads' %}
-            {% set href = url_for('google_bp.ads_ui') %}
-          {% elif key == 'lsa' %}
-            {% set href = url_for('glsa_bp.index') %}
-          {% elif key == 'ga' %}
-            {% set href = url_for('google_bp.ga_ui') %}
-          {% elif key == 'gsc' %}
-            {% set href = url_for('google_bp.gsc_ui') %}
-          {% elif key == 'gmb' %}
-            {% set href = url_for('gmb_bp.index') %}
-          {% else %}
-            {% set href = url_for('reports_bp.index') if has_endpoint('reports_bp.index') else '#' %}
-          {% endif %}
-        {% else %}
-          {% set href = '#' %}
-        {% endif %}
-
-        {# Fallback connect URL if the view didn't supply one #}
-        {% if card.connect_url %}
-          {% set connect_url = card.connect_url %}
-        {% else %}
-          {% if key == 'ads' %}
-            {% set connect_url = url_for('google_bp.connect_ads') %}
-          {% elif key == 'lsa' %}
-            {% set connect_url = url_for('google_bp.connect_lsa') %}
-          {% elif key == 'ga' %}
-            {% set connect_url = url_for('google_bp.connect_ga') %}
-          {% elif key == 'gsc' %}
-            {% set connect_url = url_for('google_bp.connect_search_console') %}
-          {% elif key == 'gmb' %}
-            {% set connect_url = url_for('google_bp.connect_gmb') %}
-          {% else %}
-            {% set connect_url = '#' %}
-          {% endif %}
-        {% endif %}
-
-        {% set wrapper_tag = 'a' if clickable else 'div' %}
-
-        <{{ wrapper_tag }} {% if clickable %}href="{{ href }}"{% endif %}
-          class="relative block rounded-lg border bg-white p-4 shadow-sm hover:shadow-md transition">
-
-          <div class="flex items-start justify-between">
-            <div>
-              <div class="text-sm text-gray-500">
-                {{ card.name }}
-              </div>
-              <div class="mt-1 text-xs {% if card.connected %}text-green-600{% else %}text-gray-500{% endif %}">
-                {% if card.connected %}
-                  Connected{% if card.last_sync %} • last sync {{ card.last_sync.strftime('%Y-%m-%d %H:%M') }}{% endif %}
-                {% else %}
-                  Not connected
-                {% endif %}
-              </div>
-            </div>
-
-            {% if (not card.connected) and (not card.get('coming_soon')) and connect_url and connect_url != '#' %}
-              <a href="{{ connect_url }}"
-                 class="ml-3 rounded-md border hover:bg-gray-50 px-3 py-1.5 text-sm">Connect</a>
-            {% endif %}
-          </div>
-
-          {% if card.get('coming_soon') %}
-            <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div class="-rotate-12 text-3xl font-extrabold uppercase tracking-widest opacity-50 bg-white/80 px-6 py-2 border-2 border-gray-400">
-                Coming Soon
-              </div>
-            </div>
-          {% else %}
-            <!-- BODY -->
-            <div class="mt-4 min-h-[120px] relative rounded-md bg-gray-50 p-4">
-              {% if card.data and card.data.get('sample') %}
-                <!-- Diagonal centered Sample overlay -->
-                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div class="-rotate-12 text-4xl font-extrabold uppercase tracking-widest opacity-50 bg-white/70 px-8 py-2 border-2 border-gray-400">
-                    Sample
-                  </div>
-                </div>
-              {% endif %}
-
-              {# Special renderings by key (optional) #}
-              {% if key == 'facebook' and (card.connected and card.data and not card.data.get('sample')) %}
-                <!-- <div class="grid grid-cols-3 gap-3 text-center">
-                  <div>
-                    <div class="text-xs text-gray-500">Leads (7d)</div>
-                    <div class="text-xl font-semibold">{{ card.data.last_7d }}</div>
-                  </div>
-                  <div>
-                    <div class="text-xs text-gray-500">Leads (30d)</div>
-                    <div class="text-xl font-semibold">{{ card.data.last_30d }}</div>
-                  </div>
-                  <div>
-                    <div class="text-xs text-gray-500">Total Leads</div>
-                    <div class="text-xl font-semibold">{{ card.data.total }}</div>
-                  </div>
-                </div> -->
-
-              {% elif key == 'lsa' %}
-                {# LSA card: small callouts or simple label #}
-                {% if card.connected and card.data and not card.data.get('sample') %}
-                  <div class="grid grid-cols-3 gap-3 text-center">
-                    <div>
-                      <div class="text-xs text-gray-500">Active Leads (30d)</div>
-                      <div class="text-xl font-semibold">{{ card.data.leads_30d|default('—') }}</div>
-                    </div>
-                    <div>
-                      <div class="text-xs text-gray-500">Avg Rating</div>
-                      <div class="text-xl font-semibold">{{ card.data.rating|default('—') }}</div>
-                    </div>
-                    <div>
-                      <div class="text-xs text-gray-500">Review Count</div>
-                      <div class="text-xl font-semibold">{{ card.data.reviews|default('—') }}</div>
-                    </div>
-                  </div>
-                {% else %}
-                  <div class="text-sm text-gray-600">
-                    Connect Local Services Ads to review leads and optimize your profile.
-                  </div>
-                {% endif %}
-
-              {% elif key == 'wp' and (card.connected and card.data and not card.data.get('sample')) %}
-                {% if card.error %}
-                  <div class="text-sm text-amber-700">Connected, but we couldn’t read from the REST API: {{ card.error }}</div>
-                {% endif %}
-                <div class="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div class="rounded border bg-white p-3">
-                    <div class="font-medium">Recent Posts</div>
-                    <ul class="mt-2 space-y-2 text-sm">
-                      {% for p in card.data.posts %}
-                        <li class="flex items-center justify-between">
-                          <span class="line-clamp-1">{{ p.title }}</span>
-                          <a class="text-indigo-600 hover:underline" href="{{ p.link }}" target="_blank">View</a>
-                        </li>
-                      {% else %}
-                        <li class="text-gray-500">No posts found.</li>
-                      {% endfor %}
-                    </ul>
-                  </div>
-                  <div class="rounded border bg-white p-3">
-                    <div class="font-medium">Recent Pages</div>
-                    <ul class="mt-2 space-y-2 text-sm">
-                      {% for pg in card.data.pages %}
-                        <li class="flex items-center justify-between">
-                          <span class="line-clamp-1">{{ pg.title }}</span>
-                          <a class="text-indigo-600 hover:underline" href="{{ pg.link }}" target="_blank">View</a>
-                        </li>
-                      {% else %}
-                        <li class="text-gray-500">No pages found.</li>
-                      {% endfor %}
-                    </ul>
-                  </div>
-                </div>
-
-              {% else %}
-                <div class="text-sm text-gray-600">
-                  {% if card.connected %}
-                    Connected — data population is handled by the provider page.
-                  {% else %}
-                    {{ card.data.label if card.data and card.data.label else '' }}
-                  {% endif %}
-                </div>
-              {% endif %}
-            </div>
-          {% endif %}
-        </{{ wrapper_tag }}>
+  {# ── Google Ads KPIs (server-rendered) ───────────────────────────────────── #}
+  {% if ads_connected %}
+  <div>
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Google Ads This Month</h2>
+      {% if has_endpoint('google_bp.ads_performance') %}
+      <a href="{{ url_for('google_bp.ads_performance') }}" class="text-xs text-indigo-600 hover:text-indigo-700 font-medium">Full report →</a>
       {% endif %}
-    {% endfor %}
+    </div>
+
+    {% set k = kpis or {} %}
+    {% if k.get('has_data') %}
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+
+      {# Spend #}
+      <div class="bg-white rounded-xl border shadow-sm p-4">
+        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Spend (MTD)</div>
+        <div class="text-2xl font-bold text-gray-900">${{ '{:,.0f}'.format(k.get('spend', 0) | float) }}</div>
+        <div class="text-xs mt-1
+          {% if k.get('trend_spend') is not none %}{% if k.get('trend_spend') > 0 %}text-red-500{% elif k.get('trend_spend') < 0 %}text-green-600{% else %}text-gray-400{% endif %}{% else %}text-gray-400{% endif %}">
+          {% if k.get('trend_spend') is not none %}
+            {% if k.get('trend_spend') > 0 %}↑{% elif k.get('trend_spend') < 0 %}↓{% else %}→{% endif %}
+            {{ k.get('trend_spend')|abs }}% vs last mo
+            {% if k.get('cpc') %}&nbsp;·&nbsp;${{ '{:,.2f}'.format(k.get('cpc',0)|float) }} CPC{% endif %}
+          {% elif k.get('cpc') %}${{ '{:,.2f}'.format(k.get('cpc',0)|float) }} avg CPC{% endif %}
+        </div>
+      </div>
+
+      {# Clicks #}
+      <div class="bg-white rounded-xl border shadow-sm p-4">
+        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Clicks</div>
+        <div class="text-2xl font-bold text-gray-900">{{ '{:,}'.format(k.get('clicks', 0) | int) }}</div>
+        <div class="text-xs mt-1
+          {% if k.get('trend_clicks') is not none %}{% if k.get('trend_clicks') > 0 %}text-green-600{% elif k.get('trend_clicks') < 0 %}text-red-500{% else %}text-gray-400{% endif %}{% else %}text-gray-400{% endif %}">
+          {% if k.get('trend_clicks') is not none %}
+            {% if k.get('trend_clicks') > 0 %}↑{% elif k.get('trend_clicks') < 0 %}↓{% else %}→{% endif %}
+            {{ k.get('trend_clicks')|abs }}% vs last mo
+          {% endif %}
+        </div>
+      </div>
+
+      {# Conversions #}
+      <div class="bg-white rounded-xl border shadow-sm p-4">
+        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Conversions</div>
+        <div class="text-2xl font-bold text-gray-900">{{ k.get('conversions', 0) | float | round(1) }}</div>
+        <div class="text-xs mt-1
+          {% if k.get('trend_conv') is not none %}{% if k.get('trend_conv') > 0 %}text-green-600{% elif k.get('trend_conv') < 0 %}text-red-500{% else %}text-gray-400{% endif %}{% else %}text-gray-400{% endif %}">
+          {% if k.get('trend_conv') is not none %}
+            {% if k.get('trend_conv') > 0 %}↑{% elif k.get('trend_conv') < 0 %}↓{% else %}→{% endif %}
+            {{ k.get('trend_conv')|abs }}% vs last mo
+          {% endif %}
+        </div>
+      </div>
+
+      {# CTR #}
+      <div class="bg-white rounded-xl border shadow-sm p-4">
+        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">CTR</div>
+        <div class="text-2xl font-bold text-gray-900">{{ k.get('ctr', 0) | float | round(2) }}%</div>
+        <div class="text-xs text-gray-400 mt-1">{{ '{:,}'.format(k.get('impressions', 0) | int) }} impressions</div>
+      </div>
+
+    </div>
+
+    {% if k.get('best_campaign') %}
+    <div class="mt-2 bg-white rounded-xl border shadow-sm px-5 py-3 flex items-center justify-between gap-4 text-sm">
+      <div class="text-xs text-gray-400">Top campaign</div>
+      <div class="font-semibold text-gray-800 truncate flex-1 mx-3">{{ k.best_campaign.get('name', '') }}</div>
+      <div class="text-xs text-gray-400 shrink-0">{{ k.best_campaign.get('cv', 0) | round(0) | int }} conversions</div>
+      {% if has_endpoint('google_bp.ads_performance') %}
+      <a href="{{ url_for('google_bp.ads_performance') }}" class="text-xs text-indigo-600 font-medium hover:underline shrink-0 ml-2">View →</a>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="bg-white rounded-xl border shadow-sm p-5 text-center text-sm text-gray-500">
+      No spend data yet this month.
+      {% if has_endpoint('google_bp.ads_performance') %}
+      <a href="{{ url_for('google_bp.ads_performance') }}" class="text-indigo-600 hover:underline ml-1">View campaigns →</a>
+      {% endif %}
+    </div>
+    {% endif %}
   </div>
 
-  <!-- Quick Wins Widget -->
-  {% set ads_connected = cards.get('ads') and cards.get('ads').connected %}
-  {% if ads_connected %}
-  <div class="mt-8">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-lg font-semibold flex items-center gap-2">
-        <i class="fa-solid fa-bolt text-yellow-500"></i>
-        Quick Wins - Top 3 Actions
+  {# ── Automation panel ─────────────────────────────────────────────────────── #}
+  <div>
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+        <i class="fa-solid fa-bolt text-amber-500"></i> AI Automation
       </h2>
-      <a href="{{ url_for('ads_grader_bp.quick_wins_dashboard') }}" class="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
-        View All <i class="fa-solid fa-arrow-right ml-1"></i>
+      {% if has_endpoint('autonomous_bp.control_panel') %}
+      <a href="{{ url_for('autonomous_bp.control_panel') }}" class="text-xs text-indigo-600 font-medium">Configure →</a>
+      {% endif %}
+    </div>
+    <div class="bg-white rounded-xl border shadow-sm p-5 text-sm text-gray-500">
+      {% if has_endpoint('autonomous_bp.control_panel') %}
+      <a href="{{ url_for('autonomous_bp.control_panel') }}"
+         class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition text-sm">
+        <i class="fa-solid fa-robot text-xs"></i> Open Control Panel
       </a>
+      {% else %}
+      Automation panel is not configured.
+      {% endif %}
     </div>
+  </div>
 
-    <div class="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl border-2 border-indigo-200 p-6 shadow-lg">
-      <div id="quickWinsContainer">
-        <div class="flex items-center justify-center py-8">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-          <span class="ml-3 text-gray-600">Loading quick wins...</span>
-        </div>
-      </div>
+  {% else %}
+  {# Google Ads not connected #}
+  <div class="bg-white rounded-xl border border-dashed border-gray-200 p-6 flex items-center gap-4">
+    <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
+      <i class="fa-brands fa-google text-blue-500 text-xl"></i>
     </div>
+    <div class="flex-1">
+      <p class="text-sm font-semibold text-gray-800">Connect Google Ads to see your campaign performance</p>
+      <p class="text-xs text-gray-500 mt-0.5">Spend, clicks, conversions and top opportunities — all in one view.</p>
+    </div>
+    {% if has_endpoint('google_bp.connect_ads') %}
+    <a href="{{ url_for('google_bp.connect_ads') }}" class="flex-shrink-0 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition">Connect →</a>
+    {% endif %}
   </div>
   {% endif %}
 
-  {# ── Autonomous Mode Status + Decision Feed (ads connected only) ──────────── #}
-  {% if ads_connected %}
-  <div class="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-
-    {# Status card — 1 col #}
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5" id="autonomousStatusCard">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-sm font-semibold text-gray-800 flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-gray-300" id="autonomousDot"></span>
-          Autonomous Mode
-        </h2>
-        <a href="{{ url_for('autonomous_bp.control_panel') }}"
-           class="text-xs text-indigo-600 hover:text-indigo-700 font-medium">Configure →</a>
-      </div>
-      <div id="autonomousStatusBody" class="space-y-3">
-        <div class="flex items-center justify-center py-4">
-          <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-500"></div>
-        </div>
-      </div>
-    </div>
-
-    {# Decision Feed — 2 cols #}
-    <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-      <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-        <h2 class="text-sm font-semibold text-gray-800">What Automation Did</h2>
-        <a href="{{ url_for('autonomous_bp.control_panel') }}"
-           class="text-xs text-indigo-600 hover:text-indigo-700 font-medium">All actions →</a>
-      </div>
-      <ul id="decisionFeedList" class="divide-y divide-gray-100">
-        <li class="px-5 py-4 text-center text-gray-400 text-sm">
-          <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-500 mx-auto"></div>
-        </li>
-      </ul>
-    </div>
-
-  </div>
-  {% endif %}
+  {% if not is_paid %}{% include 'components/pricing_modal.html' %}{% endif %}
 
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script nonce="{{ csp_nonce() }}">
-// Load Quick Wins on page load
-document.addEventListener('DOMContentLoaded', function() {
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+{% if False %}
+// ── KPI Strip ──────────────────────────────────────────────────────────────
+(function loadKpis() {
+  const strip  = document.getElementById('kpiStrip');
+  const footer = document.getElementById('kpiFooter');
+  if (!strip) return;
+
+  const fmt$ = n => '$' + Number(n).toLocaleString('en-US', {maximumFractionDigits: 0});
+  const fmtN = n => Number(n).toLocaleString('en-US');
+
+  function trendBadge(pct) {
+    if (pct === null || pct === undefined) return '';
+    const up = pct > 0, flat = pct === 0;
+    const cls = flat ? 'text-gray-400' : (up ? 'text-green-600' : 'text-red-500');
+    return `<span class="text-xs font-medium ${cls}">${flat ? '→' : (up ? '↑' : '↓')} ${Math.abs(pct)}% vs last mo</span>`;
+  }
+
+  function kpiCard(label, value, trend, sub) {
+    return `<div class="bg-white rounded-xl border shadow-sm p-4">
+      <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">${label}</div>
+      <div class="text-2xl font-bold text-gray-900 mb-1">${value}</div>
+      <div class="flex items-center gap-2 flex-wrap">${trendBadge(trend)}${sub ? `<span class="text-xs text-gray-400">${sub}</span>` : ''}</div>
+    </div>`;
+  }
+
+  const ctrl = new AbortController();
+  setTimeout(() => ctrl.abort(), 12000);
+
+  fetch('{{ url_for("account_bp.dashboard_kpis") }}', {signal: ctrl.signal})
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(d => {
+      if (!d || d.error || (!d.spend_dollars && !d.clicks && !d.impressions)) {
+        strip.innerHTML = `<div class="col-span-4 bg-white rounded-xl border shadow-sm p-5 text-center text-sm text-gray-500">
+          No spend data yet this month. {% if has_endpoint('google_bp.ads_performance') %}<a href="{{ url_for('google_bp.ads_performance') }}" class="text-indigo-600 hover:underline">View campaigns →</a>{% endif %}
+        </div>`;
+        return;
+      }
+      const t = d.trends || {};
+      strip.innerHTML =
+        kpiCard('Spend (MTD)', fmt$(d.spend_dollars), t.spend, d.cpc ? `${fmt$(d.cpc)} avg CPC` : null) +
+        kpiCard('Clicks',      fmtN(d.clicks),         t.clicks, null) +
+        kpiCard('Conversions', d.conversions,           t.conversions, null) +
+        kpiCard('CTR',         d.ctr + '%',             t.ctr, fmtN(d.impressions) + ' impr');
+      if (d.best_campaign && footer) {
+        footer.classList.remove('hidden');
+        footer.innerHTML = `<div class="text-xs text-gray-400">Top campaign</div>
+          <div class="font-semibold text-gray-800 truncate flex-1 mx-3">${d.best_campaign.name}</div>
+          <div class="text-xs text-gray-400 shrink-0">${d.best_campaign.conversions} conversions</div>
+          {% if has_endpoint('google_bp.ads_performance') %}<a href="{{ url_for('google_bp.ads_performance') }}" class="text-xs text-indigo-600 font-medium hover:underline shrink-0 ml-4">View →</a>{% endif %}`;
+      }
+    })
+    .catch(() => {
+      strip.innerHTML = `<div class="col-span-4 bg-white rounded-xl border shadow-sm p-5 text-center text-sm text-gray-400">
+        Stats unavailable. {% if has_endpoint('google_bp.ads_performance') %}<a href="{{ url_for('google_bp.ads_performance') }}" class="text-indigo-600 hover:underline">Open Google Ads →</a>{% endif %}
+      </div>`;
+    });
+})();
+
+// ── Quick Wins ──────────────────────────────────────────────────────────────
+(function loadQuickWins() {
   const container = document.getElementById('quickWinsContainer');
   if (!container) return;
 
-  // Fetch quick wins data
-  fetch('{{ url_for("ads_grader_bp.quick_wins_dashboard") }}')
-    .then(response => response.text())
-    .then(html => {
-      // Parse the response to extract quick wins data
-      // For now, we'll make an API call to get JSON data
-      // TODO: Create a JSON API endpoint for quick wins
+  const WIN_ICONS = {
+    pause_low_performers:      { bg: 'bg-orange-100', text: 'text-orange-600', symbol: '⏸' },
+    budget_reallocation:       { bg: 'bg-blue-100',   text: 'text-blue-600',   symbol: '↑$' },
+    quality_score_improvement: { bg: 'bg-purple-100', text: 'text-purple-600', symbol: 'QS' },
+    negative_keywords:         { bg: 'bg-red-100',    text: 'text-red-600',    symbol: '–KW' },
+  };
+  const DEFAULT_ICON = { bg: 'bg-green-100', text: 'text-green-600', symbol: '✓' };
+  const DIFF_COLORS  = { easy: 'text-green-600 bg-green-50', medium: 'text-amber-600 bg-amber-50', hard: 'text-red-600 bg-red-50' };
 
-      // Temporary: Show a message to visit the full page
-      container.innerHTML = `
-        <div class="text-center py-6">
-          <div class="mb-4">
-            <i class="fa-solid fa-bolt text-yellow-500 text-4xl"></i>
+  const ctrl = new AbortController();
+  setTimeout(() => ctrl.abort(), 12000);
+
+  fetch('{{ url_for("account_bp.dashboard_quick_wins") }}', {signal: ctrl.signal})
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(data => {
+      if (!data || !data.wins || !data.wins.length) {
+        container.innerHTML = `<div class="bg-white rounded-xl border shadow-sm p-6 text-center">
+          <div class="text-green-500 text-2xl mb-2">✓</div>
+          <p class="text-sm font-semibold text-gray-800 mb-1">Campaigns look healthy</p>
+          <p class="text-xs text-gray-500 mb-4">No critical issues detected.</p>
+          {% if has_endpoint('ads_grader_bp.quick_wins_dashboard') %}<a href="{{ url_for('ads_grader_bp.quick_wins_dashboard') }}" class="inline-block px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition text-sm">Run Full Grader →</a>{% endif %}
+        </div>`;
+        return;
+      }
+      container.innerHTML = data.wins.map(w => {
+        const icon    = WIN_ICONS[w.win_type] || DEFAULT_ICON;
+        const diffCls = DIFF_COLORS[w.difficulty] || 'text-gray-600 bg-gray-100';
+        const impact  = w.impact_monthly_value > 0
+          ? `<span class="text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">saves $${Math.round(w.impact_monthly_value)}/mo</span>`
+          : w.impact_leads > 0
+          ? `<span class="text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">+${w.impact_leads} leads/mo</span>`
+          : '';
+        return `<div class="bg-white rounded-xl border shadow-sm p-4 flex items-start gap-3">
+          <div class="shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold ${icon.bg} ${icon.text}">${icon.symbol}</div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between gap-2 flex-wrap mb-0.5">
+              <p class="text-sm font-semibold text-gray-900">${w.title}</p>${impact}
+            </div>
+            <p class="text-xs text-gray-500">${w.description}</p>
+            <div class="mt-2 flex items-center gap-3">
+              <span class="text-xs px-2 py-0.5 rounded-full font-medium ${diffCls}">${w.difficulty} · ${w.time_estimate}</span>
+              <a href="${w.action_url}" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800">${w.action_text} →</a>
+            </div>
           </div>
-          <h3 class="text-xl font-bold text-gray-900 mb-2">Discover Your Top Optimization Opportunities</h3>
-          <p class="text-gray-600 mb-4">We've analyzed your Google Ads account and identified the top 3 immediate actions to improve your ROI.</p>
-          <a href="{{ url_for('ads_grader_bp.quick_wins_dashboard') }}" class="inline-block px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-lg hover:from-indigo-700 hover:to-purple-700 transition shadow-lg">
-            <i class="fa-solid fa-rocket mr-2"></i>View Quick Wins
-          </a>
-        </div>
-      `;
+        </div>`;
+      }).join('') + `{% if has_endpoint('ads_grader_bp.quick_wins_dashboard') %}<div class="text-right"><a href="{{ url_for('ads_grader_bp.quick_wins_dashboard') }}" class="text-xs text-indigo-600 font-medium">See full report →</a></div>{% endif %}`;
     })
-    .catch(error => {
-      console.error('Error loading quick wins:', error);
-      container.innerHTML = `
-        <div class="text-center py-6">
-          <p class="text-gray-600">
-            <i class="fa-solid fa-exclamation-triangle text-yellow-500 mr-2"></i>
-            Unable to load quick wins. <a href="{{ url_for('ads_grader_bp.quick_wins_dashboard') }}" class="text-indigo-600 hover:underline">View dashboard</a>
-          </p>
-        </div>
-      `;
+    .catch(() => {
+      container.innerHTML = `<div class="bg-white rounded-xl border shadow-sm p-4 text-center text-sm text-gray-400">
+        {% if has_endpoint('ads_grader_bp.quick_wins_dashboard') %}<a href="{{ url_for('ads_grader_bp.quick_wins_dashboard') }}" class="text-indigo-600 hover:underline">View Quick Wins →</a>{% endif %}
+      </div>`;
     });
-});
+})();
 
-function upgradeToAnnual() {
-  // Get Stripe price ID from config
-  const priceId = '{{ config.STRIPE_YEARLY_PRICE_ID }}';
-
-  if (!priceId) {
-    alert('Pricing configuration error. Please contact support at hi@fieldsprout.io');
-    return;
-  }
-
-  // Show loading state
-  const button = event.target;
-  const originalText = button.innerHTML;
-  button.innerHTML = '<svg class="animate-spin h-5 w-5 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Loading...';
-  button.disabled = true;
-
-  // Create Stripe Checkout session
-  fetch('/billing/create-checkout-session', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
-    },
-    body: JSON.stringify({
-      price_id: priceId,
-      plan_type: 'annual',
-      success_url: window.location.origin + '/account/dashboard?upgrade=success',
-      cancel_url: window.location.href
-    })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.error) {
-      alert('Error: ' + data.error);
-      button.disabled = false;
-      button.innerHTML = originalText;
-    } else if (data.checkout_url) {
-      // Redirect to Stripe Checkout
-      window.location.href = data.checkout_url;
-    } else {
-      alert('Unexpected response. Please try again or contact support.');
-      button.disabled = false;
-      button.innerHTML = originalText;
-    }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    alert('Failed to start checkout. Please try again or contact support at hi@fieldsprout.io');
-    button.disabled = false;
-    button.innerHTML = originalText;
-  });
-}
-
-function showPricingDetails() {
-  window.location.href = '/#pricing';
-}
-
-// ── Autonomous Mode widgets (loaded async) ───────────────────────────────────
+// ── Autonomous Mode ──────────────────────────────────────────────────────────
 (function loadAutonomousWidgets() {
   const dot      = document.getElementById('autonomousDot');
   const body     = document.getElementById('autonomousStatusBody');
   const feedList = document.getElementById('decisionFeedList');
   if (!body && !feedList) return;
 
-  const ACTION_LABELS = {
-    negative_keyword_added:   'Added negative keyword',
-    negative_keyword_removed: 'Removed negative keyword',
-    keyword_paused:           'Paused keyword',
-    keyword_enabled:          'Enabled keyword',
-    bid_adjusted:             'Adjusted bid',
-    budget_reallocated:       'Reallocated budget',
-    ad_paused:                'Paused ad',
-    ad_enabled:               'Enabled ad',
-    campaign_paused:          'Paused campaign',
-    campaign_enabled:         'Enabled campaign',
-    search_term_blocked:      'Blocked search term',
-    quality_score_fix:        'Fixed quality score',
-  };
-
   const ICON_MAP = {
-    negative_keyword_added:   { bg: 'bg-red-100',    text: 'text-red-600',    symbol: '–KW' },
-    keyword_paused:           { bg: 'bg-orange-100', text: 'text-orange-600', symbol: '⏸'  },
-    campaign_paused:          { bg: 'bg-orange-100', text: 'text-orange-600', symbol: '⏸'  },
-    budget_reallocated:       { bg: 'bg-blue-100',   text: 'text-blue-600',   symbol: '$'   },
-    bid_adjusted:             { bg: 'bg-purple-100', text: 'text-purple-600', symbol: '↕'   },
+    negative_keyword_added: { bg: 'bg-red-100',    text: 'text-red-600',    symbol: '–KW' },
+    keyword_paused:         { bg: 'bg-orange-100', text: 'text-orange-600', symbol: '⏸'  },
+    campaign_paused:        { bg: 'bg-orange-100', text: 'text-orange-600', symbol: '⏸'  },
+    budget_reallocated:     { bg: 'bg-blue-100',   text: 'text-blue-600',   symbol: '$'   },
+    bid_adjusted:           { bg: 'bg-purple-100', text: 'text-purple-600', symbol: '↕'   },
   };
   const DEFAULT_ICON = { bg: 'bg-green-100', text: 'text-green-600', symbol: '✓' };
 
-  // Load summary for the status card
-  fetch('{{ url_for("autonomous_bp.summary_json") }}')
+  {% if has_endpoint('autonomous_bp.summary_json') %}
+  const sumCtrl = new AbortController();
+  setTimeout(() => sumCtrl.abort(), 12000);
+  fetch('{{ url_for("autonomous_bp.summary_json") }}', {signal: sumCtrl.signal})
     .then(r => r.ok ? r.json() : null)
     .then(data => {
       if (!data || !body) return;
-      const enabled = {{ 'true' if request and request.args else 'false' }}; // will be set below via feed
-      const modeLabel = data.growth_mode || 'balanced';
-
-      body.innerHTML = `
-        <div class="text-xs text-gray-500 leading-relaxed space-y-2">
-          <div class="flex justify-between">
-            <span class="text-gray-400">Actions (7d)</span>
-            <span class="font-semibold text-gray-800">${data.total_actions}</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="text-gray-400">Est. savings</span>
-            <span class="font-semibold text-green-600">$${Math.round(data.total_savings)}/mo</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="text-gray-400">Extra leads</span>
-            <span class="font-semibold text-blue-600">${data.additional_leads}</span>
-          </div>
-        </div>
-        <a href="{{ url_for('autonomous_bp.control_panel') }}"
-           class="mt-3 block text-center text-xs py-1.5 px-3 rounded-lg border border-indigo-200
-                  text-indigo-600 hover:bg-indigo-50 font-medium transition">
-          Open Control Panel
-        </a>
-      `;
-      if (dot) {
-        dot.className = data.total_actions > 0
-          ? 'w-2 h-2 rounded-full bg-green-500 animate-pulse'
-          : 'w-2 h-2 rounded-full bg-gray-300';
-      }
+      body.innerHTML = `<div class="grid grid-cols-3 gap-2 text-center">
+        <div class="bg-gray-50 rounded-lg p-2"><div class="text-lg font-bold text-gray-900">${data.total_actions}</div><div class="text-xs text-gray-500">Actions (7d)</div></div>
+        <div class="bg-green-50 rounded-lg p-2"><div class="text-lg font-bold text-green-700">$${Math.round(data.total_savings)}</div><div class="text-xs text-gray-500">Saved/mo</div></div>
+        <div class="bg-blue-50 rounded-lg p-2"><div class="text-lg font-bold text-blue-700">${data.additional_leads}</div><div class="text-xs text-gray-500">Extra leads</div></div>
+      </div>`;
+      if (dot) dot.className = data.total_actions > 0
+        ? 'w-2 h-2 rounded-full bg-green-500 animate-pulse'
+        : 'w-2 h-2 rounded-full bg-gray-300';
     })
-    .catch(() => {
-      if (body) body.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">Unavailable</p>';
-    });
+    .catch(() => { if (body) body.innerHTML = '<p class="text-xs text-gray-400 text-center py-3">Unavailable</p>'; });
+  {% endif %}
 
-  // Load recent feed
-  fetch('{{ url_for("autonomous_bp.feed_json") }}?limit=5')
+  {% if has_endpoint('autonomous_bp.feed_json') %}
+  const feedCtrl = new AbortController();
+  setTimeout(() => feedCtrl.abort(), 12000);
+  fetch('{{ url_for("autonomous_bp.feed_json") }}?limit=5', {signal: feedCtrl.signal})
     .then(r => r.ok ? r.json() : [])
     .then(items => {
       if (!feedList) return;
-      if (!items || items.length === 0) {
-        feedList.innerHTML = `
-          <li class="px-5 py-6 text-center text-sm text-gray-400">
-            No automated actions yet — agents will populate this once they run.
-          </li>`;
+      if (!items || !items.length) {
+        feedList.innerHTML = '<li class="px-4 py-4 text-center text-xs text-gray-400">No automated actions yet.</li>';
         return;
       }
       feedList.innerHTML = items.map(item => {
         const icon  = ICON_MAP[item.action_type] || DEFAULT_ICON;
         const date  = item.executed_at ? item.executed_at.slice(0, 10) : '';
-        const camp  = item.campaign_name ? `${item.campaign_name} · ` : '';
         const badge = item.savings > 0
-          ? `<span class="shrink-0 text-xs font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">saves $${Math.round(item.savings)}/mo</span>`
+          ? `<span class="shrink-0 text-xs font-semibold text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">$${Math.round(item.savings)}/mo</span>`
           : '';
-        return `
-          <li class="px-5 py-3 flex items-start gap-3">
-            <div class="shrink-0 mt-0.5 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${icon.bg} ${icon.text}">
-              ${icon.symbol}
+        return `<li class="px-4 py-2.5 flex items-start gap-2">
+          <div class="shrink-0 mt-0.5 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${icon.bg} ${icon.text}">${icon.symbol}</div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-baseline justify-between gap-1">
+              <p class="text-xs font-medium text-gray-800 truncate">${item.title}</p>${badge}
             </div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-baseline justify-between gap-2">
-                <p class="text-sm font-medium text-gray-900 truncate">${item.title}</p>
-                ${badge}
-              </div>
-              <p class="text-xs text-gray-400 mt-0.5 truncate">${camp}${date}</p>
-            </div>
-          </li>`;
+            <p class="text-xs text-gray-400">${date}</p>
+          </div>
+        </li>`;
       }).join('');
     })
-    .catch(() => {
-      if (feedList) feedList.innerHTML = '<li class="px-5 py-4 text-xs text-gray-400 text-center">Could not load feed.</li>';
-    });
+    .catch(() => { if (feedList) feedList.innerHTML = '<li class="px-4 py-3 text-xs text-gray-400 text-center">Could not load.</li>'; });
+  {% endif %}
 })();
+{% endif %}
+
+function upgradeToAnnual() {
+  const priceId = '{{ config.STRIPE_YEARLY_PRICE_ID }}';
+  if (!priceId) { showToast('Pricing configuration error. Please contact support.', 'error'); return; }
+  const button = event.target;
+  const orig = button.innerHTML;
+  button.innerHTML = '<svg class="animate-spin h-4 w-4 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+  button.disabled = true;
+  fetch('/billing/create-checkout-session', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''},
+    body: JSON.stringify({price_id: priceId, plan_type: 'annual', success_url: window.location.origin + '/account/dashboard?upgrade=success', cancel_url: window.location.href})
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.checkout_url) window.location.href = data.checkout_url;
+    else { showToast(data.error || 'Unexpected response.', 'error'); button.disabled = false; button.innerHTML = orig; }
+  })
+  .catch(() => { showToast('Failed to start checkout. Please contact support.', 'error'); button.disabled = false; button.innerHTML = orig; });
+}
+function showPricingDetails() { window.location.href = '/#pricing'; }
 </script>
 {% endblock %}

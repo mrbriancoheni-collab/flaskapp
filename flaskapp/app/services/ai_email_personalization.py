@@ -167,12 +167,17 @@ class AIEmailPersonalizationService:
             prompt = self._build_personalization_prompt(context, value_prop, email_type)
 
             response = self.anthropic_client.messages.create(
-                model="claude-3-5-sonnet-20241022",
+                model="claude-sonnet-4-6",
                 max_tokens=1000,
-                temperature=0.7,
                 messages=[{
                     "role": "user",
-                    "content": prompt
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": prompt,
+                            "cache_control": {"type": "ephemeral"}
+                        }
+                    ]
                 }]
             )
 

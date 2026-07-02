@@ -900,3 +900,103 @@ def get_prompt_for_service(prompt_key: str) -> dict:
         'max_tokens': prompt.max_tokens,
         'name': prompt.name
     }
+
+
+def initialize_seo_ai_prompts(force=False):
+    """Register SEO AI agent prompts in the database so admins can edit them."""
+    from app import db
+    from app.models_ads import AIPrompt
+
+    count = 0
+    prompts = [
+        {
+            "key": "seo_freshness_plan",
+            "name": "Content Freshness AI Plan",
+            "description": "Analyzes stale posts and generates a prioritized refresh action plan",
+            "system_message": "You are an expert SEO content strategist. Analyze post staleness data and provide prioritized, actionable refresh recommendations.",
+            "template": (
+                "Analyze these WordPress posts ranked by staleness score (0-100) and create a prioritized content refresh plan.\n\n"
+                "Posts data:\n{posts_data}\n\n"
+                "Return a JSON array of up to 10 recommendations. Each item must have:\n"
+                "- title: post title\n"
+                "- url: post URL\n"
+                "- priority: integer 1-10 (1 = highest priority)\n"
+                "- action: one of 'refresh', 'rewrite', 'consolidate', 'redirect'\n"
+                "- reason: 1-2 sentence explanation of why this action\n"
+                "- specific_changes: array of 2-3 specific things to do (e.g. 'Update statistics to 2025', 'Add FAQ section')\n\n"
+                "Return only valid JSON array, no other text."
+            ),
+            "model": "claude-haiku-4-5-20251001",
+            "max_tokens": 1500,
+        },
+        {
+            "key": "seo_content_recommendations",
+            "name": "SEO Content Recommendations",
+            "description": "Generates topic cluster and pillar page recommendations from keyword gap data",
+            "system_message": "You are an expert SEO content strategist specializing in topic clusters and content architecture.",
+            "template": (
+                "Based on this keyword gap analysis data, recommend topic clusters for a content strategy.\n\n"
+                "{gap_context}\n\n"
+                "Return a JSON array of 6-8 topic cluster recommendations. Each item must have:\n"
+                "- cluster_name: the topic cluster name\n"
+                "- pillar_topic: the main pillar page title\n"
+                "- supporting_topics: array of 3-5 supporting article titles\n"
+                "- monthly_searches_potential: rough estimate string (e.g. '500-2,000/mo')\n"
+                "- rationale: 1-2 sentences explaining why this cluster matters\n\n"
+                "Return only valid JSON array, no other text."
+            ),
+            "model": "claude-haiku-4-5-20251001",
+            "max_tokens": 1800,
+        },
+        {
+            "key": "seo_roadmap",
+            "name": "90-Day SEO Roadmap",
+            "description": "Generates a strategic 3-phase 90-day SEO roadmap from gap analysis data",
+            "system_message": "You are a senior SEO strategist. Create actionable, phased SEO roadmaps based on data.",
+            "template": (
+                "Create a 90-day SEO roadmap based on this data:\n\n"
+                "{gap_context}\n\n"
+                "Return a JSON object with exactly two keys:\n"
+                "1. 'phases': array of 3 objects, each with: phase (1-3), focus (string), goals (array of 3 strings), actions (array of 5-7 specific actions), kpi (string)\n"
+                "2. 'priorities': array of 5 objects, each with: area (string), why (string), impact ('high'|'medium'), effort ('low'|'medium'|'high')\n\n"
+                "Return only valid JSON object, no other text."
+            ),
+            "model": "claude-haiku-4-5-20251001",
+            "max_tokens": 2000,
+        },
+        {
+            "key": "seo_alt_text",
+            "name": "Image Alt Text Generator",
+            "description": "Generates SEO-optimized alt text for WordPress images based on post context",
+            "system_message": "You are an SEO specialist. Write concise, descriptive alt text that helps both accessibility and search ranking.",
+            "template": (
+                "Write a concise, descriptive SEO alt text (max 120 characters) "
+                "for an image {context}. "
+                "Image filename: {filename}. "
+                "Alt text should describe what's in the image and be relevant to the page topic. "
+                "Return only the alt text with no quotes, punctuation at end, or explanation."
+            ),
+            "model": "claude-haiku-4-5-20251001",
+            "max_tokens": 60,
+        },
+    ]
+
+    for p in prompts:
+        obj = AIPrompt.query.filter_by(prompt_key=p["key"]).first()
+        if not obj or force:
+            if not obj:
+                obj = AIPrompt(prompt_key=p["key"])
+                db.session.add(obj)
+            obj.name = p["name"]
+            obj.description = p["description"]
+            obj.system_message = p["system_message"]
+            obj.prompt_template = p["template"]
+            obj.model = p["model"]
+            obj.max_tokens = p["max_tokens"]
+            obj.is_active = True
+            count += 1
+
+    if count:
+        db.session.commit()
+
+    return count

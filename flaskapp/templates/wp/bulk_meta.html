@@ -1,0 +1,156 @@
+{% extends "base_app.html" %}
+{% block title %}Edit Page Titles & Summaries · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Edit Page Titles & Summaries in Bulk</h1>
+      <p class="text-gray-500 text-sm mt-1">Update the page titles and the short summaries Google shows in search results — across all your pages at once.</p>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+    <div class="rounded-xl px-4 py-3 text-sm font-medium border
+      {% if cat == 'success' %}bg-green-50 border-green-300 text-green-800
+      {% elif cat == 'error' %}bg-red-50 border-red-300 text-red-800
+      {% elif cat == 'warning' %}bg-yellow-50 border-yellow-300 text-yellow-800
+      {% else %}bg-blue-50 border-blue-300 text-blue-800{% endif %}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {% if error %}
+  <div class="bg-red-50 border border-red-200 rounded-xl p-5">
+    <p class="text-red-800"><i class="fa-solid fa-circle-xmark text-red-500 mr-2"></i>{{ error }}</p>
+  </div>
+  {% endif %}
+
+  {% if not site %}
+  <div class="bg-white rounded-xl shadow-sm border p-12 text-center">
+    <i class="fa-brands fa-wordpress text-gray-300 text-5xl mb-4"></i>
+    <p class="text-gray-600 mb-4">Connect a WordPress site to edit post metadata.</p>
+    <a href="{{ url_for('wp_bp.settings') }}"
+       class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">Connect WordPress</a>
+  </div>
+
+  {% elif posts %}
+  <form method="POST" action="{{ url_for('wp_bp.bulk_meta') }}" id="meta-form">
+    <input type="hidden" name="action" value="save" id="form-action">
+
+    <!-- Toolbar -->
+    <div class="bg-white rounded-xl shadow-sm border p-4 flex flex-wrap items-center gap-3">
+      <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+        <input type="checkbox" id="select-all" class="rounded">
+        <span>Select all</span>
+      </label>
+      <div class="ml-auto flex gap-2">
+        <button type="button" onclick="setAction('ai_generate')"
+                class="px-4 py-2 border border-indigo-300 text-indigo-600 rounded-lg text-sm hover:bg-indigo-50 font-medium">
+          <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>AI Generate for Selected
+        </button>
+        <button type="submit"
+                class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 font-medium">
+          <i class="fa-solid fa-floppy-disk mr-1"></i>Save All Changes
+        </button>
+      </div>
+    </div>
+
+    <!-- Posts table -->
+    <div class="space-y-3">
+      {% for p in posts %}
+      <div class="bg-white rounded-xl shadow-sm border p-4 {% if p.ai_generated %}ring-2 ring-indigo-200{% endif %}">
+        <input type="hidden" name="post_id" value="{{ p.id }}">
+        <div class="flex items-start gap-3 mb-3">
+          <input type="checkbox" name="selected_ids" value="{{ p.id }}"
+                 class="post-cb rounded mt-1 flex-shrink-0">
+          <div class="flex-1 min-w-0">
+            <a href="{{ p.url }}" target="_blank" rel="noopener"
+               class="text-xs text-gray-400 hover:text-indigo-500 truncate block">{{ p.url }}</a>
+            {% if p.ai_generated %}
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">
+              <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>AI Generated
+            </span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="space-y-2">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="text-xs font-medium text-gray-500">Page Title (shown in Google search)</label>
+              <span class="text-xs text-gray-400 char-count" data-target="title-{{ p.id }}">
+                {{ p.title | length }}/60
+              </span>
+            </div>
+            <input type="text" id="title-{{ p.id }}" name="title_{{ p.id }}"
+                   value="{{ p.title }}"
+                   maxlength="70"
+                   oninput="updateCount(this, 60)"
+                   class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300 focus:outline-none
+                     {% if p.title | length > 60 %}border-amber-300{% elif p.title | length < 30 %}border-amber-300{% else %}border-gray-200{% endif %}">
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="text-xs font-medium text-gray-500">Summary (shown under your title in Google)</label>
+              <span class="text-xs text-gray-400 char-count" data-target="meta-{{ p.id }}">
+                {{ p.meta | length }}/155
+              </span>
+            </div>
+            <textarea id="meta-{{ p.id }}" name="meta_{{ p.id }}"
+                      rows="2" maxlength="165"
+                      oninput="updateCount(this, 155)"
+                      class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300 focus:outline-none resize-none
+                        {% if p.meta | length > 155 %}border-amber-300{% elif p.meta | length < 70 %}border-amber-300{% else %}border-gray-200{% endif %}">{{ p.meta }}</textarea>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Save footer -->
+    <div class="bg-white rounded-xl shadow-sm border p-4 flex justify-between items-center">
+      <p class="text-xs text-gray-400">
+        Changes update each WordPress page's title and short summary (what most themes and Yoast SEO show to Google).
+      </p>
+      <button type="submit"
+              class="px-5 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 font-medium">
+        <i class="fa-solid fa-floppy-disk mr-1"></i>Save All Changes
+      </button>
+    </div>
+  </form>
+
+  {% elif site %}
+  <div class="bg-white rounded-xl shadow-sm border p-12 text-center text-gray-400">
+    <i class="fa-solid fa-file-lines text-5xl mb-4"></i>
+    <p>No published posts found.</p>
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+document.getElementById('select-all')?.addEventListener('change', function() {
+  document.querySelectorAll('.post-cb').forEach(cb => cb.checked = this.checked);
+});
+
+function setAction(action) {
+  document.getElementById('form-action').value = action;
+  document.getElementById('meta-form').submit();
+}
+
+function updateCount(el, limit) {
+  const len = el.value.length;
+  const label = el.closest('.space-y-2').querySelector('.char-count[data-target="' + el.id + '"]')
+             || document.querySelector('[data-target="' + el.id + '"]');
+  if (label) {
+    label.textContent = len + '/' + limit;
+    label.className = 'text-xs ' + (len > limit ? 'text-red-500 font-semibold' :
+                        len < (limit * 0.5) ? 'text-amber-500' : 'text-green-600');
+  }
+  el.className = el.className.replace(/border-(amber|red|gray)-\d+/, '')
+                              .replace(/border-\w+-\d+/, '') + ' ' +
+    (len > limit ? 'border-red-300' : len < (limit * 0.5) ? 'border-amber-200' : 'border-green-200');
+}
+</script>
+{% endblock %}

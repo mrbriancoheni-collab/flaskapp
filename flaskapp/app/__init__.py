@@ -75,7 +75,7 @@ def create_app():
         PASSWORD_REQUIRE_SYMBOL=True,
 
         # Paid-plan rules
-        PAID_PLANS=tuple(_os.getenv("PAID_PLANS", "pro,team,enterprise").split(",")),
+        PAID_PLANS=tuple(_os.getenv("PAID_PLANS", "growth,pro,managed,active,trialing,basic,premium").split(",")),
         PAID_STRIPE_STATES=("active", "trialing"),
         ACCOUNT_TABLE_NAME=_os.getenv("ACCOUNT_TABLE_NAME", "accounts"),
         ACCOUNT_PLAN_FIELD=_os.getenv("ACCOUNT_PLAN_FIELD", "plan"),
@@ -512,6 +512,7 @@ def create_app():
             "Content-Security-Policy",
             "default-src 'self'; "
             "img-src 'self' data: https:; "
+            "media-src 'self'; "
             "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
             "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
             f"script-src 'self' 'nonce-{nonce}' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com "
@@ -523,15 +524,18 @@ def create_app():
             "form-action 'self' https://checkout.stripe.com https://*.stripe.com"
         )
 
-        # Performance: Aggressive caching for static files (CSS, JS, images, fonts)
-        if request.path.startswith('/static/'):
-            # Cache static files for 1 year (immutable)
-            resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
-            resp.headers["Expires"] = (datetime.utcnow() + timedelta(days=365)).strftime('%a, %d %b %Y %H:%M:%S GMT')
-        elif request.path.endswith(('.css', '.js', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.woff', '.woff2', '.ttf', '.ico')):
-            # Cache other static assets for 1 week
-            resp.headers["Cache-Control"] = "public, max-age=604800"
-            resp.headers["Expires"] = (datetime.utcnow() + timedelta(days=7)).strftime('%a, %d %b %Y %H:%M:%S GMT')
+        # Performance: Aggressive caching for static files — only on 200 OK.
+        # Never cache errors; a cached 404 would permanently break assets.
+        if resp.status_code == 200:
+            if request.path.startswith('/static/'):
+                resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+                resp.headers["Expires"] = (datetime.utcnow() + timedelta(days=365)).strftime('%a, %d %b %Y %H:%M:%S GMT')
+            elif request.path.endswith(('.css', '.js', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.woff', '.woff2', '.ttf', '.ico')):
+                resp.headers["Cache-Control"] = "public, max-age=604800"
+                resp.headers["Expires"] = (datetime.utcnow() + timedelta(days=7)).strftime('%a, %d %b %Y %H:%M:%S GMT')
+        elif resp.status_code >= 400 and request.path.startswith('/static/'):
+            # Ensure errors on static paths are never cached
+            resp.headers["Cache-Control"] = "no-store"
 
         return resp
 
@@ -822,6 +826,69 @@ def create_app():
         app.logger.exception("Failed to register gads_bp")
 
     try:
+        from app.google.dayparting_routes import dayparting_bp
+        app.register_blueprint(dayparting_bp)
+        app.logger.info("dayparting_bp registered at /account/google/ads/dayparting")
+    except Exception:
+        app.logger.exception("Failed to register dayparting_bp")
+
+    try:
+        from app.google.rsa_routes import rsa_bp
+        app.register_blueprint(rsa_bp)
+        app.logger.info("rsa_bp registered at /account/google/ads/rsa")
+    except Exception:
+        app.logger.exception("Failed to register rsa_bp")
+
+    try:
+        from app.google.auction_insights_routes import auction_insights_bp
+        app.register_blueprint(auction_insights_bp)
+        app.logger.info("auction_insights_bp registered at /account/google/ads/competitors")
+    except Exception:
+        app.logger.exception("Failed to register auction_insights_bp")
+
+    try:
+        from app.google.offline_conversions_routes import offline_conv_bp
+        app.register_blueprint(offline_conv_bp)
+        app.logger.info("offline_conv_bp registered at /account/google/ads/offline-conversions")
+    except Exception:
+        app.logger.exception("Failed to register offline_conv_bp")
+
+    try:
+        from app.integrations import integrations_hub_bp
+        app.register_blueprint(integrations_hub_bp)
+        app.logger.info("integrations_hub_bp registered at /account/integrations")
+    except Exception:
+        app.logger.exception("Failed to register integrations_hub_bp")
+
+    try:
+        from app.google.skimmer_routes import skimmer_bp
+        app.register_blueprint(skimmer_bp)
+        app.logger.info("skimmer_bp registered at /account/integrations/skimmer")
+    except Exception:
+        app.logger.exception("Failed to register skimmer_bp")
+
+    try:
+        from app.multiloc import multiloc_bp
+        app.register_blueprint(multiloc_bp)
+        app.logger.info("multiloc_bp registered")
+    except Exception:
+        app.logger.exception("Failed to register multiloc_bp")
+
+    try:
+        from app.google.gclid_capture_routes import gclid_capture_bp
+        app.register_blueprint(gclid_capture_bp)
+        app.logger.info("gclid_capture_bp registered at /track")
+    except Exception:
+        app.logger.exception("Failed to register gclid_capture_bp")
+
+    try:
+        from app.google.lead_form_routes import lead_form_bp
+        app.register_blueprint(lead_form_bp)
+        app.logger.info("lead_form_bp registered at /webhooks/google + /account/integrations/lead-forms")
+    except Exception:
+        app.logger.exception("Failed to register lead_form_bp")
+
+    try:
         from app.telephony import telephony_bp
         app.register_blueprint(telephony_bp)
         app.logger.info("telephony_bp registered at /telephony")
@@ -851,18 +918,19 @@ def create_app():
         app.logger.exception("Failed to register agent_config_bp")
 
     try:
+        from app.admin.knowledge_routes import knowledge_bp
+        app.register_blueprint(knowledge_bp)  # url_prefix=/admin/knowledge
+        app.logger.info("knowledge_bp registered at /admin/knowledge")
+    except Exception:
+        app.logger.exception("Failed to register knowledge_bp")
+
+    try:
         from app.admin.email_workflow_routes import email_workflow_bp
         app.register_blueprint(email_workflow_bp)  # url_prefix=/admin/email-workflows
         app.logger.info("email_workflow_bp registered at /admin/email-workflows")
     except Exception:
         app.logger.exception("Failed to register email_workflow_bp")
 
-    try:
-        from app.admin.servicetitan_routes import servicetitan_bp
-        app.register_blueprint(servicetitan_bp)  # url_prefix=/admin/servicetitan
-        app.logger.info("servicetitan_bp registered at /admin/servicetitan")
-    except Exception:
-        app.logger.exception("Failed to register servicetitan_bp")
 
     try:
         from app.admin.lead_campaigns_routes import lead_campaigns_bp
@@ -884,6 +952,46 @@ def create_app():
         app.logger.info("ml_admin_bp registered at /admin/ml")
     except Exception:
         app.logger.exception("Failed to register ml_admin_bp")
+
+    # --- ServiceTitan Integration (account-level) ---
+    try:
+        from app.admin.servicetitan_routes import servicetitan_bp
+        app.register_blueprint(servicetitan_bp)  # url_prefix=/account/servicetitan
+        app.logger.info("servicetitan_bp registered at /account/servicetitan")
+    except Exception:
+        app.logger.exception("Failed to register servicetitan_bp")
+
+    # --- Marketing Command Center ---
+    try:
+        from app.marketing import marketing_bp
+        app.register_blueprint(marketing_bp)  # url_prefix=/account/marketing
+        app.logger.info("marketing_bp registered at /account/marketing")
+    except Exception:
+        app.logger.exception("Failed to register marketing_bp")
+
+    # --- CRM Webhooks (Jobber, HouseCall Pro, ServiceTitan, manual) ---------
+    try:
+        from app.webhooks.crm_webhooks import crm_webhooks_bp
+        app.register_blueprint(crm_webhooks_bp)  # url_prefix=/api/webhooks/crm
+        try:
+            csrf.exempt(crm_webhooks_bp)
+        except Exception as _e:
+            app.logger.warning(f"Could not exempt crm_webhooks_bp from CSRF: {_e}")
+        app.logger.info("crm_webhooks_bp registered at /api/webhooks/crm")
+    except Exception:
+        app.logger.exception("Failed to register crm_webhooks_bp")
+
+    # --- Marketing Webhooks (Twilio, Angi, Thumbtack, Nextdoor, generic) ---
+    try:
+        from app.webhooks.marketing_webhooks import marketing_webhooks_bp
+        app.register_blueprint(marketing_webhooks_bp)  # url_prefix=/api/webhooks
+        try:
+            csrf.exempt(marketing_webhooks_bp)
+        except Exception as _e:
+            app.logger.warning(f"Could not exempt marketing_webhooks_bp from CSRF: {_e}")
+        app.logger.info("marketing_webhooks_bp registered at /api/webhooks")
+    except Exception:
+        app.logger.exception("Failed to register marketing_webhooks_bp")
 
     # --- Email Webhooks (AI auto-responses for inbound emails) -------------
     try:
@@ -1028,6 +1136,13 @@ def create_app():
         app.logger.info("digest_bp registered at /account/digest")
     except Exception:
         app.logger.exception("Failed to register digest_bp")
+    # --- Social Media Calendar -----------------------------------------------
+    try:
+        from app.social_calendar import social_calendar_bp
+        app.register_blueprint(social_calendar_bp)
+        app.logger.info("social_calendar_bp registered at /account/social-calendar")
+    except Exception:
+        app.logger.exception("Failed to register social_calendar_bp")
 
     # ---- Apply CSRF exemptions AFTER blueprints are registered -------------
     try:
@@ -1043,6 +1158,10 @@ def create_app():
             # External webhooks — no browser session, no CSRF token
             "lead_intake_bp.networx_webhook",
             "lead_intake_bp.elocal_webhook",
+            # Social calendar JSON endpoints (send X-CSRFToken header)
+            "social_calendar_bp.post_add",
+            "social_calendar_bp.post_update",
+            "social_calendar_bp.post_delete",
         ):
             fn = app.view_functions.get(ep)
             if fn:
@@ -1423,9 +1542,49 @@ def create_app():
 </html>
         """, app_name=app.config.get('APP_NAME', 'FieldSprout')), 400
 
+    _SHTML_500 = """<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>500 — Something went wrong · FieldSprout</title>
+<style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}.card{background:#fff;border-radius:16px;box-shadow:0 25px 50px -12px rgba(0,0,0,.35);padding:3rem 2.5rem;max-width:540px;width:100%;text-align:center}.wordmark{font-size:1.5rem;font-weight:800;background:linear-gradient(135deg,#4f46e5,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:2rem}.code{font-size:5rem;font-weight:800;line-height:1;color:#ef4444;margin-bottom:.5rem}h1{font-size:1.5rem;font-weight:700;color:#111827;margin-bottom:.75rem}.sub{color:#6b7280;font-size:1rem;line-height:1.6;margin-bottom:2rem}.actions{display:flex;flex-wrap:wrap;gap:.75rem;justify-content:center;margin-bottom:2rem}.btn{display:inline-flex;align-items:center;padding:.75rem 1.5rem;border-radius:8px;font-weight:600;font-size:.95rem;text-decoration:none}.btn-primary{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff}.btn-ghost{background:#fff;color:#4f46e5;border:2px solid #e0e7ff}.footer-note{font-size:.8rem;color:#9ca3af;padding-top:1.5rem;border-top:1px solid #f3f4f6}.footer-note a{color:#4f46e5;text-decoration:none;font-weight:600}</style>
+</head><body><div class="card"><div class="wordmark">FieldSprout</div><div class="code">500</div>
+<h1>Something went wrong on our end</h1>
+<p class="sub">We hit an unexpected error. Our team has been notified automatically.<br>Your data is safe — this is a temporary hiccup.</p>
+<div class="actions"><a href="/account/dashboard" class="btn btn-primary">Go to Dashboard</a><a href="javascript:history.back()" class="btn btn-ghost">Go Back</a><a href="javascript:location.reload()" class="btn btn-ghost">Try Again</a></div>
+<div class="footer-note">If this keeps happening, <a href="mailto:support@fieldsprout.io">contact support</a>.</div>
+</div></body></html>"""
+
+    _SHTML_400 = """<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>400 — Request Error · FieldSprout</title>
+<style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#d97706 0%,#b45309 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}.card{background:#fff;border-radius:16px;box-shadow:0 25px 50px -12px rgba(0,0,0,.35);padding:3rem 2.5rem;max-width:540px;width:100%;text-align:center}.wordmark{font-size:1.5rem;font-weight:800;background:linear-gradient(135deg,#d97706,#b45309);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:2rem}.code{font-size:5rem;font-weight:800;line-height:1;color:#d97706;margin-bottom:.5rem}h1{font-size:1.5rem;font-weight:700;color:#111827;margin-bottom:.75rem}.sub{color:#6b7280;font-size:1rem;line-height:1.6;margin-bottom:2rem}.actions{display:flex;flex-wrap:wrap;gap:.75rem;justify-content:center;margin-bottom:2rem}.btn{display:inline-flex;align-items:center;padding:.75rem 1.5rem;border-radius:8px;font-weight:600;font-size:.95rem;text-decoration:none}.btn-primary{background:linear-gradient(135deg,#d97706,#b45309);color:#fff}.btn-ghost{background:#fff;color:#d97706;border:2px solid #fde68a}.footer-note{font-size:.8rem;color:#9ca3af;padding-top:1.5rem;border-top:1px solid #f3f4f6}.footer-note a{color:#d97706;text-decoration:none;font-weight:600}</style>
+</head><body><div class="card"><div class="wordmark">FieldSprout</div><div class="code">400</div>
+<h1>Request timed out or was invalid</h1>
+<p class="sub">The request couldn't be completed — it may have timed out or contained invalid data. Try again or head back to the dashboard.</p>
+<div class="actions"><a href="/account/dashboard" class="btn btn-primary">Go to Dashboard</a><a href="javascript:history.back()" class="btn btn-ghost">Go Back</a></div>
+<div class="footer-note">If this keeps happening, <a href="mailto:support@fieldsprout.io">contact support</a>.</div>
+</div></body></html>"""
+
+    _SHTML_404 = """<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>404 — Page Not Found · FieldSprout</title>
+<style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}.card{background:#fff;border-radius:16px;box-shadow:0 25px 50px -12px rgba(0,0,0,.35);padding:3rem 2.5rem;max-width:540px;width:100%;text-align:center}.wordmark{font-size:1.5rem;font-weight:800;background:linear-gradient(135deg,#4f46e5,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:2rem}.code{font-size:5rem;font-weight:800;line-height:1;color:#6b7280;margin-bottom:.5rem}h1{font-size:1.5rem;font-weight:700;color:#111827;margin-bottom:.75rem}.sub{color:#6b7280;font-size:1rem;line-height:1.6;margin-bottom:2rem}.actions{display:flex;flex-wrap:wrap;gap:.75rem;justify-content:center;margin-bottom:2rem}.btn{display:inline-flex;align-items:center;padding:.75rem 1.5rem;border-radius:8px;font-weight:600;font-size:.95rem;text-decoration:none}.btn-primary{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff}.btn-ghost{background:#fff;color:#4f46e5;border:2px solid #e0e7ff}.footer-note{font-size:.8rem;color:#9ca3af;padding-top:1.5rem;border-top:1px solid #f3f4f6}.footer-note a{color:#4f46e5;text-decoration:none;font-weight:600}</style>
+</head><body><div class="card"><div class="wordmark">FieldSprout</div><div class="code">404</div>
+<h1>Page not found</h1>
+<p class="sub">The page you're looking for doesn't exist or may have been moved. Head back to the dashboard to pick up where you left off.</p>
+<div class="actions"><a href="/account/dashboard" class="btn btn-primary">Go to Dashboard</a><a href="javascript:history.back()" class="btn btn-ghost">Go Back</a></div>
+<div class="footer-note">If you followed a link that should work, <a href="mailto:support@fieldsprout.io">let us know</a>.</div>
+</div></body></html>"""
+
     @app.errorhandler(404)
     def _404(err):
         """Handle 404 Not Found errors with clean HTML page"""
+        # LiteSpeed ErrorDocument subrequests: serve branded page directly
+        if request.path == '/500.shtml':
+            return _SHTML_500, 200, {'Content-Type': 'text/html; charset=utf-8'}
+        if request.path == '/400.shtml':
+            return _SHTML_400, 200, {'Content-Type': 'text/html; charset=utf-8'}
+        if request.path == '/404.shtml':
+            return _SHTML_404, 200, {'Content-Type': 'text/html; charset=utf-8'}
         app.logger.warning(
             "[404 ERROR] URL: %s, Method: %s, PATH_INFO: %r, SCRIPT_NAME: %r, "
             "registered_routes: %s",
@@ -1737,6 +1896,23 @@ def create_app():
         # Otherwise, return 500
         return _500(err)
 
+    @app.route('/400.shtml')
+    @app.route('/404.shtml')
+    @app.route('/500.shtml')
+    def _serve_shtml_error_page():
+        """Serve static error pages for LiteSpeed ErrorDocument redirects.
+        LiteSpeed treats .shtml as SSI and proxies to Flask instead of serving
+        the file directly, so we handle these URLs explicitly."""
+        import os as _os
+        webroot = _os.path.dirname(_os.path.dirname(_os.path.dirname(__file__)))
+        fname = request.path.lstrip('/')
+        fpath = _os.path.join(webroot, fname)
+        try:
+            with open(fpath) as _f:
+                return _f.read(), 200, {'Content-Type': 'text/html; charset=utf-8'}
+        except OSError:
+            return '', 204
+
     @app.context_processor
     def inject_app_and_config():
         from flask import current_app
@@ -1757,6 +1933,16 @@ def create_app():
         app.logger.info("Background job scheduler initialized")
     except Exception as e:
         app.logger.warning(f"Failed to initialize scheduler: {e}")
+
+    # ---- Serve favicon from root so browsers find it without HTML parsing ----
+    from flask import send_from_directory
+    @app.route('/favicon.ico')
+    def favicon():
+        return send_from_directory(
+            _os.path.join(app.static_folder, 'brand'),
+            'favicon.ico',
+            mimetype='image/vnd.microsoft.icon',
+        )
 
     return app
 

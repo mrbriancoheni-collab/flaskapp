@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>{% block title %}FieldSprout — Get Found. Grow Leads. Book Jobs.{% endblock %}</title>
   <meta name="description" content="{% block meta_description %}FieldSprout helps local service pros get found, grow leads, and book more jobs with AI-powered campaigns and review automation.{% endblock %}">
-  <meta name="robots" content="{% block meta_robots %}index, follow{% endblock %}">
+  <meta name="robots" content="{% block meta_robots %}index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1{% endblock %}">
   <link rel="canonical" href="{% block canonical %}https://fieldsprout.io{{ request.path }}{% endblock %}">
 
   <!-- Open Graph -->
@@ -34,7 +34,7 @@
     "@type": "Organization",
     "name": "FieldSprout",
     "url": "https://fieldsprout.io",
-    "logo": "https://fieldsprout.io/static/brand/logo.png",
+    "logo": "https://fieldsprout.io/static/brand/icons/fieldsprout-icon-512.png",
     "description": "AI-powered marketing automation for home service businesses. Autonomous agents that optimize Google Ads, manage reviews, and grow leads for HVAC, plumbing, electrical, roofing, and pest control companies.",
     "foundingDate": "2023",
     "sameAs": [
@@ -405,27 +405,6 @@
     .animation-delay-600 { animation-delay: 0.6s; }
   </style>
 
-  <!-- Organization Schema for AI Search & Entity Recognition -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "FieldSprout",
-    "url": "https://fieldsprout.io",
-    "logo": "https://fieldsprout.io/static/brand/logos/fieldsprout-wordmark.svg",
-    "description": "AI agents that autonomously optimize Google Ads, Facebook Ads, and local marketing for home service businesses.",
-    "sameAs": [
-      "https://www.linkedin.com/company/fieldsprout",
-      "https://twitter.com/fieldsprout"
-    ],
-    "contactPoint": {
-      "@type": "ContactPoint",
-      "contactType": "Customer Service",
-      "email": "support@fieldsprout.io"
-    }
-  }
-  </script>
-
   {% block head_extra %}{% endblock %}
 </head>
 
@@ -439,8 +418,7 @@
         <img
           src="{{ url_for('static', filename='brand/logos/fieldsprout-wordmark.svg') }}"
           alt="FieldSprout"
-          class="h-7 lg:h-8"
-          onerror="this.outerHTML=document.getElementById('fs-logo-fallback').innerHTML">
+          class="h-7 lg:h-8">
       </a>
 
       <!-- Desktop Navigation -->
@@ -751,8 +729,7 @@
             <img
               src="{{ url_for('static', filename='brand/logos/FieldSprout-White-logo.svg') }}"
               alt="FieldSprout"
-              class="h-8"
-              onerror="this.outerHTML=document.getElementById('fs-logo-fallback-white').innerHTML">
+              class="h-8">
           </a>
           <p class="mt-6 text-lg text-white/70 max-w-md leading-relaxed">
             Get found. Grow leads. Book jobs — with AI that works 24/7 for local service pros.

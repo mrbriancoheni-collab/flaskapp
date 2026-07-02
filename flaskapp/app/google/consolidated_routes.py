@@ -18,6 +18,7 @@ from sqlalchemy import text
 
 from app import db
 from app.auth.utils import login_required, current_account_id
+from app.services.safety_layer import check_anomaly_gate
 
 log = logging.getLogger(__name__)
 
@@ -82,6 +83,15 @@ def ai_control():
     pending_decisions, decisions_by_risk = _safe(
         lambda: _load_pending_decisions(account_id), ([], {"high": [], "low": []})
     )
+    low_risk_count = sum(
+        1 for d in pending_decisions
+        if d.get("risk_level") == "low" and (d.get("confidence") or 0) >= 0.80
+    )
+
+    # ── anomaly detection ──
+    anomaly_detected, anomaly_details = _safe(
+        lambda: check_anomaly_gate(account_id), (False, "")
+    )
 
     # ── change log ──
     cl_total_actions = cl_total_saved = cl_total_optimizations = cl_total_blocks = 0
@@ -90,19 +100,46 @@ def ai_control():
         from app.models_ai_actions import AIAction
         from sqlalchemy import func as _func
         from datetime import datetime as _dt, timedelta as _td
-        cl_total_actions = AIAction.query.filter_by(account_id=account_id, status='executed').count()
-        cl_total_saved = db.session.query(_func.sum(AIAction.estimated_monthly_savings)).filter_by(
-            account_id=account_id, status='executed'
-        ).scalar() or 0
-        cl_total_blocks = AIAction.query.filter_by(
-            account_id=account_id, status='executed', action_type='negative_keyword_added'
-        ).count()
+
+        # Count only DISTINCT titles to avoid inflating numbers from pre-dedup duplicates
+        cl_total_actions = db.session.execute(text(
+            "SELECT COUNT(DISTINCT title) FROM ai_actions "
+            "WHERE account_id=:aid AND status='executed'"
+        ), {"aid": account_id}).scalar() or 0
+
+        # Sum savings from only the first occurrence of each unique action title
+        cl_total_saved = db.session.execute(text(
+            "SELECT COALESCE(SUM(s),0) FROM ("
+            "  SELECT MIN(estimated_monthly_savings) AS s FROM ai_actions "
+            "  WHERE account_id=:aid AND status='executed' AND estimated_monthly_savings IS NOT NULL "
+            "  GROUP BY title"
+            ") AS deduped"
+        ), {"aid": account_id}).scalar() or 0
+
+        cl_total_blocks = db.session.execute(text(
+            "SELECT COUNT(DISTINCT title) FROM ai_actions "
+            "WHERE account_id=:aid AND status='executed' AND action_type='negative_keyword_added'"
+        ), {"aid": account_id}).scalar() or 0
+
         cl_total_optimizations = cl_total_actions - cl_total_blocks
+
+        # Show only the most recent occurrence of each unique action in the feed
         cl_recent_actions = AIAction.query.filter(
             AIAction.account_id == account_id,
             AIAction.status == 'executed',
             AIAction.created_at >= _dt.utcnow() - _td(days=30)
-        ).order_by(AIAction.created_at.desc()).limit(50).all()
+        ).order_by(AIAction.created_at.desc()).limit(200).all()
+
+        # Deduplicate the feed by title, keeping only the latest
+        seen_titles = set()
+        deduped = []
+        for a in cl_recent_actions:
+            if a.title not in seen_titles:
+                seen_titles.add(a.title)
+                deduped.append(a)
+            if len(deduped) >= 50:
+                break
+        cl_recent_actions = deduped
     except Exception:
         pass
 
@@ -123,6 +160,10 @@ def ai_control():
         pending_decisions=pending_decisions,
         decisions_by_risk=decisions_by_risk,
         total_pending=len(pending_decisions),
+        low_risk_count=low_risk_count,
+        # Anomaly
+        anomaly_detected=anomaly_detected,
+        anomaly_details=anomaly_details,
         # Change log
         cl_total_actions=cl_total_actions,
         cl_total_saved=round(cl_total_saved, 2),
@@ -158,6 +199,22 @@ def _load_agent_stats(account_id: int) -> list:
 
 
 def _load_pending_decisions(account_id: int):
+    # Demote generic playbook decisions (add Search/PMax campaign, balanced
+    # structure) that aren't account-specific wins. Idempotent — after the
+    # first run for an account, the WHERE clause matches nothing.
+    try:
+        db.session.execute(text("""
+            UPDATE agent_decisions
+            SET confidence = 0.40
+            WHERE account_id = :aid
+              AND status = 'pending'
+              AND decision_type IN ('create_search_campaign', 'create_pmax_campaign', 'create_balanced_campaigns')
+              AND confidence > 0.5
+        """), {"aid": account_id})
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
     rows = db.session.execute(text("""
         SELECT
             id, agent_id, agent_type, decision_type,
@@ -172,6 +229,7 @@ def _load_pending_decisions(account_id: int):
             CASE risk_level
                 WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4
             END,
+            confidence DESC,
             created_at DESC
     """), {"aid": account_id}).mappings().all()
     pending = [dict(r) for r in rows]
@@ -186,10 +244,75 @@ def _load_pending_decisions(account_id: int):
 
 # ── Budget & Forecast ──────────────────────────────────────────────────────────
 
+@consolidated_bp.route("/api/budget-groups", methods=["POST"])
+@login_required
+def api_create_budget_group():
+    """Create a new budget group (used by the inline modal on the budget-plan page)."""
+    account_id = current_account_id()
+    data = request.get_json(silent=True) or {}
+    name = (data.get("name") or "").strip()
+    monthly_budget = float(data.get("monthly_budget_target") or 0)
+    description = (data.get("description") or "").strip()
+
+    if not name:
+        return jsonify({"error": "Name is required"}), 400
+    if monthly_budget <= 0:
+        return jsonify({"error": "Monthly budget must be greater than 0"}), 400
+
+    customer_id = (data.get("customer_id") or "").strip()
+    if not customer_id:
+        try:
+            from app.google.utils_ads import resolve_ads_context
+            ctx = resolve_ads_context(account_id) or {}
+            customer_id = ctx.get("customer_id") or ""
+        except Exception:
+            pass
+    if not customer_id:
+        try:
+            row = db.session.execute(text(
+                "SELECT google_customer_id FROM ads_campaigns "
+                "WHERE account_id=:aid AND google_customer_id IS NOT NULL LIMIT 1"
+            ), {"aid": account_id}).mappings().first()
+            if row:
+                customer_id = row["google_customer_id"] or ""
+        except Exception:
+            pass
+
+    try:
+        db.session.execute(text("""
+            INSERT INTO budget_groups
+                (account_id, customer_id, name, description,
+                 monthly_budget_target, min_daily_budget, max_daily_budget,
+                 enabled, adjustment_frequency,
+                 performance_weight, seasonality_weight, capacity_weight,
+                 industry, send_notifications, color)
+            VALUES
+                (:aid, :cid, :name, :desc,
+                 :budget, 10, 1000,
+                 1, 'daily',
+                 0.70, 0.20, 0.10,
+                 'hvac_heating', 1, '#3B82F6')
+        """), {
+            "aid": account_id,
+            "cid": customer_id,
+            "name": name,
+            "desc": description,
+            "budget": monthly_budget,
+        })
+        db.session.commit()
+        return jsonify({"success": True})
+    except Exception as exc:
+        log.exception("api_create_budget_group failed")
+        db.session.rollback()
+        return jsonify({"error": str(exc)}), 500
+
+
 @consolidated_bp.route("/budget-plan", endpoint="budget_planning")
 @login_required
 def budget_planning():
     """Budget Groups + Auto-Budget Settings + Forecasting in one tabbed page."""
+    from app.models_ads import AdsCampaign
+    AdsCampaign.ensure_columns()
     account_id = current_account_id()
     tab = request.args.get("tab", "groups")
     is_connected = _is_ads_connected(account_id)
@@ -199,12 +322,32 @@ def budget_planning():
         lambda: _load_budget_groups(account_id), ([], [], [])
     )
 
+    # Auto-create a default group when none exist so the page is immediately useful
+    if not budget_groups:
+        _safe(lambda: _create_default_budget_group(account_id), None)
+        budget_groups, unassigned_campaigns, all_campaigns = _safe(
+            lambda: _load_budget_groups(account_id), ([], [], [])
+        )
+
     # ── auto-budget settings ──
     auto_budget_settings = _safe(lambda: _load_auto_budget_settings(account_id), {})
     auto_budget_history  = _safe(lambda: _load_auto_budget_history(account_id), [])
 
     # ── forecasting campaigns ──
     forecast_campaigns = _safe(lambda: _load_forecast_campaigns(account_id), [])
+
+    # ── ads customer_id + detected budget for the create-group modal ──
+    ads_customer_id = ""
+    try:
+        from app.google.utils_ads import resolve_ads_context
+        ctx = resolve_ads_context(account_id) or {}
+        ads_customer_id = ctx.get("customer_id") or ""
+    except Exception:
+        pass
+    if not ads_customer_id and budget_groups:
+        ads_customer_id = budget_groups[0].get("customer_id") or ""
+
+    detected_budget = _safe(lambda: _detect_monthly_budget(account_id), 0.0)
 
     return render_template(
         "google/budget_planning.html",
@@ -215,6 +358,8 @@ def budget_planning():
         unassigned_campaigns=unassigned_campaigns,
         all_campaigns=all_campaigns,
         current_month=date.today(),
+        ads_customer_id=ads_customer_id,
+        detected_budget=detected_budget,
         # Auto-budget
         auto_budget_settings=auto_budget_settings,
         auto_budget_history=auto_budget_history,
@@ -223,20 +368,122 @@ def budget_planning():
     )
 
 
+def _detect_monthly_budget(account_id: int) -> float:
+    """
+    Return the best estimate of the account's total monthly Google Ads budget.
+
+    Priority:
+      1. auto_budget_settings.total_monthly_budget_cents  (user-set explicit cap)
+      2. SUM(ads_campaigns.daily_budget_cents) * 30       (synced from Google Ads)
+      3. account_settings.monthly_budget                  (autonomous mode setting)
+    Returns 0.0 if nothing is found so the caller can decide the fallback.
+    """
+    # 1 – explicit cap set in auto-budget settings
+    try:
+        row = db.session.execute(text(
+            "SELECT total_monthly_budget_cents FROM auto_budget_settings "
+            "WHERE account_id=:aid LIMIT 1"
+        ), {"aid": account_id}).mappings().first()
+        if row and row["total_monthly_budget_cents"]:
+            return float(row["total_monthly_budget_cents"]) / 100.0
+    except Exception:
+        pass
+
+    # 2 – sum of campaign daily budgets × 30
+    try:
+        row = db.session.execute(text(
+            "SELECT SUM(daily_budget_cents) AS total "
+            "FROM ads_campaigns WHERE account_id=:aid AND status != 'removed'"
+        ), {"aid": account_id}).mappings().first()
+        if row and row["total"]:
+            return float(row["total"]) * 30 / 100.0
+    except Exception:
+        pass
+
+    # 3 – autonomous mode monthly_budget setting
+    try:
+        row = db.session.execute(text(
+            "SELECT setting_value FROM account_settings "
+            "WHERE account_id=:aid AND setting_key='monthly_budget' LIMIT 1"
+        ), {"aid": account_id}).mappings().first()
+        if row and row["setting_value"]:
+            return float(row["setting_value"])
+    except Exception:
+        pass
+
+    return 0.0
+
+
+def _create_default_budget_group(account_id: int) -> None:
+    """Insert a starter 'Main Budget' group seeded with the account's real budget."""
+    # Resolve customer_id
+    customer_id = ""
+    try:
+        from app.google.utils_ads import resolve_ads_context
+        ctx = resolve_ads_context(account_id) or {}
+        customer_id = ctx.get("customer_id") or ""
+    except Exception:
+        pass
+    if not customer_id:
+        try:
+            row = db.session.execute(text(
+                "SELECT google_customer_id FROM ads_campaigns "
+                "WHERE account_id=:aid AND google_customer_id IS NOT NULL LIMIT 1"
+            ), {"aid": account_id}).mappings().first()
+            if row:
+                customer_id = row["google_customer_id"] or ""
+        except Exception:
+            pass
+
+    monthly_budget = _detect_monthly_budget(account_id)
+    # Derive sensible daily bounds from the monthly total
+    daily_avg = monthly_budget / 30.0 if monthly_budget else 0.0
+    min_daily = max(10.0, round(daily_avg * 0.5, 2)) if daily_avg else 10.0
+    max_daily = max(min_daily * 2, round(daily_avg * 1.5, 2)) if daily_avg else 1000.0
+
+    db.session.execute(text("""
+        INSERT INTO budget_groups
+            (account_id, customer_id, name, description,
+             monthly_budget_target, min_daily_budget, max_daily_budget,
+             enabled, adjustment_frequency,
+             performance_weight, seasonality_weight, capacity_weight,
+             industry, send_notifications, color)
+        VALUES
+            (:aid, :cid, 'Main Budget', 'Default budget group',
+             :budget, :min_d, :max_d,
+             1, 'daily',
+             0.70, 0.20, 0.10,
+             'hvac_heating', 1, '#3B82F6')
+    """), {
+        "aid": account_id, "cid": customer_id,
+        "budget": monthly_budget, "min_d": min_daily, "max_d": max_daily,
+    })
+    db.session.commit()
+
+
 def _load_budget_groups(account_id: int):
     from datetime import date as _date
     today = _date.today()
     month_start = today.replace(day=1)
 
     groups = db.session.execute(text("""
-        SELECT bg.*, COUNT(ac.id) AS campaign_count,
-               COALESCE(SUM(ac.daily_budget_cents * 30), 0) AS estimated_monthly_cents
+        SELECT bg.*,
+               COUNT(DISTINCT ac.id) AS campaign_count,
+               COALESCE(SUM(ac.daily_budget_cents * 30), 0) AS estimated_monthly_cents,
+               COALESCE((
+                 SELECT SUM(gs.cost_micros) / 1000000.0
+                 FROM gads_stats_daily gs
+                 JOIN ads_campaigns ac2 ON ac2.id = gs.entity_id
+                 WHERE ac2.budget_group_id = bg.id
+                   AND gs.entity_type = 'campaign'
+                   AND gs.date >= :month_start
+               ), 0) AS current_spend_dollars
         FROM budget_groups bg
         LEFT JOIN ads_campaigns ac ON ac.budget_group_id = bg.id AND ac.account_id = :aid
         WHERE bg.account_id = :aid
         GROUP BY bg.id
         ORDER BY bg.name
-    """), {"aid": account_id}).mappings().all()
+    """), {"aid": account_id, "month_start": month_start}).mappings().all()
 
     campaigns = db.session.execute(text("""
         SELECT ac.*, bg.name AS group_name

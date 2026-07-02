@@ -79,3 +79,50 @@ class LeadIntakeConfig(db.Model):
 
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class ReferralRequest(db.Model):
+    """Tracks referral ask messages sent after a completed job."""
+    __tablename__ = "referral_requests"
+    id           = db.Column(db.Integer, primary_key=True)
+    account_id   = db.Column(db.Integer, nullable=False, index=True)
+    channel      = db.Column(db.String(16), nullable=False)   # email | sms
+    recipient    = db.Column(db.String(255), nullable=False)
+    customer_name = db.Column(db.String(255), nullable=True)
+    job_type     = db.Column(db.String(128), nullable=True)
+    status       = db.Column(db.String(32), nullable=False, default="queued")  # queued|sent|failed
+    created_at   = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    sent_at      = db.Column(db.DateTime, nullable=True)
+
+
+class ReactivationSend(db.Model):
+    """Tracks win-back campaign sends so we don't re-contact within the cooldown period."""
+    __tablename__ = "reactivation_sends"
+    id           = db.Column(db.Integer, primary_key=True)
+    account_id   = db.Column(db.Integer, nullable=False, index=True)
+    customer_email = db.Column(db.String(255), nullable=True, index=True)
+    customer_phone = db.Column(db.String(32), nullable=True)
+    customer_name  = db.Column(db.String(255), nullable=True)
+    sent_at      = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    __table_args__ = (db.Index("idx_react_acct_email", "account_id", "customer_email"),)
+
+
+class NpsSurvey(db.Model):
+    """
+    One-question satisfaction survey sent after a completed job.
+    Score 1-10: if >= 7 → route customer to Google review; if < 7 → flag internally.
+    """
+    __tablename__ = "nps_surveys"
+    id            = db.Column(db.Integer, primary_key=True)
+    account_id    = db.Column(db.Integer, nullable=False, index=True)
+    token         = db.Column(db.String(64), nullable=False, unique=True, index=True)
+    customer_name = db.Column(db.String(255), nullable=True)
+    customer_email = db.Column(db.String(255), nullable=True)
+    customer_phone = db.Column(db.String(32), nullable=True)
+    job_type      = db.Column(db.String(128), nullable=True)
+    score         = db.Column(db.Integer, nullable=True)          # 1-10, NULL = not yet answered
+    review_link_google = db.Column(db.String(512), nullable=True)
+    status        = db.Column(db.String(32), nullable=False, default="queued")  # queued|sent|responded|failed
+    created_at    = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    sent_at       = db.Column(db.DateTime, nullable=True)
+    responded_at  = db.Column(db.DateTime, nullable=True)

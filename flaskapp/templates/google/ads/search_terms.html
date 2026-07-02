@@ -1,0 +1,339 @@
+{% extends "base_app.html" %}
+{% set SECTION = 'google' %}
+{% set gads_active = 'search_terms' %}
+{% block title %}Search Terms · Google Ads · {{ app_name }}{% endblock %}
+
+{% block content %}
+{% include "google/components/gads_nav.html" %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Search Term Report</h1>
+      <p class="text-gray-500 text-sm mt-1">Last 30 days · {{ terms_data | length }} terms · Add high-performers as keywords or block irrelevant ones as negatives</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <button id="sync-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 flex items-center gap-2">
+        <i class="fa-solid fa-rotate"></i>Sync from Google Ads
+      </button>
+      <a href="{{ url_for('gads_bp.optimize', tab='campaigns') }}" class="text-sm text-gray-500 hover:text-indigo-600">
+        ← Back to Optimizer
+      </a>
+    </div>
+  </div>
+
+  <!-- Sync status -->
+  <div id="sync-status" class="hidden rounded-xl px-4 py-3 text-sm border bg-blue-50 border-blue-200 text-blue-800"></div>
+
+  <!-- Toast notification -->
+  <div id="bulk-toast" class="hidden fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-sm rounded-xl px-5 py-3 shadow-lg flex items-center gap-2">
+    <i class="fa-solid fa-circle-check text-green-400"></i>
+    <span id="bulk-toast-msg"></span>
+  </div>
+
+  {% if wasted_spend_dollars > 0 %}
+  <div class="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between gap-4">
+    <div>
+      <p class="text-red-800 font-semibold text-sm">
+        ${{ "%.2f" | format(wasted_spend_dollars) }} wasted on {{ wasted_term_count }} irrelevant search term{{ 's' if wasted_term_count != 1 else '' }}
+      </p>
+      <p class="text-red-600 text-xs mt-0.5">These terms show buying intent — people shopping to purchase, not hire a service</p>
+    </div>
+    <button id="block-all-irrelevant"
+            data-count="{{ wasted_term_count }}"
+            class="px-3 py-1.5 bg-red-600 text-white text-xs rounded-lg hover:bg-red-700 font-medium whitespace-nowrap">
+      Block all {{ wasted_term_count }} irrelevant
+    </button>
+  </div>
+  {% endif %}
+
+  {% if not terms_data %}
+  <div class="bg-white rounded-xl shadow-sm border p-12 text-center">
+    <i class="fa-solid fa-magnifying-glass-chart text-gray-300 text-4xl mb-4"></i>
+    <h3 class="text-base font-semibold text-gray-800 mb-1">No search terms yet</h3>
+    <p class="text-sm text-gray-500 mb-4">Data appears after your ads start getting clicks — sync to pull the last 30 days of searches.</p>
+    <button onclick="document.getElementById('sync-btn')?.click()"
+            class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500 transition">
+      <i class="fa-solid fa-rotate"></i> Sync from Google Ads
+    </button>
+  </div>
+  {% else %}
+
+  <!-- Filter bar -->
+  <div class="bg-white rounded-xl shadow-sm border p-4 flex flex-wrap gap-3 items-center">
+    <input id="term-filter" type="text" placeholder="Filter search terms…"
+           class="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300 focus:outline-none flex-1 min-w-48">
+    <select id="camp-filter" class="border rounded-lg px-3 py-2 text-sm focus:outline-none">
+      <option value="">All campaigns</option>
+      {% for c in campaigns_list %}
+      <option value="{{ c.id }}">{{ c.name }}</option>
+      {% endfor %}
+    </select>
+    <select id="action-filter" class="border rounded-lg px-3 py-2 text-sm focus:outline-none">
+      <option value="">All terms</option>
+      <option value="unactioned">Not actioned</option>
+      <option value="keyword">Added as keyword</option>
+      <option value="negative">Added as negative</option>
+      <option value="irrelevant">Irrelevant only</option>
+    </select>
+    <span class="text-xs text-gray-400 ml-auto">Showing <span id="visible-count">{{ terms_data | length }}</span> terms</span>
+  </div>
+
+  <!-- Table -->
+  <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm" id="terms-table">
+        <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+          <tr>
+            <th class="text-left px-4 py-3">Search Term</th>
+            <th class="text-left px-4 py-3">Campaign</th>
+            <th class="text-right px-4 py-3 w-20">Impr.</th>
+            <th class="text-right px-4 py-3 w-20">Clicks</th>
+            <th class="text-right px-4 py-3 w-24">Spend</th>
+            <th class="text-right px-4 py-3 w-20">Conv.</th>
+            <th class="text-center px-4 py-3 w-28">Relevance</th>
+            <th class="text-right px-4 py-3 w-20">CPL</th>
+            <th class="text-center px-4 py-3 w-40">Status</th>
+            <th class="text-center px-4 py-3 w-48">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y" id="terms-tbody">
+          {% for t in terms_data %}
+          <tr class="hover:bg-gray-50 term-row {% if t.relevance == 'irrelevant' %}bg-red-50{% endif %}"
+              data-id="{{ t.id }}"
+              data-term="{{ t.search_term | lower | e }}"
+              data-campaign="{{ t.campaign_id or '' }}"
+              data-added-kw="{{ 'true' if t.added_as_keyword else 'false' }}"
+              data-added-neg="{{ 'true' if t.added_as_negative else 'false' }}"
+              data-relevance="{{ t.relevance }}">
+            <td class="px-4 py-3 font-mono text-gray-800 max-w-xs truncate">{{ t.search_term }}</td>
+            <td class="px-4 py-3 text-gray-600 text-xs max-w-32 truncate">{{ t.campaign_name or '—' }}</td>
+            <td class="px-4 py-3 text-right text-gray-700">{{ t.impressions | int }}</td>
+            <td class="px-4 py-3 text-right text-gray-700">{{ t.clicks | int }}</td>
+            <td class="px-4 py-3 text-right text-gray-700">
+              ${{ "%.2f" | format((t.cost_micros or 0) / 1000000) }}
+            </td>
+            <td class="px-4 py-3 text-right {% if t.conversions and t.conversions > 0 %}text-green-600 font-semibold{% else %}text-gray-400{% endif %}">
+              {{ t.conversions | int if t.conversions else '0' }}
+            </td>
+            <td class="px-4 py-3 text-center">
+              {% if t.relevance == 'irrelevant' %}
+                <div class="flex flex-col items-center gap-0.5">
+                  <span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">Irrelevant</span>
+                  {% if t.irrelevant_reason %}
+                  <span class="text-xs text-red-500 max-w-36 leading-tight" title="{{ t.irrelevant_reason }}">{{ t.irrelevant_reason }}</span>
+                  {% endif %}
+                </div>
+              {% elif t.relevance == 'low_quality' %}
+                <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Low quality</span>
+              {% else %}
+                <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Relevant</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-right text-gray-600 text-xs">
+              {% if t.cpl %}${{ "%.2f" | format(t.cpl) }}{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3 text-center">
+              <span class="term-status-{{ t.id }}">
+                {% if t.added_as_keyword %}
+                  <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Keyword</span>
+                {% elif t.added_as_negative %}
+                  <span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Negative</span>
+                {% else %}
+                  <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Unactioned</span>
+                {% endif %}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-center">
+              <div class="flex justify-center gap-2">
+                {% if not t.added_as_keyword %}
+                <button class="add-kw-btn text-xs px-2.5 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+                        data-id="{{ t.id }}" title="Add as exact-match keyword">
+                  <i class="fa-solid fa-plus mr-1"></i>Keyword
+                </button>
+                {% endif %}
+                {% if not t.added_as_negative %}
+                <button class="add-neg-btn text-xs px-2.5 py-1 border border-red-300 text-red-600 rounded hover:bg-red-50 transition"
+                        data-id="{{ t.id }}" title="Add as campaign-level negative">
+                  <i class="fa-solid fa-ban mr-1"></i>Block
+                </button>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% endif %}
+
+</div>
+
+<script>
+(function () {
+  const termFilter = document.getElementById('term-filter');
+  const campFilter = document.getElementById('camp-filter');
+  const actionFilter = document.getElementById('action-filter');
+  const visibleCount = document.getElementById('visible-count');
+
+  function applyFilters() {
+    const term = (termFilter?.value || '').toLowerCase();
+    const camp = campFilter?.value || '';
+    const action = actionFilter?.value || '';
+    let count = 0;
+    document.querySelectorAll('.term-row').forEach(row => {
+      const matchTerm = !term || row.dataset.term.includes(term);
+      const matchCamp = !camp || row.dataset.campaign === camp;
+      const matchAction = !action ||
+        (action === 'unactioned' && row.dataset.addedKw === 'false' && row.dataset.addedNeg === 'false') ||
+        (action === 'keyword' && row.dataset.addedKw === 'true') ||
+        (action === 'negative' && row.dataset.addedNeg === 'true') ||
+        (action === 'irrelevant' && row.dataset.relevance === 'irrelevant');
+      const show = matchTerm && matchCamp && matchAction;
+      row.style.display = show ? '' : 'none';
+      if (show) count++;
+    });
+    if (visibleCount) visibleCount.textContent = count;
+  }
+
+  termFilter?.addEventListener('input', applyFilters);
+  campFilter?.addEventListener('change', applyFilters);
+  actionFilter?.addEventListener('change', applyFilters);
+
+  document.querySelectorAll('.add-kw-btn').forEach(btn => {
+    btn.addEventListener('click', async function () {
+      const id = this.dataset.id;
+      this.disabled = true;
+      this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+      try {
+        const r = await fetch(`/account/google/ads/search-terms/${id}/add-keyword`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({match_type: 'exact'}),
+        });
+        const data = await r.json();
+        if (data.ok) {
+          const statusEl = document.querySelector(`.term-status-${id}`);
+          if (statusEl) statusEl.innerHTML = '<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Keyword</span>';
+          this.closest('td').querySelector('.add-kw-btn')?.remove();
+          const row = this.closest('tr');
+          if (row) {
+            row.dataset.addedKw = 'true';
+          }
+        }
+      } catch (e) {
+        this.disabled = false;
+        this.innerHTML = '<i class="fa-solid fa-plus mr-1"></i>Keyword';
+      }
+    });
+  });
+
+  document.querySelectorAll('.add-neg-btn').forEach(btn => {
+    btn.addEventListener('click', async function () {
+      const id = this.dataset.id;
+      const term = this.closest('tr')?.dataset.term || 'this search';
+      if (!window.confirm(`Block "${term}"? Your ads will stop showing when people search for this.`)) return;
+      this.disabled = true;
+      this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+      try {
+        const r = await fetch(`/account/google/ads/search-terms/${id}/add-negative`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({scope: 'campaign', match_type: 'exact'}),
+        });
+        const data = await r.json();
+        if (data.ok) {
+          const statusEl = document.querySelector(`.term-status-${id}`);
+          if (statusEl) statusEl.innerHTML = '<span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Negative</span>';
+          this.closest('td').querySelector('.add-neg-btn')?.remove();
+          const row = this.closest('tr');
+          if (row) row.dataset.addedNeg = 'true';
+        }
+      } catch (e) {
+        this.disabled = false;
+        this.innerHTML = '<i class="fa-solid fa-ban mr-1"></i>Block';
+      }
+    });
+  });
+
+  const syncBtn = document.getElementById('sync-btn');
+  const syncStatus = document.getElementById('sync-status');
+  syncBtn?.addEventListener('click', async function () {
+    syncBtn.disabled = true;
+    syncBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Syncing…';
+    syncStatus?.classList.remove('hidden');
+    if (syncStatus) syncStatus.textContent = 'Pulling data from Google Ads API…';
+    try {
+      const r = await fetch('/account/google/ads/sync', {method: 'POST'});
+      const data = await r.json();
+      const s = data.sync || {};
+      if (syncStatus) {
+        syncStatus.textContent = `Sync complete — ${s.campaigns_synced || 0} campaign rows, ` +
+          `${s.keywords_synced || 0} keyword rows, ${s.search_terms_synced || 0} search terms. ` +
+          `${data.optimizer?.created || 0} recommendations generated. Refresh to see updated data.`;
+      }
+    } catch (e) {
+      if (syncStatus) syncStatus.textContent = `Sync failed: ${e.message}`;
+    } finally {
+      syncBtn.disabled = false;
+      syncBtn.innerHTML = '<i class="fa-solid fa-rotate mr-2"></i>Sync from Google Ads';
+    }
+  });
+
+  const blockAllBtn = document.getElementById('block-all-irrelevant');
+  const bulkToast = document.getElementById('bulk-toast');
+  const bulkToastMsg = document.getElementById('bulk-toast-msg');
+
+  function showToast(msg) {
+    if (!bulkToast || !bulkToastMsg) return;
+    bulkToastMsg.textContent = msg;
+    bulkToast.classList.remove('hidden');
+    setTimeout(() => bulkToast.classList.add('hidden'), 4000);
+  }
+
+  if (blockAllBtn) {
+    blockAllBtn.addEventListener('click', async function () {
+      const count = parseInt(blockAllBtn.dataset.count || '0', 10);
+      if (!count) return;
+      const confirmed = window.confirm(
+        `Block all ${count} irrelevant search term${count !== 1 ? 's' : ''} as campaign-level negative keywords?\n\nThis will prevent your ads from showing on these searches.`
+      );
+      if (!confirmed) return;
+
+      blockAllBtn.disabled = true;
+      blockAllBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Blocking…';
+
+      try {
+        const r = await fetch('/account/google/ads/block-irrelevant-search-terms', {method: 'POST'});
+        const data = await r.json();
+        if (data.ok) {
+          const n = data.blocked || 0;
+          showToast(`Blocked ${n} irrelevant search term${n !== 1 ? 's' : ''} as negative keywords`);
+          blockAllBtn.textContent = `Blocked ${n}`;
+          document.querySelectorAll('.term-row[data-relevance="irrelevant"] .add-neg-btn').forEach(btn => {
+            const row = btn.closest('tr');
+            const id = row?.dataset.id;
+            if (id) {
+              const statusEl = document.querySelector(`.term-status-${id}`);
+              if (statusEl) statusEl.innerHTML = '<span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Negative</span>';
+              row.dataset.addedNeg = 'true';
+            }
+            btn.remove();
+          });
+        } else {
+          blockAllBtn.disabled = false;
+          blockAllBtn.textContent = `Block all ${count} irrelevant`;
+          showToast(`Error: ${data.error || 'Unknown error'}`);
+        }
+      } catch (e) {
+        blockAllBtn.disabled = false;
+        blockAllBtn.textContent = `Block all ${count} irrelevant`;
+        showToast(`Request failed: ${e.message}`);
+      }
+    });
+  }
+})();
+</script>
+{% endblock %}

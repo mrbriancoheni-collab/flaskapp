@@ -3,16 +3,31 @@
 {% set gads_active = 'ai_control' %}
 {% block title %}AI Control — FieldSprout{% endblock %}
 
+{# Agent domain metadata — icon, short label, one-line specialty #}
+{% set AGENT_META = {
+  'StrategicDirectorAgent':    ('fa-chess-king',  'Strategic',       'Campaign architecture and high-level budget allocation'),
+  'CampaignManagerAgent':      ('fa-sitemap',     'Campaigns',       'Campaign settings, ad schedules, geographic targeting'),
+  'BudgetGuardianAgent':       ('fa-shield-alt',  'Budget Guard',    'Spend pacing, waste prevention, budget-cap enforcement'),
+  'KeywordOptimizerAgent':     ('fa-key',         'Keywords',        'Bid optimisation, match types, Quality Score uplift'),
+  'NegativeKeywordAgent':      ('fa-ban',         'Negatives',       'Blocking irrelevant searches, reducing click waste'),
+  'AdCopyAgent':               ('fa-pen-nib',     'Ad Copy',         'RSA headline testing and description optimisation'),
+  'QualityScoreAgent':         ('fa-star',        'Quality Score',   'Ad relevance, landing-page alignment, CTR improvement'),
+  'LandingPageAnalystAgent':   ('fa-globe',       'Landing Pages',   'Page-level relevance and post-click conversion'),
+  'AssetPerformanceAgent':     ('fa-images',      'PMax Assets',     'Performance Max asset group scoring and rotation'),
+  'AudienceSignalAgent':       ('fa-users',       'Audiences',       'Custom audience signals for Performance Max'),
+  'PMaxCampaignStructureAgent':('fa-project-diagram','PMax Structure','Performance Max campaign architecture and asset groups'),
+} %}
+
 {% block content %}
 {% include "google/components/gads_nav.html" %}
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
 
   {# ── page header ── #}
-  <div class="flex items-start justify-between flex-wrap gap-4 mb-6">
+  <div class="flex items-start justify-between flex-wrap gap-4 mb-4">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">AI Control</h1>
-      <p class="text-sm text-gray-500 mt-0.5">Autonomous mode · Agent performance · Approval queue</p>
+      <h1 class="text-2xl font-bold text-gray-900">AI settings &amp; activity</h1>
+      <p class="text-sm text-gray-500 mt-0.5">Control what the AI does automatically, see what it's done, and approve changes</p>
     </div>
     {% if total_pending > 0 %}
     <span id="pending-alert" class="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-100 text-amber-800 text-sm font-semibold rounded-full">
@@ -21,6 +36,20 @@
     </span>
     {% endif %}
   </div>
+
+  {# ── ANOMALY ALERT BANNER ── #}
+  {% if anomaly_detected %}
+  <div class="flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-xl p-4 mb-4">
+    <div class="flex-shrink-0 w-9 h-9 bg-amber-100 rounded-lg flex items-center justify-center">
+      <i class="fas fa-exclamation-triangle text-amber-600"></i>
+    </div>
+    <div class="flex-1">
+      <p class="font-semibold text-amber-900">Spend Anomaly Detected — Autonomy reduced to L2</p>
+      <p class="text-sm text-amber-800 mt-0.5">{{ anomaly_details }}. High-risk actions have been moved to the approval queue until spend normalises.</p>
+    </div>
+    <button onclick="this.closest('div.flex').remove()" class="text-amber-500 hover:text-amber-700 text-lg leading-none">&times;</button>
+  </div>
+  {% endif %}
 
   {# ── impact summary bar ── #}
   <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -47,10 +76,10 @@
     <nav class="-mb-px flex gap-6" id="aiTabs">
       {% for t, label, icon in [
         ('autonomous', 'Autonomous Mode', 'fa-sliders'),
-        ('agents',     'Agent Performance', 'fa-robot'),
-        ('approval',   'Approval Queue', 'fa-clipboard-check'),
-        ('feed',       'Action Feed', 'fa-stream'),
-        ('history',    'Change Log', 'fa-history'),
+        ('agents',     'Agent Roster',    'fa-robot'),
+        ('approval',   'Approval Queue',  'fa-clipboard-check'),
+        ('feed',       'Action Feed',     'fa-stream'),
+        ('history',    'Change Log',      'fa-history'),
       ] %}
       <a href="?tab={{ t }}"
          class="tab-link flex items-center gap-2 py-3 border-b-2 text-sm font-medium transition
@@ -114,9 +143,9 @@
             <p class="text-sm font-medium text-gray-700 mb-3">Autonomy Level</p>
             <div class="grid grid-cols-3 gap-3" id="autonomyCards">
               {% for level, label, desc in [
-                ('1', 'L1 — Assist', 'Recommend only, never execute'),
-                ('2', 'L2 — Semi-Auto', 'Auto-execute low-risk actions'),
-                ('3', 'L3 — Full Auto', 'Execute all actions at 92% confidence'),
+                ('1', 'L1 — Assist',     'Recommend only, never execute'),
+                ('2', 'L2 — Semi-Auto',  'Auto-execute low-risk actions'),
+                ('3', 'L3 — Full Auto',  'Execute all actions at 92% confidence'),
               ] %}
               <div class="autonomy-card cursor-pointer rounded-xl border-2 p-4 transition
                           {{ 'border-indigo-500 bg-indigo-50' if settings.autonomy_level == level else 'border-gray-200 hover:border-gray-300' }}"
@@ -190,55 +219,64 @@
     </div>
   </div>
 
-  {# ══ TAB: Agent Performance ══ #}
+  {# ══ TAB: Agent Roster — named domain cards ══ #}
   <div id="tab-agents" class="{{ '' if tab == 'agents' else 'hidden' }}">
     {% if agent_stats %}
-    <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-      <div class="px-5 py-4 border-b border-gray-100">
-        <h2 class="font-semibold text-gray-900">Agent Performance</h2>
+    <p class="text-sm text-gray-500 mb-5">Each agent runs independently on a focused domain. Decisions feed into the approval queue or auto-execute based on your autonomy level.</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+      {% for s in agent_stats %}
+      {% set meta = AGENT_META.get(s.agent_type, ('fa-robot', s.agent_type | replace('Agent','') | replace('_',' '), 'Optimisation agent')) %}
+      {% set icon, domain, specialty = meta[0], meta[1], meta[2] %}
+      {% set conf_pct = ((s.avg_confidence or 0) * 100) | int %}
+      {% set exec_rate = ((s.executed_count or 0) / [s.total_decisions, 1] | max * 100) | int %}
+      <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
+            <i class="fas {{ icon }} text-indigo-600"></i>
+          </div>
+          <div class="min-w-0">
+            <p class="font-semibold text-gray-900 text-sm leading-tight">{{ domain }}</p>
+            <p class="text-xs text-indigo-600 font-medium">{{ s.agent_type | replace('Agent','') | replace('_',' ') }}</p>
+          </div>
+          <div class="ml-auto flex-shrink-0">
+            <span class="text-xs px-2 py-0.5 rounded-full font-semibold
+                         {{ 'bg-green-100 text-green-700' if exec_rate >= 50 else 'bg-gray-100 text-gray-600' }}">
+              {{ exec_rate }}% exec
+            </span>
+          </div>
+        </div>
+        <p class="text-xs text-gray-500 mb-4 leading-relaxed">{{ specialty }}</p>
+        <div class="grid grid-cols-3 gap-2 text-center border-t border-gray-100 pt-3">
+          <div>
+            <p class="text-lg font-bold text-gray-900">{{ s.total_decisions }}</p>
+            <p class="text-xs text-gray-500">Decisions</p>
+          </div>
+          <div>
+            <p class="text-lg font-bold text-green-700">${{ '%.0f'|format(s.total_expected_savings or 0) }}</p>
+            <p class="text-xs text-gray-500">Saved/mo</p>
+          </div>
+          <div>
+            <p class="text-lg font-bold text-indigo-600">{{ conf_pct }}%</p>
+            <p class="text-xs text-gray-500">Confidence</p>
+          </div>
+        </div>
+        {# Confidence bar #}
+        <div class="mt-3">
+          <div class="w-full bg-gray-100 rounded-full h-1.5">
+            <div class="bg-indigo-500 h-1.5 rounded-full transition-all" style="width:{{ conf_pct }}%"></div>
+          </div>
+        </div>
       </div>
-      <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-100 text-sm">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Agent</th>
-              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Decisions</th>
-              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Executed</th>
-              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Avg Confidence</th>
-              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Est. Savings/mo</th>
-              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Est. Leads/mo</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-50">
-            {% for s in agent_stats %}
-            <tr class="hover:bg-gray-50 transition">
-              <td class="px-5 py-3 font-medium text-gray-900">{{ s.agent_type | replace('Agent','') | replace('_',' ') }}</td>
-              <td class="px-4 py-3 text-right text-gray-700">{{ s.total_decisions }}</td>
-              <td class="px-4 py-3 text-right text-gray-700">{{ s.executed_count or 0 }}</td>
-              <td class="px-4 py-3 text-right text-gray-700">
-                {{ '%.0f'|format((s.avg_confidence or 0) * 100) }}%
-              </td>
-              <td class="px-4 py-3 text-right text-green-700 font-medium">
-                ${{ '%.0f'|format(s.total_expected_savings or 0) }}
-              </td>
-              <td class="px-4 py-3 text-right text-blue-700">
-                {{ '%.1f'|format(s.total_expected_leads or 0) }}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-          <tfoot class="bg-gray-50 border-t border-gray-200">
-            <tr>
-              <td class="px-5 py-3 font-semibold text-gray-900">Total</td>
-              <td class="px-4 py-3 text-right font-semibold text-gray-900">{{ total_decisions }}</td>
-              <td class="px-4 py-3 text-right font-semibold text-gray-900">{{ total_executed }}</td>
-              <td class="px-4 py-3"></td>
-              <td class="px-4 py-3 text-right font-semibold text-green-700">${{ '%.0f'|format(total_savings) }}</td>
-              <td class="px-4 py-3 text-right font-semibold text-blue-700">{{ '%.1f'|format(total_leads) }}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+      {% endfor %}
+    </div>
+
+    {# Totals footer row #}
+    <div class="bg-white border border-gray-200 rounded-xl p-4 flex flex-wrap items-center gap-6 text-sm shadow-sm">
+      <span class="text-gray-500">All agents combined:</span>
+      <span class="font-semibold text-gray-900">{{ total_decisions }} decisions</span>
+      <span class="font-semibold text-gray-900">{{ total_executed }} executed</span>
+      <span class="font-semibold text-green-700">${{ '%.0f'|format(total_savings) }}/mo projected savings</span>
+      <span class="font-semibold text-blue-700">+{{ '%.1f'|format(total_leads) }} leads/mo projected</span>
     </div>
     {% else %}
     <div class="bg-white border border-gray-200 rounded-xl p-10 text-center">
@@ -251,13 +289,37 @@
 
   {# ══ TAB: Approval Queue ══ #}
   <div id="tab-approval" class="{{ '' if tab == 'approval' else 'hidden' }}">
+
+    {# ── MICRO-OPTIMIZATION: one-click batch for low-risk actions ── #}
+    {% if low_risk_count > 0 %}
+    <div class="flex items-center justify-between gap-4 p-4 bg-blue-50 border border-blue-200 rounded-xl mb-5">
+      <div>
+        <p class="font-semibold text-blue-900">
+          <i class="fas fa-bolt text-blue-500 mr-1"></i>
+          {{ low_risk_count }} low-risk action{{ 's' if low_risk_count != 1 }} ready for instant execution
+        </p>
+        <p class="text-sm text-blue-700 mt-0.5">Each has ≥80% confidence — safe to run without individual review.</p>
+      </div>
+      <button id="autoLowRiskBtn" onclick="autoExecuteLowRisk()"
+              class="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition">
+        <i class="fas fa-play"></i> Run {{ low_risk_count }} Now
+      </button>
+    </div>
+    {% endif %}
+
     {% if pending_decisions %}
     <div class="space-y-4">
       {% for decision in pending_decisions %}
       {% set risk = decision.risk_level or 'medium' %}
+      {% set savings = decision.expected_monthly_savings or 0 %}
+      {% set conf = decision.confidence or 0.5 %}
+      {% set leads = decision.expected_monthly_leads or 0 %}
+      {% set impr_pct = decision.expected_improvement_pct or 0 %}
       <div class="bg-white border-l-4 rounded-xl shadow-sm overflow-hidden
                   {{ 'border-red-500' if risk in ('critical','high') else 'border-yellow-400' if risk == 'medium' else 'border-blue-400' }}"
            id="decision-{{ decision.id }}" data-card="1">
+
+        {# ── Main decision header ── #}
         <div class="p-5">
           <div class="flex items-start justify-between gap-4 flex-wrap">
             <div class="flex-1 min-w-0">
@@ -273,13 +335,10 @@
               {% if decision.description %}
               <p class="text-sm text-gray-600 mt-1">{{ decision.description }}</p>
               {% endif %}
-              {% if decision.reasoning %}
-              <p class="text-xs text-gray-500 mt-2 italic">{{ decision.reasoning[:200] }}{% if decision.reasoning|length > 200 %}…{% endif %}</p>
-              {% endif %}
               <div class="flex items-center gap-4 mt-2 text-xs text-gray-500">
                 {% if decision.confidence %}<span>Confidence: <strong>{{ '%.0f'|format(decision.confidence * 100) }}%</strong></span>{% endif %}
-                {% if decision.expected_monthly_savings %}<span class="text-green-600">Est. savings: <strong>${{ '%.0f'|format(decision.expected_monthly_savings) }}/mo</strong></span>{% endif %}
-                {% if decision.expected_monthly_leads %}<span class="text-blue-600">Est. leads: <strong>+{{ '%.1f'|format(decision.expected_monthly_leads) }}/mo</strong></span>{% endif %}
+                {% if savings %}<span class="text-green-600">Est. savings: <strong>${{ '%.0f'|format(savings) }}/mo</strong></span>{% endif %}
+                {% if leads %}<span class="text-blue-600">Est. leads: <strong>+{{ '%.1f'|format(leads) }}/mo</strong></span>{% endif %}
               </div>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
@@ -296,6 +355,142 @@
             </div>
           </div>
         </div>
+
+        {# ── Expandable controls row ── #}
+        <div class="border-t border-gray-100 px-5 py-2 bg-gray-50 flex items-center gap-4 text-xs">
+          {% if savings or leads %}
+          <button onclick="toggleSim({{ decision.id }})"
+                  class="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 font-medium transition">
+            <i class="fas fa-chart-bar"></i> Impact simulation
+          </button>
+          {% endif %}
+          {% if decision.reasoning %}
+          <button onclick="toggleTrace({{ decision.id }})"
+                  class="flex items-center gap-1.5 text-gray-500 hover:text-gray-800 font-medium transition">
+            <i class="fas fa-route"></i> Decision trace
+          </button>
+          {% endif %}
+        </div>
+
+        {# ── PRE-FLIGHT IMPACT SIMULATION ── #}
+        {% if savings or leads %}
+        <div id="sim-{{ decision.id }}" class="hidden border-t border-gray-100 px-5 py-4 bg-indigo-50">
+          <p class="text-xs font-semibold text-indigo-900 uppercase tracking-wide mb-3">Impact Simulation</p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+
+            {# Scenario: Do nothing #}
+            <div class="bg-white rounded-lg border border-gray-200 p-3 text-center">
+              <p class="text-xs text-gray-500 font-medium mb-2 uppercase tracking-wide">Without Action</p>
+              {% if savings %}
+              <p class="text-xl font-bold text-red-600">-${{ '%.0f'|format(savings) }}/mo</p>
+              <p class="text-xs text-gray-500 mt-1">Ongoing wasted spend</p>
+              {% endif %}
+              {% if impr_pct %}
+              <p class="text-xs text-gray-400 mt-1">{{ '%.0f'|format(impr_pct) }}% improvement foregone</p>
+              {% endif %}
+            </div>
+
+            {# Scenario: Approve (expected) #}
+            <div class="bg-green-50 rounded-lg border border-green-300 p-3 text-center">
+              <p class="text-xs text-green-700 font-medium mb-2 uppercase tracking-wide">After Approval</p>
+              {% if savings %}
+              <p class="text-xl font-bold text-green-700">+${{ '%.0f'|format(savings * conf) }}/mo</p>
+              <p class="text-xs text-gray-500 mt-1">Risk-adjusted expected savings</p>
+              {% endif %}
+              {% if leads %}
+              <p class="text-xs text-blue-600 font-medium mt-1">+{{ '%.1f'|format(leads * conf) }} leads/mo</p>
+              {% endif %}
+            </div>
+
+            {# Confidence range #}
+            <div class="bg-white rounded-lg border border-gray-200 p-3">
+              <p class="text-xs text-gray-500 font-medium mb-2 uppercase tracking-wide">Confidence Range</p>
+              {% set low_est = savings * [conf - 0.25, 0] | max %}
+              {% set high_est = savings * [conf + 0.15, 1.5] | min %}
+              <div class="space-y-1.5 text-xs">
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-500">Conservative</span>
+                  <span class="font-semibold text-gray-700">${{ '%.0f'|format(low_est) }}/mo</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-500">Expected</span>
+                  <span class="font-semibold text-green-700">${{ '%.0f'|format(savings * conf) }}/mo</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-500">Optimistic</span>
+                  <span class="font-semibold text-gray-700">${{ '%.0f'|format(high_est) }}/mo</span>
+                </div>
+              </div>
+              <div class="mt-2 pt-2 border-t border-gray-100">
+                <div class="flex items-center gap-1.5">
+                  <div class="flex-1 bg-gray-200 rounded-full h-1.5">
+                    <div class="bg-indigo-500 h-1.5 rounded-full" style="width:{{ '%.0f'|format(conf * 100) }}%"></div>
+                  </div>
+                  <span class="text-xs font-semibold text-indigo-700">{{ '%.0f'|format(conf * 100) }}%</span>
+                </div>
+                <p class="text-xs text-gray-400 mt-1">Agent confidence</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        {# ── DECISION LIFECYCLE TRACE ── #}
+        {% if decision.reasoning %}
+        <div id="trace-{{ decision.id }}" class="hidden border-t border-gray-100 px-5 py-4 bg-gray-50">
+          <p class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">Decision Lifecycle</p>
+          <div class="relative pl-5">
+            {# Step connector line #}
+            <div class="absolute left-2 top-2 bottom-2 w-px bg-gray-300"></div>
+
+            <div class="space-y-4">
+              {# Step 1: Insight (what triggered it) #}
+              <div class="relative flex gap-3">
+                <div class="absolute -left-3 w-2 h-2 rounded-full bg-blue-500 mt-1 flex-shrink-0"></div>
+                <div>
+                  <p class="text-xs font-semibold text-blue-700 uppercase mb-0.5">1 — Insight</p>
+                  <p class="text-xs text-gray-600 leading-relaxed">{{ decision.reasoning[:300] }}{% if decision.reasoning|length > 300 %}…{% endif %}</p>
+                </div>
+              </div>
+
+              {# Step 2: Recommendation #}
+              <div class="relative flex gap-3">
+                <div class="absolute -left-3 w-2 h-2 rounded-full bg-indigo-500 mt-1 flex-shrink-0"></div>
+                <div>
+                  <p class="text-xs font-semibold text-indigo-700 uppercase mb-0.5">2 — Recommendation</p>
+                  <p class="text-xs text-gray-600 leading-relaxed">{{ decision.description or decision.title }}</p>
+                  <p class="text-xs text-gray-400 mt-0.5">Issued by {{ decision.agent_type | replace('Agent','') }} · Risk: {{ (decision.risk_level or 'medium') | upper }}</p>
+                </div>
+              </div>
+
+              {# Step 3: Execution (pending your approval) #}
+              <div class="relative flex gap-3">
+                <div class="absolute -left-3 w-2 h-2 rounded-full bg-amber-400 mt-1 flex-shrink-0"></div>
+                <div>
+                  <p class="text-xs font-semibold text-amber-700 uppercase mb-0.5">3 — Execution</p>
+                  <p class="text-xs text-gray-500">Awaiting your approval. Approve to apply the change directly in Google Ads.</p>
+                </div>
+              </div>
+
+              {# Step 4: Projected result #}
+              <div class="relative flex gap-3">
+                <div class="absolute -left-3 w-2 h-2 rounded-full bg-green-500 mt-1 flex-shrink-0"></div>
+                <div>
+                  <p class="text-xs font-semibold text-green-700 uppercase mb-0.5">4 — Predicted Result</p>
+                  <p class="text-xs text-gray-600">
+                    {% if savings %}Save an estimated <strong>${{ '%.0f'|format(savings) }}/mo</strong>{% endif %}
+                    {% if leads %} and gain <strong>+{{ '%.1f'|format(leads) }} leads/mo</strong>{% endif %}
+                    {% if impr_pct %} with a <strong>{{ '%.0f'|format(impr_pct) }}% performance improvement</strong>{% endif %}
+                    {% if not (savings or leads or impr_pct) %}Outcome tracked after execution.{% endif %}
+                    <span class="text-gray-400"> ({{ '%.0f'|format(conf * 100) }}% confidence)</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
       </div>
       {% endfor %}
     </div>
@@ -350,7 +545,6 @@
   {# ══ TAB: Change Log ══ #}
   <div id="tab-history" class="{{ '' if tab == 'history' else 'hidden' }}">
 
-    {# Summary stats #}
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
       <div class="bg-white border border-gray-200 rounded-xl p-4 text-center shadow-sm">
         <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Total Actions</p>
@@ -370,7 +564,6 @@
       </div>
     </div>
 
-    {# Action list #}
     {% if cl_recent_actions %}
     <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
       <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -421,26 +614,101 @@ function getCsrfToken() {
   return document.querySelector('meta[name="csrf-token"]')?.content || '';
 }
 
-// Growth mode card selection
-document.querySelectorAll('.growth-card').forEach(card => {
-  card.addEventListener('click', () => {
-    document.querySelectorAll('.growth-card').forEach(c => {
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(message, type) {
+  type = type || 'success';
+  var colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-indigo-600' };
+  var icons  = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle' };
+  var el = document.createElement('div');
+  el.className = 'fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-white text-sm font-medium '
+               + (colors[type] || colors.info) + ' transition-all duration-300 translate-y-2 opacity-0';
+  el.innerHTML = '<i class="fas ' + (icons[type] || icons.info) + '"></i><span>' + message + '</span>';
+  document.body.appendChild(el);
+  requestAnimationFrame(function() {
+    el.classList.replace('translate-y-2','translate-y-0');
+    el.classList.replace('opacity-0','opacity-100');
+  });
+  setTimeout(function() {
+    el.classList.add('opacity-0','translate-y-2');
+    setTimeout(function() { el.remove(); }, 300);
+  }, 3500);
+}
+
+// ── Impact simulation toggle ──────────────────────────────────────────────────
+function toggleSim(id) {
+  var el = document.getElementById('sim-' + id);
+  if (el) el.classList.toggle('hidden');
+}
+
+// ── Decision lifecycle trace toggle ──────────────────────────────────────────
+function toggleTrace(id) {
+  var el = document.getElementById('trace-' + id);
+  if (el) el.classList.toggle('hidden');
+}
+
+// ── Micro-optimisation: run all low-risk ─────────────────────────────────────
+function autoExecuteLowRisk() {
+  var btn = document.getElementById('autoLowRiskBtn');
+  if (!btn) return;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running…';
+
+  fetch('/account/google/ads/agents/api/decisions/auto-execute-low-risk', {
+    method: 'POST',
+    headers: { 'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/json' },
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    if (data.success || data.executed > 0) {
+      showToast((data.executed || 0) + ' low-risk action' + (data.executed !== 1 ? 's' : '') + ' executed.', 'success');
+      // Remove executed cards from the queue
+      var ids = data.executed_ids || [];
+      ids.forEach(function(id) {
+        var card = document.getElementById('decision-' + id);
+        if (card) card.remove();
+      });
+      // Update pending counts
+      var executed = data.executed || 0;
+      document.querySelectorAll('[data-pending-count]').forEach(function(el) {
+        var n = parseInt(el.textContent, 10);
+        if (!isNaN(n) && n >= executed) el.textContent = n - executed;
+      });
+      // Hide the banner after running
+      var banner = btn.closest('div.flex');
+      if (banner) banner.remove();
+    } else {
+      showToast(data.error || 'Nothing executed.', 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-play"></i> Run Now';
+    }
+  })
+  .catch(function(err) {
+    showToast('Error: ' + err.message, 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-play"></i> Run Now';
+  });
+}
+
+// ── Growth mode card selection ────────────────────────────────────────────────
+document.querySelectorAll('.growth-card').forEach(function(card) {
+  card.addEventListener('click', function() {
+    document.querySelectorAll('.growth-card').forEach(function(c) {
       c.classList.remove('border-green-500','border-indigo-500','border-orange-500','bg-green-50','bg-indigo-50','bg-orange-50');
       c.classList.add('border-gray-200');
     });
-    const mode = card.dataset.mode;
-    const colorMap = {efficient:'green', balanced:'indigo', aggressive:'orange'};
-    const col = colorMap[mode] || 'indigo';
+    var mode = card.dataset.mode;
+    var colorMap = {efficient:'green', balanced:'indigo', aggressive:'orange'};
+    var col = colorMap[mode] || 'indigo';
     card.classList.remove('border-gray-200');
-    card.classList.add(`border-${col}-500`, `bg-${col}-50`);
+    card.classList.add('border-' + col + '-500', 'bg-' + col + '-50');
     document.getElementById('growthModeInput').value = mode;
   });
 });
 
-// Autonomy level card selection
-document.querySelectorAll('.autonomy-card').forEach(card => {
-  card.addEventListener('click', () => {
-    document.querySelectorAll('.autonomy-card').forEach(c => {
+// ── Autonomy level card selection ─────────────────────────────────────────────
+document.querySelectorAll('.autonomy-card').forEach(function(card) {
+  card.addEventListener('click', function() {
+    document.querySelectorAll('.autonomy-card').forEach(function(c) {
       c.classList.remove('border-indigo-500','bg-indigo-50');
       c.classList.add('border-gray-200');
     });
@@ -450,65 +718,41 @@ document.querySelectorAll('.autonomy-card').forEach(card => {
   });
 });
 
-// Save settings
-document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
-  const btn = document.getElementById('saveSettingsBtn');
+// ── Save settings ─────────────────────────────────────────────────────────────
+document.getElementById('saveSettingsBtn').addEventListener('click', async function() {
+  var btn = document.getElementById('saveSettingsBtn');
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
 
-  const payload = {
+  var payload = {
     autonomous_mode_enabled: document.getElementById('autonomousEnabled').checked ? '1' : '0',
-    growth_mode: document.getElementById('growthModeInput').value,
-    autonomy_level: document.getElementById('autonomyLevelInput').value,
-    target_cpl: document.getElementById('targetCpl').value,
-    monthly_budget: document.getElementById('monthlyBudget').value,
+    growth_mode:       document.getElementById('growthModeInput').value,
+    autonomy_level:    document.getElementById('autonomyLevelInput').value,
+    target_cpl:        document.getElementById('targetCpl').value,
+    monthly_budget:    document.getElementById('monthlyBudget').value,
     services_priority: document.getElementById('servicesPriority').value,
-    geo_targets: document.getElementById('geoTargets').value,
+    geo_targets:       document.getElementById('geoTargets').value,
   };
 
   try {
-    const res = await fetch('/account/google/autonomous/settings', {
+    var res  = await fetch('/account/google/autonomous/settings', {
       method: 'POST',
       headers: {'Content-Type':'application/json','X-CSRFToken':getCsrfToken()},
       body: JSON.stringify(payload),
     });
-    const data = await res.json();
-    const msg = document.getElementById('saveMsg');
+    var data = await res.json();
+    var msg = document.getElementById('saveMsg');
     msg.textContent = data.ok ? 'Settings saved.' : 'Error: ' + (data.error || 'unknown');
     msg.className = 'text-sm ' + (data.ok ? 'text-green-600' : 'text-red-600');
     msg.classList.remove('hidden');
-    setTimeout(() => msg.classList.add('hidden'), 3000);
+    setTimeout(function() { msg.classList.add('hidden'); }, 3000);
   } catch(e) {
-    alert('Save failed: ' + e.message);
+    showToast('Save failed: ' + e.message, 'error');
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-save"></i> Save Settings';
   }
 });
-
-// ── Toast notification ───────────────────────────────────────────────────────
-function showToast(message, type = 'success') {
-  const colors = {
-    success: 'bg-green-600',
-    error:   'bg-red-600',
-    info:    'bg-indigo-600',
-  };
-  const icons = {
-    success: 'fa-check-circle',
-    error:   'fa-exclamation-circle',
-    info:    'fa-info-circle',
-  };
-  const el = document.createElement('div');
-  el.className = `fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-white text-sm font-medium
-                  ${colors[type] || colors.info} transition-all duration-300 translate-y-2 opacity-0`;
-  el.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i><span>${message}</span>`;
-  document.body.appendChild(el);
-  requestAnimationFrame(() => el.classList.replace('translate-y-2','translate-y-0') || el.classList.replace('opacity-0','opacity-100'));
-  setTimeout(() => {
-    el.classList.add('opacity-0','translate-y-2');
-    setTimeout(() => el.remove(), 300);
-  }, 3500);
-}
 
 // ── Approve / Reject (event delegation) ──────────────────────────────────────
 document.addEventListener('click', function(e) {
@@ -518,7 +762,6 @@ document.addEventListener('click', function(e) {
   var id     = btn.dataset.decisionId;
   var action = btn.dataset.decisionAction;
 
-  // First click: arm the button; second click within 3s: fire
   if (!btn._armed) {
     btn._armed     = true;
     btn._origHTML  = btn.innerHTML;
@@ -534,14 +777,12 @@ document.addEventListener('click', function(e) {
     return;
   }
 
-  // Second click — send to server, wait for confirmation before removing card
   clearTimeout(btn._disarmTimer);
   btn._armed        = false;
   btn.disabled      = true;
   btn.style.cssText = '';
   btn.innerHTML     = '<i class="fas fa-spinner fa-spin"></i>';
 
-  // Find card by walking up from button to [data-card]
   var card = btn.parentElement;
   while (card && !card.dataset.card) card = card.parentElement;
 
@@ -552,12 +793,9 @@ document.addEventListener('click', function(e) {
   })
   .then(function(res) {
     var ok = res.ok, status = res.status;
-    return res.json()
-      .catch(function() { return {}; })
-      .then(function(data) { return {ok: ok, status: status, data: data}; });
+    return res.json().catch(function() { return {}; }).then(function(data) { return {ok: ok, status: status, data: data}; });
   })
   .then(function(r) {
-    // Treat a 404 on reject as "already handled" — remove from UI without error
     var alreadyDone = (r.status === 404 && action === 'reject');
     if (r.ok || alreadyDone) {
       if (card) card.remove();
@@ -582,7 +820,6 @@ document.addEventListener('click', function(e) {
       btn.className = btn._origClass;
       var errMsg = r.data.error || r.data.message || ('HTTP ' + r.status);
       showToast('Could not ' + action + ': ' + errMsg, 'error');
-      // Also show inline on the card so it's impossible to miss
       if (card) {
         var banner = document.createElement('div');
         banner.className = 'px-4 py-2 bg-red-50 border-t border-red-200 text-red-700 text-sm';

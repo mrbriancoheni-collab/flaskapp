@@ -19,8 +19,8 @@
   <!-- Header -->
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-3xl font-bold">Account Structure</h1>
-      <p class="text-gray-600 mt-1">{{ ads_data.account_name or 'Google Ads Account' }}</p>
+      <h1 class="text-3xl font-bold">Your campaign structure</h1>
+      <p class="text-gray-600 mt-1">{{ ads_data.account_name or 'Google Ads Account' }} — campaigns, ad groups, and keywords at a glance</p>
     </div>
     {% if connected %}
     <form action="{{ url_for('google_bp.ads_pull_live') }}" method="POST">
@@ -364,6 +364,15 @@
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
 let currentKeywordId = null;
 
 function editKeywordMatchType(keywordId, keywordText, currentMatch) {
@@ -399,15 +408,14 @@ async function saveMatchType() {
 
     if (data.success) {
       // Show success message
-      alert('Keyword match type updated successfully!');
-      // Reload the page to show updated data
+      showToast('Match type updated.', 'success');
       window.location.reload();
     } else {
-      alert('Error: ' + (data.error || 'Failed to update keyword'));
+      showToast('Error: ' + (data.error || 'Failed to update keyword'), 'error');
     }
   } catch (error) {
     console.error('Error updating keyword:', error);
-    alert('An error occurred while updating the keyword');
+    showToast('An error occurred while updating the keyword', 'error');
   }
 
   closeMatchTypeModal();

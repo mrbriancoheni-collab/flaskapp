@@ -146,7 +146,7 @@ def ai_control():
                 break
         cl_recent_actions = deduped
     except Exception:
-        pass
+        db.session.rollback()
 
     return render_template(
         "google/ai_control.html",

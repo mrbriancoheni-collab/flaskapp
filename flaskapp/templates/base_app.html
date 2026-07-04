@@ -566,6 +566,8 @@
         <a class="block px-3 py-3 nav-link min-h-12" href="{{ url_for('digest_bp.preview') }}">
           <i class="fa-solid fa-sun"></i><span>Daily Digest</span>
         </a>
+      {% endif %}
+
       {% if has_endpoint('social_calendar_bp.index') %}
         <div class="pt-2 text-sm font-semibold text-gray-600 uppercase"><i class="fa-solid fa-calendar-days mr-1"></i>Social Calendar</div>
         <a href="{{ url_for('social_calendar_bp.index') }}" class="block px-3 py-3 nav-link min-h-12">

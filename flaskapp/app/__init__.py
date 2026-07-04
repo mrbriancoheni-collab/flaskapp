@@ -1890,10 +1890,9 @@ def create_app():
     def _handle_exception(err):
         """Catch-all exception handler"""
         app.logger.exception("Unhandled exception")
-        # If it's an HTTP exception, let Flask handle it normally
-        if hasattr(err, 'code'):
+        from werkzeug.exceptions import HTTPException
+        if isinstance(err, HTTPException):
             return err
-        # Otherwise, return 500
         return _500(err)
 
     @app.route('/400.shtml')

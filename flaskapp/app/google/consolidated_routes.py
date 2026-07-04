@@ -36,6 +36,11 @@ def _safe(fn, default=None):
         return fn()
     except Exception as exc:
         log.debug("consolidated_routes safe-call failed: %s", exc)
+        try:
+            from app import db
+            db.session.rollback()
+        except Exception:
+            pass
         return default
 
 

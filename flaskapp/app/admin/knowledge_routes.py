@@ -21,7 +21,7 @@ def _require_admin(f):
     def decorated(*args, **kwargs):
         if not getattr(g, "user", None) or not getattr(g.user, "is_admin", False):
             flash("Admin access required.", "error")
-            return redirect(url_for("dashboard_bp.index"))
+            return redirect(url_for("account_bp.dashboard"))
         return f(*args, **kwargs)
     return decorated
 

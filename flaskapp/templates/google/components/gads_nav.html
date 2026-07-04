@@ -6,59 +6,77 @@
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex items-center gap-1 overflow-x-auto py-1 no-scrollbar">
 
+      {% if has_endpoint('google_bp.ads_performance') %}
       <a href="{{ url_for('google_bp.ads_performance') }}"
          class="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition
                 {{ 'bg-indigo-50 text-indigo-700' if _active == 'performance' else 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">
         <i class="fas fa-chart-line text-xs"></i> Performance
       </a>
+      {% endif %}
 
+      {% if has_endpoint('consolidated_bp.ai_control') %}
       <a href="{{ url_for('consolidated_bp.ai_control') }}"
          class="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition
                 {{ 'bg-indigo-50 text-indigo-700' if _active == 'ai_control' else 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">
         <i class="fas fa-robot text-xs"></i> AI Control
       </a>
+      {% endif %}
 
+      {% if has_endpoint('consolidated_bp.budget_planning') %}
       <a href="{{ url_for('consolidated_bp.budget_planning') }}"
          class="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition
                 {{ 'bg-indigo-50 text-indigo-700' if _active == 'budget' else 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">
         <i class="fas fa-wallet text-xs"></i> Budget & Forecast
       </a>
+      {% endif %}
 
+      {% if has_endpoint('consolidated_bp.intelligence') %}
       <a href="{{ url_for('consolidated_bp.intelligence') }}"
          class="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition
                 {{ 'bg-indigo-50 text-indigo-700' if _active == 'intelligence' else 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">
         <i class="fas fa-chess text-xs"></i> Intelligence
       </a>
+      {% endif %}
 
+      {% if has_endpoint('gads_bp.search_terms') %}
       <a href="{{ url_for('gads_bp.search_terms') }}"
          class="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition
                 {{ 'bg-indigo-50 text-indigo-700' if _active == 'search_terms' else 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">
         <i class="fas fa-search text-xs"></i> Search Terms
       </a>
+      {% endif %}
 
+      {% if has_endpoint('gads_bp.optimize') %}
       <a href="{{ url_for('gads_bp.optimize') }}"
          class="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition
                 {{ 'bg-indigo-50 text-indigo-700' if _active == 'structure' else 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">
         <i class="fas fa-wand-magic-sparkles text-xs"></i> Optimize
       </a>
+      {% endif %}
 
+      {% if has_endpoint('auction_insights_bp.competitors_page') %}
       <a href="{{ url_for('auction_insights_bp.competitors_page') }}"
          class="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition
                 {{ 'bg-indigo-50 text-indigo-700' if _active == 'competitors' else 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">
         <i class="fas fa-chess text-xs"></i> Competitors
       </a>
+      {% endif %}
 
+      {% if has_endpoint('rsa_bp.rsa_page') %}
       <a href="{{ url_for('rsa_bp.rsa_page') }}"
          class="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition
                 {{ 'bg-indigo-50 text-indigo-700' if _active == 'rsa' else 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">
         <i class="fas fa-pen-nib text-xs"></i> Ad Copy
       </a>
+      {% endif %}
 
+      {% if has_endpoint('offline_conv_bp.imports_page') %}
       <a href="{{ url_for('offline_conv_bp.imports_page') }}"
          class="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition
                 {{ 'bg-indigo-50 text-indigo-700' if _active == 'offline_conversions' else 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">
         <i class="fas fa-phone text-xs"></i> Call Tracking
       </a>
+      {% endif %}
 
     </div>
   </div>

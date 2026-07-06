@@ -1,6 +1,6 @@
 # app/services/ai_client.py
 """
-Unified AI client — Anthropic (Claude) primary, OpenAI fallback.
+Unified AI client — OpenAI (ChatGPT) primary, Anthropic (Claude) fallback.
 
 Usage
 -----
@@ -14,16 +14,9 @@ text = generate_text(system_prompt, user_prompt)
 
 Provider selection
 ------------------
-- Uses Anthropic if ANTHROPIC_API_KEY is set in env/config.
-- Falls back to OpenAI if OPENAI_API_KEY is set.
+- Uses OpenAI if OPENAI_API_KEY is set in env/config.
+- Falls back to Anthropic if ANTHROPIC_API_KEY is set.
 - Raises RuntimeError if neither key is available.
-
-Prompt caching
---------------
-When using Anthropic, the system prompt is marked with cache_control
-so repeated calls with the same system prompt hit the cache tier.
-This is particularly valuable for the Google Ads insights prompt which
-is the same across many accounts.
 """
 from __future__ import annotations
 
@@ -138,30 +131,30 @@ def generate_text(
     """
     Generate a text response.
 
-    Provider order: Anthropic (Claude) → OpenAI → empty string.
+    Provider order: OpenAI (ChatGPT) → Anthropic (Claude) → empty string.
     Never raises — returns "" if both providers fail.
     prefer_provider: 'anthropic' | 'openai' | None (auto-select)
     """
-    use_anthropic = (prefer_provider == "anthropic") or (
-        prefer_provider is None and bool(_get_anthropic_key())
+    use_openai = (prefer_provider == "openai") or (
+        prefer_provider is None and bool(_get_openai_key())
     )
 
-    if use_anthropic:
-        try:
-            result = _call_anthropic(system_prompt, user_prompt, max_tokens, temperature)
-            log.debug("ai_client: Anthropic responded (%d chars)", len(result))
-            return result
-        except Exception as exc:
-            log.warning("Anthropic failed, trying OpenAI fallback: %s", exc)
-
-    if _get_openai_key():
+    if use_openai:
         try:
             result = _call_openai(system_prompt, user_prompt,
                                   max_tokens=max_tokens, temperature=temperature)
-            log.debug("ai_client: OpenAI fallback responded (%d chars)", len(result))
+            log.debug("ai_client: OpenAI responded (%d chars)", len(result))
             return result
         except Exception as exc:
-            log.error("OpenAI fallback also failed: %s", exc)
+            log.warning("OpenAI failed, trying Anthropic fallback: %s", exc)
+
+    if _get_anthropic_key():
+        try:
+            result = _call_anthropic(system_prompt, user_prompt, max_tokens, temperature)
+            log.debug("ai_client: Anthropic fallback responded (%d chars)", len(result))
+            return result
+        except Exception as exc:
+            log.error("Anthropic fallback also failed: %s", exc)
 
     log.error("ai_client: both providers unavailable — returning empty string")
     return ""
@@ -177,31 +170,31 @@ def generate_json(
     """
     Generate a JSON response and parse it.
 
-    Provider order: Anthropic (Claude) → OpenAI → {}.
+    Provider order: OpenAI (ChatGPT) → Anthropic (Claude) → {}.
     Never raises — returns {} if both providers fail or response is unparseable.
     """
-    use_anthropic = (prefer_provider == "anthropic") or (
-        prefer_provider is None and bool(_get_anthropic_key())
+    use_openai = (prefer_provider == "openai") or (
+        prefer_provider is None and bool(_get_openai_key())
     )
 
     raw = ""
-    if use_anthropic:
-        try:
-            raw = _call_anthropic(system_prompt, user_prompt, max_tokens, temperature,
-                                  json_mode=True)
-            log.debug("ai_client: Anthropic responded for JSON request")
-        except Exception as exc:
-            log.warning("Anthropic failed for JSON, trying OpenAI fallback: %s", exc)
-            raw = ""
-
-    if not raw and _get_openai_key():
+    if use_openai:
         try:
             raw = _call_openai(system_prompt, user_prompt,
                                max_tokens=max_tokens, temperature=temperature,
                                json_mode=True)
-            log.debug("ai_client: OpenAI fallback responded for JSON request")
+            log.debug("ai_client: OpenAI responded for JSON request")
         except Exception as exc:
-            log.error("OpenAI fallback also failed for JSON: %s", exc)
+            log.warning("OpenAI failed for JSON, trying Anthropic fallback: %s", exc)
+            raw = ""
+
+    if not raw and _get_anthropic_key():
+        try:
+            raw = _call_anthropic(system_prompt, user_prompt, max_tokens, temperature,
+                                  json_mode=True)
+            log.debug("ai_client: Anthropic fallback responded for JSON request")
+        except Exception as exc:
+            log.error("Anthropic fallback also failed for JSON: %s", exc)
             raw = ""
 
     if not raw:
@@ -226,9 +219,9 @@ def generate_json(
 
 
 def active_provider() -> str:
-    """Return which provider will be used ('anthropic' or 'openai' or 'none')."""
-    if _get_anthropic_key():
-        return "anthropic"
+    """Return which provider will be used ('openai' or 'anthropic' or 'none')."""
     if _get_openai_key():
         return "openai"
+    if _get_anthropic_key():
+        return "anthropic"
     return "none"

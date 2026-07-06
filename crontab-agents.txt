@@ -2,11 +2,12 @@
 # AI Agent Scheduler - Crontab Configuration
 # ============================================================================
 #
-# Copy these lines to your crontab (crontab -e) to enable automatic agent runs
-#
-# IMPORTANT: Replace these placeholders:
-#   /path/to/flaskapp - Your actual Flask app directory path
-#   /path/to/venv - Your Python virtual environment path
+# SETUP STEPS:
+#   1. Make sure deploy.sh has been run at least once so flaskapp-repo/ exists
+#   2. Test manually first:
+#      cd /home/fieldsprout/flaskapp-repo
+#      /home/fieldsprout/virtualenv/flaskapp/3.9/bin/python3 run_agents.py --layer tactical
+#   3. Add to crontab: crontab -e, then paste the lines below
 #
 # Schedule:
 #   - Tactical agents: Every hour (keyword optimization, negative keywords)
@@ -14,13 +15,9 @@
 #   - Strategic agent: Daily at 6am (budget reallocation, scaling decisions)
 # ============================================================================
 
-# Set environment variables (update these!)
-FLASK_APP=/path/to/flaskapp/flaskapp/app/__init__.py
-PYTHON_BIN=/path/to/venv/bin/python
-FLASK_BIN=/path/to/venv/bin/flask
-
-# Change to your app directory before running commands
-APP_DIR=/path/to/flaskapp/flaskapp
+PYTHON=/home/fieldsprout/virtualenv/flaskapp/3.9/bin/python3
+AGENTS=/home/fieldsprout/flaskapp-repo/run_agents.py
+LOGS=/home/fieldsprout/logs/agents
 
 # ============================================================================
 # TACTICAL AGENTS - Run Every Hour
@@ -30,7 +27,7 @@ APP_DIR=/path/to/flaskapp/flaskapp
 #   - Negative Keyword Agent: Blocks "free", "DIY", "jobs" searches
 #   - Ad Copy Scientist: Tests ad variations
 
-0 * * * * cd $APP_DIR && $FLASK_BIN run-agents --layer tactical >> /var/log/agents-tactical.log 2>&1
+0 * * * * $PYTHON $AGENTS --layer tactical >> $LOGS-tactical.log 2>&1
 
 # ============================================================================
 # OPERATIONAL AGENTS - Run Every 4 Hours
@@ -40,7 +37,7 @@ APP_DIR=/path/to/flaskapp/flaskapp
 #   - Budget Guardian: Emergency pauses for runaway spend
 #   - Quality Score Doctor: Diagnoses and fixes low Quality Scores
 
-0 */4 * * * cd $APP_DIR && $FLASK_BIN run-agents --layer operational >> /var/log/agents-operational.log 2>&1
+0 */4 * * * $PYTHON $AGENTS --layer operational >> $LOGS-operational.log 2>&1
 
 # ============================================================================
 # STRATEGIC AGENT - Run Daily at 6am
@@ -48,26 +45,11 @@ APP_DIR=/path/to/flaskapp/flaskapp
 # This agent makes high-level budget and scaling decisions:
 #   - Strategic Director: Budget reallocation, campaign scaling, pause decisions
 
-0 6 * * * cd $APP_DIR && $FLASK_BIN run-agents --layer strategic >> /var/log/agents-strategic.log 2>&1
+0 6 * * * $PYTHON $AGENTS --layer strategic >> $LOGS-strategic.log 2>&1
 
 # ============================================================================
-# ALTERNATIVE: Run ALL agents daily at 2am (simpler but less optimal)
+# NEGATIVE KEYWORD AGENT - Run Daily at 3am
 # ============================================================================
-# Uncomment this if you want to run all agents once per day instead of on different schedules
+# Dedicated negative keyword sweep across all campaigns
 
-# 0 2 * * * cd $APP_DIR && $FLASK_BIN run-agents --all >> /var/log/agents-all.log 2>&1
-
-# ============================================================================
-# LOG ROTATION
-# ============================================================================
-# To prevent log files from growing too large, set up logrotate:
-#
-# Create /etc/logrotate.d/agents-logs with:
-#
-# /var/log/agents-*.log {
-#     daily
-#     rotate 7
-#     compress
-#     missingok
-#     notifempty
-# }
+0 3 * * * $PYTHON $AGENTS --layer negative_keyword >> $LOGS-negative_keyword.log 2>&1

@@ -311,10 +311,10 @@
     <div class="space-y-4">
       {% for decision in pending_decisions %}
       {% set risk = decision.risk_level or 'medium' %}
-      {% set savings = decision.expected_monthly_savings or 0 %}
-      {% set conf = decision.confidence or 0.5 %}
-      {% set leads = decision.expected_monthly_leads or 0 %}
-      {% set impr_pct = decision.expected_improvement_pct or 0 %}
+      {% set savings = (decision.expected_monthly_savings or 0) | float %}
+      {% set conf = (decision.confidence or 0.5) | float %}
+      {% set leads = (decision.expected_monthly_leads or 0) | float %}
+      {% set impr_pct = (decision.expected_improvement_pct or 0) | float %}
       <div class="bg-white border-l-4 rounded-xl shadow-sm overflow-hidden
                   {{ 'border-red-500' if risk in ('critical','high') else 'border-yellow-400' if risk == 'medium' else 'border-blue-400' }}"
            id="decision-{{ decision.id }}" data-card="1">

@@ -21,6 +21,13 @@ echo "==> Syncing app files to production..."
 # Does NOT delete server-only files (no --delete flag)
 rsync -av "$REPO_DIR/flaskapp/" "$PROD_DIR/"
 
+echo "==> Syncing agent runner to /home/fieldsprout/run_agents.py..."
+sed \
+  -e "s|sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'flaskapp'))|sys.path.insert(0, '/home/fieldsprout/flaskapp')|" \
+  -e "s|load_environment(os.path.dirname(os.path.abspath(__file__)))|load_environment('/home/fieldsprout')|" \
+  "$REPO_DIR/run_agents.py" > /home/fieldsprout/run_agents.py
+chown fieldsprout:fieldsprout /home/fieldsprout/run_agents.py
+
 echo "==> Clearing Python bytecode cache..."
 find "$PROD_DIR" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 find "$PROD_DIR" -type f -name "*.pyc" -delete 2>/dev/null || true

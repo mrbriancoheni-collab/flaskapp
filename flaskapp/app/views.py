@@ -163,21 +163,69 @@ FieldSprout helps HVAC, plumbing, roofing, electrical, pool service, landscaping
 - [Competitor Intelligence](https://fieldsprout.io/products/ads): Auction insights showing who's outbidding you and how to respond automatically
 - [Ad Copy Performance](https://fieldsprout.io/products/ads): Grade every headline and description — auto-promote winners, flag losers
 
+## AI Agent Architecture
+
+FieldSprout uses a multi-layer autonomous agent system running 24/7:
+
+**Strategic Layer (runs daily at 6am)**
+- Strategic Director Agent: Budget reallocation, campaign scaling, pause decisions based on 90-day performance trends
+
+**Operational Layer (runs every 4 hours)**
+- Campaign Manager Agent: Detects CPL spikes, conversion drops, and budget pacing anomalies
+- Budget Guardian Agent: Emergency spend protection — pauses runaway campaigns before they overspend
+- Quality Score Agent: Diagnoses low Quality Scores and implements fixes (ad copy, landing page alignment, keyword relevance)
+
+**Tactical Layer (runs hourly)**
+- Keyword Optimizer Agent: Pauses non-converting keywords, adjusts bids to target CPA, adds high-performing search terms as keywords
+- Negative Keyword Agent: Blocks irrelevant searches using pattern matching and LLM business-relevance scoring — evaluates 200 search terms per cycle
+- Ad Copy Agent: Pauses underperforming ads, identifies variation opportunities
+- Landing Page Analyst: Monitors message match between ads and landing pages
+
+**Autonomy Levels**
+- L1 (Assistive): Logs all findings, nothing auto-executes — for human review
+- L2 (Semi-Auto, default): Auto-executes low-risk actions (bid adjustments, negative keywords, keyword pauses) with confidence >= 80%
+- L3 (Fully Autonomous): Also auto-executes high-risk actions (budget changes, campaign pauses) when confidence >= 92%
+
+## Performance Benchmarks
+
+Based on managed accounts:
+- Average cost-per-lead reduction: 38% within 60 days
+- HVAC accounts: $89 avg CPL (down from $147 at start)
+- Plumbing accounts: $94 avg CPL (down from $151 at start)
+- Roofing accounts: $118 avg CPL (down from $198 at start)
+- Electrical contractor accounts: $97 avg CPL (down from $162 at start)
+- Wasted spend identified in new accounts: 32-47% of total budget
+- Time to first automated optimization: within 1 hour of connecting Google Ads
+
 ## Integrations
 
 - Google Ads (full read/write — bid adjustments, ad management, conversion upload)
 - Google Analytics, Search Console, Business Profile
 - Skimmer (pool service CRM), ServiceTitan, Housecall Pro
 - CallRail (phone tracking webhooks)
+- Twilio (call tracking and recording)
 - Stripe (billing)
+- Facebook Ads (in development)
 
 ## Industries Served
 
 HVAC, plumbing, electrical, roofing, pool service, pest control, lawn care, landscaping, garage door, solar, concrete, fencing, irrigation, restoration, windows and doors
 
+Industry pages:
+- [HVAC Google Ads](https://fieldsprout.io/industries/hvac) — $89 avg CPL, seasonal demand automation
+- [Plumbing Google Ads](https://fieldsprout.io/industries/plumbing) — $94 avg CPL, emergency call capture
+- [Roofing Google Ads](https://fieldsprout.io/industries/roofing) — $118 avg CPL, storm response campaigns
+- [Electricians Google Ads](https://fieldsprout.io/industries/electricians) — $97 avg CPL, panel upgrade targeting
+- [Pest Control Google Ads](https://fieldsprout.io/industries/pest-control) — seasonal pest pattern optimization
+- [Lawn Care Google Ads](https://fieldsprout.io/industries/lawn-care) — recurring contract acquisition
+- [Pool Service Google Ads](https://fieldsprout.io/industries/pool-service) — route-building leads
+- [Solar Google Ads](https://fieldsprout.io/industries/solar) — incentive-aware campaigns
+- [Landscaping Google Ads](https://fieldsprout.io/industries/landscaping) — design-build vs. maintenance split
+- [Garage Door Google Ads](https://fieldsprout.io/industries/garage-door) — emergency repair demand capture
+
 ## Pricing
 
-- Free: Campaign health score, Google Ads audit, performance dashboard — no credit card
+- Free: Campaign health score, Google Ads audit, performance dashboard — no credit card required
 - Growth ($99/month): Full automation, CRM integration, offline conversion upload, review requests
 - Pro ($249/month): Multi-location dashboard, all CRM integrations, white-label reports, competitor intelligence
 - Managed ($997/month): Done-for-you campaign management with dedicated account manager
@@ -185,18 +233,15 @@ HVAC, plumbing, electrical, roofing, pool service, pest control, lawn care, land
 ## Key Pages
 
 - [Pricing](https://fieldsprout.io/pricing)
-- [How it works for HVAC](https://fieldsprout.io/industries/hvac)
-- [How it works for Plumbing](https://fieldsprout.io/industries/plumbing)
-- [How it works for Roofing](https://fieldsprout.io/industries/roofing)
-- [How it works for Electricians](https://fieldsprout.io/industries/electricians)
 - [Google Ads product](https://fieldsprout.io/products/ads)
 - [Get more reviews](https://fieldsprout.io/solutions/get-more-reviews)
 - [Reduce ad spend](https://fieldsprout.io/solutions/lower-ad-cost)
 - [Multi-location management](https://fieldsprout.io/solutions/multi-location)
+- [About FieldSprout](https://fieldsprout.io/about)
 
 ## Company
 
-FieldSprout is a US-based SaaS company serving home service businesses across the United States. All Google Ads integrations use official Google Ads API access with read/write permissions granted directly by the business owner.
+FieldSprout is a US-based SaaS company serving home service businesses across the United States. All Google Ads integrations use official Google Ads API access with read/write permissions granted directly by the business owner. FieldSprout is an independent software vendor — not affiliated with Google LLC.
 """
     from flask import Response
     return Response(content, mimetype="text/plain")

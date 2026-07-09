@@ -119,7 +119,7 @@ def _load_autonomous_settings(account_id: int) -> dict:
         'target_cpl', 'monthly_budget', 'geo_targets', 'services_priority',
     ]
     DEFAULTS = {
-        'autonomous_mode_enabled': '1',
+        'autonomous_mode_enabled': '1',  # enabled by default — L1 is opt-in
         'autonomy_level': '2',
         'growth_mode': 'balanced',
         'target_cpl': '80',
@@ -453,13 +453,14 @@ def run_agents_for_account(
                 ad_group_criterion.keyword.text,
                 ad_group_criterion.keyword.match_type,
                 ad_group_criterion.ad_group,
+                ad_group_criterion.quality_info.quality_score,
                 metrics.cost_micros, metrics.conversions,
                 metrics.clicks, metrics.impressions
             FROM keyword_view
             WHERE ad_group_criterion.status != 'REMOVED'
               AND segments.date DURING LAST_30_DAYS
             ORDER BY metrics.cost_micros DESC
-            LIMIT 30
+            LIMIT 100
         """)
 
         keywords_list = []
@@ -477,6 +478,8 @@ def run_agents_for_account(
             ad_group_id = ad_group_resource.split("/")[-1] if ad_group_resource else ""
 
             kw_cpa = cost / conversions if conversions > 0 else 0
+            quality_info = kw.get("qualityInfo", {})
+            quality_score = int(quality_info.get("qualityScore", 0) or 0)
             keywords_list.append({
                 'id': str(kw.get("criterionId", "")),
                 'text': kw_keyword.get("text", ""),
@@ -493,7 +496,7 @@ def run_agents_for_account(
                 'spend_30d': cost,
                 # Keys expected by QualityScoreAgent
                 'monthly_spend': cost,
-                'quality_score': 0,  # not available from this query
+                'quality_score': quality_score,
             })
 
         # 4. Search terms (last 30 days, top 20 by spend)
@@ -511,7 +514,7 @@ def run_agents_for_account(
                 FROM search_term_view
                 WHERE segments.date DURING LAST_30_DAYS
                 ORDER BY metrics.cost_micros DESC
-                LIMIT 50
+                LIMIT 200
             """)
             for row in st_rows:
                 stv = row.get("searchTermView", {})
@@ -886,7 +889,11 @@ def run_agents_for_account(
             totals['decisions'] += int(result.get('decisions_made', 0) or 0)
             totals['opportunities'] += int(result.get('opportunities_found', 0) or 0)
 
-            print(f"  ✓ {agent.agent_type}: {result['decisions_made']} decisions")
+            auto_exec = len(result.get('auto_executed', []))
+            pending = len(result.get('pending_approval', []))
+            print(f"  ✓ {agent.agent_type}: {result['opportunities_found']} opps → "
+                  f"{result['decisions_made']} decisions "
+                  f"({auto_exec} auto-executed, {pending} pending approval)")
 
         except Exception as e:
             # Log error to database

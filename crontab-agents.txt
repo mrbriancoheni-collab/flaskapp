@@ -16,7 +16,7 @@
 # ============================================================================
 
 PYTHON=/home/fieldsprout/virtualenv/flaskapp/3.9/bin/python3
-AGENTS=/home/fieldsprout/flaskapp-repo/run_agents.py
+AGENTS=/home/fieldsprout/run_agents.py
 LOGS=/home/fieldsprout/logs/agents
 
 # ============================================================================

@@ -38,7 +38,7 @@ AUTONOMOUS_KEYS = [
 ]
 
 DEFAULTS = {
-    "autonomous_mode_enabled": "0",
+    "autonomous_mode_enabled": "1",
     "autonomy_level": "2",
     "growth_mode": "balanced",
     "target_cpl": "80",

@@ -119,7 +119,7 @@ def _load_autonomous_settings(account_id: int) -> dict:
         'target_cpl', 'monthly_budget', 'geo_targets', 'services_priority',
     ]
     DEFAULTS = {
-        'autonomous_mode_enabled': '1',
+        'autonomous_mode_enabled': '1',  # enabled by default — L1 is opt-in
         'autonomy_level': '2',
         'growth_mode': 'balanced',
         'target_cpl': '80',

@@ -74,7 +74,7 @@ class KeywordOptimizerAgent(BaseAgent):
                 AgentCapability.BID_OPTIMIZATION,
                 AgentCapability.AUTONOMOUS_EXECUTION,
             ],
-            auto_execute_threshold=0.92,
+            auto_execute_threshold=0.80,
             **kwargs
         )
 
@@ -221,7 +221,7 @@ class KeywordOptimizerAgent(BaseAgent):
                     },
                     risk_level=DecisionRiskLevel.LOW,
                     requires_approval=False,
-                    confidence=0.88
+                    confidence=0.92
                 )
                 decisions.append(decision)
 
@@ -244,7 +244,7 @@ class KeywordOptimizerAgent(BaseAgent):
                     },
                     risk_level=DecisionRiskLevel.LOW,
                     requires_approval=False,
-                    confidence=0.85,
+                    confidence=0.90,
                     expected_monthly_leads=2
                 )
                 decisions.append(decision)
@@ -597,9 +597,16 @@ Return a JSON array:
         campaign_id = decision.campaign_id or decision.action_data.get('campaign_id', '')
 
         if not campaign_id:
+            import logging as _log
+            _log.getLogger(__name__).warning(
+                "NegativeKeywordAgent: skipping '%s' — no campaign_id in decision or action_data. "
+                "Ensure grader_context.waste_terms and search_terms include campaign_id.",
+                decision.action_data.get('keyword_text', ''),
+            )
             return {
                 'success': False,
-                'error': 'Missing campaign_id - cannot add negative keyword without target campaign'
+                'skipped': True,
+                'error': 'Missing campaign_id — negative keyword not added (no campaign to target)',
             }
 
         if isinstance(google_ads_client, GoogleAdsAgentExecutor):

@@ -322,9 +322,8 @@ def sitemap_xml():
         for sub in industry_sub_routes:
             pages.append((f"https://fieldsprout.io/industries/{industry}{sub}", "0.7", "monthly"))
 
-    # Add main page + sub-routes for additional industries
+    # Add sub-routes only for additional industries (no main-page template yet)
     for industry in additional_industries:
-        pages.append((f"https://fieldsprout.io/industries/{industry}", "0.8", "monthly"))
         for sub in industry_sub_routes:
             pages.append((f"https://fieldsprout.io/industries/{industry}{sub}", "0.7", "monthly"))
 

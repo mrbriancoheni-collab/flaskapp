@@ -1,5 +1,6 @@
 # app/public/__init__.py (or wherever your public routes live)
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, abort
+from jinja2.exceptions import TemplateNotFound
 
 public_bp = Blueprint(
     "public_bp",
@@ -128,6 +129,27 @@ def industry_pool_service():
 @public_bp.route("/industries/solar", endpoint="industry_solar")
 def industry_solar():
     return render_template("industries/solar.html")
+
+
+_INDUSTRY_TEMPLATE_OVERRIDES = {
+    'electricians-google-ads':        'industries/electrical-google-ads.html',
+    'electricians-local-service-ads': 'industries/electrical-local-service-ads.html',
+    'electricians-meta-ads':          'industries/electrical-meta-ads.html',
+    'electricians-website-cro':       'industries/electrical-website-cro.html',
+    'pool-service-google-ads':        'industries/pools-google-ads.html',
+    'pool-service-local-service-ads': 'industries/pools-local-service-ads.html',
+    'pool-service-meta-ads':          'industries/pools-meta-ads.html',
+    'pool-service-website-cro':       'industries/pools-website-cro.html',
+}
+
+
+@public_bp.route("/industries/<slug>", endpoint="industry_subpage")
+def industry_subpage(slug):
+    template = _INDUSTRY_TEMPLATE_OVERRIDES.get(slug, f'industries/{slug}.html')
+    try:
+        return render_template(template)
+    except TemplateNotFound:
+        abort(404)
 
 
 @public_bp.route("/sitemap.html", endpoint="sitemap")

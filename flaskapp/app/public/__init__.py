@@ -165,6 +165,10 @@ def lifetime_deal(tier):
     return render_template("public/lifetime_deal.html", tier=tier)
 
 
+# Public Maps audit funnel (registers /maps-audit on this blueprint)
+from app.public import maps_audit  # noqa: E402,F401
+
+
 @public_bp.route("/nps/<token>", endpoint="nps_respond")
 def nps_respond(token: str):
     """Public NPS survey response endpoint — no login required."""

@@ -29,6 +29,29 @@
     <h2 class="text-2xl font-bold text-gray-900 mb-2">Google Ads Tools</h2>
     <p class="text-gray-500 mb-8">Two different views of your Google Ads — diagnosis and treatment.</p>
 
+    <!-- Google Maps Audit — instant, no connection needed -->
+    <div class="mb-14 rounded-2xl border-2 border-green-200 hover:border-green-300 p-8 shadow-sm hover:shadow-lg transition-all bg-green-50/30 flex flex-col md:flex-row md:items-center gap-6">
+      <div class="w-14 h-14 rounded-2xl bg-green-100 flex items-center justify-center shrink-0">
+        <i class="fa-solid fa-map-location-dot text-2xl text-green-600"></i>
+      </div>
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-1">
+          <div class="text-xs font-bold text-green-600 uppercase tracking-wide">Fastest start — 30 seconds</div>
+          <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full">Free</span>
+        </div>
+        <h2 class="text-xl font-bold text-gray-900 mb-2">Google Maps Audit</h2>
+        <p class="text-gray-600">
+          Type your business name, get an instant grade of your Google Business Profile —
+          reviews, photos, hours, and the signals that decide who shows up in the local pack.
+          No login, no connection needed.
+        </p>
+      </div>
+      <a href="{{ url_for('public_bp.maps_audit') }}"
+         class="shrink-0 text-center px-6 py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition">
+        Audit My Maps Listing →
+      </a>
+    </div>
+
     <div class="grid md:grid-cols-2 gap-8 mb-14">
 
       <!-- Google Ads Grader -->

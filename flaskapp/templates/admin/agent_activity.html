@@ -1,0 +1,126 @@
+{% extends "base_admin.html" %}
+{% block title %}Admin – Agent Activity{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-6">
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">AI Agent Activity</h1>
+      <p class="text-gray-500 text-sm">Proof of execution — what the agents actually did on live Google Ads accounts.</p>
+    </div>
+  </div>
+
+  {# Summary tiles #}
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+    <div class="rounded-xl border bg-white p-4">
+      <div class="text-2xl font-bold text-gray-900">{{ summary.total }}</div>
+      <div class="text-xs text-gray-500 uppercase tracking-wide">Decisions ({{ days }}d)</div>
+    </div>
+    <div class="rounded-xl border bg-white p-4">
+      <div class="text-2xl font-bold text-green-600">{{ summary.executed }}</div>
+      <div class="text-xs text-gray-500 uppercase tracking-wide">Executed</div>
+    </div>
+    <div class="rounded-xl border bg-white p-4">
+      <div class="text-2xl font-bold text-amber-500">{{ summary.pending }}</div>
+      <div class="text-xs text-gray-500 uppercase tracking-wide">Pending / Approval</div>
+    </div>
+    <div class="rounded-xl border bg-white p-4">
+      <div class="text-2xl font-bold {{ 'text-red-500' if summary.failed else 'text-gray-400' }}">{{ summary.failed }}</div>
+      <div class="text-xs text-gray-500 uppercase tracking-wide">Failed</div>
+    </div>
+  </div>
+
+  {# Filters #}
+  <form method="get" class="flex flex-wrap items-end gap-3 mb-4 bg-white border rounded-xl p-4">
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Status</label>
+      <select name="status" class="rounded-lg border-gray-300 text-sm">
+        {% for opt in ['all','executed','failed','pending'] %}
+          <option value="{{ opt }}" {% if status_filter == opt %}selected{% endif %}>{{ opt|capitalize }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Account ID</label>
+      <input type="number" name="account_id" value="{{ account_filter or '' }}" placeholder="All"
+             class="w-28 rounded-lg border-gray-300 text-sm">
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Window (days)</label>
+      <input type="number" name="days" value="{{ days }}" min="1" max="90"
+             class="w-24 rounded-lg border-gray-300 text-sm">
+    </div>
+    <button type="submit" class="rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm font-semibold hover:bg-indigo-700">
+      Apply
+    </button>
+  </form>
+
+  {# Decisions table #}
+  <div class="bg-white border rounded-xl overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
+          <tr>
+            <th class="text-left px-4 py-3">When</th>
+            <th class="text-left px-4 py-3">Account</th>
+            <th class="text-left px-4 py-3">Agent / Action</th>
+            <th class="text-left px-4 py-3">Status</th>
+            <th class="text-left px-4 py-3">API Result</th>
+            <th class="text-right px-4 py-3">Conf.</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          {% for d in decisions %}
+          <tr class="hover:bg-gray-50 align-top">
+            <td class="px-4 py-3 whitespace-nowrap text-gray-500">
+              {{ (d.executed_at or d.created_at).strftime('%b %d %H:%M') if (d.executed_at or d.created_at) else '—' }}
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap">
+              <a href="{{ url_for('admin_bp.agent_activity', account_id=d.account_id, days=days) }}"
+                 class="text-indigo-600 hover:underline">{{ d.account_name }}</a>
+              <div class="text-xs text-gray-400">#{{ d.account_id }}</div>
+            </td>
+            <td class="px-4 py-3">
+              <div class="font-medium text-gray-900">{{ d.title or d.decision_type }}</div>
+              <div class="text-xs text-gray-400">{{ d.agent_type }} · {{ d.decision_type }}</div>
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap">
+              {% if d.status == 'executed' %}
+                <span class="inline-flex items-center gap-1 rounded-full bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 text-xs font-medium">
+                  <i class="fa-solid fa-circle-check"></i> Executed
+                </span>
+              {% elif d.status in ('failed','execution_failed') %}
+                <span class="inline-flex items-center gap-1 rounded-full bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 text-xs font-medium">
+                  <i class="fa-solid fa-circle-xmark"></i> Failed
+                </span>
+              {% else %}
+                <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 text-xs font-medium">
+                  <i class="fa-solid fa-clock"></i> {{ d.status|capitalize }}
+                </span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-gray-600 max-w-md">
+              {% if d.outcome %}
+                <span class="{% if d.ok is false %}text-red-600{% elif d.ok %}text-green-700{% endif %}">{{ d.outcome }}</span>
+              {% else %}
+                <span class="text-gray-300">—</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-right whitespace-nowrap text-gray-500">
+              {{ '%.0f%%'|format((d.confidence or 0) * 100) }}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" class="px-4 py-12 text-center text-gray-400">
+              No agent decisions in this window. If agents are scheduled but nothing appears here,
+              they aren't running or aren't finding opportunities.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

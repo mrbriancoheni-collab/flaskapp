@@ -2466,3 +2466,124 @@ def ads_grader_scoring():
         dimensions=dimensions,
         grade_scale=grade_scale,
     )
+
+
+@admin_bp.route("/agent-activity")
+@require_admin
+def agent_activity():
+    """
+    Verification view: recent AI agent decisions across all accounts with
+    their real execution status and API result. Lets an operator confirm the
+    agents are making actual Google Ads changes (not silently failing).
+    """
+    import json as _json
+    from sqlalchemy import text as _text
+
+    status_filter = (request.args.get("status") or "all").strip()
+    try:
+        account_filter = int(request.args.get("account_id") or 0)
+    except (TypeError, ValueError):
+        account_filter = 0
+    try:
+        days = max(1, min(int(request.args.get("days") or 7), 90))
+    except (TypeError, ValueError):
+        days = 7
+
+    from datetime import datetime as _dt, timedelta as _td
+    cutoff = _dt.utcnow() - _td(days=days)
+    where = ["ad.created_at >= :cutoff"]
+    params = {"cutoff": cutoff, "lim": 200}
+    if status_filter == "executed":
+        where.append("ad.status = 'executed'")
+    elif status_filter == "failed":
+        where.append("ad.status IN ('failed', 'execution_failed')")
+    elif status_filter == "pending":
+        where.append("ad.status IN ('pending', 'approved')")
+    if account_filter:
+        where.append("ad.account_id = :aid")
+        params["aid"] = account_filter
+
+    where_sql = " AND ".join(where)
+
+    rows = []
+    summary = {"executed": 0, "failed": 0, "pending": 0, "total": 0}
+    try:
+        with db.engine.connect() as conn:
+            rows = conn.execute(_text(f"""
+                SELECT ad.id, ad.account_id, a.name AS account_name,
+                       ad.agent_type, ad.decision_type, ad.title,
+                       ad.status, ad.confidence, ad.risk_level,
+                       ad.expected_monthly_savings, ad.campaign_id,
+                       ad.execution_result, ad.created_at, ad.executed_at
+                  FROM agent_decisions ad
+                  LEFT JOIN accounts a ON a.id = ad.account_id
+                 WHERE {where_sql}
+                 ORDER BY ad.created_at DESC
+                 LIMIT :lim
+            """), params).fetchall()
+
+            srow = conn.execute(_text("""
+                SELECT
+                    COUNT(CASE WHEN status = 'executed' THEN 1 END) AS executed,
+                    COUNT(CASE WHEN status IN ('failed','execution_failed') THEN 1 END) AS failed,
+                    COUNT(CASE WHEN status IN ('pending','approved') THEN 1 END) AS pending,
+                    COUNT(*) AS total
+                  FROM agent_decisions
+                 WHERE created_at >= :cutoff
+            """), {"cutoff": cutoff}).first()
+            if srow:
+                summary = {
+                    "executed": srow.executed or 0,
+                    "failed": srow.failed or 0,
+                    "pending": srow.pending or 0,
+                    "total": srow.total or 0,
+                }
+    except Exception as exc:
+        current_app.logger.warning("agent_activity query failed: %s", exc)
+
+    decisions = []
+    for r in rows:
+        # Distill execution_result JSON into a one-line outcome
+        outcome, ok = "", None
+        raw = r.execution_result
+        if raw:
+            try:
+                data = _json.loads(raw) if isinstance(raw, str) else raw
+                if isinstance(data, dict):
+                    ok = bool(data.get("success"))
+                    if ok:
+                        outcome = data.get("message") or data.get("resource_name") or "Applied via Google Ads API"
+                    else:
+                        outcome = data.get("error") or data.get("message") or "Failed"
+                        if data.get("skipped"):
+                            outcome = f"Skipped: {outcome}"
+                else:
+                    outcome = str(data)[:200]
+            except Exception:
+                outcome = str(raw)[:200]
+        decisions.append({
+            "id": r.id,
+            "account_id": r.account_id,
+            "account_name": r.account_name or f"#{r.account_id}",
+            "agent_type": r.agent_type,
+            "decision_type": r.decision_type,
+            "title": r.title,
+            "status": r.status,
+            "confidence": r.confidence,
+            "risk_level": r.risk_level,
+            "savings": r.expected_monthly_savings,
+            "campaign_id": r.campaign_id,
+            "outcome": outcome,
+            "ok": ok,
+            "created_at": r.created_at,
+            "executed_at": r.executed_at,
+        })
+
+    return render_template(
+        "admin/agent_activity.html",
+        decisions=decisions,
+        summary=summary,
+        status_filter=status_filter,
+        account_filter=account_filter,
+        days=days,
+    )

@@ -298,6 +298,11 @@
         <a class="block pl-6 pr-3 py-3 nav-link min-h-12" href="{{ url_for('gmb_bp.index') }}">
           <i class="fa-solid fa-store"></i><span>Overview</span>
         </a>
+        {% if has_endpoint('gmb_bp.audit') %}
+          <a href="{{ url_for('gmb_bp.audit') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-map-location-dot"></i><span>Maps Optimization</span>
+          </a>
+        {% endif %}
         {% if has_endpoint('gmb_bp.reviews') %}
           <a href="{{ url_for('gmb_bp.reviews') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
             <i class="fa-solid fa-star"></i><span>Reviews</span>
@@ -1385,6 +1390,9 @@
             {% endif %}
             {% if has_endpoint('gmb_bp.index') %}
             { name: 'Google Business', icon: 'fa-google', url: '{{ url_for("gmb_bp.index") }}', keywords: ['gmb', 'business', 'profile'] },
+            {% if has_endpoint('gmb_bp.audit') %}
+            { name: 'Maps Optimization Audit', icon: 'fa-map-location-dot', url: '{{ url_for("gmb_bp.audit") }}', keywords: ['maps', 'audit', 'local', 'gbp', 'optimize'] },
+            {% endif %}
             {% endif %}
             {% if has_endpoint('glsa_bp.index') %}
             { name: 'Local Services Ads', icon: 'fa-bullhorn', url: '{{ url_for("glsa_bp.index") }}', keywords: ['lsa', 'local services'] },

@@ -911,13 +911,34 @@ def photos():
 
 
 # --------- Profile: AI optimize pipeline ----------
+def _optimizer_base_profile(aid: int, requested_location: str = "") -> Dict[str, Any]:
+    """
+    Best available profile for the AI optimizer: real GBP location data when
+    connected, then session-edited profile, then the demo sample.
+    """
+    if _is_connected(aid):
+        try:
+            at = _gbp_access_token_for(aid)
+            loc = _resolve_location(at, requested_location) if at else None
+            if at and loc:
+                from .audit import get_location_details, location_to_profile
+                location = get_location_details(at, loc)
+                if location:
+                    profile = location_to_profile(location)
+                    _set_session_profile(profile)
+                    return profile
+        except Exception:
+            current_app.logger.exception("Fetching real GBP profile for optimizer failed")
+        return _get_session_profile() or dict(_SAMPLE_PROFILE)
+    return dict(_SAMPLE_PROFILE)
+
+
 @gmb_bp.route("/optimize", methods=["GET"], endpoint="optimize_profile")
 @login_required
 def optimize_profile():
-    """Runs AI optimizer and stores suggestions in session for the UI."""
+    """Runs AI optimizer against the real GBP profile and stores suggestions."""
     aid = current_account_id()
-    connected = _is_connected(aid)
-    base = _get_session_profile() if connected else _SAMPLE_PROFILE
+    base = _optimizer_base_profile(aid, request.args.get("location", ""))
     suggestions = _ai_optimize_profile(base)
     _set_suggestions(suggestions)
     flash("AI suggestions generated.", "success")
@@ -928,8 +949,8 @@ def optimize_profile():
 @gmb_bp.route("/optimize.json", methods=["POST"], endpoint="optimize_profile_json")
 @login_required
 def optimize_profile_json():
-    connected = _is_connected(current_account_id())
-    base = _get_session_profile() if connected else _SAMPLE_PROFILE
+    aid = current_account_id()
+    base = _optimizer_base_profile(aid, request.args.get("location", ""))
     try:
         suggestions = _ai_optimize_profile(base)
         _set_suggestions(suggestions)
@@ -1022,7 +1043,8 @@ def update_profile():
     if _is_connected(aid) and not allow_demo:
         try:
             at = _gbp_access_token_for(aid)
-            loc = _gbp_list_first_location_name(at) if at else None
+            # Push to the location the user selected, not blindly the first one
+            loc = _resolve_location(at, request.form.get("location_name", "")) if at else None
             if at and loc:
                 gbp_body: Dict[str, Any] = {}
                 update_fields = []
@@ -1108,6 +1130,73 @@ def reviews_ai_draft():
         return jsonify(ok=False, error=str(e)), 500
 
 
+# --------- Maps optimization audit ----------
+def _find_account_for_location(access_token: str, location_name: str) -> Optional[str]:
+    """Return the parent 'accounts/XXX' resource for a location, or None."""
+    for acct in _gbp_list_all_accounts_and_locations(access_token):
+        for loc in acct.get("locations") or []:
+            if loc.get("location_name") == location_name:
+                return acct.get("account_name")
+    return None
+
+
+def _resolve_location(access_token: str, requested: str = "") -> Optional[str]:
+    """Use the requested location if given, else fall back to the first one."""
+    return requested or _gbp_list_first_location_name(access_token)
+
+
+@gmb_bp.route("/audit", methods=["GET"], endpoint="audit")
+@login_required
+def audit():
+    """
+    Google Maps optimization audit: pulls the real location, reviews, and
+    photos via the GBP APIs and scores the profile with a prioritized fix list.
+    """
+    from .audit import (
+        get_location_details, fetch_reviews_summary, fetch_media_count,
+        build_audit, location_to_profile,
+    )
+
+    aid = current_account_id()
+    if not _is_connected(aid):
+        flash("Connect Google Business to run a Maps optimization audit.", "warning")
+        return redirect(url_for("gmb_bp.index"))
+
+    at = _gbp_access_token_for(aid)
+    if not at:
+        flash("Could not refresh your Google connection. Please reconnect.", "error")
+        return redirect(url_for("gmb_bp.index"))
+
+    location_name = _resolve_location(at, request.args.get("location", ""))
+    if not location_name:
+        flash("No locations found on this Google Business account.", "error")
+        return redirect(url_for("gmb_bp.index"))
+
+    location = get_location_details(at, location_name)
+    if not location:
+        flash("Could not load this location from Google. Try again shortly.", "error")
+        return redirect(url_for("gmb_bp.index"))
+
+    account_name = _find_account_for_location(at, location_name)
+    reviews = fetch_reviews_summary(at, account_name, location_name) if account_name else None
+    media_count = fetch_media_count(at, account_name, location_name) if account_name else None
+
+    result = build_audit(location, reviews=reviews, media_count=media_count)
+    profile = location_to_profile(location)
+
+    # Keep the profile form + AI optimizer in sync with real data
+    _set_session_profile(profile)
+
+    return render_template(
+        "gmb/audit.html",
+        connected=True,
+        audit=result,
+        profile=profile,
+        location_name=location_name,
+        location_title=location.get("title", ""),
+    )
+
+
 # --------- Insights pages ----------
 @gmb_bp.route("/insights", methods=["GET"], endpoint="insights")
 @login_required
@@ -1178,7 +1267,9 @@ def insights_regenerate():
 
 
 # --------- Blueprint-level error handler ----------
-@gmb_bp.app_errorhandler(Exception)
+# NOTE: errorhandler (not app_errorhandler) — app_errorhandler hijacked every
+# unhandled exception in the whole app and redirected users to the GMB page.
+@gmb_bp.errorhandler(Exception)
 def _gmb_any_err(e: Exception):
     current_app.logger.exception("Unhandled error in GMB blueprint")
     wants_json = request.accept_mimetypes.get("application/json", 0) >= request.accept_mimetypes.get("text/html", 0)

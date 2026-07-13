@@ -293,6 +293,25 @@
   </div>
   {% endif %}
 
+  {# ── Local visibility (Google Maps) ────────────────────────────────────────── #}
+  {% if has_endpoint('gmb_bp.audit') %}
+  <div>
+    <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-3">
+      <i class="fa-solid fa-map-location-dot text-green-600"></i> Local Visibility
+    </h2>
+    <div class="bg-white rounded-xl border shadow-sm p-5 flex items-center gap-4 flex-wrap">
+      <div class="flex-1 min-w-48">
+        <p class="text-sm font-semibold text-gray-800">How do you look on Google Maps?</p>
+        <p class="text-xs text-gray-500 mt-0.5">Nearly half of home-service leads start in the local pack. Run a free audit of your Google Business Profile and get a prioritized fix list.</p>
+      </div>
+      <a href="{{ url_for('gmb_bp.audit') }}"
+         class="flex-shrink-0 px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition">
+        Run Maps Audit →
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
   {% if not is_paid %}{% include 'components/pricing_modal.html' %}{% endif %}
 
 </div>

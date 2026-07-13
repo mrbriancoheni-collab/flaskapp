@@ -974,6 +974,8 @@
     </a>
     {% endif %}
   </div>
+
+  {% with tools = ['maps', 'roi'] %}{% include 'components/next_free_tool.html' %}{% endwith %}
 </div>
 {% endblock %}
 

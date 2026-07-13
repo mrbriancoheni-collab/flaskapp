@@ -96,6 +96,9 @@
           <a href="{{ url_for('ads_grader_bp.index') }}"
              class="btn btn-primary btn-lg">Grade My Garage Door Ads — Free</a>
           {% endif %}
+          {% if has_endpoint('public_bp.maps_audit') %}
+          <a href="{{ url_for('public_bp.maps_audit') }}" class="btn btn-secondary btn-lg">Free Google Maps Audit</a>
+          {% endif %}
           <a href="/pricing" class="btn btn-secondary btn-lg">See Plans &amp; Pricing</a>
         </div>
         <p class="text-sm text-gray-500 mt-4">No credit card · 60-second setup · Cancel anytime</p>

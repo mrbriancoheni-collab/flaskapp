@@ -49,6 +49,12 @@
 
     {# Primary actions #}
     <div class="mt-4 flex flex-wrap gap-2">
+      {% if connected %}
+      <a href="{{ url_for('gmb_bp.audit', location=selected_location or '') }}"
+         class="rounded-md bg-indigo-600 px-3 py-2 text-white hover:bg-indigo-700">
+        <i class="fa-solid fa-map-location-dot mr-2"></i>Run Maps Optimization Audit
+      </a>
+      {% endif %}
       <a href="{{ url_for('gmb_bp.reviews') }}" class="rounded-md border px-3 py-2 hover:bg-gray-50">
         <i class="fa-regular fa-star mr-2"></i>See your reviews
       </a>

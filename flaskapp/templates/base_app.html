@@ -223,24 +223,6 @@
       </a>
       {% endif %}
 
-      <!-- AI Tools Section -->
-      <div class="pt-2 text-sm font-semibold text-gray-600 uppercase"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>AI Tools</div>
-      {% if has_endpoint('creative_bp.index') %}
-      <a href="{{ url_for('creative_bp.index') }}" class="block px-3 py-3 rounded nav-link min-h-12">
-        <i class="fa-solid fa-palette"></i><span>Creative Studio</span>
-      </a>
-      {% endif %}
-      {% if has_endpoint('budget_forecast_bp.index') %}
-      <a href="{{ url_for('budget_forecast_bp.index') }}" class="block px-3 py-3 rounded nav-link min-h-12">
-        <i class="fa-solid fa-chart-line"></i><span>Budget Forecast</span>
-      </a>
-      {% endif %}
-      {% if has_endpoint('journey_bp.index') %}
-      <a href="{{ url_for('journey_bp.index') }}" class="block px-3 py-3 rounded nav-link min-h-12">
-        <i class="fa-solid fa-route"></i><span>Journeys</span>
-      </a>
-      {% endif %}
-
       <!-- Google Services (unified) -->
       <div class="pt-2 text-sm font-semibold text-gray-600 uppercase"><i class="fa-brands fa-google mr-1"></i>Google Services</div>
       <a class="block px-3 py-3 rounded nav-link min-h-12" href="{{ url_for('google_bp.index') }}">
@@ -298,6 +280,11 @@
         <a class="block pl-6 pr-3 py-3 nav-link min-h-12" href="{{ url_for('gmb_bp.index') }}">
           <i class="fa-solid fa-store"></i><span>Overview</span>
         </a>
+        {% if has_endpoint('gmb_bp.audit') %}
+          <a href="{{ url_for('gmb_bp.audit') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-map-location-dot"></i><span>Maps Optimization</span>
+          </a>
+        {% endif %}
         {% if has_endpoint('gmb_bp.reviews') %}
           <a href="{{ url_for('gmb_bp.reviews') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
             <i class="fa-solid fa-star"></i><span>Reviews</span>
@@ -313,6 +300,94 @@
             <i class="fa-solid fa-envelope"></i><span>Review Requests</span>
           </a>
         {% endif %}
+      {% endif %}
+
+      <!-- Facebook Ads Section -->
+      {% if has_endpoint('fbads_bp.index') %}
+        <div class="pt-2 text-sm font-semibold text-gray-600 uppercase">Facebook Ads</div>
+        <a href="{{ url_for('fbads_bp.index') }}" class="block px-3 py-3 nav-link min-h-12">
+          <i class="fa-solid fa-gauge"></i><span>Overview / Connect</span>
+        </a>
+        {% if has_endpoint('fbads_bp.select_account') %}
+          <a href="{{ url_for('fbads_bp.select_account') }}" class="block px-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-building"></i><span>Select Account</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('fbads_bp.campaigns') %}
+          <a href="{{ url_for('fbads_bp.campaigns') }}" class="block px-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-bullseye"></i><span>Campaigns</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('fbads_bp.optimize') %}
+          <a href="{{ url_for('fbads_bp.optimize') }}" class="block px-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-wand-magic-sparkles"></i><span>Optimizer</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('fbads_bp.leads') %}
+          <a href="{{ url_for('fbads_bp.leads') }}" class="block px-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-inbox"></i><span>Review Leads</span>
+          </a>
+        {% endif %}
+      {% endif %}
+
+      {% if has_endpoint('reports_bp.overview') or has_endpoint('reports_bp.index') %}
+        <div class="pt-2 text-sm font-semibold text-gray-600 uppercase"><i class="fa-solid fa-heart-pulse mr-1"></i>Reports</div>
+        {% if has_endpoint('reports_bp.overview') %}
+          <a href="{{ url_for('reports_bp.overview') }}" class="block px-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-heart-pulse"></i><span>Business Pulse</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('reports_bp.index') %}
+          <a href="{{ url_for('reports_bp.index') }}" class="block px-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-gauge"></i><span>Channel Overview</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('reports_bp.cpl_dashboard') %}
+          <a href="{{ url_for('reports_bp.cpl_dashboard') }}" class="block px-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-dollar-sign"></i><span>Cost per Lead</span>
+          </a>
+        {% endif %}
+      {% endif %}
+
+      {% if has_endpoint('ads_grader_bp.index') %}
+        <div class="pt-3 mt-3 border-t text-sm font-semibold text-green-600 uppercase">Free Tools</div>
+        <a class="block px-3 py-3 nav-link min-h-12 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-400 hover:from-green-100 hover:to-emerald-100" href="{{ url_for('ads_grader_bp.index') }}">
+          <i class="fa-brands fa-google text-green-600"></i><span class="font-semibold text-green-700">Google Ads Inspector</span>
+          <span class="ml-auto text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded-full font-bold">FREE</span>
+        </a>
+        <a class="block px-3 py-3 nav-link min-h-12" href="{{ url_for('ads_grader_bp.quick_wins_dashboard') }}">
+          <i class="fa-solid fa-bolt text-yellow-500"></i><span>Quick Wins</span>
+        </a>
+      {% endif %}
+
+      {% if has_endpoint('integrations_hub_bp.hub') %}
+        <a href="{{ url_for('integrations_hub_bp.hub') }}" class="block px-3 py-3 nav-link min-h-12 {% if SECTION=='integrations' %}font-semibold text-indigo-600{% endif %}">
+          <i class="fa-solid fa-plug"></i><span>Integrations</span>
+        </a>
+      {% endif %}
+
+      <!-- More tools (secondary modules, collapsed by default) -->
+      <details class="pt-2 mt-2 border-t">
+        <summary class="px-3 py-3 text-sm font-semibold text-gray-600 uppercase cursor-pointer select-none flex items-center min-h-12">
+          <i class="fa-solid fa-ellipsis mr-2"></i><span>More tools</span>
+          <i class="fa-solid fa-chevron-down ml-auto text-xs"></i>
+        </summary>
+      <!-- AI Tools Section -->
+      <div class="pt-2 text-sm font-semibold text-gray-600 uppercase"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>AI Tools</div>
+      {% if has_endpoint('creative_bp.index') %}
+      <a href="{{ url_for('creative_bp.index') }}" class="block px-3 py-3 rounded nav-link min-h-12">
+        <i class="fa-solid fa-palette"></i><span>Creative Studio</span>
+      </a>
+      {% endif %}
+      {% if has_endpoint('budget_forecast_bp.index') %}
+      <a href="{{ url_for('budget_forecast_bp.index') }}" class="block px-3 py-3 rounded nav-link min-h-12">
+        <i class="fa-solid fa-chart-line"></i><span>Budget Forecast</span>
+      </a>
+      {% endif %}
+      {% if has_endpoint('journey_bp.index') %}
+      <a href="{{ url_for('journey_bp.index') }}" class="block px-3 py-3 rounded nav-link min-h-12">
+        <i class="fa-solid fa-route"></i><span>Journeys</span>
+      </a>
       {% endif %}
 
       <!-- WordPress & Content Section -->
@@ -456,34 +531,6 @@
         {% endif %}
       {% endif %}
 
-      <!-- Facebook Ads Section -->
-      {% if has_endpoint('fbads_bp.index') %}
-        <div class="pt-2 text-sm font-semibold text-gray-600 uppercase">Facebook Ads</div>
-        <a href="{{ url_for('fbads_bp.index') }}" class="block px-3 py-3 nav-link min-h-12">
-          <i class="fa-solid fa-gauge"></i><span>Overview / Connect</span>
-        </a>
-        {% if has_endpoint('fbads_bp.select_account') %}
-          <a href="{{ url_for('fbads_bp.select_account') }}" class="block px-3 py-3 nav-link min-h-12">
-            <i class="fa-solid fa-building"></i><span>Select Account</span>
-          </a>
-        {% endif %}
-        {% if has_endpoint('fbads_bp.campaigns') %}
-          <a href="{{ url_for('fbads_bp.campaigns') }}" class="block px-3 py-3 nav-link min-h-12">
-            <i class="fa-solid fa-bullseye"></i><span>Campaigns</span>
-          </a>
-        {% endif %}
-        {% if has_endpoint('fbads_bp.optimize') %}
-          <a href="{{ url_for('fbads_bp.optimize') }}" class="block px-3 py-3 nav-link min-h-12">
-            <i class="fa-solid fa-wand-magic-sparkles"></i><span>Optimizer</span>
-          </a>
-        {% endif %}
-        {% if has_endpoint('fbads_bp.leads') %}
-          <a href="{{ url_for('fbads_bp.leads') }}" class="block px-3 py-3 nav-link min-h-12">
-            <i class="fa-solid fa-inbox"></i><span>Review Leads</span>
-          </a>
-        {% endif %}
-      {% endif %}
-
       {% if has_endpoint('linkedin_bp.index') %}
         <div class="pt-2 text-sm font-semibold text-gray-600 uppercase">LinkedIn</div>
         <a class="block px-3 py-3 nav-link min-h-12" href="{{ url_for('linkedin_bp.index') }}">
@@ -587,42 +634,6 @@
         </a>
       {% endif %}
 
-      {% if has_endpoint('reports_bp.overview') or has_endpoint('reports_bp.index') %}
-        <div class="pt-2 text-sm font-semibold text-gray-600 uppercase"><i class="fa-solid fa-heart-pulse mr-1"></i>Reports</div>
-        {% if has_endpoint('reports_bp.overview') %}
-          <a href="{{ url_for('reports_bp.overview') }}" class="block px-3 py-3 nav-link min-h-12">
-            <i class="fa-solid fa-heart-pulse"></i><span>Business Pulse</span>
-          </a>
-        {% endif %}
-        {% if has_endpoint('reports_bp.index') %}
-          <a href="{{ url_for('reports_bp.index') }}" class="block px-3 py-3 nav-link min-h-12">
-            <i class="fa-solid fa-gauge"></i><span>Channel Overview</span>
-          </a>
-        {% endif %}
-        {% if has_endpoint('reports_bp.cpl_dashboard') %}
-          <a href="{{ url_for('reports_bp.cpl_dashboard') }}" class="block px-3 py-3 nav-link min-h-12">
-            <i class="fa-solid fa-dollar-sign"></i><span>Cost per Lead</span>
-          </a>
-        {% endif %}
-      {% endif %}
-
-      {% if has_endpoint('ads_grader_bp.index') %}
-        <div class="pt-3 mt-3 border-t text-sm font-semibold text-green-600 uppercase">Free Tools</div>
-        <a class="block px-3 py-3 nav-link min-h-12 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-400 hover:from-green-100 hover:to-emerald-100" href="{{ url_for('ads_grader_bp.index') }}">
-          <i class="fa-brands fa-google text-green-600"></i><span class="font-semibold text-green-700">Google Ads Inspector</span>
-          <span class="ml-auto text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded-full font-bold">FREE</span>
-        </a>
-        <a class="block px-3 py-3 nav-link min-h-12" href="{{ url_for('ads_grader_bp.quick_wins_dashboard') }}">
-          <i class="fa-solid fa-bolt text-yellow-500"></i><span>Quick Wins</span>
-        </a>
-      {% endif %}
-
-      {% if has_endpoint('integrations_hub_bp.hub') %}
-        <a href="{{ url_for('integrations_hub_bp.hub') }}" class="block px-3 py-3 nav-link min-h-12 {% if SECTION=='integrations' %}font-semibold text-indigo-600{% endif %}">
-          <i class="fa-solid fa-plug"></i><span>Integrations</span>
-        </a>
-      {% endif %}
-
       {% if has_endpoint('multiloc_bp.dashboard') %}
         <a href="/account/locations/"
            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors min-h-12
@@ -631,6 +642,8 @@
           <span>Locations</span>
         </a>
       {% endif %}
+
+      </details>
 
       <div class="pt-3 mt-3 border-t"></div>
       {% if g.user and g.user.is_admin %}
@@ -661,27 +674,66 @@
 
       {# <a href="{{ url_for('strategy_bp.index') }}" class="primary-btn {% if SECTION=='strategy' %}active{% endif %}" title="Strategy"><i class="fa-solid fa-lightbulb"></i></a> #}
       <a href="{{ url_for('google_bp.index') }}" class="primary-btn {% if SECTION in ['google', 'glsa', 'gmb'] %}active{% endif %}" title="Google Services"><i class="fa-brands fa-google"></i></a>
-      {% if has_endpoint('wp_bp.insights') %}
-        <a href="{{ url_for('wp_bp.insights') }}" class="primary-btn {% if SECTION=='wp' %}active{% endif %}" title="WordPress &amp; Content"><i class="fa-brands fa-wordpress"></i></a>
-      {% endif %}
-      {% if has_endpoint('seo_bp.index') %}
-        <a href="{{ url_for('seo_bp.index') }}" class="primary-btn {% if SECTION=='seo' %}active{% endif %}" title="SEO"><i class="fa-solid fa-magnifying-glass-chart"></i></a>
-      {% endif %}
       <a href="{{ url_for('fbads_bp.index') }}" class="primary-btn {% if SECTION=='fbads' %}active{% endif %}" title="Facebook Ads"><i class="fa-brands fa-facebook-f"></i></a>
       {# <a href="{{ url_for('yelp_bp.index') }}" class="primary-btn {% if SECTION=='yelp' %}active{% endif %}" title="Yelp"><i class="fa-brands fa-yelp"></i></a> #}
-      {% if has_endpoint('linkedin_bp.index') %}
-        <a href="{{ url_for('linkedin_bp.index') }}" class="primary-btn {% if SECTION=='linkedin' %}active{% endif %}" title="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
-      {% endif %}
-      {% if has_endpoint('social_calendar_bp.index') %}
-        <a href="{{ url_for('social_calendar_bp.index') }}" class="primary-btn {% if SECTION=='social_calendar' %}active{% endif %}" title="Social Calendar"><i class="fa-solid fa-calendar-days"></i></a>
-      {% endif %}
       <a href="{{ url_for('reports_bp.overview') if has_endpoint('reports_bp.overview') else url_for('reports_bp.index') }}" class="primary-btn {% if SECTION=='reports' %}active{% endif %}" title="Business Pulse"><i class="fa-solid fa-heart-pulse"></i></a>
       {% if has_endpoint('integrations_hub_bp.hub') %}
         <a href="{{ url_for('integrations_hub_bp.hub') }}" class="primary-btn {% if SECTION=='integrations' %}active{% endif %}" title="Integrations"><i class="fa-solid fa-plug"></i></a>
       {% endif %}
-      {% if has_endpoint('multiloc_bp.dashboard') %}
-        <a href="/account/locations/" class="primary-btn {% if SECTION=='locations' %}active{% endif %}" title="Locations"><i class="fa-solid fa-map-location-dot"></i></a>
-      {% endif %}
+
+      {# Secondary modules live behind "More" to keep the rail focused on core home-service tools #}
+      <button id="more-rail-btn" type="button"
+              class="primary-btn {% if SECTION in ['wp','seo','linkedin','social_calendar','locations'] %}active{% endif %}"
+              title="More tools" aria-haspopup="true" aria-expanded="false" aria-controls="more-rail-menu">
+        <i class="fa-solid fa-ellipsis"></i>
+      </button>
+      <div id="more-rail-menu" class="hidden fixed w-56 bg-white text-gray-800 rounded-lg shadow-xl border py-1 z-50" role="menu">
+        {% if has_endpoint('wp_bp.insights') %}
+          <a href="{{ url_for('wp_bp.insights') }}" role="menuitem" class="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-gray-50 {% if SECTION=='wp' %}text-indigo-600 font-semibold{% endif %}"><i class="fa-brands fa-wordpress w-4 text-center"></i><span>WordPress &amp; Content</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.index') %}
+          <a href="{{ url_for('seo_bp.index') }}" role="menuitem" class="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-gray-50 {% if SECTION=='seo' %}text-indigo-600 font-semibold{% endif %}"><i class="fa-solid fa-magnifying-glass-chart w-4 text-center"></i><span>SEO</span></a>
+        {% endif %}
+        {% if has_endpoint('linkedin_bp.index') %}
+          <a href="{{ url_for('linkedin_bp.index') }}" role="menuitem" class="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-gray-50 {% if SECTION=='linkedin' %}text-indigo-600 font-semibold{% endif %}"><i class="fa-brands fa-linkedin w-4 text-center"></i><span>LinkedIn</span></a>
+        {% endif %}
+        {% if has_endpoint('social_calendar_bp.index') %}
+          <a href="{{ url_for('social_calendar_bp.index') }}" role="menuitem" class="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-gray-50 {% if SECTION=='social_calendar' %}text-indigo-600 font-semibold{% endif %}"><i class="fa-solid fa-calendar-days w-4 text-center"></i><span>Social Calendar</span></a>
+        {% endif %}
+        {% if has_endpoint('multiloc_bp.dashboard') %}
+          <a href="/account/locations/" role="menuitem" class="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-gray-50 {% if SECTION=='locations' %}text-indigo-600 font-semibold{% endif %}"><i class="fa-solid fa-map-location-dot w-4 text-center"></i><span>Locations</span></a>
+        {% endif %}
+      </div>
+      <script nonce="{{ g.csp_nonce }}">
+        (function () {
+          var btn = document.getElementById('more-rail-btn');
+          var menu = document.getElementById('more-rail-menu');
+          if (!btn || !menu) return;
+          btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var willOpen = menu.classList.contains('hidden');
+            menu.classList.toggle('hidden');
+            btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+            if (willOpen) {
+              var r = btn.getBoundingClientRect();
+              menu.style.left = (r.right + 8) + 'px';
+              var top = r.top;
+              var overflow = top + menu.offsetHeight - (window.innerHeight - 12);
+              if (overflow > 0) top -= overflow;
+              menu.style.top = Math.max(12, top) + 'px';
+            }
+          });
+          document.addEventListener('click', function (ev) {
+            if (!menu.classList.contains('hidden') && !menu.contains(ev.target) && ev.target !== btn) {
+              menu.classList.add('hidden');
+              btn.setAttribute('aria-expanded', 'false');
+            }
+          });
+          document.addEventListener('keydown', function (ev) {
+            if (ev.key === 'Escape') { menu.classList.add('hidden'); btn.setAttribute('aria-expanded', 'false'); }
+          });
+        })();
+      </script>
 
       <div class="mt-auto flex flex-col items-center space-y-1.5 pt-2">
         {% if g.user and g.user.is_admin %}
@@ -1385,6 +1437,9 @@
             {% endif %}
             {% if has_endpoint('gmb_bp.index') %}
             { name: 'Google Business', icon: 'fa-google', url: '{{ url_for("gmb_bp.index") }}', keywords: ['gmb', 'business', 'profile'] },
+            {% if has_endpoint('gmb_bp.audit') %}
+            { name: 'Maps Optimization Audit', icon: 'fa-map-location-dot', url: '{{ url_for("gmb_bp.audit") }}', keywords: ['maps', 'audit', 'local', 'gbp', 'optimize'] },
+            {% endif %}
             {% endif %}
             {% if has_endpoint('glsa_bp.index') %}
             { name: 'Local Services Ads', icon: 'fa-bullhorn', url: '{{ url_for("glsa_bp.index") }}', keywords: ['lsa', 'local services'] },

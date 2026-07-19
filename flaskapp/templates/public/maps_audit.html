@@ -1,0 +1,171 @@
+{% extends "base_public.html" %}
+{% block title %}Free Google Maps Audit for Home Service Businesses — FieldSprout{% endblock %}
+{% block meta_description %}See how your business looks on Google Maps in 30 seconds. Free profile audit for HVAC, plumbing, roofing, electrical, and other home service companies — no login required.{% endblock %}
+{% block og_title %}Free Google Maps Audit — How Visible Is Your Business?{% endblock %}
+{% block og_description %}Nearly half of home-service leads start in the Google local pack. Grade your Google Business Profile free in 30 seconds.{% endblock %}
+
+{% block content %}
+<!-- Hero + form -->
+<section class="bg-gradient-to-br from-green-50 via-white to-emerald-50 pt-20 pb-14">
+  <div class="max-w-3xl mx-auto px-4 text-center">
+    <span class="inline-flex items-center gap-2 rounded-full bg-green-100 text-green-800 px-3 py-1 text-xs font-bold uppercase tracking-wide mb-4">
+      <i class="fa-solid fa-map-location-dot"></i> Free tool · No login
+    </span>
+    <h1 class="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
+      How does your business look on <span class="text-green-600">Google Maps</span>?
+    </h1>
+    <p class="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
+      Nearly half of home-service leads start in the Google local pack. Enter your
+      business name and get an instant audit of your profile — what's working, what's
+      costing you calls, and how to fix it.
+    </p>
+
+    <form method="post" action="{{ url_for('public_bp.maps_audit') }}"
+          class="mt-8 bg-white rounded-2xl shadow-lg border p-4 sm:p-6 flex flex-col sm:flex-row gap-3 text-left">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="text" name="business" required value="{{ query }}"
+             placeholder="Business name (e.g. Smith Plumbing)"
+             class="flex-1 rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500">
+      <input type="text" name="city" placeholder="City, State"
+             class="sm:w-48 rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500">
+      <button type="submit"
+              class="rounded-lg bg-green-600 px-6 py-3 text-white font-bold hover:bg-green-700 transition whitespace-nowrap">
+        Run Free Audit
+      </button>
+    </form>
+
+    {% if error %}
+      <div class="mt-4 rounded-lg border border-amber-300 bg-amber-50 text-amber-900 px-4 py-3 text-sm inline-block">
+        <i class="fa-solid fa-circle-exclamation mr-1"></i> {{ error }}
+      </div>
+    {% endif %}
+  </div>
+</section>
+
+{% if result %}
+<!-- Results -->
+<section class="py-14 bg-white">
+  <div class="max-w-3xl mx-auto px-4 space-y-8">
+
+    <div class="rounded-2xl border shadow-sm p-6 sm:p-8">
+      <div class="flex flex-col sm:flex-row items-center gap-6">
+        {% set score = result.score %}
+        {% set ring = 'text-green-600' if score >= 80 else ('text-amber-500' if score >= 55 else 'text-red-500') %}
+        <div class="relative h-36 w-36 shrink-0">
+          <svg viewBox="0 0 36 36" class="h-36 w-36 -rotate-90">
+            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" stroke-width="3.5"></circle>
+            <circle cx="18" cy="18" r="15.9" fill="none" stroke="currentColor" stroke-width="3.5"
+                    class="{{ ring }}" stroke-linecap="round"
+                    stroke-dasharray="{{ score }}, 100"></circle>
+          </svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <span class="text-4xl font-extrabold {{ ring }}">{{ score }}</span>
+            <span class="text-xs text-gray-400 font-semibold uppercase">/ 100</span>
+          </div>
+        </div>
+        <div class="text-center sm:text-left">
+          <div class="text-xl font-bold text-gray-900">{{ place.name }}</div>
+          <div class="text-sm text-gray-500">{{ place.address }}</div>
+          <p class="mt-2 text-gray-700">
+            {% if score >= 80 %}Strong visible profile — the locked checks below are where the remaining wins live.
+            {% elif score >= 55 %}Decent foundation, but {{ result.failed_count }} visible issue{{ 's' if result.failed_count != 1 }} are costing you calls.
+            {% else %}Your profile is likely losing jobs to competitors every week. The good news: these are all fixable.{% endif %}
+          </p>
+          {% if place.maps_uri %}
+          <a href="{{ place.maps_uri }}" target="_blank" rel="noopener" class="mt-2 inline-block text-sm text-green-700 hover:underline">
+            <i class="fa-solid fa-arrow-up-right-from-square mr-1"></i>View your listing on Google Maps
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Visible checks -->
+    <div class="rounded-2xl border shadow-sm overflow-hidden">
+      <div class="px-6 py-4 border-b bg-gray-50 font-semibold text-gray-900">What we can see publicly</div>
+      <ul class="divide-y">
+        {% for c in result.checks %}
+        <li class="px-6 py-4 flex items-start gap-3">
+          {% if c.passed %}
+            <i class="fa-solid fa-circle-check text-green-600 mt-1"></i>
+          {% else %}
+            <i class="fa-solid fa-circle-xmark text-red-500 mt-1"></i>
+          {% endif %}
+          <div>
+            <div class="font-medium text-gray-900">{{ c.label }}</div>
+            <div class="text-sm text-gray-500">{{ c.detail }}</div>
+            {% if not c.passed %}
+            <div class="text-sm text-gray-700 mt-1">{{ c.action }}</div>
+            {% endif %}
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <!-- Locked checks + CTA -->
+    <div class="rounded-2xl border-2 border-green-200 shadow-sm overflow-hidden">
+      <div class="px-6 py-4 border-b bg-green-50 flex items-center gap-2 font-semibold text-gray-900">
+        <i class="fa-solid fa-lock text-green-700"></i> {{ result.locked|length }} more checks require profile access
+      </div>
+      <ul class="divide-y">
+        {% for label in result.locked %}
+        <li class="px-6 py-3.5 flex items-center gap-3 text-gray-400">
+          <i class="fa-solid fa-lock text-gray-300"></i>
+          <span class="blur-[1.5px] select-none">{{ label }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      <div class="p-6 bg-gradient-to-br from-green-600 to-emerald-700 text-white text-center">
+        <div class="text-xl font-bold">Get your full Maps audit — free</div>
+        <p class="mt-1 text-green-50 text-sm max-w-xl mx-auto">
+          Create a free account, connect your Google Business Profile, and see every issue
+          with a prioritized fix list — plus AI that drafts your description, review replies,
+          and keeps your profile optimized automatically.
+        </p>
+        <a href="{{ url_for('auth_bp.register') }}"
+           class="mt-4 inline-block rounded-lg bg-white px-8 py-3 text-green-700 font-bold hover:bg-green-50 transition">
+          Unlock Full Audit →
+        </a>
+        <div class="mt-2 text-xs text-green-100">No credit card required</div>
+      </div>
+    </div>
+
+    {% with tools = ['ads', 'roi'] %}{% include 'components/next_free_tool.html' %}{% endwith %}
+
+  </div>
+</section>
+{% else %}
+<!-- Social proof / how it works (pre-submit) -->
+<section class="py-14 bg-white">
+  <div class="max-w-4xl mx-auto px-4 grid sm:grid-cols-3 gap-6 text-center">
+    <div class="rounded-2xl border p-6">
+      <div class="text-3xl font-extrabold text-green-600">46%</div>
+      <p class="mt-1 text-sm text-gray-600">of Google searches have local intent — Maps is where customers pick who to call</p>
+    </div>
+    <div class="rounded-2xl border p-6">
+      <div class="text-3xl font-extrabold text-green-600">2.7×</div>
+      <p class="mt-1 text-sm text-gray-600">more trust for businesses with a complete Google Business Profile</p>
+    </div>
+    <div class="rounded-2xl border p-6">
+      <div class="text-3xl font-extrabold text-green-600">35%</div>
+      <p class="mt-1 text-sm text-gray-600">more clicks for profiles with 10+ photos — most contractors have 3 or fewer</p>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Free Google Maps Audit for Home Service Businesses",
+  "url": "https://fieldsprout.io/maps-audit",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Web",
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+  "description": "Instantly grade your Google Business Profile: reviews, photos, hours, and the profile signals that drive local pack rankings for home service companies.",
+  "publisher": {"@type": "Organization", "name": "FieldSprout", "url": "https://fieldsprout.io"}
+}
+</script>
+{% endblock %}

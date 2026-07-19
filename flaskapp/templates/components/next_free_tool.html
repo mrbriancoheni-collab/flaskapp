@@ -1,0 +1,68 @@
+{#
+  Cross-sell strip for results pages: "Try another free tool."
+  Usage:
+    {% with tools = ['maps', 'roi'] %}{% include 'components/next_free_tool.html' %}{% endwith %}
+  Valid keys: 'maps', 'ads', 'roi'. Unknown keys and unavailable endpoints are skipped.
+  Self-contained Tailwind so it renders under base_app.html or base_public.html.
+#}
+{% set _defs = {
+  'maps': {
+    'endpoint': 'public_bp.maps_audit',
+    'icon': 'fa-map-location-dot',
+    'card': 'from-green-50 to-emerald-50 border-green-200 hover:border-green-300',
+    'text': 'text-green-700',
+    'eyebrow': '30-second check',
+    'title': 'Google Maps Audit',
+    'blurb': 'See how your Google Business Profile stacks up in the local pack — reviews, photos, hours, and more.',
+  },
+  'ads': {
+    'endpoint': 'ads_grader_bp.strength_test',
+    'icon': 'fa-magnifying-glass-chart',
+    'card': 'from-indigo-50 to-violet-50 border-indigo-200 hover:border-indigo-300',
+    'text': 'text-indigo-700',
+    'eyebrow': '60-second grade',
+    'title': 'Google Ads Grader',
+    'blurb': 'Get an A–F grade on your Google Ads account and see exactly where you are wasting spend.',
+  },
+  'roi': {
+    'endpoint': 'ads_grader_bp.calculator',
+    'icon': 'fa-calculator',
+    'card': 'from-amber-50 to-yellow-50 border-amber-200 hover:border-amber-300',
+    'text': 'text-amber-700',
+    'eyebrow': 'Instant estimate',
+    'title': 'Marketing ROI Calculator',
+    'blurb': 'Plug in your budget and close rate to see the leads, jobs, and revenue your spend should return.',
+  }
+} %}
+{% set _visible = [] %}
+{% for key in (tools if tools is defined else []) %}
+  {% set d = _defs.get(key) %}
+  {% if d and has_endpoint(d.endpoint) %}{% set _ = _visible.append(d) %}{% endif %}
+{% endfor %}
+
+{% if _visible|length > 0 %}
+<div class="max-w-4xl mx-auto px-4 my-10">
+  <div class="text-center mb-5">
+    <div class="text-xs font-bold uppercase tracking-widest text-gray-400">Keep going — it's free</div>
+    <h3 class="text-lg font-semibold text-gray-800">Try another free tool</h3>
+  </div>
+  <div class="grid gap-4 {% if _visible|length > 1 %}sm:grid-cols-2{% endif %}">
+    {% for d in _visible %}
+    <a href="{{ url_for(d.endpoint) }}"
+       class="group flex items-start gap-4 rounded-2xl border bg-gradient-to-br {{ d.card }} p-5 transition-all hover:shadow-md">
+      <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm">
+        <i class="fa-solid {{ d.icon }} text-lg {{ d.text }}"></i>
+      </div>
+      <div class="min-w-0">
+        <div class="text-[11px] font-bold uppercase tracking-wide {{ d.text }}">{{ d.eyebrow }}</div>
+        <div class="font-bold text-gray-900">{{ d.title }}</div>
+        <p class="mt-0.5 text-sm text-gray-600">{{ d.blurb }}</p>
+        <span class="mt-2 inline-flex items-center gap-1 text-sm font-semibold {{ d.text }}">
+          Try it free <i class="fa-solid fa-arrow-right text-xs transition-transform group-hover:translate-x-0.5"></i>
+        </span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}

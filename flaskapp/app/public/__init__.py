@@ -167,6 +167,8 @@ def lifetime_deal(tier):
 
 # Public Maps audit funnel (registers /maps-audit on this blueprint)
 from app.public import maps_audit  # noqa: E402,F401
+# Public LSA lead-cost estimator (registers /lsa-estimator on this blueprint)
+from app.public import lsa_estimator  # noqa: E402,F401
 
 
 @public_bp.route("/nps/<token>", endpoint="nps_respond")

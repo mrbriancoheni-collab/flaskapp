@@ -234,6 +234,7 @@ Industry pages:
 
 - [Pricing](https://fieldsprout.io/pricing)
 - [Free Google Maps audit](https://fieldsprout.io/maps-audit)
+- [Free Local Services Ads lead cost estimator](https://fieldsprout.io/lsa-estimator)
 - [Google Ads product](https://fieldsprout.io/products/ads)
 - [Get more reviews](https://fieldsprout.io/solutions/get-more-reviews)
 - [Reduce ad spend](https://fieldsprout.io/solutions/lower-ad-cost)
@@ -311,6 +312,7 @@ def sitemap_xml():
         # Tools & graders
         ("https://fieldsprout.io/ads-grader", "0.9", "weekly"),
         ("https://fieldsprout.io/maps-audit", "0.9", "weekly"),
+        ("https://fieldsprout.io/lsa-estimator", "0.9", "weekly"),
         # Legal
         ("https://fieldsprout.io/privacy-policy", "0.3", "yearly"),
         ("https://fieldsprout.io/terms-of-service", "0.3", "yearly"),

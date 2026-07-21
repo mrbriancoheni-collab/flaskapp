@@ -167,6 +167,24 @@ def lifetime_deal(tier):
 
 # Public Maps audit funnel (registers /maps-audit on this blueprint)
 from app.public import maps_audit  # noqa: E402,F401
+# Public LSA lead-cost estimator (registers /lsa-estimator on this blueprint)
+from app.public import lsa_estimator  # noqa: E402,F401
+
+
+@public_bp.route("/lsa-report/<share_token>", endpoint="lsa_shared_report")
+def lsa_shared_report(share_token: str):
+    """Public, no-login view of a shared LSA history archive."""
+    from app.services.lsa_archive_service import get_archive
+    archive = get_archive(share_token=share_token)
+    if not archive:
+        abort(404)
+    return render_template(
+        "glsa/archive_report.html",
+        archive=archive,
+        snapshot=archive.get("snapshot") or {},
+        public=True,
+        share_token=share_token,
+    )
 
 
 @public_bp.route("/nps/<token>", endpoint="nps_respond")

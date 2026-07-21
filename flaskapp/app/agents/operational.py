@@ -152,14 +152,32 @@ class CampaignManagerAgent(BaseAgent):
                     'recommended_increase': monthly_spend * 0.3,
                 })
 
+            # 6. Recommend splitting multi-service campaigns with divergent per-service
+            #    CPLs — important ahead of Google's 2026 LSA -> Google Ads migration,
+            #    which collapses per-category targets into one blended Target CPA.
+            categories = campaign.get('service_categories')
+            if categories:
+                from .expertise import campaign_split_recommendation
+                split = campaign_split_recommendation(categories)
+                if split:
+                    opportunities.append({
+                        'type': 'campaign_split',
+                        'severity': 'medium',
+                        'campaign_id': campaign_id,
+                        'campaign_name': campaign_name,
+                        'split': split,
+                    })
+
         return opportunities
 
     def decide(self, opportunities: List[Dict[str, Any]]) -> List[AgentDecision]:
         """Make operational decisions."""
         decisions = []
 
+        from .expertise import expert_reasoning
         for opp in opportunities:
             opp_type = opp['type']
+            _expert = expert_reasoning(opp)
 
             if opp_type == 'cpl_spike':
                 # Delegate investigation to Quality Score Agent
@@ -170,7 +188,7 @@ class CampaignManagerAgent(BaseAgent):
                     decision_type='investigate_cpl_spike',
                     title=f"Investigate CPL spike in '{opp['campaign_name']}'",
                     description=f"CPL increased {opp['spike_pct']:.0f}% from ${opp['baseline_cpl']:.2f} to ${opp['current_cpl']:.2f}",
-                    reasoning="Sudden CPL spike requires investigation to prevent wasted spend",
+                    reasoning=_expert or "Sudden CPL spike requires investigation to prevent wasted spend",
                     account_id=0,
                     customer_id='',
                     campaign_id=opp['campaign_id'],
@@ -191,7 +209,7 @@ class CampaignManagerAgent(BaseAgent):
                     decision_type='adjust_bids',
                     title=f"Reduce bids by {abs(opp['recommended_bid_change_pct']):.0f}% in '{opp['campaign_name']}'",
                     description=f"Current CPL ${opp['current_cpl']:.2f} is above target ${opp['target_cpl']:.2f}",
-                    reasoning="Bid reduction will lower CPL toward target",
+                    reasoning=_expert or "Bid reduction will lower CPL toward target",
                     account_id=0,
                     customer_id='',
                     campaign_id=opp['campaign_id'],
@@ -216,7 +234,7 @@ class CampaignManagerAgent(BaseAgent):
                     decision_type='pause_campaign',
                     title=f"Pause underperforming campaign '{opp['campaign_name']}'",
                     description=f"90-day CPL ${opp['cpl_90d']:.2f} is {opp['cpl_90d'] / opp['target_cpl']:.1f}x the target ${opp['target_cpl']:.2f}",
-                    reasoning=f"Consistently high CPL after 90 days — estimated ${overspend:,.0f} wasted vs target",
+                    reasoning=_expert or f"Consistently high CPL after 90 days — estimated ${overspend:,.0f} wasted vs target",
                     account_id=0,
                     customer_id='',
                     campaign_id=opp['campaign_id'],
@@ -235,7 +253,7 @@ class CampaignManagerAgent(BaseAgent):
                     decision_type='scale_campaign',
                     title=f"Scale '{opp['campaign_name']}' — strong CPL, low impression share",
                     description=f"CPL ${opp['cpl_90d']:.2f} is {(1 - opp['cpl_90d'] / opp['target_cpl']) * 100:.0f}% below target with only {opp['impression_share']:.0f}% impression share",
-                    reasoning="More budget here will capture reachable demand at a proven CPL",
+                    reasoning=_expert or "More budget here will capture reachable demand at a proven CPL",
                     account_id=0,
                     customer_id='',
                     campaign_id=opp['campaign_id'],
@@ -248,6 +266,31 @@ class CampaignManagerAgent(BaseAgent):
                     requires_approval=True,
                     confidence=0.78,
                     expected_monthly_leads=int(opp['recommended_increase'] / max(opp['cpl_90d'], 1)),
+                )
+                decisions.append(decision)
+
+            elif opp_type == 'campaign_split':
+                split = opp['split']
+                high = ", ".join(split.get('high_cost', [])) or "high-cost services"
+                decision = AgentDecision(
+                    agent_id=self.agent_id,
+                    agent_type=self.agent_type,
+                    decision_type='recommend_campaign_split',
+                    title=f"Split '{opp['campaign_name']}' — {split['spread_ratio']}x lead-cost spread across services",
+                    description=f"Move {high} into a separate campaign for independent bidding control",
+                    reasoning=_expert or split['reasoning'],
+                    account_id=0,
+                    customer_id='',
+                    campaign_id=opp['campaign_id'],
+                    action_data={
+                        'high_cost_services': split.get('high_cost', []),
+                        'low_cost_services': split.get('low_cost', []),
+                        'spread_ratio': split.get('spread_ratio'),
+                        'advisory_only': True,
+                    },
+                    risk_level=DecisionRiskLevel.MEDIUM,
+                    requires_approval=True,
+                    confidence=0.75,
                 )
                 decisions.append(decision)
 
@@ -266,6 +309,11 @@ class CampaignManagerAgent(BaseAgent):
                     'campaign_id': decision.campaign_id
                 })
             return {'success': True, 'delegated': True}
+        elif decision.decision_type == 'recommend_campaign_split':
+            # Advisory only — restructuring campaigns is a human decision.
+            # "Executing" the recommendation just acknowledges it.
+            return {'success': True, 'advisory': True,
+                    'message': 'Campaign-split recommendation acknowledged (no automatic change made).'}
 
         return {'success': False, 'error': f'Unknown decision type: {decision.decision_type}'}
 

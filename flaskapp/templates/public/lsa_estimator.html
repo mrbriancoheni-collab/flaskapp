@@ -1,0 +1,159 @@
+{% extends "base_public.html" %}
+{% block title %}Free Local Services Ads Lead Cost Estimator — FieldSprout{% endblock %}
+{% block meta_description %}Estimate your Google Local Services Ads cost per lead, monthly lead volume, and ROI by trade and market — free, no login. Built for HVAC, plumbing, roofing, electrical, and other home service pros.{% endblock %}
+{% block og_title %}Free Local Services Ads Lead Cost Estimator{% endblock %}
+{% block og_description %}See your estimated LSA cost per lead, monthly leads, and booked-job ROI in 30 seconds. No login required.{% endblock %}
+
+{% block content %}
+<section class="bg-gradient-to-br from-blue-50 via-white to-indigo-50 pt-20 pb-14">
+  <div class="max-w-3xl mx-auto px-4 text-center">
+    <span class="inline-flex items-center gap-2 rounded-full bg-blue-100 text-blue-800 px-3 py-1 text-xs font-bold uppercase tracking-wide mb-4">
+      <i class="fa-solid fa-calculator"></i> Free tool · No login
+    </span>
+    <h1 class="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
+      What will <span class="text-blue-600">Local Services Ads</span> cost you?
+    </h1>
+    <p class="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
+      Estimate your cost per lead, monthly lead volume, and booked-job ROI by trade and market.
+      No account, no connection — just benchmarks built for home service businesses.
+    </p>
+
+    <form method="post" action="{{ url_for('public_bp.lsa_estimator') }}"
+          class="mt-8 bg-white rounded-2xl shadow-lg border p-5 sm:p-6 text-left grid sm:grid-cols-2 gap-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Your trade</label>
+        <select name="trade" required class="w-full rounded-lg border-gray-300 px-3 py-2.5 focus:ring-2 focus:ring-blue-500">
+          <option value="">Select a trade…</option>
+          {% for t in trades %}
+            <option value="{{ t.value }}" {% if form.trade == t.value %}selected{% endif %}>{{ t.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Monthly budget ($)</label>
+        <input type="number" name="budget" min="0" step="50" value="{{ form.budget }}" required
+               class="w-full rounded-lg border-gray-300 px-3 py-2.5 focus:ring-2 focus:ring-blue-500">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Market size</label>
+        <select name="market" class="w-full rounded-lg border-gray-300 px-3 py-2.5 focus:ring-2 focus:ring-blue-500">
+          {% for m in markets %}
+            <option value="{{ m.value }}" {% if form.market == m.value %}selected{% endif %}>{{ m.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Avg. job value ($)</label>
+        <input type="number" name="avg_job_value" min="0" step="25" value="{{ form.avg_job_value }}"
+               class="w-full rounded-lg border-gray-300 px-3 py-2.5 focus:ring-2 focus:ring-blue-500">
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Booking rate: <span class="text-blue-600 font-semibold">{{ form.booking_rate or 35 }}%</span>
+          <span class="text-gray-400 font-normal">(how many leads become jobs)</span>
+        </label>
+        <input type="number" name="booking_rate" min="5" max="95" step="5" value="{{ form.booking_rate }}"
+               class="w-full rounded-lg border-gray-300 px-3 py-2.5 focus:ring-2 focus:ring-blue-500">
+      </div>
+      <button type="submit"
+              class="sm:col-span-2 rounded-lg bg-blue-600 px-6 py-3 text-white font-bold hover:bg-blue-700 transition">
+        Estimate My Leads &amp; ROI
+      </button>
+    </form>
+
+    {% if error %}
+      <div class="mt-4 rounded-lg border border-amber-300 bg-amber-50 text-amber-900 px-4 py-3 text-sm inline-block">
+        <i class="fa-solid fa-circle-exclamation mr-1"></i> {{ error }}
+      </div>
+    {% endif %}
+  </div>
+</section>
+
+{% if result %}
+<section class="py-14 bg-white">
+  <div class="max-w-3xl mx-auto px-4 space-y-8">
+    <div class="text-center">
+      <div class="text-sm text-gray-400 uppercase tracking-widest font-bold">Estimated for</div>
+      <div class="text-xl font-bold text-gray-900">{{ result.trade_label }} · {{ result.market_label }}</div>
+    </div>
+
+    <div class="grid sm:grid-cols-3 gap-4">
+      <div class="rounded-2xl border bg-blue-50/50 p-5 text-center">
+        <div class="text-xs text-gray-500 uppercase tracking-wide">Cost per lead</div>
+        <div class="text-2xl font-extrabold text-blue-700 mt-1">${{ result.cost_per_lead_low }}–${{ result.cost_per_lead_high }}</div>
+      </div>
+      <div class="rounded-2xl border bg-blue-50/50 p-5 text-center">
+        <div class="text-xs text-gray-500 uppercase tracking-wide">Leads / month</div>
+        <div class="text-2xl font-extrabold text-blue-700 mt-1">{{ result.leads_low }}–{{ result.leads_high }}</div>
+      </div>
+      <div class="rounded-2xl border bg-green-50/60 p-5 text-center">
+        <div class="text-xs text-gray-500 uppercase tracking-wide">Booked jobs / month</div>
+        <div class="text-2xl font-extrabold text-green-700 mt-1">~{{ result.jobs_mid }}</div>
+      </div>
+    </div>
+
+    {% if result.revenue_mid %}
+    <div class="rounded-2xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 p-6 text-center">
+      <div class="text-sm text-gray-600">At a {{ result.booking_rate_pct }}% booking rate and ${{ '{:,.0f}'.format(result.avg_job_value) }} average job value</div>
+      <div class="mt-2 text-3xl font-extrabold text-green-700">${{ '{:,.0f}'.format(result.revenue_mid) }}<span class="text-lg font-semibold text-gray-500">/mo estimated revenue</span></div>
+      <div class="mt-2 flex flex-wrap justify-center gap-x-8 gap-y-1 text-sm text-gray-600">
+        {% if result.cost_per_job %}<div>Cost per booked job: <span class="font-semibold text-gray-900">${{ '{:,.0f}'.format(result.cost_per_job) }}</span></div>{% endif %}
+        {% if result.roas %}<div>Estimated ROAS: <span class="font-semibold text-gray-900">{{ result.roas }}x</span></div>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <p class="text-xs text-gray-400 text-center max-w-xl mx-auto">
+      Estimates use national LSA benchmark ranges adjusted for market size. Your actual cost per lead
+      depends on competition, reviews, responsiveness, and service area. Dispute-eligible leads can lower effective cost.
+    </p>
+
+    <div class="rounded-2xl border bg-white p-6 text-center">
+      <div class="text-lg font-bold text-gray-900">Want these numbers to be real — and managed for you?</div>
+      <p class="mt-1 text-gray-600 text-sm max-w-xl mx-auto">
+        FieldSprout connects your Local Services Ads, auto-disputes bad leads, optimizes your budget,
+        and (with Google's 2026 migration to Google Ads) keeps your lead history and performance in one place.
+      </p>
+      <a href="{{ url_for('auth_bp.register') }}"
+         class="mt-4 inline-block rounded-lg bg-blue-600 px-8 py-3 text-white font-bold hover:bg-blue-700 transition">
+        Get Started Free →
+      </a>
+    </div>
+
+    {% with tools = ['maps', 'ads'] %}{% include 'components/next_free_tool.html' %}{% endwith %}
+  </div>
+</section>
+{% else %}
+<section class="py-14 bg-white">
+  <div class="max-w-3xl mx-auto px-4">
+    <div class="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-6">
+      <div class="flex items-start gap-3">
+        <i class="fa-solid fa-circle-info text-indigo-500 mt-1"></i>
+        <div class="text-sm text-indigo-900">
+          <span class="font-semibold">Heads up — Local Services Ads is moving into Google Ads.</span>
+          Starting August 2026, Google is migrating LSA into Google Ads as pay-per-lead Performance Max
+          campaigns. Billing stays pay-per-lead and reach stays on Search &amp; Maps, but reporting and
+          management change — and <span class="font-semibold">historical reports won't transfer</span>.
+          FieldSprout can archive your LSA history before you migrate.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Local Services Ads Lead Cost Estimator",
+  "url": "https://fieldsprout.io/lsa-estimator",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Web",
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+  "description": "Estimate Google Local Services Ads cost per lead, monthly lead volume, and ROI by trade and market for home service businesses.",
+  "publisher": {"@type": "Organization", "name": "FieldSprout", "url": "https://fieldsprout.io"}
+}
+</script>
+{% endblock %}

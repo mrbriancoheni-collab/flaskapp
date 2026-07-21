@@ -25,8 +25,9 @@ class AgentCapability(Enum):
 
 class DecisionRiskLevel(Enum):
     """Risk level of a decision."""
-    LOW = "low"    # Auto-execute immediately (e.g., add negative keyword, small bid adjustment)
-    HIGH = "high"  # Always require manual approval (e.g., budget changes, campaign creation)
+    LOW = "low"       # Auto-execute immediately (e.g., add negative keyword, small bid adjustment)
+    MEDIUM = "medium" # Never auto-executed; always routed to the approval queue
+    HIGH = "high"     # Always require manual approval (e.g., budget changes, campaign creation)
 
 
 @dataclass

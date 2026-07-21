@@ -149,6 +149,63 @@ def expert_reasoning(opp: Dict[str, Any]) -> Optional[str]:
     return None
 
 
+def campaign_split_recommendation(categories: list, min_conversions: int = 10,
+                                  spread_ratio: float = 2.0) -> Optional[Dict[str, Any]]:
+    """
+    Decide whether a multi-service campaign should be split into separate
+    campaigns, given per-category economics.
+
+    This matters for Google's Aug 2026 migration of Local Services Ads into
+    Google Ads: a single campaign-level Target CPA replaces per-category
+    (vertical-level) targets. When one campaign mixes services with very
+    different lead costs (e.g. drain cleaning at $30 and repipe at $120), one
+    blended target overpays on the cheap service and underfunds the expensive
+    one. Splitting restores bidding control — at the cost of thinner conversion
+    data per campaign, so we only recommend it when each side has real volume.
+
+    `categories`: list of {name, cpl, conversions}.
+    Returns a recommendation dict when a split is warranted, else None.
+    """
+    try:
+        qualified = [
+            c for c in (categories or [])
+            if (c.get("conversions") or 0) >= min_conversions and (c.get("cpl") or 0) > 0
+        ]
+        if len(qualified) < 2:
+            return None
+
+        cheapest = min(qualified, key=lambda c: c["cpl"])
+        dearest = max(qualified, key=lambda c: c["cpl"])
+        ratio = dearest["cpl"] / cheapest["cpl"] if cheapest["cpl"] else 0
+        if ratio < spread_ratio:
+            return None
+
+        high = [c for c in qualified if c["cpl"] >= cheapest["cpl"] * spread_ratio]
+        low = [c for c in qualified if c not in high]
+        reasoning = _clean(
+            f"This campaign mixes services with very different lead economics — "
+            f"{dearest['name']} costs ${dearest['cpl']:.0f}/lead while {cheapest['name']} "
+            f"costs ${cheapest['cpl']:.0f}, a {ratio:.1f}x spread. After Google's 2026 move of "
+            "Local Services Ads into Google Ads, one campaign gets a single blended Target CPA, "
+            "so a shared target would overpay on the cheap services and starve the expensive ones. "
+            "Splitting the high-cost services into their own campaign restores per-service bidding "
+            "control. Both sides clear the volume bar for reliable bidding signals, so the usual "
+            "downside of splitting (thin data) doesn't apply here."
+        )
+        return {
+            "should_split": True,
+            "spread_ratio": round(ratio, 1),
+            "high_cost": [c["name"] for c in high],
+            "low_cost": [c["name"] for c in low],
+            "dearest": dearest,
+            "cheapest": cheapest,
+            "reasoning": reasoning,
+        }
+    except Exception:
+        log.debug("campaign_split_recommendation failed for %s", categories, exc_info=True)
+    return None
+
+
 def build_expert_context(agent_type: str, account_id: int = 0,
                          goal: str = "") -> str:
     """

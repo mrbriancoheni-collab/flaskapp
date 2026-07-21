@@ -158,8 +158,10 @@ class CampaignManagerAgent(BaseAgent):
         """Make operational decisions."""
         decisions = []
 
+        from .expertise import expert_reasoning
         for opp in opportunities:
             opp_type = opp['type']
+            _expert = expert_reasoning(opp)
 
             if opp_type == 'cpl_spike':
                 # Delegate investigation to Quality Score Agent
@@ -170,7 +172,7 @@ class CampaignManagerAgent(BaseAgent):
                     decision_type='investigate_cpl_spike',
                     title=f"Investigate CPL spike in '{opp['campaign_name']}'",
                     description=f"CPL increased {opp['spike_pct']:.0f}% from ${opp['baseline_cpl']:.2f} to ${opp['current_cpl']:.2f}",
-                    reasoning="Sudden CPL spike requires investigation to prevent wasted spend",
+                    reasoning=_expert or "Sudden CPL spike requires investigation to prevent wasted spend",
                     account_id=0,
                     customer_id='',
                     campaign_id=opp['campaign_id'],
@@ -191,7 +193,7 @@ class CampaignManagerAgent(BaseAgent):
                     decision_type='adjust_bids',
                     title=f"Reduce bids by {abs(opp['recommended_bid_change_pct']):.0f}% in '{opp['campaign_name']}'",
                     description=f"Current CPL ${opp['current_cpl']:.2f} is above target ${opp['target_cpl']:.2f}",
-                    reasoning="Bid reduction will lower CPL toward target",
+                    reasoning=_expert or "Bid reduction will lower CPL toward target",
                     account_id=0,
                     customer_id='',
                     campaign_id=opp['campaign_id'],
@@ -216,7 +218,7 @@ class CampaignManagerAgent(BaseAgent):
                     decision_type='pause_campaign',
                     title=f"Pause underperforming campaign '{opp['campaign_name']}'",
                     description=f"90-day CPL ${opp['cpl_90d']:.2f} is {opp['cpl_90d'] / opp['target_cpl']:.1f}x the target ${opp['target_cpl']:.2f}",
-                    reasoning=f"Consistently high CPL after 90 days — estimated ${overspend:,.0f} wasted vs target",
+                    reasoning=_expert or f"Consistently high CPL after 90 days — estimated ${overspend:,.0f} wasted vs target",
                     account_id=0,
                     customer_id='',
                     campaign_id=opp['campaign_id'],
@@ -235,7 +237,7 @@ class CampaignManagerAgent(BaseAgent):
                     decision_type='scale_campaign',
                     title=f"Scale '{opp['campaign_name']}' — strong CPL, low impression share",
                     description=f"CPL ${opp['cpl_90d']:.2f} is {(1 - opp['cpl_90d'] / opp['target_cpl']) * 100:.0f}% below target with only {opp['impression_share']:.0f}% impression share",
-                    reasoning="More budget here will capture reachable demand at a proven CPL",
+                    reasoning=_expert or "More budget here will capture reachable demand at a proven CPL",
                     account_id=0,
                     customer_id='',
                     campaign_id=opp['campaign_id'],

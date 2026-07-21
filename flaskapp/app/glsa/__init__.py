@@ -1776,3 +1776,58 @@ def _get_lsa_opportunities(aid: int) -> list:
         ]
     except Exception:
         return []
+
+
+# ---------------------------------------------------------------------------
+# LSA History Archiver — snapshot lead history before the Aug 2026 migration.
+# Available to all users (not paid-gated); reports are shareable via public link.
+# ---------------------------------------------------------------------------
+@glsa_bp.route("/archive", methods=["GET"], endpoint="archive_index")
+@login_required
+def archive_index():
+    aid = current_account_id()
+    from app.services.lsa_archive_service import list_archives
+    archives = list_archives(aid)
+    return render_template("glsa/archive_index.html", archives=archives)
+
+
+@glsa_bp.route("/archive/create", methods=["POST"], endpoint="archive_create")
+@login_required
+def archive_create():
+    aid = current_account_id()
+    from app.services.lsa_archive_service import create_archive
+    archive_id = create_archive(aid)
+    if archive_id:
+        flash("LSA history archived — this snapshot is saved permanently, even after migration.", "success")
+        return redirect(url_for("glsa_bp.archive_report", archive_id=archive_id))
+    flash("Could not create the archive right now. Please try again.", "error")
+    return redirect(url_for("glsa_bp.archive_index"))
+
+
+@glsa_bp.route("/archive/<int:archive_id>", methods=["GET"], endpoint="archive_report")
+@login_required
+def archive_report(archive_id):
+    aid = current_account_id()
+    from app.services.lsa_archive_service import get_archive
+    archive = get_archive(archive_id=archive_id, account_id=aid)
+    if not archive:
+        flash("Archive not found.", "error")
+        return redirect(url_for("glsa_bp.archive_index"))
+    return render_template(
+        "glsa/archive_report.html",
+        archive=archive,
+        snapshot=archive.get("snapshot") or {},
+        public=False,
+        share_token=archive.get("share_token"),
+    )
+
+
+@glsa_bp.route("/archive/<int:archive_id>/share", methods=["POST"], endpoint="archive_share")
+@login_required
+def archive_share(archive_id):
+    aid = current_account_id()
+    from app.services.lsa_archive_service import set_share
+    enable = request.form.get("enable") == "1"
+    set_share(archive_id, aid, enable)
+    flash("Share link enabled." if enable else "Share link disabled.", "success")
+    return redirect(url_for("glsa_bp.archive_report", archive_id=archive_id))

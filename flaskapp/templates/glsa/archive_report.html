@@ -1,0 +1,140 @@
+{% extends "base_public.html" if public else "base_app.html" %}
+{% block title %}Local Services Ads History{% if snapshot.business_name %} — {{ snapshot.business_name }}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8 space-y-8">
+
+  <div class="flex items-start justify-between gap-4 flex-wrap">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Local Services Ads — History Archive</h1>
+      <p class="text-gray-500 text-sm">
+        {% if snapshot.business_name %}{{ snapshot.business_name }} · {% endif %}
+        {% if snapshot.period_start %}{{ snapshot.period_start }} → {{ snapshot.period_end }}{% else %}No dated leads{% endif %}
+        {% if archive.created_at %} · archived {{ archive.created_at.strftime('%b %d, %Y') if archive.created_at.strftime is defined else archive.created_at }}{% endif %}
+      </p>
+    </div>
+    {% if not public %}
+    <a href="{{ url_for('glsa_bp.archive_index') }}" class="rounded-md border px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">← All archives</a>
+    {% endif %}
+  </div>
+
+  {# Migration note #}
+  <div class="rounded-xl border border-indigo-200 bg-indigo-50/50 p-4 text-sm text-indigo-900 flex items-start gap-3">
+    <i class="fa-solid fa-shield-halved text-indigo-500 mt-0.5"></i>
+    <div>This snapshot is preserved permanently. When Google migrates Local Services Ads into Google Ads
+    (starting August 2026), the original LSA dashboard reports won't transfer — but this archive keeps your
+    history for year-over-year comparisons.</div>
+  </div>
+
+  {# Summary tiles #}
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div class="rounded-xl border bg-white p-4">
+      <div class="text-2xl font-bold text-gray-900">{{ '{:,}'.format(snapshot.total_leads or 0) }}</div>
+      <div class="text-xs text-gray-500 uppercase tracking-wide">Total leads</div>
+    </div>
+    <div class="rounded-xl border bg-white p-4">
+      <div class="text-2xl font-bold text-gray-900">${{ '{:,.0f}'.format(snapshot.total_spend or 0) }}</div>
+      <div class="text-xs text-gray-500 uppercase tracking-wide">Total spend</div>
+    </div>
+    <div class="rounded-xl border bg-white p-4">
+      <div class="text-2xl font-bold text-green-600">{{ '{:,}'.format(snapshot.booked_leads or 0) }}</div>
+      <div class="text-xs text-gray-500 uppercase tracking-wide">Booked</div>
+    </div>
+    <div class="rounded-xl border bg-white p-4">
+      <div class="text-2xl font-bold text-gray-900">${{ '{:,.2f}'.format(snapshot.avg_cost_per_lead or 0) }}</div>
+      <div class="text-xs text-gray-500 uppercase tracking-wide">Avg cost / lead</div>
+    </div>
+  </div>
+
+  {# Monthly volume — CSS bar chart #}
+  {% if snapshot.monthly and snapshot.monthly|length > 0 %}
+  {% set max_leads = (snapshot.monthly | map(attribute='leads') | max) or 1 %}
+  <div class="rounded-xl border bg-white p-6">
+    <h2 class="text-lg font-medium mb-4">Leads by month</h2>
+    <div class="space-y-2">
+      {% for m in snapshot.monthly %}
+      <div class="flex items-center gap-3">
+        <div class="w-16 text-xs text-gray-500 shrink-0">{{ m.month }}</div>
+        <div class="flex-1 bg-gray-100 rounded h-6 overflow-hidden">
+          <div class="h-6 bg-blue-500 rounded flex items-center justify-end pr-2"
+               style="width: {{ ((m.leads / max_leads) * 100) | round(1) }}%; min-width: 2rem;">
+            <span class="text-[11px] font-semibold text-white">{{ m.leads }}</span>
+          </div>
+        </div>
+        <div class="w-20 text-right text-xs text-gray-500 shrink-0">${{ '{:,.0f}'.format(m.spend or 0) }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="mt-3 flex justify-between text-[11px] text-gray-400">
+      <span>Bar length = leads</span><span>Right column = spend</span>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Job type breakdown #}
+  {% if snapshot.job_types and snapshot.job_types|length > 0 %}
+  {% set max_jt = (snapshot.job_types | map(attribute='count') | max) or 1 %}
+  <div class="rounded-xl border bg-white p-6">
+    <h2 class="text-lg font-medium mb-4">Leads by job type</h2>
+    <div class="space-y-2">
+      {% for j in snapshot.job_types %}
+      <div class="flex items-center gap-3">
+        <div class="w-40 text-sm text-gray-700 truncate shrink-0" title="{{ j.name }}">{{ j.name }}</div>
+        <div class="flex-1 bg-gray-100 rounded h-5 overflow-hidden">
+          <div class="h-5 bg-indigo-400 rounded" style="width: {{ ((j.count / max_jt) * 100) | round(1) }}%; min-width: 1.5rem;"></div>
+        </div>
+        <div class="w-24 text-right text-xs text-gray-500 shrink-0">{{ j.count }} · ${{ '{:,.0f}'.format(j.spend or 0) }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if not snapshot.total_leads %}
+  <div class="rounded-xl border bg-white p-8 text-center text-gray-500">
+    No LSA leads found for this account yet. Once leads sync, create a fresh archive to capture them.
+  </div>
+  {% endif %}
+
+  {# Share controls — owner only #}
+  {% if not public %}
+  <div class="rounded-xl border bg-white p-5">
+    <div class="flex items-center justify-between gap-4 flex-wrap">
+      <div>
+        <div class="font-medium text-gray-900">Share this report</div>
+        <div class="text-sm text-gray-500">Anyone with the link can view it — no login required.</div>
+      </div>
+      {% if share_token %}
+      <form method="post" action="{{ url_for('glsa_bp.archive_share', archive_id=archive.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="enable" value="0">
+        <button class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50" type="submit">Disable link</button>
+      </form>
+      {% else %}
+      <form method="post" action="{{ url_for('glsa_bp.archive_share', archive_id=archive.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="enable" value="1">
+        <button class="rounded-md bg-indigo-600 text-white px-3 py-2 text-sm font-semibold hover:bg-indigo-700" type="submit">Create share link</button>
+      </form>
+      {% endif %}
+    </div>
+    {% if share_token %}
+    <div class="mt-3 flex items-center gap-2">
+      <input id="shareLink" type="text" readonly
+             value="{{ url_for('public_bp.lsa_shared_report', share_token=share_token, _external=True) }}"
+             class="flex-1 rounded-md border px-3 py-2 text-sm text-gray-600 bg-gray-50">
+      <button type="button"
+              onclick="navigator.clipboard.writeText(document.getElementById('shareLink').value); this.innerText='Copied!'"
+              class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Copy</button>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if public %}
+  <div class="text-center text-xs text-gray-400 pt-2">
+    Report by <a href="{{ url_for('main_bp.home') if has_endpoint('main_bp.home') else '/' }}" class="text-indigo-600 hover:underline">FieldSprout</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

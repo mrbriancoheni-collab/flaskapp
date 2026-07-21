@@ -252,6 +252,11 @@
             <i class="fa-solid fa-inbox"></i><span>Review Leads</span>
           </a>
         {% endif %}
+        {% if has_endpoint('glsa_bp.archive_index') %}
+          <a href="{{ url_for('glsa_bp.archive_index') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-box-archive"></i><span>History Archive</span>
+          </a>
+        {% endif %}
         {% if has_endpoint('glsa_bp.optimize') %}
           <a href="{{ url_for('glsa_bp.optimize') if is_paid else '#' }}" class="block pl-6 pr-3 py-3 nav-link min-h-12 {% if not is_paid %}opacity-40 cursor-not-allowed{% endif %}" {% if not is_paid %}onclick="showToast('This feature requires a paid plan. Please upgrade.', 'info'); return false;"{% endif %}>
             <i class="fa-solid fa-wand-magic-sparkles"></i><span>Optimize</span>

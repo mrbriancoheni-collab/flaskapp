@@ -115,6 +115,13 @@ Disallow: /fb_ads_grader/
 Disallow: /_deploy_check
 Disallow: /test
 Disallow: /wsgi-check
+# Auth & utility pages — no SEO value, keep them out of the index
+Disallow: /login
+Disallow: /register
+Disallow: /auth/
+Disallow: /connect/
+Disallow: /pv/
+Disallow: /*?next=
 
 # Allow major AI crawlers to index public content
 User-agent: GPTBot

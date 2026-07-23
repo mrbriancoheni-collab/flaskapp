@@ -115,6 +115,13 @@ Disallow: /fb_ads_grader/
 Disallow: /_deploy_check
 Disallow: /test
 Disallow: /wsgi-check
+# Auth & utility endpoints — no SEO value. Login/register carry a noindex
+# meta instead of a Disallow so Google can crawl them and drop them from the
+# index (a Disallow can't remove an already-indexed page).
+Disallow: /auth/
+Disallow: /connect/
+Disallow: /pv/
+Disallow: /*?next=
 
 # Allow major AI crawlers to index public content
 User-agent: GPTBot

@@ -1,4 +1,6 @@
 {% extends "base_public.html" if public else "base_app.html" %}
+{# Private lead/spend history — never index a shared report. #}
+{% block meta_robots %}noindex, nofollow{% endblock %}
 {% block title %}Local Services Ads History{% if snapshot.business_name %} — {{ snapshot.business_name }}{% endif %}{% endblock %}
 
 {% block content %}

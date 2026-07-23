@@ -1,5 +1,5 @@
 # app/public/__init__.py (or wherever your public routes live)
-from flask import Blueprint, render_template, abort
+from flask import Blueprint, render_template, abort, redirect, url_for
 from jinja2.exceptions import TemplateNotFound
 
 public_bp = Blueprint(
@@ -169,6 +169,32 @@ def lifetime_deal(tier):
 from app.public import maps_audit  # noqa: E402,F401
 # Public LSA lead-cost estimator (registers /lsa-estimator on this blueprint)
 from app.public import lsa_estimator  # noqa: E402,F401
+
+
+# ---------------------------------------------------------------------------
+# 301 redirects for legacy / wrong-path URLs that show up as 404s in Search
+# Console. Each points at the canonical page so link equity isn't lost.
+# ---------------------------------------------------------------------------
+_LEGACY_REDIRECTS = {
+    "/lower-ad-cost":   "public_bp.lower_ad_cost",     # -> /solutions/lower-ad-cost
+    "/demo":            "public_bp.product_ads_demo",  # -> /products/ads-demo
+    "/connect/google":  "public_bp.product_google_ads",# -> /products/ads
+    "/industries":      "main_bp.home",                # no hub page -> homepage
+}
+
+
+def _make_legacy_redirect(target_endpoint):
+    def _redir():
+        return redirect(url_for(target_endpoint), code=301)
+    return _redir
+
+
+for _path, _endpoint in _LEGACY_REDIRECTS.items():
+    public_bp.add_url_rule(
+        _path,
+        endpoint=f"legacy_redirect_{_path.strip('/').replace('/', '_')}",
+        view_func=_make_legacy_redirect(_endpoint),
+    )
 
 
 @public_bp.route("/lsa-report/<share_token>", endpoint="lsa_shared_report")

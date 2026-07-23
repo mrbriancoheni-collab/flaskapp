@@ -1,5 +1,8 @@
 {% extends "base_public.html" %}
 {% set SECTION = 'products' %}
+{# Served at both /products/ads and /products/google-ads — canonicalize to the
+   sitemap URL so the two don't compete as duplicate content. #}
+{% block canonical %}https://fieldsprout.io/products/ads{% endblock %}
 {% block title %}Google Ads for Home Services — FieldSprout{% endblock %}
 {% block meta_description %}AI-powered Google Ads management built for plumbers, HVAC, roofers & more. FieldSprout cuts waste, boosts call volume, and optimizes campaigns around the clock.{% endblock %}
 

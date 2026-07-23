@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
+  {# base.html is used only by utility/app pages (login, register, choose-plan,
+     ad-composer) — none should be indexed. Blanket noindex so Google drops any
+     that were previously indexed once it re-crawls. #}
+  <meta name="robots" content="{% block meta_robots %}noindex, nofollow{% endblock %}"/>
   <title>{{ APP_NAME }}{% if title %} — {{ title }}{% endif %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <link rel="stylesheet" href="https://unpkg.com/milligram/dist/milligram.min.css"/>

@@ -147,10 +147,17 @@ def accounts():
         if cols:
             qry = qry.filter(or_(*cols))
 
+    # Hide soft-deleted accounts by default; ?deleted=1 shows only the deactivated ones.
+    show_deleted = request.args.get("deleted") == "1"
+    if show_deleted:
+        qry = qry.filter(Account.status == "deleted")
+    else:
+        qry = qry.filter(Account.status != "deleted")
+
     page = max(int(request.args.get("page", 1)), 1)
     per = min(max(int(request.args.get("per", 25)), 1), 200)
     rows = qry.order_by(desc(Account.created_at)).paginate(page=page, per_page=per, error_out=False)
-    return render_template("admin/accounts.html", rows=rows, q=q)
+    return render_template("admin/accounts.html", rows=rows, q=q, show_deleted=show_deleted)
 
 
 @admin_bp.get("/accounts/<int:account_id>")
@@ -166,6 +173,55 @@ def account_detail(account_id: int):
             desc(getattr(Subscription, "created_at", Subscription.id))
         ).first()
     return render_template("admin/account_detail.html", acct=acct, users=users, sub=sub)
+
+
+# -------------------------
+# Account deactivate / restore (soft-delete)
+# -------------------------
+@admin_bp.post("/accounts/<int:account_id>/deactivate")
+@login_required
+@require_admin
+def deactivate_account(account_id: int):
+    acct = Account.query.get_or_404(account_id)
+    # Guard: never let an admin deactivate the account they're signed in under.
+    if getattr(g, "user", None) and getattr(g.user, "account_id", None) == acct.id:
+        flash("You can't deactivate your own account.", "error")
+        return redirect(url_for("admin_bp.accounts", q=request.args.get("q", "")))
+    if acct.status == "deleted":
+        flash("That account is already deactivated.", "info")
+        return redirect(url_for("admin_bp.accounts", q=request.args.get("q", "")))
+
+    prev = acct.status
+    acct.status = "deleted"
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        flash("Could not deactivate the account. Please try again.", "error")
+        return redirect(url_for("admin_bp.accounts", q=request.args.get("q", "")))
+
+    _audit("account_deactivated", target_account_id=acct.id,
+           note=f"Soft-deleted account '{acct.name}' (was status={prev})")
+    flash(f"Account '{acct.name}' deactivated — hidden from the list and reversible.", "success")
+    return redirect(url_for("admin_bp.accounts", q=request.args.get("q", "")))
+
+
+@admin_bp.post("/accounts/<int:account_id>/restore")
+@login_required
+@require_admin
+def restore_account(account_id: int):
+    acct = Account.query.get_or_404(account_id)
+    acct.status = "active"
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        flash("Could not restore the account. Please try again.", "error")
+        return redirect(url_for("admin_bp.accounts", deleted=1))
+
+    _audit("account_restored", target_account_id=acct.id, note=f"Restored account '{acct.name}'")
+    flash(f"Account '{acct.name}' restored to active.", "success")
+    return redirect(url_for("admin_bp.accounts", deleted=1))
 
 
 # -------------------------

@@ -361,6 +361,27 @@ def _send_reset_email(email: str, token: str) -> bool:
 # ---------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------
+def _account_deactivated(user_id) -> bool:
+    """
+    True only if the user's account was soft-deleted by an admin (status='deleted').
+    Fails OPEN (returns False on any error) so a DB hiccup can never lock out
+    the whole user base. 'deleted' is set exclusively by the admin deactivate
+    action, so this never affects active/trial/canceled accounts.
+    """
+    try:
+        from app import db
+        from sqlalchemy import text
+        with db.engine.connect() as conn:
+            r = conn.execute(
+                text("SELECT a.status FROM accounts a "
+                     "JOIN users u ON u.account_id = a.id WHERE u.id = :uid"),
+                {"uid": user_id},
+            ).first()
+        return bool(r and str(r[0] or "").lower() == "deleted")
+    except Exception:
+        return False
+
+
 @auth_bp.route("/login", methods=["GET", "POST"], endpoint="login")
 @_limit("10/minute")
 def login():
@@ -391,6 +412,10 @@ def login():
             row = _find_user_by_email(email)
             if not row or not check_password_hash(row["password_hash"], password):
                 form.password.errors.append("Invalid email or password")
+            elif _account_deactivated(row["id"]):
+                form.email.errors.append(
+                    "This account has been deactivated. Please contact support if you believe this is an error."
+                )
             else:
                 _set_login_session(row["id"], email)
 

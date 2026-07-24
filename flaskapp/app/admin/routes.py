@@ -157,7 +157,34 @@ def accounts():
     page = max(int(request.args.get("page", 1)), 1)
     per = min(max(int(request.args.get("per", 25)), 1), 200)
     rows = qry.order_by(desc(Account.created_at)).paginate(page=page, per_page=per, error_out=False)
-    return render_template("admin/accounts.html", rows=rows, q=q, show_deleted=show_deleted)
+
+    # Per-account last-login and API-connection counts for just the visible page.
+    # All raw SQL + defensive so a missing column/table degrades to blank, never 500s.
+    from sqlalchemy import text as _text
+    acct_ids = [a.id for a in rows.items]
+    last_logins, conn_counts = {}, {}
+    if acct_ids:
+        id_list = ",".join(str(int(i)) for i in acct_ids)  # ints only — injection-safe
+        try:
+            res = db.session.execute(_text(
+                f"SELECT account_id, MAX(last_login_at) FROM users "
+                f"WHERE account_id IN ({id_list}) GROUP BY account_id"))
+            last_logins = {aid: ts for aid, ts in res if ts is not None}
+        except Exception:
+            last_logins = {}
+        # Count connected integrations across each provider's table.
+        for tbl in ("google_oauth_tokens", "glsa_accounts", "fb_accounts"):
+            try:
+                res = db.session.execute(_text(
+                    f"SELECT account_id, COUNT(*) FROM {tbl} "
+                    f"WHERE account_id IN ({id_list}) GROUP BY account_id"))
+                for aid, c in res:
+                    conn_counts[aid] = conn_counts.get(aid, 0) + int(c or 0)
+            except Exception:
+                continue
+
+    return render_template("admin/accounts.html", rows=rows, q=q, show_deleted=show_deleted,
+                           last_logins=last_logins, conn_counts=conn_counts)
 
 
 @admin_bp.get("/accounts/<int:account_id>")

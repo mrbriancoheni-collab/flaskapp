@@ -30,6 +30,8 @@
         <th class="text-left px-3 py-2">Plan</th>
         <th class="text-left px-3 py-2">Status</th>
         <th class="text-left px-3 py-2">Created</th>
+        <th class="text-left px-3 py-2">Last login</th>
+        <th class="text-left px-3 py-2">Connections</th>
         <th class="text-right px-3 py-2">Actions</th>
       </tr>
     </thead>
@@ -39,7 +41,21 @@
         <td class="px-3 py-2">{{ a.name or ('Account #'+a.id|string) }}</td>
         <td class="px-3 py-2">{{ a.plan }}</td>
         <td class="px-3 py-2">{{ a.status }}</td>
-        <td class="px-3 py-2">{{ a.created_at }}</td>
+        <td class="px-3 py-2 whitespace-nowrap">{{ a.created_at.strftime('%b %d, %Y') if a.created_at and a.created_at.strftime is defined else (a.created_at or '—') }}</td>
+        <td class="px-3 py-2 whitespace-nowrap">
+          {% set ll = last_logins.get(a.id) %}
+          {% if ll %}{{ ll.strftime('%b %d, %Y') if ll.strftime is defined else ll }}{% else %}<span class="text-gray-400">Never</span>{% endif %}
+        </td>
+        <td class="px-3 py-2">
+          {% set cc = conn_counts.get(a.id, 0) %}
+          {% if cc > 0 %}
+            <span class="inline-flex items-center gap-1 rounded-full bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 text-xs font-medium">
+              <i class="fa-solid fa-plug"></i> {{ cc }}
+            </span>
+          {% else %}
+            <span class="text-gray-400 text-xs">None</span>
+          {% endif %}
+        </td>
         <td class="px-3 py-2 text-right whitespace-nowrap">
           <a class="underline" href="{{ url_for('admin_bp.account_detail', account_id=a.id) }}">Open</a>
           {% if a.status == 'deleted' %}
@@ -59,7 +75,7 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="5" class="px-3 py-4 text-gray-500">{% if show_deleted %}No deactivated accounts.{% else %}No accounts.{% endif %}</td></tr>
+      <tr><td colspan="7" class="px-3 py-4 text-gray-500">{% if show_deleted %}No deactivated accounts.{% else %}No accounts.{% endif %}</td></tr>
       {% endfor %}
     </tbody>
   </table>

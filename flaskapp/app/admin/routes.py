@@ -171,6 +171,15 @@ def _paid_condition() -> str:
     return cond
 
 
+def _active_condition() -> str:
+    """
+    'Should be visible by default' = paid or trialing (billing signal) OR an
+    app-managed trial (accounts.status='trial'). App trials have no Stripe
+    'trialing' status, so they must be included explicitly.
+    """
+    return f"(LOWER(COALESCE(status,'')) = 'trial' OR {_paid_condition()})"
+
+
 @admin_bp.get("/accounts")
 @login_required
 @require_admin
@@ -194,10 +203,10 @@ def accounts():
     elif status_filter == "deleted":
         qry = qry.filter(Account.status == "deleted")
     elif status_filter == "inactive":
-        qry = qry.filter(Account.status != "deleted").filter(_text("NOT (" + _paid_condition() + ")"))
+        qry = qry.filter(Account.status != "deleted").filter(_text("NOT (" + _active_condition() + ")"))
     else:
         status_filter = "active"
-        qry = qry.filter(Account.status != "deleted").filter(_text(_paid_condition()))
+        qry = qry.filter(Account.status != "deleted").filter(_text(_active_condition()))
 
     page = max(int(request.args.get("page", 1)), 1)
     per = min(max(int(request.args.get("per", 25)), 1), 200)

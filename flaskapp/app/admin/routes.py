@@ -147,12 +147,13 @@ def accounts():
         if cols:
             qry = qry.filter(or_(*cols))
 
-    # Two views: Active (everything not deactivated) and Deactivated.
-    status_filter = "deleted" if request.args.get("status") == "deleted" else "active"
-    if status_filter == "deleted":
-        qry = qry.filter(Account.status == "deleted")
+    # Two views: Active (status == 'active') and Inactive (everything else —
+    # canceled, past_due, trial, and admin-deactivated). Each account on one tab.
+    status_filter = "inactive" if request.args.get("status") == "inactive" else "active"
+    if status_filter == "inactive":
+        qry = qry.filter(Account.status != "active")
     else:
-        qry = qry.filter(Account.status != "deleted")
+        qry = qry.filter(Account.status == "active")
 
     page = max(int(request.args.get("page", 1)), 1)
     per = min(max(int(request.args.get("per", 25)), 1), 200)
@@ -244,11 +245,11 @@ def restore_account(account_id: int):
     except Exception:
         db.session.rollback()
         flash("Could not restore the account. Please try again.", "error")
-        return redirect(url_for("admin_bp.accounts", status="deleted"))
+        return redirect(url_for("admin_bp.accounts", status="inactive"))
 
     _audit("account_restored", target_account_id=acct.id, note=f"Restored account '{acct.name}'")
     flash(f"Account '{acct.name}' restored to active.", "success")
-    return redirect(url_for("admin_bp.accounts", status="deleted"))
+    return redirect(url_for("admin_bp.accounts", status="inactive"))
 
 
 # -------------------------

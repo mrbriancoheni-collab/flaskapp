@@ -147,12 +147,15 @@ def accounts():
         if cols:
             qry = qry.filter(or_(*cols))
 
-    # Hide soft-deleted accounts by default; ?deleted=1 shows only the deactivated ones.
-    show_deleted = request.args.get("deleted") == "1"
-    if show_deleted:
-        qry = qry.filter(Account.status == "deleted")
+    # Show only active accounts by default. ?status=<value> switches the view:
+    #   active (default) | trial | past_due | canceled | deleted | inactive | all
+    status_filter = (request.args.get("status") or "active").strip().lower()
+    if status_filter == "all":
+        pass
+    elif status_filter == "inactive":
+        qry = qry.filter(Account.status != "active")
     else:
-        qry = qry.filter(Account.status != "deleted")
+        qry = qry.filter(Account.status == status_filter)
 
     page = max(int(request.args.get("page", 1)), 1)
     per = min(max(int(request.args.get("per", 25)), 1), 200)
@@ -183,7 +186,7 @@ def accounts():
             except Exception:
                 continue
 
-    return render_template("admin/accounts.html", rows=rows, q=q, show_deleted=show_deleted,
+    return render_template("admin/accounts.html", rows=rows, q=q, status_filter=status_filter,
                            last_logins=last_logins, conn_counts=conn_counts)
 
 
@@ -244,11 +247,11 @@ def restore_account(account_id: int):
     except Exception:
         db.session.rollback()
         flash("Could not restore the account. Please try again.", "error")
-        return redirect(url_for("admin_bp.accounts", deleted=1))
+        return redirect(url_for("admin_bp.accounts", status="deleted"))
 
     _audit("account_restored", target_account_id=acct.id, note=f"Restored account '{acct.name}'")
     flash(f"Account '{acct.name}' restored to active.", "success")
-    return redirect(url_for("admin_bp.accounts", deleted=1))
+    return redirect(url_for("admin_bp.accounts", status="deleted"))
 
 
 # -------------------------

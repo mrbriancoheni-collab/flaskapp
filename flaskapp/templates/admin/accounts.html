@@ -2,12 +2,25 @@
 {% block title %}Admin – Accounts{% endblock %}
 {% block content %}
 <div class="flex items-center justify-between mb-4">
-  <h1 class="text-2xl font-bold">Accounts</h1>
+  <div class="flex items-center gap-3">
+    <h1 class="text-2xl font-bold">Accounts</h1>
+    {% if show_deleted %}
+      <a class="text-sm text-indigo-600 underline" href="{{ url_for('admin_bp.accounts', q=q) }}">← Active accounts</a>
+    {% else %}
+      <a class="text-sm text-gray-500 underline" href="{{ url_for('admin_bp.accounts', q=q, deleted=1) }}">View deactivated</a>
+    {% endif %}
+  </div>
   <form class="flex items-center gap-2" method="get">
+    {% if show_deleted %}<input type="hidden" name="deleted" value="1">{% endif %}
     <input class="border rounded px-3 py-2 text-sm" type="text" name="q" value="{{ q }}" placeholder="Search name/plan/status…">
     <button class="px-3 py-2 rounded bg-indigo-600 text-white text-sm" type="submit">Search</button>
   </form>
 </div>
+{% if show_deleted %}
+<div class="mb-4 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+  Showing <b>deactivated</b> accounts. These are hidden from the main list and from normal use; restore any to reactivate.
+</div>
+{% endif %}
 
 <div class="bg-white border rounded-xl overflow-hidden">
   <table class="w-full text-sm">
@@ -17,6 +30,8 @@
         <th class="text-left px-3 py-2">Plan</th>
         <th class="text-left px-3 py-2">Status</th>
         <th class="text-left px-3 py-2">Created</th>
+        <th class="text-left px-3 py-2">Last login</th>
+        <th class="text-left px-3 py-2">Connections</th>
         <th class="text-right px-3 py-2">Actions</th>
       </tr>
     </thead>
@@ -26,13 +41,41 @@
         <td class="px-3 py-2">{{ a.name or ('Account #'+a.id|string) }}</td>
         <td class="px-3 py-2">{{ a.plan }}</td>
         <td class="px-3 py-2">{{ a.status }}</td>
-        <td class="px-3 py-2">{{ a.created_at }}</td>
-        <td class="px-3 py-2 text-right">
+        <td class="px-3 py-2 whitespace-nowrap">{{ a.created_at.strftime('%b %d, %Y') if a.created_at and a.created_at.strftime is defined else (a.created_at or '—') }}</td>
+        <td class="px-3 py-2 whitespace-nowrap">
+          {% set ll = last_logins.get(a.id) %}
+          {% if ll %}{{ ll.strftime('%b %d, %Y') if ll.strftime is defined else ll }}{% else %}<span class="text-gray-400">Never</span>{% endif %}
+        </td>
+        <td class="px-3 py-2">
+          {% set cc = conn_counts.get(a.id, 0) %}
+          {% if cc > 0 %}
+            <span class="inline-flex items-center gap-1 rounded-full bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 text-xs font-medium">
+              <i class="fa-solid fa-plug"></i> {{ cc }}
+            </span>
+          {% else %}
+            <span class="text-gray-400 text-xs">None</span>
+          {% endif %}
+        </td>
+        <td class="px-3 py-2 text-right whitespace-nowrap">
           <a class="underline" href="{{ url_for('admin_bp.account_detail', account_id=a.id) }}">Open</a>
+          {% if a.status == 'deleted' %}
+          <form method="post" class="inline ml-3"
+                action="{{ url_for('admin_bp.restore_account', account_id=a.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="text-green-600 hover:underline" type="submit">Restore</button>
+          </form>
+          {% else %}
+          <form method="post" class="inline ml-3"
+                action="{{ url_for('admin_bp.deactivate_account', account_id=a.id, q=q) }}"
+                onsubmit="return confirm('Deactivate {{ (a.name or ('Account #' + a.id|string))|e }}? It will be hidden and disabled, but you can restore it later.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="text-red-600 hover:underline" type="submit">Deactivate</button>
+          </form>
+          {% endif %}
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="5" class="px-3 py-4 text-gray-500">No accounts.</td></tr>
+      <tr><td colspan="7" class="px-3 py-4 text-gray-500">{% if show_deleted %}No deactivated accounts.{% else %}No accounts.{% endif %}</td></tr>
       {% endfor %}
     </tbody>
   </table>

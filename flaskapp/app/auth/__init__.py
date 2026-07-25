@@ -153,6 +153,35 @@ def _set_login_session(user_id, email):
         # Log but don't fail if Flask-Login integration has issues
         current_app.logger.warning(f"Flask-Login integration failed: {e}")
 
+    # Best-effort: record last-login timestamp. Uses raw SQL (not an ORM column)
+    # so a missing column can never break User.query app-wide; self-heals the
+    # column on first use. Never blocks login.
+    try:
+        _ensure_last_login_column()
+        db.session.execute(
+            text("UPDATE users SET last_login_at = :now WHERE id = :id"),
+            {"now": datetime.utcnow(), "id": int(user_id)},
+        )
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+
+_last_login_col_ready = False
+
+
+def _ensure_last_login_column() -> None:
+    """Add users.last_login_at if it isn't there yet (idempotent, once per process)."""
+    global _last_login_col_ready
+    if _last_login_col_ready:
+        return
+    _last_login_col_ready = True  # only attempt once regardless of outcome
+    try:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN last_login_at DATETIME NULL"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()  # already exists, or no ALTER privilege — both fine
+
 
 def _send_welcome_email(name: str, email: str) -> None:
     """Send a welcome email to a newly registered user. Failures are logged, not raised."""
@@ -361,6 +390,27 @@ def _send_reset_email(email: str, token: str) -> bool:
 # ---------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------
+def _account_deactivated(user_id) -> bool:
+    """
+    True only if the user's account was soft-deleted by an admin (status='deleted').
+    Fails OPEN (returns False on any error) so a DB hiccup can never lock out
+    the whole user base. 'deleted' is set exclusively by the admin deactivate
+    action, so this never affects active/trial/canceled accounts.
+    """
+    try:
+        from app import db
+        from sqlalchemy import text
+        with db.engine.connect() as conn:
+            r = conn.execute(
+                text("SELECT a.status FROM accounts a "
+                     "JOIN users u ON u.account_id = a.id WHERE u.id = :uid"),
+                {"uid": user_id},
+            ).first()
+        return bool(r and str(r[0] or "").lower() == "deleted")
+    except Exception:
+        return False
+
+
 @auth_bp.route("/login", methods=["GET", "POST"], endpoint="login")
 @_limit("10/minute")
 def login():
@@ -391,6 +441,10 @@ def login():
             row = _find_user_by_email(email)
             if not row or not check_password_hash(row["password_hash"], password):
                 form.password.errors.append("Invalid email or password")
+            elif _account_deactivated(row["id"]):
+                form.email.errors.append(
+                    "This account has been deactivated. Please contact support if you believe this is an error."
+                )
             else:
                 _set_login_session(row["id"], email)
 

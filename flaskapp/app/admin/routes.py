@@ -133,53 +133,6 @@ def dashboard():
 # -------------------------
 # Accounts
 # -------------------------
-_acct_col_cache: dict = {}
-
-
-def _accounts_has_column(col: str) -> bool:
-    """Cached check for whether the accounts table has a given column."""
-    if col in _acct_col_cache:
-        return _acct_col_cache[col]
-    ok = False
-    try:
-        from sqlalchemy import text as _t
-        with db.engine.connect() as conn:
-            r = conn.execute(_t(
-                "SELECT 1 FROM information_schema.columns "
-                "WHERE table_schema = DATABASE() AND table_name = 'accounts' "
-                "AND column_name = :c LIMIT 1"), {"c": col}).first()
-        ok = bool(r)
-    except Exception:
-        ok = False
-    _acct_col_cache[col] = ok
-    return ok
-
-
-def _paid_condition() -> str:
-    """
-    SQL condition (against the accounts table) for a paid-or-trialing account,
-    mirroring auth.utils.is_paid_account: plan in PAID_PLANS, or stripe_status
-    in (active, trialing). accounts.status is NOT used — it defaults to 'active'
-    for everyone and doesn't reflect billing.
-    """
-    plans = [p.strip().lower().replace("'", "")
-             for p in current_app.config.get("PAID_PLANS", ()) if p and p.strip()]
-    plans_sql = ",".join(f"'{p}'" for p in plans) or "''"
-    cond = f"LOWER(COALESCE(plan,'')) IN ({plans_sql})"
-    if _accounts_has_column("stripe_status"):
-        cond = f"({cond} OR LOWER(COALESCE(stripe_status,'')) IN ('active','trialing'))"
-    return cond
-
-
-def _active_condition() -> str:
-    """
-    'Should be visible by default' = paid or trialing (billing signal) OR an
-    app-managed trial (accounts.status='trial'). App trials have no Stripe
-    'trialing' status, so they must be included explicitly.
-    """
-    return f"(LOWER(COALESCE(status,'')) = 'trial' OR {_paid_condition()})"
-
-
 @admin_bp.get("/accounts")
 @login_required
 @require_admin
@@ -194,19 +147,12 @@ def accounts():
         if cols:
             qry = qry.filter(or_(*cols))
 
-    # Default view = paid + trialing accounts (real billing signal), excluding
-    # deactivated. ?status=<value>: active (default) | inactive | deleted | all
-    from sqlalchemy import text as _text
-    status_filter = (request.args.get("status") or "active").strip().lower()
-    if status_filter == "all":
-        pass
-    elif status_filter == "deleted":
+    # Two views: Active (everything not deactivated) and Deactivated.
+    status_filter = "deleted" if request.args.get("status") == "deleted" else "active"
+    if status_filter == "deleted":
         qry = qry.filter(Account.status == "deleted")
-    elif status_filter == "inactive":
-        qry = qry.filter(Account.status != "deleted").filter(_text("NOT (" + _active_condition() + ")"))
     else:
-        status_filter = "active"
-        qry = qry.filter(Account.status != "deleted").filter(_text(_active_condition()))
+        qry = qry.filter(Account.status != "deleted")
 
     page = max(int(request.args.get("page", 1)), 1)
     per = min(max(int(request.args.get("per", 25)), 1), 200)

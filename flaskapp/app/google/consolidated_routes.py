@@ -83,26 +83,52 @@ def ai_control():
         lambda: _load_pending_decisions(account_id), ([], {"high": [], "low": []})
     )
 
-    # ── change log ──
-    cl_total_actions = cl_total_saved = cl_total_optimizations = cl_total_blocks = 0
+    # ── change log — agent_decisions is source of truth ──
+    cl_total_actions = cl_total_optimizations = cl_total_blocks = 0
+    cl_total_saved = 0.0
     cl_recent_actions = []
     try:
-        from app.models_ai_actions import AIAction
-        from sqlalchemy import func as _func
         from datetime import datetime as _dt, timedelta as _td
-        cl_total_actions = AIAction.query.filter_by(account_id=account_id, status='executed').count()
-        cl_total_saved = db.session.query(_func.sum(AIAction.estimated_monthly_savings)).filter_by(
-            account_id=account_id, status='executed'
-        ).scalar() or 0
-        cl_total_blocks = AIAction.query.filter_by(
-            account_id=account_id, status='executed', action_type='negative_keyword_added'
-        ).count()
-        cl_total_optimizations = cl_total_actions - cl_total_blocks
-        cl_recent_actions = AIAction.query.filter(
-            AIAction.account_id == account_id,
-            AIAction.status == 'executed',
-            AIAction.created_at >= _dt.utcnow() - _td(days=30)
-        ).order_by(AIAction.created_at.desc()).limit(50).all()
+
+        stats = db.session.execute(text("""
+            SELECT
+                COUNT(*)                                                          AS total,
+                SUM(CASE WHEN decision_type LIKE '%negative%' THEN 1 ELSE 0 END) AS blocks,
+                COALESCE(SUM(LEAST(COALESCE(expected_monthly_savings,0), 500)), 0) AS saved
+            FROM agent_decisions
+            WHERE account_id = :aid AND status = 'executed'
+        """), {"aid": account_id}).fetchone()
+        if stats:
+            cl_total_actions       = int(stats[0] or 0)
+            cl_total_blocks        = int(stats[1] or 0)
+            cl_total_saved         = float(stats[2] or 0)
+            cl_total_optimizations = cl_total_actions - cl_total_blocks
+
+        cl_raw = db.session.execute(text("""
+            SELECT id, decision_type, title, description,
+                   LEAST(COALESCE(expected_monthly_savings, 0), 500) AS estimated_monthly_savings,
+                   campaign_id,
+                   COALESCE(executed_at, created_at) AS created_at,
+                   status
+            FROM agent_decisions
+            WHERE account_id = :aid AND status = 'executed'
+              AND COALESCE(executed_at, created_at) >= :cutoff
+            ORDER BY COALESCE(executed_at, created_at) DESC
+            LIMIT 50
+        """), {"aid": account_id, "cutoff": _dt.utcnow() - _td(days=30)}).mappings().all()
+
+        class _Proxy:
+            def __init__(self, r):
+                self.id                       = r['id']
+                self.action_type              = r['decision_type']
+                self.title                    = r['title']
+                self.description              = r['description']
+                self.estimated_monthly_savings = r['estimated_monthly_savings']
+                self.campaign_name            = r['campaign_id']
+                self.created_at               = r['created_at']
+                self.status                   = r['status']
+
+        cl_recent_actions = [_Proxy(r) for r in cl_raw]
     except Exception:
         pass
 
@@ -139,7 +165,9 @@ def _load_agent_stats(account_id: int) -> list:
             COUNT(*) as total_decisions,
             SUM(CASE WHEN status = 'executed' THEN 1 ELSE 0 END) as executed_count,
             AVG(confidence) as avg_confidence,
-            SUM(expected_monthly_savings) as total_expected_savings,
+            SUM(CASE WHEN status = 'executed'
+                THEN LEAST(COALESCE(expected_monthly_savings, 0), 500)
+                ELSE 0 END) as total_expected_savings,
             SUM(expected_monthly_leads) as total_expected_leads
         FROM agent_decisions
         WHERE account_id = :aid

@@ -75,20 +75,21 @@ def test_page():
     ), 200
 
 
-@main_bp.route("/blog/", defaults={"subpath": ""}, endpoint="blog_index")
-@main_bp.route("/blog/<path:subpath>", endpoint="blog")
-def blog(subpath):
-    """
-    WordPress was removed.  If WP_BASE is configured, proxy-redirect there;
-    otherwise return 404 so search engines drop stale blog URLs cleanly.
-    """
-    wp_base = current_app.config.get("WP_BASE", "").rstrip("/")
-    if wp_base:
-        target = f"{wp_base}/blog/{subpath}"
-        qs = ("?" + request.query_string.decode()) if request.query_string else ""
-        return redirect(target + qs, 301)
+@main_bp.route("/blog/", endpoint="blog_index")
+def blog_index():
+    from app.blog_data import POSTS
+    return render_template("blog/index.html", posts=POSTS)
+
+
+@main_bp.route("/blog/<slug>", endpoint="blog")
+def blog_post(slug):
+    from app.blog_data import POSTS, POSTS_BY_SLUG
     from flask import abort
-    abort(404)
+    post = POSTS_BY_SLUG.get(slug)
+    if not post:
+        abort(404)
+    related = [p for p in POSTS if p["slug"] != slug][:2]
+    return render_template(f"blog/{slug}.html", post=post, related_posts=related)
 
 
 @main_bp.route("/about", methods=["GET"], endpoint="about")

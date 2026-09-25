@@ -128,3 +128,12 @@ def industry_pool_service():
 @public_bp.route("/industries/solar", endpoint="industry_solar")
 def industry_solar():
     return render_template("industries/solar.html")
+
+
+@public_bp.route("/industries/<trade>/<channel>", endpoint="industry_sub")
+def industry_sub(trade, channel):
+    from flask import abort
+    try:
+        return render_template(f"industries/{trade}-{channel}.html")
+    except Exception:
+        abort(404)

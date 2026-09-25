@@ -162,6 +162,30 @@ def sitemap_xml():
         ("https://fieldsprout.io/terms-of-service", "0.3", "yearly"),
         ("https://fieldsprout.io/security", "0.4", "yearly"),
     ]
+    # Industry sub-pages (trade/channel combinations)
+    _industry_subs = [
+        ("hvac", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("plumbing", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("electrical", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("roofing", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("pest-control", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("lawn-care", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("garage-door", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("solar", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("pools", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("concrete", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("fencing", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("irrigation", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("windows-doors", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("restoration", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+    ]
+    for trade, channels in _industry_subs:
+        for channel in channels:
+            pages.append((
+                f"https://fieldsprout.io/industries/{trade}/{channel}",
+                "0.7",
+                "monthly",
+            ))
     # Dynamically include all blog posts
     for post in POSTS:
         pages.append((

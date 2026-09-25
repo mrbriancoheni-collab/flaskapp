@@ -17,10 +17,19 @@
   "headline": "{{ post.title }}",
   "description": "{{ post.meta_description }}",
   "datePublished": "{{ post.date }}",
-  "publisher": {
+  "author": {
     "@type": "Organization",
     "name": "FieldSprout",
     "url": "https://fieldsprout.io"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "FieldSprout",
+    "url": "https://fieldsprout.io",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://fieldsprout.io/static/brand/logos/fieldsprout-wordmark.svg"
+    }
   },
   "mainEntityOfPage": {
     "@type": "WebPage",
@@ -28,6 +37,35 @@
   }
 }
 </script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://fieldsprout.io"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Blog",
+      "item": "https://fieldsprout.io/blog/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "{{ post.title }}",
+      "item": "https://fieldsprout.io/blog/{{ post.slug }}"
+    }
+  ]
+}
+</script>
+
+{% block post_schemas %}{% endblock %}
 {% endblock %}
 
 {% block content %}

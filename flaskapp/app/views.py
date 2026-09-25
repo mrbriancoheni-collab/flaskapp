@@ -123,6 +123,7 @@ def robots_txt():
 def sitemap_xml():
     from flask import Response
     from datetime import date
+    from app.blog_data import POSTS
     today = date.today().isoformat()
     pages = [
         ("https://fieldsprout.io/", "1.0", "weekly"),
@@ -156,10 +157,18 @@ def sitemap_xml():
         ("https://fieldsprout.io/solutions/spend-when-open", "0.7", "monthly"),
         ("https://fieldsprout.io/solutions/see-what-works", "0.7", "monthly"),
         ("https://fieldsprout.io/ads-grader", "0.9", "weekly"),
+        ("https://fieldsprout.io/blog/", "0.8", "weekly"),
         ("https://fieldsprout.io/privacy-policy", "0.3", "yearly"),
         ("https://fieldsprout.io/terms-of-service", "0.3", "yearly"),
         ("https://fieldsprout.io/security", "0.4", "yearly"),
     ]
+    # Dynamically include all blog posts
+    for post in POSTS:
+        pages.append((
+            f"https://fieldsprout.io/blog/{post['slug']}",
+            "0.8",
+            "monthly",
+        ))
     urls = "\n".join(
         f"  <url>\n"
         f"    <loc>{loc}</loc>\n"
@@ -176,6 +185,52 @@ def sitemap_xml():
         "</urlset>"
     )
     return Response(xml, mimetype="application/xml")
+
+
+@main_bp.route("/llms.txt", methods=["GET"], endpoint="llms_txt")
+def llms_txt():
+    """
+    llms.txt — machine-readable index for AI crawlers (ChatGPT, Perplexity,
+    Claude, Google AI Overviews).  Format: https://llmstxt.org/
+    """
+    from flask import Response
+    from app.blog_data import POSTS
+    blog_lines = "\n".join(
+        f"- [{p['title']}](https://fieldsprout.io/blog/{p['slug']}): {p['excerpt']}"
+        for p in POSTS
+    )
+    body = f"""# FieldSprout
+
+> FieldSprout is a full-service AI marketing platform for trade and field service businesses. AI agents manage Google Ads, Meta Ads, SEO, reputation, and lead follow-up 24/7 — no marketing expertise or dedicated marketing team required. Works for both residential (B2C) and commercial (B2B) trade businesses.
+
+## Product
+
+- [Home](https://fieldsprout.io/): Overview of FieldSprout's AI marketing platform for trade businesses
+- [Pricing](https://fieldsprout.io/pricing): Plans starting at $250/month; annual plan at $200/month
+- [About](https://fieldsprout.io/about): Company mission and background
+
+## Industries
+
+- [HVAC](https://fieldsprout.io/industries/hvac): Google Ads and marketing automation for HVAC companies
+- [Plumbing](https://fieldsprout.io/industries/plumbing): Marketing AI for plumbing contractors
+- [Electrical](https://fieldsprout.io/industries/electricians): Marketing platform for electricians and electrical contractors
+- [Roofing](https://fieldsprout.io/industries/roofing): Lead generation and ads management for roofing companies
+- [Pest Control](https://fieldsprout.io/industries/pest-control): Marketing automation for pest control businesses
+- [Landscaping](https://fieldsprout.io/industries/landscaping): Ads and SEO for landscaping and lawn care companies
+- [Garage Door](https://fieldsprout.io/industries/garage-door): Marketing for garage door repair and installation businesses
+- [Solar](https://fieldsprout.io/industries/solar): Lead generation for solar installation companies
+
+## Blog
+
+{blog_lines}
+
+## Optional
+
+- [Privacy Policy](https://fieldsprout.io/privacy-policy)
+- [Terms of Service](https://fieldsprout.io/terms-of-service)
+"""
+    return Response(body, mimetype="text/plain")
+
 
 
 # -------------------------

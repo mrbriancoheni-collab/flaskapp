@@ -1,5 +1,56 @@
 {% extends "blog/base_post.html" %}
 
+{% block post_schemas %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How much should a trade contractor spend on Google Ads per month?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The minimum for meaningful results in most competitive markets is $1,000–$1,500/month. Below that you don't get enough data to optimize. The right number depends on your revenue goal: calculate leads needed ÷ your cost per lead benchmark for your trade. A typical HVAC business targeting $15,000/month in new revenue needs roughly $4,000–$5,000/month in ad spend."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the average cost per lead for HVAC Google Ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The typical range is $60–$140 per lead for HVAC Google Ads in competitive U.S. markets. High-competition metros like LA, NYC, and Chicago skew toward the upper end. Emergency HVAC searches tend to have lower CPLs because urgency drives higher conversion rates."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the average cost per lead for plumbing Google Ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Plumbing Google Ads typically cost $50–$120 per lead in competitive U.S. markets. Emergency plumbing searches (burst pipe, flooding) convert at higher rates and often produce leads at the lower end of that range."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I calculate the right Google Ads budget for my trade business?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Work backwards from your revenue goal: (1) Set a target monthly revenue from ads. (2) Divide by your average job value to get jobs needed. (3) Divide by your close rate to get leads needed. (4) Multiply by your industry's cost-per-lead benchmark to get your budget. Example: $15,000 target ÷ $800 job value = 19 jobs ÷ 40% close rate = 47 leads × $90 CPL = $4,230/month."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "When should I increase my Google Ads budget?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Increase your budget when your cost per lead is below your industry benchmark and you have capacity for more jobs, your lead-to-booked-job conversion rate is above 40%, or you're entering peak season for your trade. Pull back when CPL is 2x+ above benchmark after 30 days of optimization or when you're at capacity."
+      }
+    }
+  ]
+}
+</script>
+{% endblock %}
+
 {% block post_body %}
 
 <p>One of the most common questions trade contractors ask when they start running Google Ads is: <em>"How much should I be spending?"</em></p>

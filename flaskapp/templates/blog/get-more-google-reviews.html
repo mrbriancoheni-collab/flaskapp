@@ -1,5 +1,96 @@
 {% extends "blog/base_post.html" %}
 
+{% block post_schemas %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to Get More Google Reviews for Your Trade Business",
+  "description": "A repeatable 6-step system to consistently collect Google reviews after every job — without being pushy or requiring manual effort.",
+  "totalTime": "PT30M",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "position": 1,
+      "name": "Ask at the right time — 2 to 4 hours after job completion",
+      "text": "Send a text message 2–4 hours after completing the job, while the customer is satisfied and the experience is still fresh. This window consistently outperforms asking verbally on-site or sending a message days later."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 2,
+      "name": "Send a direct link to your Google review form",
+      "text": "Get your Google review short link from your Google Business Profile ('Get more reviews' button) and include it directly in the text. A direct link eliminates 4–5 navigation steps and dramatically increases completion rates."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 3,
+      "name": "Write a personalized message that doesn't feel like a form letter",
+      "text": "Use the customer's first name, reference the specific service you performed, and explain why the review helps (other homeowners find a trustworthy contractor). Avoid generic 'please leave us a review' templates."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 4,
+      "name": "Follow up once, 48 to 72 hours later",
+      "text": "Send a single follow-up if the customer hasn't left a review. Frame it as a check-in on the service, not a guilt trip. This recovers 10–15% of reviews from customers who intended to leave one but forgot."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 5,
+      "name": "Respond to every review — positive and negative",
+      "text": "A personalized response to every 5-star review signals to Google that you're active and engaged. A calm, professional response to negative reviews shows prospective customers you handle problems like a legitimate business."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 6,
+      "name": "Automate the entire process",
+      "text": "Connect your field service software or CRM to trigger review requests automatically when a job is marked complete. Automation removes the manual step entirely, so you collect reviews consistently without remembering to send texts."
+    }
+  ]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How do I get more Google reviews for my trade business?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The most effective system: send a text message with a direct Google review link 2–4 hours after job completion, follow up once 48–72 hours later if they haven't responded, and respond to every review you receive. Automating the process so messages send automatically when a job is marked complete turns a sporadic effort into a consistent stream."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "When is the best time to ask a customer for a Google review?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "2–4 hours after job completion via text message. Asking verbally at the end of the job produces 5–10% follow-through. A text sent when the customer is back to their normal life — satisfied but not yet distracted — consistently produces 25–40% conversion rates."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How many Google reviews does a trade business need?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "In most mid-size markets, moving from 5 to 25–30 recent reviews at 4.5+ stars produces measurable improvement in local pack ranking and click-through rate. In competitive metros, 50–100 reviews may be needed to consistently appear in the top three results. Recency matters more than total count — new reviews (within 90 days) carry significantly more weight."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is it against Google's policy to ask customers for reviews?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Asking customers for reviews is allowed under Google's guidelines. What is prohibited: offering incentives (discounts, gift cards) in exchange for reviews, asking only happy customers to filter out negative experiences, or posting fake reviews. A straightforward automated request sent to all customers after every job is fully compliant."
+      }
+    }
+  ]
+}
+</script>
+{% endblock %}
+
 {% block post_body %}
 
 <p>Google reviews are one of the highest-leverage things a trade business can invest in — and most businesses treat them as an afterthought.</p>

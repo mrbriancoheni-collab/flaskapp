@@ -1,5 +1,56 @@
 {% extends "blog/base_post.html" %}
 
+{% block post_schemas %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Why isn't my phone ringing even though I run Google Ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Poor targeting is the most common culprit. Broad match keywords, no negative keyword list, and campaigns that never get optimized mean 30–50% of your ad spend goes to irrelevant searches. Other causes include an incomplete Google Business Profile, no review generation system, and slow lead follow-up that lets competitors answer first."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the most important factor for ranking in Google's local pack?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Review quantity, recency, and rating are the highest-weighted factors. A business with 10 new reviews in the last 90 days typically outranks one with 200 reviews from 3 years ago. A fully completed Google Business Profile — every field filled in, recent posts, and service areas listed — is also essential."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How quickly do I need to respond to new leads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Within 5 minutes. Harvard Business Review data shows businesses that respond within 5 minutes are 100x more likely to connect than those who wait an hour. In the trades, customers call multiple contractors — speed to respond wins the job."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does my trade business website need separate pages for each service?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. High-intent searches like 'water heater replacement Dallas' or 'emergency AC repair Phoenix' require dedicated service + location pages to rank. A homepage alone won't capture these searches. Each core service in each city you serve should have its own page with targeted copy."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Why am I losing calls to competitors with similar services?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The five most common gaps are: an incomplete Google Business Profile, poorly targeted ads, no review generation system, slow lead follow-up, and missing service/location pages on the website. Competitors who show up consistently across all five channels capture the bulk of available calls in your market."
+      }
+    }
+  ]
+}
+</script>
+{% endblock %}
+
 {% block post_body %}
 
 <p>You're good at what you do. Your past customers would recommend you in a heartbeat. But the phone just isn't ringing like it used to — or like it should.</p>

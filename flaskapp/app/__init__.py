@@ -925,6 +925,15 @@ def create_app():
     except Exception:
         app.logger.exception("Failed to register fb_ads_grader_bp")
 
+    # --- GA4 Audit (free tool) -----------------------------------------------
+    try:
+        from app.ga4_audit import ga4_audit_bp
+        from app.models_ga4_audit import GA4AuditReport  # ensure table is created
+        app.register_blueprint(ga4_audit_bp)
+        app.logger.info("ga4_audit_bp registered at /ga4-audit")
+    except Exception:
+        app.logger.exception("Failed to register ga4_audit_bp")
+
     # --- Daily Tasks & Health Score ------------------------------------------
     try:
         from app.daily_tasks import daily_tasks_bp

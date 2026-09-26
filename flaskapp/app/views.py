@@ -157,6 +157,7 @@ def sitemap_xml():
         ("https://fieldsprout.io/solutions/spend-when-open", "0.7", "monthly"),
         ("https://fieldsprout.io/solutions/see-what-works", "0.7", "monthly"),
         ("https://fieldsprout.io/ads-grader", "0.9", "weekly"),
+        ("https://fieldsprout.io/ga4-audit", "0.9", "weekly"),
         ("https://fieldsprout.io/blog/", "0.8", "weekly"),
         ("https://fieldsprout.io/privacy-policy", "0.3", "yearly"),
         ("https://fieldsprout.io/terms-of-service", "0.3", "yearly"),

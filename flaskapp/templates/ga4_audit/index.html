@@ -1,0 +1,143 @@
+{% extends "base_public.html" %}
+{% block title %}Free GA4 Audit — Check Your Google Analytics Health | FieldSprout{% endblock %}
+{% block meta_description %}Run a free GA4 configuration audit in under 2 minutes. Get a health score, see exactly what's broken, and get step-by-step fixes — no data stored.{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<section class="bg-gradient-to-br from-blue-50 via-white to-indigo-50 pt-20 pb-16">
+  <div class="max-w-4xl mx-auto px-6 text-center">
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold mb-6">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      Free GA4 Audit Tool
+    </div>
+    <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-tight">
+      Is Your GA4 Telling You<br class="hidden md:block"> the Whole Story?
+    </h1>
+    <p class="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+      8 out of 10 GA4 setups have configuration gaps that silently corrupt reporting. Check your setup in under 2 minutes — 14 checks, zero data stored.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      {% if has_endpoint('ga4_audit_bp.analyze') %}
+      <a href="{{ url_for('ga4_audit_bp.connect') }}" class="inline-block bg-blue-600 text-white font-bold px-8 py-4 rounded-xl hover:bg-blue-700 transition-colors shadow-lg text-lg">
+        Get My GA4 Health Score →
+      </a>
+      <a href="{{ url_for('ga4_audit_bp.demo') }}" class="inline-block bg-white text-blue-700 font-bold px-8 py-4 rounded-xl border-2 border-blue-200 hover:border-blue-400 transition-colors text-lg">
+        View Sample Report
+      </a>
+      {% else %}
+      <a href="/ga4-audit/connect" class="inline-block bg-blue-600 text-white font-bold px-8 py-4 rounded-xl hover:bg-blue-700 transition-colors shadow-lg text-lg">
+        Get My GA4 Health Score →
+      </a>
+      <a href="/ga4-audit/demo" class="inline-block bg-white text-blue-700 font-bold px-8 py-4 rounded-xl border-2 border-blue-200 hover:border-blue-400 transition-colors text-lg">
+        View Sample Report
+      </a>
+      {% endif %}
+    </div>
+    <p class="mt-4 text-sm text-gray-400">Read-only access · No data stored · Free</p>
+  </div>
+</section>
+
+<!-- What We Check -->
+<section class="py-16 bg-white">
+  <div class="max-w-5xl mx-auto px-6">
+    <h2 class="text-2xl font-bold text-gray-900 text-center mb-2">14 Checks Across 4 Categories</h2>
+    <p class="text-gray-500 text-center mb-12">Every check maps to a specific GA4 Admin panel setting — so you can fix it yourself in minutes.</p>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="rounded-xl border border-blue-100 bg-blue-50 p-6">
+        <div class="w-10 h-10 rounded-lg bg-blue-600 text-white flex items-center justify-center mb-4 font-bold text-sm">DC</div>
+        <h3 class="font-bold text-gray-900 mb-3">Data Collection</h3>
+        <ul class="space-y-1.5 text-sm text-gray-600">
+          <li>• Web data stream setup</li>
+          <li>• Enhanced measurement</li>
+          <li>• Scroll depth tracking</li>
+          <li>• Outbound click tracking</li>
+          <li>• Form interaction tracking</li>
+        </ul>
+      </div>
+      <div class="rounded-xl border border-green-100 bg-green-50 p-6">
+        <div class="w-10 h-10 rounded-lg bg-green-600 text-white flex items-center justify-center mb-4 font-bold text-sm">CS</div>
+        <h3 class="font-bold text-gray-900 mb-3">Conversion Setup</h3>
+        <ul class="space-y-1.5 text-sm text-gray-600">
+          <li>• Key events defined</li>
+          <li>• Conversion event breadth</li>
+          <li>• Google Ads linked</li>
+          <li>• Attribution model</li>
+        </ul>
+      </div>
+      <div class="rounded-xl border border-orange-100 bg-orange-50 p-6">
+        <div class="w-10 h-10 rounded-lg bg-orange-600 text-white flex items-center justify-center mb-4 font-bold text-sm">DQ</div>
+        <h3 class="font-bold text-gray-900 mb-3">Data Quality</h3>
+        <ul class="space-y-1.5 text-sm text-gray-600">
+          <li>• Data retention (14 months)</li>
+          <li>• Internal traffic filter</li>
+        </ul>
+      </div>
+      <div class="rounded-xl border border-purple-100 bg-purple-50 p-6">
+        <div class="w-10 h-10 rounded-lg bg-purple-600 text-white flex items-center justify-center mb-4 font-bold text-sm">TH</div>
+        <h3 class="font-bold text-gray-900 mb-3">Technical Health</h3>
+        <ul class="space-y-1.5 text-sm text-gray-600">
+          <li>• Custom dimensions</li>
+          <li>• Industry category</li>
+          <li>• Remarketing audiences</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How It Works -->
+<section class="py-16 bg-gray-50">
+  <div class="max-w-4xl mx-auto px-6">
+    <h2 class="text-2xl font-bold text-gray-900 text-center mb-12">How It Works</h2>
+    <div class="grid sm:grid-cols-3 gap-8">
+      <div class="text-center">
+        <div class="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center text-xl font-extrabold mx-auto mb-4">1</div>
+        <h3 class="font-bold text-gray-900 mb-2">Connect Your GA4</h3>
+        <p class="text-sm text-gray-600">Sign in with Google — read-only access to your GA4 property configuration. No changes are made.</p>
+      </div>
+      <div class="text-center">
+        <div class="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center text-xl font-extrabold mx-auto mb-4">2</div>
+        <h3 class="font-bold text-gray-900 mb-2">Select Your Property</h3>
+        <p class="text-sm text-gray-600">Choose the GA4 property to audit. The scan runs instantly against your live configuration.</p>
+      </div>
+      <div class="text-center">
+        <div class="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center text-xl font-extrabold mx-auto mb-4">3</div>
+        <h3 class="font-bold text-gray-900 mb-2">Get Your Score + Fixes</h3>
+        <p class="text-sm text-gray-600">See your health score, every issue found, and exact step-by-step instructions to fix each one.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Privacy Note -->
+<section class="py-12 bg-white border-t border-gray-100">
+  <div class="max-w-3xl mx-auto px-6 text-center">
+    <svg class="w-8 h-8 text-green-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+    <h2 class="text-xl font-bold text-gray-900 mb-2">Your Data Stays Private</h2>
+    <p class="text-gray-600">This audit reads your GA4 <strong>configuration only</strong> — not your analytics data, user data, or event data. We use read-only permissions and do not store, share, or retain anything from your Google account.</p>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="py-16 bg-gradient-to-br from-blue-600 to-indigo-700">
+  <div class="max-w-3xl mx-auto px-6 text-center text-white">
+    <h2 class="text-3xl font-extrabold mb-4">See How Your GA4 Setup Scores</h2>
+    <p class="text-blue-100 mb-8 text-lg">Free, instant, and actionable. No credit card, no account required.</p>
+    {% if has_endpoint('ga4_audit_bp.connect') %}
+    <a href="{{ url_for('ga4_audit_bp.connect') }}" class="inline-block bg-white text-blue-700 font-bold px-10 py-4 rounded-xl hover:bg-gray-50 transition-colors shadow-lg text-lg mr-4">
+      Run My Free Audit →
+    </a>
+    <a href="{{ url_for('ga4_audit_bp.demo') }}" class="inline-block text-blue-200 hover:text-white font-semibold text-base underline">
+      See a sample report first
+    </a>
+    {% else %}
+    <a href="/ga4-audit/connect" class="inline-block bg-white text-blue-700 font-bold px-10 py-4 rounded-xl hover:bg-gray-50 transition-colors shadow-lg text-lg">
+      Run My Free Audit →
+    </a>
+    {% endif %}
+  </div>
+</section>
+
+{% endblock %}

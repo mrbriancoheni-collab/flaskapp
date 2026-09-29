@@ -1,0 +1,168 @@
+{% extends "blog/base_post.html" %}
+
+{% block post_schemas %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How long does Google Ads take to start generating leads for a trade business?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Most trade contractors see their first leads within 1–2 weeks of launching, but the volume is low and cost-per-lead is high early on. Campaigns typically reach efficient performance between weeks 6 and 12, once Google's algorithm has gathered enough conversion data to optimize bidding. Campaigns that are paused or heavily changed before this point often never reach their potential."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Why do Google Ads campaigns take time to optimize?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Google's Smart Bidding algorithm learns from conversion data. In the first 2–4 weeks, it's testing which users, times, and search terms produce conversions. It typically needs 30–50 conversions before bidding becomes statistically reliable. Until that threshold is reached, bids are less efficient and CPL is higher than it will eventually be."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Should I pause my Google Ads if I'm not getting leads in the first week?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No — pausing a new campaign resets the learning phase and wastes whatever data Google has already collected. If you're not seeing leads in week one, investigate the setup: check that conversion tracking is firing, that your ads are actually showing (check impression share), and that the budget is high enough to generate meaningful click volume. Pause only if you find a critical setup error."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How much should I budget for Google Ads as a trade contractor?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The minimum effective budget for most trade markets is $1,500–$2,500/month. Below that, you get too few clicks for the algorithm to learn, and competitors with larger budgets will win most auctions. The right number depends on your average job value and local CPCs — a general rule is budget = (target monthly leads) × (local CPC) × (clicks per lead)."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the Google Ads learning period and how do I get through it faster?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The learning period is the first 2–4 weeks after a campaign launches or a major change is made. To shorten it: start with a higher budget (then reduce after 30 days), use broad match keywords early to generate more conversion data quickly, make sure conversion tracking is properly set up before launch, and avoid making frequent changes — each major change restarts the learning period."
+      }
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block post_content %}
+<p>The most common reason trade contractors quit Google Ads before it works: they expected leads in week one, saw nothing, and pulled the budget.</p>
+
+<p>Google Ads does work for trade businesses — but it operates on a timeline that has nothing to do with impatience. Here's what actually happens in the first 12 weeks, and how to know whether your campaign is on track.</p>
+
+<h2>Week 1–2: The Algorithm Is Blind</h2>
+
+<p>When you launch a new campaign, Google has zero data about which users, times of day, or search queries produce conversions for your business specifically. The algorithm starts in exploration mode — it's casting a wide net to gather information.</p>
+
+<p>What to expect:</p>
+<ul>
+  <li>Some impressions, probably some clicks</li>
+  <li>Few or no leads</li>
+  <li>Higher cost-per-click than the account will eventually average</li>
+</ul>
+
+<p>This is normal. Do not pause the campaign. Do not make major changes to bids or targeting. Let Google collect data.</p>
+
+<p>What to check instead: Is your conversion tracking actually firing? Open Google Tag Assistant and fill out your own contact form. If a conversion doesn't register in the account within 24 hours, you have a tracking problem that will cripple the entire campaign — fix it before anything else.</p>
+
+<h2>Week 3–4: First Real Signal</h2>
+
+<p>By now you should be seeing impressions and clicks at a reasonable pace. Some leads will start trickling in. The cost-per-lead will be high — often 2–3x what it will be at 90 days.</p>
+
+<p>Google's Smart Bidding algorithm needs approximately 30–50 conversions before it becomes statistically reliable. If your campaign is getting 5–10 leads per month, you're still in the early learning window. That's okay — just don't compare week-3 CPL to your long-term target.</p>
+
+<p>What to check at week 4:</p>
+<ul>
+  <li>Review your Search Terms report — add negative keywords for irrelevant searches</li>
+  <li>Check impression share — if it's below 40%, your budget may be too low</li>
+  <li>Look at your top 3 ads' click-through rates — if CTR is below 3%, rewrite your weakest headline</li>
+</ul>
+
+<h2>Week 5–8: The Algorithm Starts Learning</h2>
+
+<p>This is the inflection point most contractors never reach because they quit too early.</p>
+
+<p>With 15–30 conversions in the account, Google's bidding starts to tighten. It knows which users convert for you. CPL drops, click quality improves, and the percentage of your budget going to waste shrinks. You should see lead volume increase without a proportional spend increase.</p>
+
+<p>If your CPL is still very high at week 8, the problem is usually one of three things:</p>
+<ol>
+  <li>Budget too low — not enough clicks to generate conversion data</li>
+  <li>Landing page weak — good clicks, poor conversion rate</li>
+  <li>Wrong match types — broad keywords attracting non-service searches</li>
+</ol>
+
+<h2>Week 9–12: Optimization Window</h2>
+
+<p>By 90 days, a well-run campaign should be approaching target CPL. This is when strategic optimizations make the biggest difference:</p>
+
+<ul>
+  <li>Pause keywords with high spend and zero conversions</li>
+  <li>Increase bids on your top-converting ad groups</li>
+  <li>Add ad schedule adjustments (bid higher during your core service hours)</li>
+  <li>Test new ad copy against your current winners</li>
+</ul>
+
+<p>The campaigns that reach this stage efficiently have one thing in common: they weren't touched constantly in the first 8 weeks. Every major change restarts the learning period. Stability in the early weeks is a feature, not impatience.</p>
+
+<h2>How to Tell If Your Campaign Is Broken vs. Just Slow</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Symptom</th>
+      <th>Slow (normal)</th>
+      <th>Broken (fix now)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>No conversions in week 1</td>
+      <td>✓ Expected</td>
+      <td>Tracking not set up</td>
+    </tr>
+    <tr>
+      <td>High CPL in weeks 2–4</td>
+      <td>✓ Learning phase</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>Zero impressions</td>
+      <td>—</td>
+      <td>Budget too low, ads disapproved, or wrong targeting</td>
+    </tr>
+    <tr>
+      <td>Lots of clicks, zero leads</td>
+      <td>—</td>
+      <td>Landing page or tracking problem</td>
+    </tr>
+    <tr>
+      <td>Impression share under 20%</td>
+      <td>—</td>
+      <td>Budget is too low for this market</td>
+    </tr>
+    <tr>
+      <td>CPL still high at week 10</td>
+      <td>—</td>
+      <td>Structural problem — review keywords, ads, landing page</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>The Minimum Budget to See Results</h2>
+
+<p>In most trade markets, the minimum effective budget is $1,500–$2,500/month. Below this, you don't generate enough clicks for the algorithm to learn, and competitors with larger budgets win most auctions before yours even show.</p>
+
+<p>The formula: <strong>target leads per month × local CPC × average clicks per lead</strong>. If your market's average CPC is $12 and it takes 4 clicks to generate one lead, getting 20 leads/month requires $960 in clicks — but with overhead (impressions that don't click, learning-phase waste), you need $1,500–$2,000 to actually hit 20 leads.</p>
+
+<h2>The Bottom Line</h2>
+
+<p>Google Ads for trade businesses is a 90-day investment, not a 7-day one. The contractors who win with it consistently are the ones who launched with the right setup, stayed patient through the learning phase, and made small, methodical optimizations starting around week 8.</p>
+
+<p>If you're in week 2 wondering why you're not flooded with calls — you're not behind. You're right on schedule.</p>
+{% endblock %}

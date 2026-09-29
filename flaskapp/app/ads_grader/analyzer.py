@@ -1006,6 +1006,33 @@ class GoogleAdsAnalyzer:
                 'summary': "🗂️ Better organization • 2-3 hours • Medium difficulty"
             })
 
+        # Competitor targeting opportunity (always surface)
+        recommendations.append({
+            'title': "Target Competitor Switchers with Demand Gen Ads",
+            'description': "Customers actively searching for alternatives to your competitors are your highest-intent prospects. Demand Gen lets you intercept them on YouTube, Gmail, and Discover before they pick anyone else.",
+            'layman_summary': "Some of your competitor's customers are unhappy right now — searching things like '[competitor] complaints' or '[competitor] alternatives'. A Demand Gen campaign puts your ad in front of them at that exact moment across YouTube, Gmail, and Google Discover.",
+            'category': 'competitor_targeting',
+            'severity': 3,
+            'roi': {
+                'monthly_leads': 8,
+                'annual_leads': 96,
+                'percentage': 10
+            },
+            'effort': {
+                'time_estimate': '2-3 hours',
+                'difficulty': 'Medium',
+                'priority': 'Medium'
+            },
+            'action_steps': [
+                "1. Build a custom segment: 'people who searched for [Competitor] pricing, [Competitor] complaints, [Competitor] alternatives'",
+                "2. Create one ad group per pain point: pricing, support, contract lock-in",
+                "3. Each ad group links to a landing page that proves you fix that exact frustration",
+                "4. Upload your existing customer list as a lookalike seed to expand reach",
+                "5. Run on YouTube, Discover, and Gmail — not Search (different intent)"
+            ],
+            'summary': "🎯 Win competitor customers • 2-3 hours • Medium difficulty"
+        })
+
         # Sort by severity and limit to top 10
         recommendations.sort(key=lambda x: x.get('severity', 5))
         self.recommendations = recommendations[:10]

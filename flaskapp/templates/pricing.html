@@ -1,6 +1,8 @@
 {% extends 'base_public.html' %}
 {% block title %}Pricing — Start Free, Automate from $99/mo | FieldSprout{% endblock %}
 {% block meta_description %}FieldSprout is free forever to start. Add full Google Ads automation for $99/mo. Plans for home service businesses — HVAC, plumbing, roofing, electrical. No credit card required.{% endblock %}
+{% block og_title %}FieldSprout Pricing — Free to Start, Automate from $99/mo{% endblock %}
+{% block og_description %}See exactly where your Google Ads waste money — free, forever. Add full AI automation for $99/mo. No contracts, no credit card required.{% endblock %}
 
 {% block head_extra %}
 <script type="application/ld+json">
@@ -18,7 +20,7 @@
   "@context": "https://schema.org",
   "@type": "Product",
   "name": "FieldSprout Marketing Automation",
-  "description": "AI-powered marketing automation for home service businesses",
+  "description": "Full-service AI marketing platform for trade and field service businesses — ads, SEO, reputation, and lead follow-up managed automatically",
   "offers": [
     {
       "@type": "Offer",
@@ -111,6 +113,56 @@
       "@type": "Question",
       "name": "What is the difference between Growth and Pro plans?",
       "acceptedAnswer": {"@type":"Answer","text":"The Growth plan ($99/mo) adds full automation, offline conversion upload, one CRM integration, review request emails, call/lead tracking, 2 user seats, and unlimited history. The Pro plan ($249/mo) adds all CRM integrations, multi-location dashboard, white-label PDF reports, competitor intelligence, Google Analytics plus Search Console plus Business Profile integrations, and 5 user seats."}
+    }
+  ]
+}
+</script>
+
+<!-- FAQPage Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Can I switch plans later?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, you can upgrade or downgrade your plan at any time. Changes take effect at the start of your next billing cycle."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is there a trial period?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes — FieldSprout offers a 14-day free trial with full access to all features. No credit card required to start."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What payment methods do you accept?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "We accept all major credit cards (Visa, Mastercard, American Express) and ACH bank transfers for annual plans."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I cancel anytime?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Absolutely. There are no long-term contracts. Cancel anytime and you will have access until the end of your billing period."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How much does FieldSprout cost?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "FieldSprout is free to start — the Grader plan is free forever. Full AI automation (Google Ads optimization, SEO, reputation management, lead follow-up) is $99/month. Each subscription covers one business location. No credit card required to start."
+      }
     }
   ]
 }

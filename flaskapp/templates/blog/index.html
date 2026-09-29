@@ -1,0 +1,62 @@
+{% extends "base_public.html" %}
+{% block title %}Blog — FieldSprout Marketing Tips for Trade Businesses{% endblock %}
+{% block meta_description %}Marketing guides, Google Ads tips, and growth strategies for trade service businesses. Written by the FieldSprout team.{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<div class="bg-gradient-to-b from-primary-50 to-white border-b border-gray-100">
+  <div class="max-w-5xl mx-auto px-6 py-16 text-center">
+    <span class="inline-block text-xs font-bold uppercase tracking-wide text-primary-600 bg-primary-50 border border-primary-200 px-3 py-1 rounded-full mb-4">FieldSprout Blog</span>
+    <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900">Marketing that works for trade businesses</h1>
+    <p class="mt-4 text-xl text-gray-600 max-w-2xl mx-auto">Practical guides on ads, SEO, reviews, and lead follow-up — written for trade and field service owners, not marketers.</p>
+  </div>
+</div>
+
+<!-- Post grid -->
+<div class="max-w-5xl mx-auto px-6 py-16">
+  <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+    {% for post in posts %}
+    <a href="/blog/{{ post.slug }}" class="group flex flex-col rounded-2xl border border-gray-200 overflow-hidden hover:shadow-xl hover:border-primary-300 transition-all">
+      <!-- Category bar -->
+      <div class="h-1.5 bg-gradient-to-r from-primary-600 to-purple-600"></div>
+      <div class="flex flex-col flex-1 p-7">
+        <div class="flex items-center gap-3 mb-3">
+          <span class="text-xs font-bold uppercase tracking-wide text-primary-600">{{ post.category }}</span>
+          <span class="text-xs text-gray-400">{{ post.reading_time }} min read</span>
+        </div>
+        <h2 class="text-lg font-bold text-gray-900 leading-snug group-hover:text-primary-700 transition-colors">{{ post.title }}</h2>
+        <p class="mt-3 text-sm text-gray-600 leading-relaxed flex-1">{{ post.excerpt }}</p>
+        <div class="mt-5 flex items-center gap-1 text-primary-600 font-semibold text-sm">
+          Read article
+          <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+          </svg>
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="bg-gradient-to-br from-gray-900 to-indigo-900 py-16 text-white text-center">
+  <div class="max-w-2xl mx-auto px-6">
+    <h2 class="text-3xl font-extrabold mb-3">Let AI handle your marketing while you read this</h2>
+    <p class="text-white/70 text-lg mb-8">FieldSprout's AI agents manage ads, SEO, reviews, and lead follow-up 24/7 — no expertise required.</p>
+    {% if has_endpoint('signup') %}
+      <a href="{{ url_for(ep('signup')) }}" class="inline-block bg-white text-indigo-900 font-bold px-10 py-4 rounded-lg hover:bg-gray-100 transition-colors shadow-xl">
+        Start Free Trial →
+      </a>
+    {% elif has_endpoint('register') %}
+      <a href="{{ url_for(ep('register')) }}" class="inline-block bg-white text-indigo-900 font-bold px-10 py-4 rounded-lg hover:bg-gray-100 transition-colors shadow-xl">
+        Start Free Trial →
+      </a>
+    {% else %}
+      <a href="/signup" class="inline-block bg-white text-indigo-900 font-bold px-10 py-4 rounded-lg hover:bg-gray-100 transition-colors shadow-xl">
+        Start Free Trial →
+      </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

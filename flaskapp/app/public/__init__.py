@@ -131,6 +131,15 @@ def industry_solar():
     return render_template("industries/solar.html")
 
 
+@public_bp.route("/industries/<trade>/<channel>", endpoint="industry_sub")
+def industry_sub(trade, channel):
+    from flask import abort
+    try:
+        return render_template(f"industries/{trade}-{channel}.html")
+    except Exception:
+        abort(404)
+
+
 _INDUSTRY_TEMPLATE_OVERRIDES = {
     'electricians-google-ads':        'industries/electrical-google-ads.html',
     'electricians-local-service-ads': 'industries/electrical-local-service-ads.html',

@@ -1,0 +1,33 @@
+{% extends "base_public.html" %}
+
+{% block title %}Server Error — FieldSprout{% endblock %}
+{% block meta_description %}Something went wrong on our end. Our team has been notified. Please try again in a moment.{% endblock %}
+
+{% block head_extra %}
+<meta name="robots" content="noindex, nofollow">
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-b from-primary-50 to-white flex items-center justify-center px-6 py-20">
+  <div class="max-w-lg w-full text-center">
+
+    <div class="text-8xl font-extrabold text-primary-200 leading-none mb-2">500</div>
+    <h1 class="text-3xl font-extrabold text-gray-900 mb-4">Something went wrong</h1>
+    <p class="text-lg text-gray-500 mb-4">We hit an unexpected error on our end. Our team has been notified and we're looking into it.</p>
+    <p class="text-base text-gray-400 mb-10">Please try refreshing the page or come back in a few minutes.</p>
+
+    <div class="flex flex-col sm:flex-row gap-3 justify-center">
+      <a href="javascript:location.reload()" class="inline-block bg-primary-600 text-white font-bold px-8 py-3 rounded-lg hover:bg-primary-700 transition-colors shadow-md">
+        Try Again
+      </a>
+      <a href="/" class="inline-block bg-white text-primary-700 font-bold px-8 py-3 rounded-lg border-2 border-primary-200 hover:border-primary-400 transition-colors">
+        Back to Home
+      </a>
+    </div>
+
+    <p class="mt-10 text-sm text-gray-400">
+      Still having trouble? <a href="/contact" class="text-primary-600 hover:underline">Contact our team</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

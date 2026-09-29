@@ -34,7 +34,12 @@
     "@type": "Organization",
     "name": "FieldSprout",
     "url": "https://fieldsprout.io",
-    "logo": "https://fieldsprout.io/static/brand/icons/fieldsprout-icon-512.png",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://fieldsprout.io/static/brand/logos/fieldsprout-wordmark.svg",
+      "width": 200,
+      "height": 40
+    },
     "description": "AI-powered marketing automation for home service businesses. Autonomous agents that optimize Google Ads, manage reviews, and grow leads for HVAC, plumbing, electrical, roofing, and pest control companies.",
     "foundingDate": "2023",
     "sameAs": [
@@ -62,8 +67,33 @@
       "HVAC marketing",
       "Plumbing marketing",
       "Roofing marketing",
-      "Electrical contractor marketing"
+      "Electrical contractor marketing",
+      "Meta Ads management",
+      "Local SEO",
+      "Google Business Profile management",
+      "Reputation management",
+      "Pay-per-click advertising",
+      "Home service business growth"
     ]
+  }
+  </script>
+
+  <!-- WebSite schema — enables sitelinks search box and GEO anchor -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "FieldSprout",
+    "url": "https://fieldsprout.io",
+    "description": "AI marketing platform for trade and field service businesses",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": "https://fieldsprout.io/blog/?q={search_term_string}"
+      },
+      "query-input": "required name=search_term_string"
+    }
   }
   </script>
   {% if csrf_token %}<meta name="csrf-token" content="{{ csrf_token() }}">{% endif %}

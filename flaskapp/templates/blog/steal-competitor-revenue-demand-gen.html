@@ -1,0 +1,152 @@
+{% extends "blog/base_post.html" %}
+
+{% block post_schemas %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is Google Demand Gen and how is it different from Search ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Demand Gen is a Google campaign type that places ads across YouTube, Gmail, and Google Discover. Unlike Search ads (which show when someone types a query), Demand Gen targets audiences — people who have shown specific interests or behaviors, like searching for a competitor's brand or pricing page. It's best for building awareness and intercepting consideration-stage buyers."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I legally target my competitors' brand names in Google Ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes — targeting competitor keywords in Search ads is legal and common. With Demand Gen custom audiences, you're targeting people who searched for competitor terms, not using the competitor's trademark in your ad copy itself. You cannot use a competitor's trademarked name in your headline without their permission, but you can reach the audience who searched for it."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What queries should I include in a competitor switcher custom segment?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Focus on queries that signal dissatisfaction or active comparison: '[Competitor] pricing', '[Competitor] reviews', '[Competitor] complaints', '[Competitor] alternatives', 'switch from [Competitor]', 'cancel [Competitor]'. Also include the competitor's brand name alone — anyone researching them may be open to alternatives."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How much budget should I allocate to competitor Demand Gen campaigns?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Start with 10–15% of your total Google Ads budget. Demand Gen CPMs are typically lower than Search CPCs, so even $500–$1,000/month can generate significant reach among competitor audiences. Once you see leads converting, scale the budget up to match your Search campaign ROI."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What should my competitor-targeting landing page say?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The landing page must directly address the pain point that led someone to search for a competitor alternative. If you're targeting 'complaints about [Competitor]', your page should lead with the specific frustration (e.g., 'Tired of being locked into a 12-month contract?') and immediately prove you solve it — with pricing, testimonials, and a clear CTA. Never send competitor-targeting traffic to a generic homepage."
+      }
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block post_content %}
+<p>Every month, a percentage of your competitors' customers get frustrated enough to start looking for alternatives. They search for things like <em>"[Competitor] complaints"</em> or <em>"alternatives to [Competitor]"</em> — and right now, nobody is showing them an ad for your business.</p>
+
+<p>That gap is exactly what Google Demand Gen was built to close.</p>
+
+<h2>Why Competitor Switchers Are Your Best Leads</h2>
+
+<p>A customer in the middle of switching is almost always:</p>
+<ul>
+  <li>Already convinced they need the service</li>
+  <li>Frustrated enough with their current provider to act</li>
+  <li>Actively comparing options — ready to make a decision quickly</li>
+</ul>
+
+<p>Compare that to cold traffic, which requires you to first convince someone they have a problem. Switchers already know. You just have to show up at the right moment and prove you're better.</p>
+
+<h2>Step 1: Catch the Switchers</h2>
+
+<p>Build a custom audience segment in Google Ads using "people who searched for any of these terms":</p>
+<ul>
+  <li>[Competitor name] pricing</li>
+  <li>[Competitor name] complaints</li>
+  <li>[Competitor name] reviews</li>
+  <li>[Competitor name] alternatives</li>
+  <li>cancel [Competitor name]</li>
+  <li>switch from [Competitor name]</li>
+</ul>
+
+<p>You can include multiple competitors in a single segment. The more specific the signal, the higher the intent.</p>
+
+<h2>Step 2: Choose Your Channels</h2>
+
+<p>Demand Gen runs on YouTube, Gmail, and Google Discover — not the Search results page. This matters because you're not interrupting someone mid-task; you're reaching them during browsing and video consumption, when they're more receptive to brand messaging.</p>
+
+<p>For trade businesses, YouTube pre-roll and Gmail ads tend to perform best. Gmail placement puts your offer directly in the inbox of people who have recently searched for competitor alternatives.</p>
+
+<h2>Step 3: One Ad Group Per Pain Point</h2>
+
+<p>Don't run one generic "we're better" campaign. Build a separate ad group for each specific frustration:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Ad Group</th>
+      <th>Angle</th>
+      <th>Landing Page Promise</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Pricing Group</td>
+      <td>"Tired of paying more every year?"</td>
+      <td>Transparent pricing page with comparisons</td>
+    </tr>
+    <tr>
+      <td>Support Group</td>
+      <td>"What if someone actually picked up the phone?"</td>
+      <td>Testimonials about responsiveness</td>
+    </tr>
+    <tr>
+      <td>Lock-in Group</td>
+      <td>"No contracts. Cancel anytime."</td>
+      <td>Terms page + flexibility guarantee</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Step 4: Match the Landing Page to the Ad</h2>
+
+<p>This is where most competitor campaigns fail. They run a compelling ad and then send traffic to a homepage that doesn't address the frustration at all.</p>
+
+<p>Each ad group needs a dedicated landing page that:</p>
+<ol>
+  <li>Opens with the exact pain the ad mentioned</li>
+  <li>Presents social proof from customers who switched (and why)</li>
+  <li>Shows a clear, specific differentiator with numbers</li>
+  <li>Has one call-to-action above the fold</li>
+</ol>
+
+<p>If someone searched for "[Competitor] contract complaints" and clicked your ad about "no contracts," the first thing they should see on your page is a headline like: <strong>"Month-to-month. No cancellation fees. Ever."</strong></p>
+
+<h2>Step 5: Build a Lookalike from Your Converters</h2>
+
+<p>Once you have 100+ conversions from Demand Gen, upload your customer list to Google Ads as a "similar audiences" seed. Google will find new people who behave like your converters — dramatically expanding your reach beyond just people who searched for your specific competitors.</p>
+
+<p>This turns your competitor targeting campaign into a self-improving lead engine: the more customers you win, the better Google gets at finding the next ones.</p>
+
+<h2>Budget and Expectations</h2>
+
+<p>Start with 10–15% of your total Google Ads budget. Demand Gen CPMs are lower than Search CPCs, so even $500–$800/month gives you meaningful reach in most trade markets.</p>
+
+<p>Expect a 3–4 week ramp before the algorithm optimizes. Don't judge performance in week one. Measure at the 30 and 60-day marks, and optimize toward cost per lead — not impressions or clicks.</p>
+
+<h2>The Bottom Line</h2>
+
+<p>Your competitors are spending money to acquire customers. Some of those customers will become unhappy. Demand Gen lets you intercept them at the exact moment they start looking for a way out.</p>
+
+<p>Most trade contractors have never run a Demand Gen campaign. That means the audience is underpriced and your ads face minimal competition. Right now is the best time to start — before your competitors figure this out too.</p>
+{% endblock %}

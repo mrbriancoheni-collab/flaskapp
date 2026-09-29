@@ -4,6 +4,56 @@
 {% block og_title %}Free Marketing Tools for Home Service Companies — FieldSprout{% endblock %}
 {% block og_description %}Grade your Google Ads in 60 seconds, calculate your ROI, and get a free Facebook Ads analysis. No credit card. No login required.{% endblock %}
 
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://fieldsprout.io"},
+    {"@type": "ListItem", "position": 2, "name": "Free Tools", "item": "https://fieldsprout.io/free-tools"}
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "name": "Free Marketing Tools for Home Service Businesses",
+  "description": "Free Google Ads grader, GA4 audit, and marketing tools built for trade contractors",
+  "numberOfItems": 2,
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "item": {
+        "@type": "SoftwareApplication",
+        "name": "Google Ads Grader",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web",
+        "description": "Free Google Ads audit for trade contractors. Grade your account in 60 seconds — see wasted spend, quality score gaps, and the top 3 fixes to lower your cost per lead.",
+        "url": "https://fieldsprout.io/ads-grader",
+        "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "item": {
+        "@type": "SoftwareApplication",
+        "name": "GA4 Tracking Health Audit",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web",
+        "description": "Free GA4 audit that checks your tracking setup, key events, Google Ads linking, data retention settings, and more — with a scored health report and prioritized fixes.",
+        "url": "https://fieldsprout.io/ga4-audit",
+        "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}
+      }
+    }
+  ]
+}
+</script>
+{% endblock %}
+
 {% block content %}
 <!-- Hero -->
 <section class="bg-gradient-to-br from-emerald-50 via-white to-teal-50 pt-20 pb-16">
@@ -153,6 +203,55 @@
         </div>
       </div>
 
+    </div>
+
+    <!-- GA4 Audit -->
+    <div class="mb-14 rounded-2xl border-2 border-blue-100 hover:border-blue-300 p-8 shadow-sm hover:shadow-lg transition-all bg-blue-50/30">
+      <div class="flex flex-col md:flex-row md:items-start gap-8">
+        <div class="flex-shrink-0">
+          <div class="w-14 h-14 rounded-2xl bg-blue-100 flex items-center justify-center">
+            <i class="fa-solid fa-chart-column text-2xl text-blue-600"></i>
+          </div>
+        </div>
+        <div class="flex-1">
+          <div class="flex items-center gap-3 mb-2">
+            <div class="text-xs font-bold text-blue-500 uppercase tracking-wide">Analytics</div>
+            <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full">Free</span>
+          </div>
+          <h2 class="text-xl font-bold text-gray-900 mb-2">GA4 Tracking Health Audit</h2>
+          <p class="text-gray-600 mb-4">
+            8 out of 10 GA4 setups have gaps that silently corrupt your data. Run 14 checks across data collection,
+            conversions, data quality, and technical health — get your score and exact fixes in under 2 minutes.
+          </p>
+          <ul class="grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-gray-600 mb-6">
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>14 GA4 configuration checks</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Health score (0–100) with grade</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Step-by-step fix instructions</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Read-only — no data stored</li>
+          </ul>
+        </div>
+        <div class="flex flex-col gap-3 md:w-52 flex-shrink-0">
+          {% if has_endpoint('ga4_audit_bp.connect') %}
+          <a href="{{ url_for('ga4_audit_bp.connect') }}"
+             class="block w-full text-center px-5 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition">
+            Audit My GA4 →
+          </a>
+          <a href="{{ url_for('ga4_audit_bp.demo') }}"
+             class="block w-full text-center px-5 py-2.5 border border-blue-200 text-blue-600 rounded-xl hover:bg-blue-50 text-sm transition">
+            See a sample report
+          </a>
+          {% else %}
+          <a href="/ga4-audit/connect"
+             class="block w-full text-center px-5 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition">
+            Audit My GA4 →
+          </a>
+          <a href="/ga4-audit/demo"
+             class="block w-full text-center px-5 py-2.5 border border-blue-200 text-blue-600 rounded-xl hover:bg-blue-50 text-sm transition">
+            See a sample report
+          </a>
+          {% endif %}
+        </div>
+      </div>
     </div>
 
     <h2 class="text-2xl font-bold text-gray-900 mb-2">More Free Tools</h2>

@@ -1,0 +1,62 @@
+{% extends "base_public.html" %}
+
+{% block title %}Page Not Found — FieldSprout{% endblock %}
+{% block meta_description %}The page you're looking for doesn't exist or has been moved. Return to the FieldSprout homepage.{% endblock %}
+
+{% block head_extra %}
+<meta name="robots" content="noindex, nofollow">
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-b from-primary-50 to-white flex items-center justify-center px-6 py-20">
+  <div class="max-w-lg w-full text-center">
+
+    <div class="text-8xl font-extrabold text-primary-200 leading-none mb-2">404</div>
+    <h1 class="text-3xl font-extrabold text-gray-900 mb-4">Page not found</h1>
+    <p class="text-lg text-gray-500 mb-10">The page you're looking for doesn't exist or has been moved. Here are some places to start:</p>
+
+    <div class="grid sm:grid-cols-2 gap-4 text-left mb-10">
+      <a href="/" class="group flex items-start gap-3 rounded-xl border border-gray-200 p-5 hover:border-primary-300 hover:shadow-md transition-all">
+        <div class="mt-0.5 w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center flex-shrink-0">
+          <svg class="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900 group-hover:text-primary-700">Home</div>
+          <div class="text-sm text-gray-500">Overview of FieldSprout</div>
+        </div>
+      </a>
+      <a href="/pricing" class="group flex items-start gap-3 rounded-xl border border-gray-200 p-5 hover:border-primary-300 hover:shadow-md transition-all">
+        <div class="mt-0.5 w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center flex-shrink-0">
+          <svg class="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900 group-hover:text-primary-700">Pricing</div>
+          <div class="text-sm text-gray-500">Plans and what's included</div>
+        </div>
+      </a>
+      <a href="/blog/" class="group flex items-start gap-3 rounded-xl border border-gray-200 p-5 hover:border-primary-300 hover:shadow-md transition-all">
+        <div class="mt-0.5 w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center flex-shrink-0">
+          <svg class="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900 group-hover:text-primary-700">Blog</div>
+          <div class="text-sm text-gray-500">Marketing guides for trade businesses</div>
+        </div>
+      </a>
+      <a href="/contact" class="group flex items-start gap-3 rounded-xl border border-gray-200 p-5 hover:border-primary-300 hover:shadow-md transition-all">
+        <div class="mt-0.5 w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center flex-shrink-0">
+          <svg class="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900 group-hover:text-primary-700">Contact</div>
+          <div class="text-sm text-gray-500">Get in touch with our team</div>
+        </div>
+      </a>
+    </div>
+
+    <a href="/" class="inline-block bg-primary-600 text-white font-bold px-8 py-3 rounded-lg hover:bg-primary-700 transition-colors shadow-md">
+      Back to Home
+    </a>
+  </div>
+</div>
+{% endblock %}

@@ -75,20 +75,21 @@ def test_page():
     ), 200
 
 
-@main_bp.route("/blog/", defaults={"subpath": ""}, endpoint="blog_index")
-@main_bp.route("/blog/<path:subpath>", endpoint="blog")
-def blog(subpath):
-    """
-    WordPress was removed.  If WP_BASE is configured, proxy-redirect there;
-    otherwise return 404 so search engines drop stale blog URLs cleanly.
-    """
-    wp_base = current_app.config.get("WP_BASE", "").rstrip("/")
-    if wp_base:
-        target = f"{wp_base}/blog/{subpath}"
-        qs = ("?" + request.query_string.decode()) if request.query_string else ""
-        return redirect(target + qs, 301)
+@main_bp.route("/blog/", endpoint="blog_index")
+def blog_index():
+    from app.blog_data import POSTS
+    return render_template("blog/index.html", posts=POSTS)
+
+
+@main_bp.route("/blog/<slug>", endpoint="blog")
+def blog_post(slug):
+    from app.blog_data import POSTS, POSTS_BY_SLUG
     from flask import abort
-    abort(404)
+    post = POSTS_BY_SLUG.get(slug)
+    if not post:
+        abort(404)
+    related = [p for p in POSTS if p["slug"] != slug][:2]
+    return render_template(f"blog/{slug}.html", post=post, related_posts=related)
 
 
 @main_bp.route("/about", methods=["GET"], endpoint="about")
@@ -154,112 +155,11 @@ Sitemap: https://fieldsprout.io/sitemap.xml
     return Response(content, mimetype="text/plain")
 
 
-@main_bp.route("/llms.txt")
-def llms_txt():
-    content = """# FieldSprout
-
-> AI-powered Google Ads optimization and marketing automation for home service businesses.
-
-FieldSprout helps HVAC, plumbing, roofing, electrical, pool service, landscaping, pest control, and other home service companies get more leads from Google Ads by automatically optimizing campaigns, ad copy, bids, and conversion tracking.
-
-## Core Product
-
-- [Campaign Health Score](https://fieldsprout.io/): Free AI audit of your Google Ads account — no credit card required
-- [Google Ads Automation](https://fieldsprout.io/products/ads): AI agents that adjust bids, dayparting, negative keywords, and ad copy 24/7
-- [Offline Conversion Import](https://fieldsprout.io/products/ads): Track phone calls and CRM jobs back to the exact ad click that drove them
-- [Competitor Intelligence](https://fieldsprout.io/products/ads): Auction insights showing who's outbidding you and how to respond automatically
-- [Ad Copy Performance](https://fieldsprout.io/products/ads): Grade every headline and description — auto-promote winners, flag losers
-
-## AI Agent Architecture
-
-FieldSprout uses a multi-layer autonomous agent system running 24/7:
-
-**Strategic Layer (runs daily at 6am)**
-- Strategic Director Agent: Budget reallocation, campaign scaling, pause decisions based on 90-day performance trends
-
-**Operational Layer (runs every 4 hours)**
-- Campaign Manager Agent: Detects CPL spikes, conversion drops, and budget pacing anomalies
-- Budget Guardian Agent: Emergency spend protection — pauses runaway campaigns before they overspend
-- Quality Score Agent: Diagnoses low Quality Scores and implements fixes (ad copy, landing page alignment, keyword relevance)
-
-**Tactical Layer (runs hourly)**
-- Keyword Optimizer Agent: Pauses non-converting keywords, adjusts bids to target CPA, adds high-performing search terms as keywords
-- Negative Keyword Agent: Blocks irrelevant searches using pattern matching and LLM business-relevance scoring — evaluates 200 search terms per cycle
-- Ad Copy Agent: Pauses underperforming ads, identifies variation opportunities
-- Landing Page Analyst: Monitors message match between ads and landing pages
-
-**Autonomy Levels**
-- L1 (Assistive): Logs all findings, nothing auto-executes — for human review
-- L2 (Semi-Auto, default): Auto-executes low-risk actions (bid adjustments, negative keywords, keyword pauses) with confidence >= 80%
-- L3 (Fully Autonomous): Also auto-executes high-risk actions (budget changes, campaign pauses) when confidence >= 92%
-
-## Performance Benchmarks
-
-Based on managed accounts:
-- Average cost-per-lead reduction: 38% within 60 days
-- HVAC accounts: $89 avg CPL (down from $147 at start)
-- Plumbing accounts: $94 avg CPL (down from $151 at start)
-- Roofing accounts: $118 avg CPL (down from $198 at start)
-- Electrical contractor accounts: $97 avg CPL (down from $162 at start)
-- Wasted spend identified in new accounts: 32-47% of total budget
-- Time to first automated optimization: within 1 hour of connecting Google Ads
-
-## Integrations
-
-- Google Ads (full read/write — bid adjustments, ad management, conversion upload)
-- Google Analytics, Search Console, Business Profile
-- Skimmer (pool service CRM), ServiceTitan, Housecall Pro
-- CallRail (phone tracking webhooks)
-- Twilio (call tracking and recording)
-- Stripe (billing)
-- Facebook Ads (in development)
-
-## Industries Served
-
-HVAC, plumbing, electrical, roofing, pool service, pest control, lawn care, landscaping, garage door, solar, concrete, fencing, irrigation, restoration, windows and doors
-
-Industry pages:
-- [HVAC Google Ads](https://fieldsprout.io/industries/hvac) — $89 avg CPL, seasonal demand automation
-- [Plumbing Google Ads](https://fieldsprout.io/industries/plumbing) — $94 avg CPL, emergency call capture
-- [Roofing Google Ads](https://fieldsprout.io/industries/roofing) — $118 avg CPL, storm response campaigns
-- [Electricians Google Ads](https://fieldsprout.io/industries/electricians) — $97 avg CPL, panel upgrade targeting
-- [Pest Control Google Ads](https://fieldsprout.io/industries/pest-control) — seasonal pest pattern optimization
-- [Lawn Care Google Ads](https://fieldsprout.io/industries/lawn-care) — recurring contract acquisition
-- [Pool Service Google Ads](https://fieldsprout.io/industries/pool-service) — route-building leads
-- [Solar Google Ads](https://fieldsprout.io/industries/solar) — incentive-aware campaigns
-- [Landscaping Google Ads](https://fieldsprout.io/industries/landscaping) — design-build vs. maintenance split
-- [Garage Door Google Ads](https://fieldsprout.io/industries/garage-door) — emergency repair demand capture
-
-## Pricing
-
-- Free: Campaign health score, Google Ads audit, performance dashboard — no credit card required
-- Growth ($99/month): Full automation, CRM integration, offline conversion upload, review requests
-- Pro ($249/month): Multi-location dashboard, all CRM integrations, white-label reports, competitor intelligence
-- Managed ($997/month): Done-for-you campaign management with dedicated account manager
-
-## Key Pages
-
-- [Pricing](https://fieldsprout.io/pricing)
-- [Free Google Maps audit](https://fieldsprout.io/maps-audit)
-- [Free Local Services Ads lead cost estimator](https://fieldsprout.io/lsa-estimator)
-- [Google Ads product](https://fieldsprout.io/products/ads)
-- [Get more reviews](https://fieldsprout.io/solutions/get-more-reviews)
-- [Reduce ad spend](https://fieldsprout.io/solutions/lower-ad-cost)
-- [Multi-location management](https://fieldsprout.io/solutions/multi-location)
-- [About FieldSprout](https://fieldsprout.io/about)
-
-## Company
-
-FieldSprout is a US-based SaaS company serving home service businesses across the United States. All Google Ads integrations use official Google Ads API access with read/write permissions granted directly by the business owner. FieldSprout is an independent software vendor — not affiliated with Google LLC.
-"""
-    from flask import Response
-    return Response(content, mimetype="text/plain")
-
-
 @main_bp.route("/sitemap.xml", methods=["GET"], endpoint="sitemap_xml")
 def sitemap_xml():
     from flask import Response
     from datetime import date
+    from app.blog_data import POSTS
     today = date.today().isoformat()
 
     # Sub-route suffixes for industry pages
@@ -318,6 +218,8 @@ def sitemap_xml():
         ("https://fieldsprout.io/solutions/see-what-works", "0.7", "monthly"),
         # Tools & graders
         ("https://fieldsprout.io/ads-grader", "0.9", "weekly"),
+        ("https://fieldsprout.io/ga4-audit", "0.9", "weekly"),
+        ("https://fieldsprout.io/blog/", "0.8", "weekly"),
         ("https://fieldsprout.io/maps-audit", "0.9", "weekly"),
         ("https://fieldsprout.io/lsa-estimator", "0.9", "weekly"),
         # Legal
@@ -327,8 +229,32 @@ def sitemap_xml():
         # llms.txt
         ("https://fieldsprout.io/llms.txt", "0.3", "monthly"),
     ]
+    # Industry sub-pages (trade/channel combinations — two-segment URL style)
+    _industry_subs = [
+        ("hvac", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("plumbing", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("electrical", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("roofing", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("pest-control", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("lawn-care", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("garage-door", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("solar", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("pools", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("concrete", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("fencing", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("irrigation", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("windows-doors", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("restoration", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+    ]
+    for trade, channels in _industry_subs:
+        for channel in channels:
+            pages.append((
+                f"https://fieldsprout.io/industries/{trade}/{channel}",
+                "0.7",
+                "monthly",
+            ))
 
-    # Add sub-routes for main 9 industries
+    # Add sub-routes for main 9 industries (single-segment slug style)
     for industry in main_industries:
         for sub in industry_sub_routes:
             pages.append((f"https://fieldsprout.io/industries/{industry}{sub}", "0.7", "monthly"))
@@ -338,6 +264,13 @@ def sitemap_xml():
         for sub in industry_sub_routes:
             pages.append((f"https://fieldsprout.io/industries/{industry}{sub}", "0.7", "monthly"))
 
+    # Dynamically include all blog posts
+    for post in POSTS:
+        pages.append((
+            f"https://fieldsprout.io/blog/{post['slug']}",
+            "0.8",
+            "monthly",
+        ))
     urls = "\n".join(
         f"  <url>\n"
         f"    <loc>{loc}</loc>\n"
@@ -354,6 +287,90 @@ def sitemap_xml():
         "</urlset>"
     )
     return Response(xml, mimetype="application/xml")
+
+
+@main_bp.route("/llms.txt", methods=["GET"], endpoint="llms_txt")
+def llms_txt():
+    """
+    llms.txt — machine-readable index for AI crawlers (ChatGPT, Perplexity,
+    Claude, Google AI Overviews).  Format: https://llmstxt.org/
+    """
+    from flask import Response
+    from app.blog_data import POSTS
+    blog_lines = "\n".join(
+        f"- [{p['title']}](https://fieldsprout.io/blog/{p['slug']}): {p['excerpt']}"
+        for p in POSTS
+    )
+    body = f"""# FieldSprout
+
+> FieldSprout is a full-service AI marketing platform built specifically for trade and field service businesses (HVAC, plumbing, electrical, roofing, landscaping, pest control, and more). Autonomous AI agents manage Google Ads, Meta Ads, Local Services Ads, SEO, Google Business Profile, reputation management, and lead follow-up 24/7 — no marketing expertise or dedicated marketing team required. Works for both residential (B2C) and commercial (B2B) trade businesses across the United States.
+
+## Key Facts
+
+- Founded: 2024
+- Pricing: $250/month (monthly) or $200/month (annual plan, $2,400/year)
+- Trial: 14-day free trial, no credit card required
+- Contract: Month-to-month, cancel anytime
+- Target customer: Trade and field service business owners — HVAC, plumbing, electrical, roofing, landscaping, pest control, painting, concrete, fencing, garage door, solar, pool service
+- Differentiator vs agencies: AI agents work 24/7 at a fraction of agency cost ($2,000–$5,000/mo); no contracts, full transparency
+
+## Product
+
+- [Home](https://fieldsprout.io/): Overview and platform capabilities
+- [Pricing](https://fieldsprout.io/pricing): Plans starting at $250/month; annual plan at $200/month
+- [About](https://fieldsprout.io/about): Company mission — marketing firepower for trade business owners without needing a marketing team
+- [Contact](https://fieldsprout.io/contact): Support and sales contact
+- [Free Tools](https://fieldsprout.io/free-tools): Free Google Ads Grader and GA4 Audit tool
+
+## Core Features
+
+- [Google Ads Management](https://fieldsprout.io/products/ads): AI optimizes keywords, bids, and ad copy 24/7
+- [Google Local Services Ads](https://fieldsprout.io/products/glsa): Google Guaranteed badge management
+- [Google Business Profile](https://fieldsprout.io/products/gbp): Automated posts, Q&A, and profile optimization
+- [Meta (Facebook/Instagram) Ads](https://fieldsprout.io/products/facebook-ads): AI-managed social advertising
+- [Reputation & Reviews](https://fieldsprout.io/products/reviews): Automated review request system after every job
+- [Listings Management](https://fieldsprout.io/products/listings): Citation consistency across 50+ directories
+- [Forms & Chat](https://fieldsprout.io/products/forms-chat): Lead capture and automated follow-up
+
+## Solutions
+
+- [Lower Ad Cost](https://fieldsprout.io/solutions/lower-ad-cost): Reduce cost per lead through AI optimization
+- [Get More Reviews](https://fieldsprout.io/solutions/get-more-reviews): Systematic review generation for trade businesses
+- [Spend When Open](https://fieldsprout.io/solutions/spend-when-open): Smart ad scheduling to match business hours
+- [See What Works](https://fieldsprout.io/solutions/see-what-works): Unified analytics and attribution reporting
+- [Lead Generation](https://fieldsprout.io/solutions/lead-generation): End-to-end lead generation for home service companies
+- [Multi-Location](https://fieldsprout.io/solutions/multi-location): Marketing management across multiple business locations
+
+## Industries
+
+- [HVAC](https://fieldsprout.io/industries/hvac): Google Ads and marketing automation for HVAC companies — tune-ups, repairs, installations
+- [Plumbing](https://fieldsprout.io/industries/plumbing): Emergency and residential plumbing marketing, review automation
+- [Electrical](https://fieldsprout.io/industries/electricians): Marketing for electricians — residential, commercial, EV chargers
+- [Roofing](https://fieldsprout.io/industries/roofing): Storm damage leads, replacement campaigns, reputation management
+- [Pest Control](https://fieldsprout.io/industries/pest-control): Seasonal and recurring pest control marketing
+- [Landscaping](https://fieldsprout.io/industries/landscaping): Lawn care, landscape design, and recurring contract marketing
+- [Garage Door](https://fieldsprout.io/industries/garage-door): Repair and installation marketing for garage door companies
+- [Solar](https://fieldsprout.io/industries/solar): Lead generation for residential solar installers
+- [Pool Service](https://fieldsprout.io/industries/pool-service): Maintenance and renovation marketing for pool companies
+
+## Free Tools
+
+- [Google Ads Grader](https://fieldsprout.io/ads-grader): Free audit — grade your Google Ads account in 60 seconds, see wasted spend and top 3 fixes
+- [GA4 Tracking Audit](https://fieldsprout.io/ga4-audit): Free GA4 health check — scores your tracking setup and identifies gaps in conversion data
+
+## Blog
+
+{blog_lines}
+
+## Optional
+
+- [Privacy Policy](https://fieldsprout.io/privacy-policy)
+- [Terms of Service](https://fieldsprout.io/terms-of-service)
+- [Security](https://fieldsprout.io/security)
+- [Sitemap](https://fieldsprout.io/sitemap.xml)
+"""
+    return Response(body, mimetype="text/plain")
+
 
 
 # -------------------------

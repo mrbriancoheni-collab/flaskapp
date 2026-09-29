@@ -1,0 +1,210 @@
+{% extends "base_app.html" %}
+{% block title %}GA4 Audit — {{ result.property_name }} | FieldSprout{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-10">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <a href="{{ url_for('ga4_audit_bp.index') if has_endpoint('ga4_audit_bp.index') else '/ga4-audit/' }}"
+         class="inline-flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700 font-medium mb-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        GA4 Audit
+      </a>
+      <h1 class="text-2xl font-extrabold text-gray-900">{{ result.property_name }}</h1>
+      <p class="text-sm text-gray-400">Property ID: {{ result.property_id }}{% if result.time_zone %} · {{ result.time_zone }}{% endif %}</p>
+    </div>
+    {% if is_demo %}
+    <span class="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm font-semibold">Sample Report</span>
+    {% else %}
+    <a href="{{ url_for('ga4_audit_bp.analyze') if has_endpoint('ga4_audit_bp.analyze') else '/ga4-audit/analyze' }}"
+       class="text-sm text-primary-600 hover:underline font-medium">Re-run Audit</a>
+    {% endif %}
+  </div>
+
+  {% if is_demo %}
+  <div class="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+    <strong>This is a sample report.</strong> Connect your own GA4 property to see your real health score.
+    <a href="{{ url_for('ga4_audit_bp.connect') if has_endpoint('ga4_audit_bp.connect') else '/ga4-audit/connect' }}" class="ml-2 underline font-semibold">Run my audit →</a>
+  </div>
+  {% endif %}
+
+  <!-- Score Card -->
+  <div class="grid sm:grid-cols-3 gap-6 mb-10">
+
+    <!-- Gauge -->
+    <div class="sm:col-span-1 rounded-2xl border border-gray-200 bg-white p-8 flex flex-col items-center justify-center shadow-sm">
+      {% set score = result.overall_score | int %}
+      {% set dash = (score / 100 * 251.2) | round(1) %}
+      {% set color = '#22c55e' if score >= 80 else ('#f59e0b' if score >= 50 else '#ef4444') %}
+      <svg viewBox="0 0 100 100" class="w-36 h-36">
+        <circle cx="50" cy="50" r="40" fill="none" stroke="#f3f4f6" stroke-width="10"/>
+        <circle cx="50" cy="50" r="40" fill="none"
+                stroke="{{ color }}"
+                stroke-width="10"
+                stroke-linecap="round"
+                stroke-dasharray="{{ dash }} 251.2"
+                stroke-dashoffset="62.8"
+                transform="rotate(-90 50 50)"/>
+        <text x="50" y="46" text-anchor="middle" font-size="18" font-weight="800" fill="#111827">{{ score }}</text>
+        <text x="50" y="60" text-anchor="middle" font-size="9" fill="#6b7280">/ 100</text>
+      </svg>
+      <div class="text-center mt-2">
+        <div class="text-3xl font-extrabold" style="color: {{ color }}">{{ result.overall_grade }}</div>
+        <div class="text-sm text-gray-500 mt-1">
+          {% if score >= 80 %}Great Setup
+          {% elif score >= 60 %}Needs Work
+          {% elif score >= 40 %}Significant Gaps
+          {% else %}Critical Issues Found
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="sm:col-span-2 grid grid-cols-2 gap-4">
+      <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div class="text-3xl font-extrabold text-red-500">{{ result.critical_issues_count }}</div>
+        <div class="text-sm text-gray-600 mt-1">Critical Issues</div>
+        <div class="text-xs text-gray-400 mt-0.5">Affecting conversion data</div>
+      </div>
+      <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div class="text-3xl font-extrabold text-amber-500">{{ result.issues_count - result.critical_issues_count }}</div>
+        <div class="text-sm text-gray-600 mt-1">Moderate Issues</div>
+        <div class="text-xs text-gray-400 mt-0.5">Gaps in tracking quality</div>
+      </div>
+      <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div class="text-3xl font-extrabold text-green-500">{{ result.passes_count }}</div>
+        <div class="text-sm text-gray-600 mt-1">Checks Passed</div>
+        <div class="text-xs text-gray-400 mt-0.5">Out of {{ result.total_checks }} total</div>
+      </div>
+      <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div class="text-3xl font-extrabold text-blue-500">{{ result.key_event_count }}</div>
+        <div class="text-sm text-gray-600 mt-1">Key Events</div>
+        <div class="text-xs text-gray-400 mt-0.5">{% if result.ads_linked %}Google Ads linked{% else %}Google Ads not linked{% endif %}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category Scores -->
+  <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm mb-10">
+    <h2 class="text-lg font-bold text-gray-900 mb-5">Score by Category</h2>
+    <div class="space-y-4">
+      {% for cat_id, cat in result.categories.items() %}
+      {% set bar_color = 'bg-green-500' if cat.pct >= 80 else ('bg-amber-400' if cat.pct >= 50 else 'bg-red-400') %}
+      <div>
+        <div class="flex justify-between items-center mb-1">
+          <span class="text-sm font-semibold text-gray-700">{{ cat.label }}</span>
+          <span class="text-sm font-bold text-gray-900">{{ cat.score }}/{{ cat.max_score }} <span class="text-gray-400 font-normal">({{ cat.pct }}%)</span></span>
+        </div>
+        <div class="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+          <div class="{{ bar_color }} h-2.5 rounded-full transition-all" style="width: {{ cat.pct }}%"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Checks List -->
+  <h2 class="text-xl font-bold text-gray-900 mb-4">All Checks ({{ result.total_checks }})</h2>
+
+  <!-- Filter tabs -->
+  <div class="flex gap-2 mb-6 flex-wrap">
+    <button onclick="filterChecks('all')" id="tab-all"
+            class="filter-tab px-4 py-2 rounded-lg text-sm font-semibold bg-gray-900 text-white transition-colors">
+      All ({{ result.total_checks }})
+    </button>
+    <button onclick="filterChecks('fail')" id="tab-fail"
+            class="filter-tab px-4 py-2 rounded-lg text-sm font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+      Failed ({{ checks | selectattr('status', 'eq', 'fail') | list | length }})
+    </button>
+    <button onclick="filterChecks('warning')" id="tab-warning"
+            class="filter-tab px-4 py-2 rounded-lg text-sm font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+      Warnings ({{ checks | selectattr('status', 'eq', 'warning') | list | length }})
+    </button>
+    <button onclick="filterChecks('pass')" id="tab-pass"
+            class="filter-tab px-4 py-2 rounded-lg text-sm font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+      Passed ({{ result.passes_count }})
+    </button>
+  </div>
+
+  <div class="space-y-3" id="checks-list">
+    {% for check in checks %}
+    {% set status_cfg = {
+      'pass':    {'bg': 'bg-green-50',  'border': 'border-green-200',  'icon_bg': 'bg-green-100',  'icon_color': 'text-green-600',  'badge_bg': 'bg-green-100',  'badge_text': 'text-green-700'},
+      'warning': {'bg': 'bg-amber-50',  'border': 'border-amber-200',  'icon_bg': 'bg-amber-100',  'icon_color': 'text-amber-600',  'badge_bg': 'bg-amber-100',  'badge_text': 'text-amber-700'},
+      'fail':    {'bg': 'bg-red-50',    'border': 'border-red-200',    'icon_bg': 'bg-red-100',    'icon_color': 'text-red-600',    'badge_bg': 'bg-red-100',    'badge_text': 'text-red-700'},
+    } %}
+    {% set cfg = status_cfg[check.status] %}
+    <div class="check-item rounded-xl border {{ cfg.border }} {{ cfg.bg }} p-5" data-status="{{ check.status }}">
+      <div class="flex items-start gap-4">
+        <!-- Icon -->
+        <div class="flex-shrink-0 w-9 h-9 rounded-lg {{ cfg.icon_bg }} {{ cfg.icon_color }} flex items-center justify-center mt-0.5">
+          {% if check.status == 'pass' %}
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+          {% elif check.status == 'warning' %}
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          {% else %}
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          {% endif %}
+        </div>
+        <!-- Content -->
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap mb-1">
+            <span class="font-bold text-gray-900">{{ check.name }}</span>
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full {{ cfg.badge_bg }} {{ cfg.badge_text }}">
+              {{ check.status | title }}
+            </span>
+            {% if check.severity == 'critical' %}
+            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-200 text-gray-600">Critical</span>
+            {% endif %}
+            <span class="ml-auto text-sm font-bold text-gray-700">{{ check.score }}/{{ check.max_score }}</span>
+          </div>
+          <p class="text-sm text-gray-700 mb-1">{{ check.message }}</p>
+          <p class="text-sm text-gray-500">{{ check.detail }}</p>
+          {% if check.fix %}
+          <div class="mt-3 flex items-start gap-2">
+            <svg class="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <p class="text-sm text-blue-700 font-medium">{{ check.fix }}</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- CTA -->
+  <div class="mt-16 rounded-2xl bg-gradient-to-br from-primary-600 to-purple-700 p-8 text-white text-center">
+    <p class="text-sm font-semibold uppercase tracking-wide text-primary-200 mb-2">FieldSprout</p>
+    <h2 class="text-2xl font-extrabold mb-3">Want Someone to Fix All of This for You?</h2>
+    <p class="text-white/80 mb-6 max-w-xl mx-auto">FieldSprout's AI agents manage your ads, SEO, reviews, and analytics tracking 24/7 — so your data is always accurate and your marketing is always optimized.</p>
+    {% if has_endpoint('signup') %}
+    <a href="{{ url_for(ep('signup')) }}" class="inline-block bg-white text-primary-700 font-bold px-8 py-3 rounded-lg hover:bg-gray-50 transition-colors shadow-lg">
+      Start Free Trial →
+    </a>
+    {% else %}
+    <a href="/signup" class="inline-block bg-white text-primary-700 font-bold px-8 py-3 rounded-lg hover:bg-gray-50 transition-colors shadow-lg">
+      Start Free Trial →
+    </a>
+    {% endif %}
+    <p class="mt-3 text-xs text-white/60">14-day free trial · No credit card · Cancel anytime</p>
+  </div>
+
+</div>
+
+<script>
+function filterChecks(status) {
+  const items = document.querySelectorAll('.check-item');
+  items.forEach(item => {
+    item.style.display = (status === 'all' || item.dataset.status === status) ? '' : 'none';
+  });
+  document.querySelectorAll('.filter-tab').forEach(btn => {
+    const isActive = btn.id === 'tab-' + status;
+    btn.className = 'filter-tab px-4 py-2 rounded-lg text-sm font-semibold transition-colors ' +
+      (isActive ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200');
+  });
+}
+</script>
+{% endblock %}

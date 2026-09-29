@@ -799,6 +799,30 @@ def _create_demo_report(customer_id: str) -> GoogleAdsGraderReport:
                     "4. Let them run for 2 weeks, then keep the winners"
                 ],
             },
+            {
+                'title': "Target Competitor Switchers with Demand Gen Ads",
+                'description': "Customers searching for alternatives to your competitors are your highest-intent prospects. Demand Gen puts your ad in front of them on YouTube, Gmail, and Discover.",
+                'layman_summary': "Some of your competitor's customers are unhappy right now — searching things like '[competitor] complaints' or '[competitor] alternatives'. A Demand Gen campaign puts your ad in front of them at that exact moment.",
+                'category': 'competitor_targeting',
+                'severity': 3,
+                'roi': {
+                    'monthly_leads': 8,
+                    'annual_leads': 96,
+                    'percentage': 10
+                },
+                'effort': {
+                    'time_estimate': '2-3 hours',
+                    'difficulty': 'Medium',
+                    'priority': 'Medium'
+                },
+                'action_steps': [
+                    "1. Build a custom segment: 'people who searched for [Competitor] pricing, complaints, alternatives'",
+                    "2. Create one ad group per pain point: pricing, support, contract lock-in",
+                    "3. Each ad group links to a page proving you fix that exact frustration",
+                    "4. Upload your customer list as a lookalike seed to expand reach",
+                    "5. Run on YouTube, Discover, and Gmail — not Search"
+                ],
+            },
         ],
 
         # Metadata

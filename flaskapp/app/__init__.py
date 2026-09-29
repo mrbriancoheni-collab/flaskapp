@@ -1153,6 +1153,14 @@ def create_app():
     except Exception:
         app.logger.exception("Failed to register social_calendar_bp")
 
+    # --- Market Intelligence (voice-of-customer research + ad scripts) --------
+    try:
+        from app.market_research import market_intel_bp
+        app.register_blueprint(market_intel_bp)
+        app.logger.info("market_intel_bp registered at /account/market-intel")
+    except Exception:
+        app.logger.exception("Failed to register market_intel_bp")
+
     # ---- Apply CSRF exemptions AFTER blueprints are registered -------------
     try:
         for ep in (
@@ -1171,6 +1179,9 @@ def create_app():
             "social_calendar_bp.post_add",
             "social_calendar_bp.post_update",
             "social_calendar_bp.post_delete",
+            # Market Intelligence AJAX endpoints
+            "market_intel_bp.run_research",
+            "market_intel_bp.generate_scripts",
         ):
             fn = app.view_functions.get(ep)
             if fn:

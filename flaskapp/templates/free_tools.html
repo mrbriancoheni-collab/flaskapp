@@ -4,6 +4,56 @@
 {% block og_title %}Free Marketing Tools for Home Service Companies — FieldSprout{% endblock %}
 {% block og_description %}Grade your Google Ads in 60 seconds, calculate your ROI, and get a free Facebook Ads analysis. No credit card. No login required.{% endblock %}
 
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://fieldsprout.io"},
+    {"@type": "ListItem", "position": 2, "name": "Free Tools", "item": "https://fieldsprout.io/free-tools"}
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "name": "Free Marketing Tools for Home Service Businesses",
+  "description": "Free Google Ads grader, GA4 audit, and marketing tools built for trade contractors",
+  "numberOfItems": 2,
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "item": {
+        "@type": "SoftwareApplication",
+        "name": "Google Ads Grader",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web",
+        "description": "Free Google Ads audit for trade contractors. Grade your account in 60 seconds — see wasted spend, quality score gaps, and the top 3 fixes to lower your cost per lead.",
+        "url": "https://fieldsprout.io/ads-grader",
+        "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "item": {
+        "@type": "SoftwareApplication",
+        "name": "GA4 Tracking Health Audit",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web",
+        "description": "Free GA4 audit that checks your tracking setup, key events, Google Ads linking, data retention settings, and more — with a scored health report and prioritized fixes.",
+        "url": "https://fieldsprout.io/ga4-audit",
+        "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}
+      }
+    }
+  ]
+}
+</script>
+{% endblock %}
+
 {% block content %}
 <!-- Hero -->
 <section class="bg-gradient-to-br from-emerald-50 via-white to-teal-50 pt-20 pb-16">

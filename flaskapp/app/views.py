@@ -226,24 +226,60 @@ def llms_txt():
     )
     body = f"""# FieldSprout
 
-> FieldSprout is a full-service AI marketing platform for trade and field service businesses. AI agents manage Google Ads, Meta Ads, SEO, reputation, and lead follow-up 24/7 — no marketing expertise or dedicated marketing team required. Works for both residential (B2C) and commercial (B2B) trade businesses.
+> FieldSprout is a full-service AI marketing platform built specifically for trade and field service businesses (HVAC, plumbing, electrical, roofing, landscaping, pest control, and more). Autonomous AI agents manage Google Ads, Meta Ads, Local Services Ads, SEO, Google Business Profile, reputation management, and lead follow-up 24/7 — no marketing expertise or dedicated marketing team required. Works for both residential (B2C) and commercial (B2B) trade businesses across the United States.
+
+## Key Facts
+
+- Founded: 2024
+- Pricing: $250/month (monthly) or $200/month (annual plan, $2,400/year)
+- Trial: 14-day free trial, no credit card required
+- Contract: Month-to-month, cancel anytime
+- Target customer: Trade and field service business owners — HVAC, plumbing, electrical, roofing, landscaping, pest control, painting, concrete, fencing, garage door, solar, pool service
+- Differentiator vs agencies: AI agents work 24/7 at a fraction of agency cost ($2,000–$5,000/mo); no contracts, full transparency
 
 ## Product
 
-- [Home](https://fieldsprout.io/): Overview of FieldSprout's AI marketing platform for trade businesses
+- [Home](https://fieldsprout.io/): Overview and platform capabilities
 - [Pricing](https://fieldsprout.io/pricing): Plans starting at $250/month; annual plan at $200/month
-- [About](https://fieldsprout.io/about): Company mission and background
+- [About](https://fieldsprout.io/about): Company mission — marketing firepower for trade business owners without needing a marketing team
+- [Contact](https://fieldsprout.io/contact): Support and sales contact
+- [Free Tools](https://fieldsprout.io/free-tools): Free Google Ads Grader and GA4 Audit tool
+
+## Core Features
+
+- [Google Ads Management](https://fieldsprout.io/products/ads): AI optimizes keywords, bids, and ad copy 24/7
+- [Google Local Services Ads](https://fieldsprout.io/products/glsa): Google Guaranteed badge management
+- [Google Business Profile](https://fieldsprout.io/products/gbp): Automated posts, Q&A, and profile optimization
+- [Meta (Facebook/Instagram) Ads](https://fieldsprout.io/products/facebook-ads): AI-managed social advertising
+- [Reputation & Reviews](https://fieldsprout.io/products/reviews): Automated review request system after every job
+- [Listings Management](https://fieldsprout.io/products/listings): Citation consistency across 50+ directories
+- [Forms & Chat](https://fieldsprout.io/products/forms-chat): Lead capture and automated follow-up
+
+## Solutions
+
+- [Lower Ad Cost](https://fieldsprout.io/solutions/lower-ad-cost): Reduce cost per lead through AI optimization
+- [Get More Reviews](https://fieldsprout.io/solutions/get-more-reviews): Systematic review generation for trade businesses
+- [Spend When Open](https://fieldsprout.io/solutions/spend-when-open): Smart ad scheduling to match business hours
+- [See What Works](https://fieldsprout.io/solutions/see-what-works): Unified analytics and attribution reporting
+- [Lead Generation](https://fieldsprout.io/solutions/lead-generation): End-to-end lead generation for home service companies
+- [Multi-Location](https://fieldsprout.io/solutions/multi-location): Marketing management across multiple business locations
 
 ## Industries
 
-- [HVAC](https://fieldsprout.io/industries/hvac): Google Ads and marketing automation for HVAC companies
-- [Plumbing](https://fieldsprout.io/industries/plumbing): Marketing AI for plumbing contractors
-- [Electrical](https://fieldsprout.io/industries/electricians): Marketing platform for electricians and electrical contractors
-- [Roofing](https://fieldsprout.io/industries/roofing): Lead generation and ads management for roofing companies
-- [Pest Control](https://fieldsprout.io/industries/pest-control): Marketing automation for pest control businesses
-- [Landscaping](https://fieldsprout.io/industries/landscaping): Ads and SEO for landscaping and lawn care companies
-- [Garage Door](https://fieldsprout.io/industries/garage-door): Marketing for garage door repair and installation businesses
-- [Solar](https://fieldsprout.io/industries/solar): Lead generation for solar installation companies
+- [HVAC](https://fieldsprout.io/industries/hvac): Google Ads and marketing automation for HVAC companies — tune-ups, repairs, installations
+- [Plumbing](https://fieldsprout.io/industries/plumbing): Emergency and residential plumbing marketing, review automation
+- [Electrical](https://fieldsprout.io/industries/electricians): Marketing for electricians — residential, commercial, EV chargers
+- [Roofing](https://fieldsprout.io/industries/roofing): Storm damage leads, replacement campaigns, reputation management
+- [Pest Control](https://fieldsprout.io/industries/pest-control): Seasonal and recurring pest control marketing
+- [Landscaping](https://fieldsprout.io/industries/landscaping): Lawn care, landscape design, and recurring contract marketing
+- [Garage Door](https://fieldsprout.io/industries/garage-door): Repair and installation marketing for garage door companies
+- [Solar](https://fieldsprout.io/industries/solar): Lead generation for residential solar installers
+- [Pool Service](https://fieldsprout.io/industries/pool-service): Maintenance and renovation marketing for pool companies
+
+## Free Tools
+
+- [Google Ads Grader](https://fieldsprout.io/ads-grader): Free audit — grade your Google Ads account in 60 seconds, see wasted spend and top 3 fixes
+- [GA4 Tracking Audit](https://fieldsprout.io/ga4-audit): Free GA4 health check — scores your tracking setup and identifies gaps in conversion data
 
 ## Blog
 
@@ -253,6 +289,8 @@ def llms_txt():
 
 - [Privacy Policy](https://fieldsprout.io/privacy-policy)
 - [Terms of Service](https://fieldsprout.io/terms-of-service)
+- [Security](https://fieldsprout.io/security)
+- [Sitemap](https://fieldsprout.io/sitemap.xml)
 """
     return Response(body, mimetype="text/plain")
 

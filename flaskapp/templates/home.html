@@ -138,26 +138,51 @@
 }
 </script>
 
-<!-- LocalBusiness Schema -->
+<!-- HowTo Schema for "How It Works" -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  "name": "FieldSprout",
-  "applicationCategory": "BusinessApplication",
-  "url": "https://fieldsprout.io",
-  "description": "Full-service AI marketing platform for trade and field service businesses. No marketing expertise required.",
-  "offers": {
-    "@type": "AggregateOffer",
-    "lowPrice": "200",
-    "highPrice": "997",
-    "priceCurrency": "USD",
-    "offerCount": "3"
-  },
-  "audience": {
-    "@type": "Audience",
-    "audienceType": "Trade and field service businesses, HVAC contractors, plumbers, electricians, roofers, landscapers, painters, general contractors"
-  }
+  "@type": "HowTo",
+  "name": "How to Start Using FieldSprout AI Marketing",
+  "description": "Get started with FieldSprout's AI marketing platform in three steps — no marketing expertise required.",
+  "totalTime": "PT5M",
+  "tool": [
+    {
+      "@type": "HowToTool",
+      "name": "Google Ads account (optional)"
+    },
+    {
+      "@type": "HowToTool",
+      "name": "Meta Business account (optional)"
+    },
+    {
+      "@type": "HowToTool",
+      "name": "Google Business Profile (optional)"
+    }
+  ],
+  "step": [
+    {
+      "@type": "HowToStep",
+      "position": 1,
+      "name": "Connect your marketing accounts",
+      "text": "Link Google Ads, Meta, Google Business Profile, and more in minutes. No technical setup or marketing experience required.",
+      "url": "https://fieldsprout.io/#how-it-works"
+    },
+    {
+      "@type": "HowToStep",
+      "position": 2,
+      "name": "AI agents analyze your entire marketing",
+      "text": "FieldSprout's AI audits your ads, SEO, reputation, and lead pipeline — finding wasted spend and missed opportunities across every channel.",
+      "url": "https://fieldsprout.io/#how-it-works"
+    },
+    {
+      "@type": "HowToStep",
+      "position": 3,
+      "name": "Watch your calendar fill up",
+      "text": "AI continuously runs and improves your marketing every day — more leads, more booked jobs, less wasted time and money.",
+      "url": "https://fieldsprout.io/#how-it-works"
+    }
+  ]
 }
 </script>
 

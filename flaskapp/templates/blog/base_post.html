@@ -17,10 +17,13 @@
   "headline": "{{ post.title }}",
   "description": "{{ post.meta_description }}",
   "datePublished": "{{ post.date }}",
+  "dateModified": "{{ post.date }}",
+  "image": "{{ post.og_image }}",
+  "wordCount": {{ (post.reading_time * 200) | int }},
   "author": {
-    "@type": "Organization",
-    "name": "FieldSprout",
-    "url": "https://fieldsprout.io"
+    "@type": "Person",
+    "name": "FieldSprout Editorial Team",
+    "url": "https://fieldsprout.io/about"
   },
   "publisher": {
     "@type": "Organization",

@@ -372,8 +372,18 @@
     "@type": "Organization",
     "name": "FieldSprout",
     "url": "https://fieldsprout.io",
-    "logo": "https://fieldsprout.io/static/brand/logos/fieldsprout-wordmark.svg",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://fieldsprout.io/static/brand/logos/fieldsprout-wordmark.svg",
+      "width": 200,
+      "height": 40
+    },
     "description": "Full-service AI marketing platform for trade and field service businesses. Autonomous AI agents manage Google Ads, Meta Ads, SEO, reputation, and lead follow-up 24/7. Designed for residential and commercial trade businesses — no marketing expertise or dedicated marketing team required.",
+    "foundingDate": "2024",
+    "areaServed": {
+      "@type": "Country",
+      "name": "United States"
+    },
     "sameAs": [
       "https://www.linkedin.com/company/fieldsprout",
       "https://twitter.com/fieldsprout"
@@ -381,7 +391,8 @@
     "contactPoint": {
       "@type": "ContactPoint",
       "contactType": "Customer Service",
-      "email": "support@fieldsprout.io"
+      "email": "support@fieldsprout.io",
+      "availableLanguage": "English"
     },
     "knowsAbout": [
       "Google Ads optimization",
@@ -395,8 +406,31 @@
       "Plumbing marketing",
       "Electrical contractor marketing",
       "Roofing marketing",
-      "Landscaping marketing"
+      "Landscaping marketing",
+      "AI marketing automation",
+      "Google Local Services Ads",
+      "Pay-per-click advertising",
+      "Home service business growth"
     ]
+  }
+  </script>
+
+  <!-- WebSite Schema with SearchAction -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "FieldSprout",
+    "url": "https://fieldsprout.io",
+    "description": "AI marketing platform for trade and field service businesses",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": "https://fieldsprout.io/blog/?q={search_term_string}"
+      },
+      "query-input": "required name=search_term_string"
+    }
   }
   </script>
 

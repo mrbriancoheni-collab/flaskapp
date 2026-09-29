@@ -120,8 +120,55 @@
         <div class="flex items-end">
           <button onclick="generateScripts()" class="btn btn-primary px-6 py-2">Generate Scripts</button>
         </div>
+        <div class="flex items-end">
+          <button onclick="generateContentStrategy()" class="btn btn-secondary px-6 py-2">Generate Content Strategy</button>
+        </div>
       </div>
       <p class="text-xs text-gray-400">Based on Motion 2026 benchmarks: 5% win rate, volume is the strategy. Generates hooks ranked by hit rate.</p>
+    </div>
+  </div>
+
+  <!-- Content Strategy results -->
+  <div id="content-strategy-section" class="hidden mt-8">
+    <div class="flex items-center gap-3 mb-6">
+      <h2 class="text-xl font-bold text-gray-900">Content Strategy</h2>
+      <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">VoC-powered</span>
+    </div>
+
+    <!-- Tabs -->
+    <div class="border-b border-gray-200 mb-6">
+      <nav class="flex gap-1 -mb-px" id="cs-tabs">
+        <button onclick="showCsTab('blog')" id="tab-blog" class="cs-tab cs-tab-active px-4 py-2 text-sm font-medium border-b-2 border-green-500 text-green-600">Blog Ideas</button>
+        <button onclick="showCsTab('lp')" id="tab-lp" class="cs-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Landing Page</button>
+        <button onclick="showCsTab('gbp')" id="tab-gbp" class="cs-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">GBP Posts</button>
+        <button onclick="showCsTab('email')" id="tab-email" class="cs-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Email Sequence</button>
+        <button onclick="showCsTab('social')" id="tab-social" class="cs-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Social Posts</button>
+      </nav>
+    </div>
+
+    <!-- Blog Ideas tab -->
+    <div id="cs-blog" class="cs-panel">
+      <div id="blog-ideas-list" class="grid md:grid-cols-2 gap-5"></div>
+    </div>
+
+    <!-- Landing Page tab -->
+    <div id="cs-lp" class="cs-panel hidden">
+      <div id="lp-content" class="space-y-6"></div>
+    </div>
+
+    <!-- GBP Posts tab -->
+    <div id="cs-gbp" class="cs-panel hidden">
+      <div id="gbp-posts-list" class="space-y-4"></div>
+    </div>
+
+    <!-- Email Sequence tab -->
+    <div id="cs-email" class="cs-panel hidden">
+      <div id="email-sequence-list" class="space-y-4"></div>
+    </div>
+
+    <!-- Social Posts tab -->
+    <div id="cs-social" class="cs-panel hidden">
+      <div id="social-ideas-list" class="grid md:grid-cols-2 gap-5"></div>
     </div>
   </div>
 
@@ -286,6 +333,200 @@ function renderScripts(data) {
 
 function escHtml(str) {
   return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Content Strategy ──────────────────────────────────────────────────────
+
+async function generateContentStrategy() {
+  if (!researchData) { alert('Run research first.'); return; }
+  showLoading('Building content strategy…');
+  try {
+    const payload = {
+      trade: researchData.trade,
+      city: researchData.city,
+      review_data: researchData.review_data,
+      reddit_data: researchData.reddit_data,
+    };
+    const res = await fetch('/account/market-intel/content-strategy', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+    renderContentStrategy(data);
+    document.getElementById('content-strategy-section').classList.remove('hidden');
+    document.getElementById('content-strategy-section').scrollIntoView({behavior: 'smooth'});
+  } catch(e) {
+    alert('Content strategy failed: ' + e.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+function showCsTab(name) {
+  document.querySelectorAll('.cs-panel').forEach(p => p.classList.add('hidden'));
+  document.querySelectorAll('.cs-tab').forEach(t => {
+    t.classList.remove('cs-tab-active','border-green-500','text-green-600');
+    t.classList.add('border-transparent','text-gray-500');
+  });
+  document.getElementById('cs-' + name).classList.remove('hidden');
+  const btn = document.getElementById('tab-' + name);
+  btn.classList.add('cs-tab-active','border-green-500','text-green-600');
+  btn.classList.remove('border-transparent','text-gray-500');
+}
+
+function renderContentStrategy(data) {
+  renderBlogIdeas(data.blog_ideas || []);
+  renderLandingPage(data.landing_page_copy || {});
+  renderGbpPosts(data.gbp_posts || []);
+  renderEmailSequence(data.email_sequence || []);
+  renderSocialIdeas(data.social_ideas || []);
+}
+
+// Blog Ideas
+const VOLUME_COLOR = {high:'green', medium:'yellow', low:'gray'};
+function renderBlogIdeas(ideas) {
+  document.getElementById('blog-ideas-list').innerHTML = ideas.map(idea => {
+    const vc = VOLUME_COLOR[idea.estimated_search_volume] || 'gray';
+    const outline = (idea.outline||[]).map(h => `<li class="flex items-start gap-1.5 text-xs text-gray-600"><span class="text-gray-300 mt-0.5">H2</span>${escHtml(h)}</li>`).join('');
+    return `
+    <div class="bg-white rounded-2xl border shadow-sm p-5">
+      <div class="flex items-start justify-between gap-2 mb-2">
+        <h3 class="font-semibold text-gray-900 text-sm leading-snug">${escHtml(idea.title)}</h3>
+        <span class="shrink-0 text-xs px-2 py-0.5 rounded-full bg-${vc}-100 text-${vc}-700 font-medium">${escHtml(idea.estimated_search_volume)}</span>
+      </div>
+      <div class="text-xs text-blue-600 font-mono mb-2">🔑 ${escHtml(idea.target_keyword)}</div>
+      <div class="text-xs text-gray-500 mb-3"><span class="font-medium">Pain addressed:</span> ${escHtml(idea.pain_addressed)}</div>
+      <ul class="space-y-1">${outline}</ul>
+      <div class="mt-3 pt-3 border-t text-xs text-gray-400">${escHtml(idea.seo_angle)}</div>
+    </div>`;
+  }).join('');
+}
+
+// Landing Page
+function renderLandingPage(lp) {
+  const objHtml = (lp.objection_handling||[]).map(o =>
+    `<div class="bg-red-50 rounded-xl p-4">
+      <div class="text-xs font-semibold text-red-600 mb-1">Objection</div>
+      <div class="text-sm text-gray-700 mb-2">${escHtml(o.objection)}</div>
+      <div class="text-xs font-semibold text-green-600 mb-1">Reframe</div>
+      <div class="text-sm text-gray-700">${escHtml(o.reframe)}</div>
+    </div>`
+  ).join('');
+  const faqHtml = (lp.faq_items||[]).map(f =>
+    `<div class="border rounded-xl p-4">
+      <div class="font-medium text-gray-800 text-sm mb-1">${escHtml(f.q)}</div>
+      <div class="text-sm text-gray-600">${escHtml(f.a)}</div>
+    </div>`
+  ).join('');
+  const proofHtml = (lp.social_proof_angles||[]).map(p =>
+    `<li class="flex items-start gap-2 text-sm text-gray-700"><i class="fa-solid fa-check text-green-500 mt-0.5 shrink-0"></i>${escHtml(p)}</li>`
+  ).join('');
+  const ctaHtml = (lp.cta_copy||[]).map(c =>
+    `<span class="inline-block bg-green-600 text-white text-sm font-semibold px-4 py-2 rounded-lg">${escHtml(c)}</span>`
+  ).join('');
+  document.getElementById('lp-content').innerHTML = `
+    <div class="bg-white rounded-2xl border shadow-sm p-6">
+      <div class="text-xs font-semibold text-gray-400 uppercase mb-1">Hero Headline</div>
+      <div class="text-2xl font-bold text-gray-900 mb-3">${escHtml(lp.hero_headline||'')}</div>
+      <div class="text-xs font-semibold text-gray-400 uppercase mb-1">Hero Subheadline</div>
+      <div class="text-base text-gray-600">${escHtml(lp.hero_subheadline||'')}</div>
+    </div>
+    <div class="bg-white rounded-2xl border shadow-sm p-6">
+      <div class="text-xs font-semibold text-gray-400 uppercase mb-3">Social Proof Angles</div>
+      <ul class="space-y-2">${proofHtml}</ul>
+    </div>
+    <div class="bg-white rounded-2xl border shadow-sm p-6">
+      <div class="text-xs font-semibold text-gray-400 uppercase mb-3">Objection Handling</div>
+      <div class="space-y-3">${objHtml}</div>
+    </div>
+    <div class="bg-white rounded-2xl border shadow-sm p-6">
+      <div class="text-xs font-semibold text-gray-400 uppercase mb-3">FAQ Items</div>
+      <div class="space-y-3">${faqHtml}</div>
+    </div>
+    <div class="bg-white rounded-2xl border shadow-sm p-6">
+      <div class="text-xs font-semibold text-gray-400 uppercase mb-3">CTA Button Copy Options</div>
+      <div class="flex flex-wrap gap-3">${ctaHtml}</div>
+    </div>`;
+}
+
+// GBP Posts
+const GBP_TYPE_COLOR = {offer:'blue', update:'gray', event:'purple'};
+function renderGbpPosts(posts) {
+  document.getElementById('gbp-posts-list').innerHTML = posts.map(p => {
+    const c = GBP_TYPE_COLOR[p.type] || 'gray';
+    return `
+    <div class="bg-white rounded-2xl border shadow-sm p-5">
+      <div class="flex items-center gap-3 mb-3">
+        <span class="text-xs px-2.5 py-1 rounded-full bg-${c}-100 text-${c}-700 font-semibold uppercase">${escHtml(p.type)}</span>
+        <span class="text-xs text-gray-500">${escHtml(p.angle)}</span>
+        <span class="ml-auto text-xs text-gray-400">Best: ${escHtml(p.best_week)}</span>
+      </div>
+      <div class="text-sm text-gray-700 whitespace-pre-line">${escHtml(p.text)}</div>
+    </div>`;
+  }).join('');
+}
+
+// Email Sequence
+const EMAIL_STAGE = ['Awareness', 'Consideration', 'Decision', 'Retention'];
+const EMAIL_COLOR = ['blue','purple','green','orange'];
+function renderEmailSequence(emails) {
+  document.getElementById('email-sequence-list').innerHTML = emails.map((e, i) => {
+    const c = EMAIL_COLOR[i] || 'gray';
+    const stage = EMAIL_STAGE[i] || '';
+    return `
+    <div class="bg-white rounded-2xl border shadow-sm p-5">
+      <div class="flex items-center gap-3 mb-3">
+        <span class="w-7 h-7 rounded-full bg-${c}-100 text-${c}-700 font-bold text-sm flex items-center justify-center shrink-0">${e.sequence_position}</span>
+        <span class="text-xs font-semibold text-${c}-600 uppercase">${stage}</span>
+        <span class="ml-auto text-xs text-gray-400">${escHtml(e.send_day)}</span>
+      </div>
+      <div class="mb-2">
+        <div class="text-xs font-semibold text-gray-400 uppercase mb-0.5">Subject Line</div>
+        <div class="font-semibold text-gray-900">${escHtml(e.subject_line)}</div>
+      </div>
+      <div class="mb-2">
+        <div class="text-xs font-semibold text-gray-400 uppercase mb-0.5">Preview Text</div>
+        <div class="text-sm text-gray-600 italic">${escHtml(e.preview_text)}</div>
+      </div>
+      <div class="mb-3">
+        <div class="text-xs font-semibold text-gray-400 uppercase mb-0.5">Body Angle</div>
+        <div class="text-sm text-gray-700">${escHtml(e.body_angle)}</div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-gray-500">CTA:</span>
+        <span class="inline-block bg-${c}-600 text-white text-xs font-semibold px-3 py-1 rounded-lg">${escHtml(e.cta)}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Social Posts
+const PLATFORM_ICON = {facebook:'fa-facebook', instagram:'fa-instagram', nextdoor:'fa-house'};
+const PLATFORM_COLOR = {facebook:'blue', instagram:'pink', nextdoor:'green'};
+function renderSocialIdeas(posts) {
+  document.getElementById('social-ideas-list').innerHTML = posts.map(p => {
+    const c = PLATFORM_COLOR[p.platform] || 'gray';
+    const icon = PLATFORM_ICON[p.platform] || 'fa-share-nodes';
+    return `
+    <div class="bg-white rounded-2xl border shadow-sm p-5">
+      <div class="flex items-center gap-2 mb-3">
+        <i class="fa-brands ${icon} text-${c}-500"></i>
+        <span class="text-xs font-semibold text-gray-700 capitalize">${escHtml(p.platform)}</span>
+        <span class="ml-auto text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">${escHtml(p.format)}</span>
+      </div>
+      <div class="mb-2">
+        <div class="text-xs font-semibold text-gray-400 uppercase mb-0.5">Hook</div>
+        <div class="font-semibold text-gray-900 text-sm">${escHtml(p.hook)}</div>
+      </div>
+      <div class="mb-2">
+        <div class="text-xs font-semibold text-gray-400 uppercase mb-0.5">Body</div>
+        <div class="text-sm text-gray-600 whitespace-pre-line">${escHtml(p.body)}</div>
+      </div>
+      <div class="text-xs text-gray-400 pt-2 border-t mt-2">Pain addressed: ${escHtml(p.pain_addressed)}</div>
+    </div>`;
+  }).join('');
 }
 </script>
 {% endblock %}

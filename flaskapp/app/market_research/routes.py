@@ -98,6 +98,47 @@ def generate_scripts():
     })
 
 
+@market_intel_bp.route("/content-strategy", methods=["POST"])
+@login_required
+def generate_content_strategy():
+    """Generate multi-channel content strategy from research data. Returns JSON."""
+    data = request.get_json(force=True) or {}
+    trade = (data.get("trade") or "").strip().lower()
+    city = (data.get("city") or "").strip()
+    review_data = data.get("review_data")
+    reddit_data = data.get("reddit_data")
+
+    if not trade or not city:
+        return jsonify({"error": "trade and city are required"}), 400
+
+    try:
+        from app.market_research.content_strategist import (
+            generate_blog_ideas,
+            generate_landing_page_copy,
+            generate_gbp_posts,
+            generate_email_sequence,
+            generate_social_ideas,
+        )
+        blog_ideas = generate_blog_ideas(trade, city, review_data, reddit_data)
+        landing_page_copy = generate_landing_page_copy(trade, city, review_data, reddit_data)
+        gbp_posts = generate_gbp_posts(trade, city, review_data, reddit_data)
+        email_sequence = generate_email_sequence(trade, city, review_data, reddit_data)
+        social_ideas = generate_social_ideas(trade, city, review_data, reddit_data)
+    except Exception:
+        log.exception("content_strategist failed for %s/%s", trade, city)
+        return jsonify({"error": "content strategy generation failed"}), 500
+
+    return jsonify({
+        "trade": trade,
+        "city": city,
+        "blog_ideas": blog_ideas,
+        "landing_page_copy": landing_page_copy,
+        "gbp_posts": gbp_posts,
+        "email_sequence": email_sequence,
+        "social_ideas": social_ideas,
+    })
+
+
 @market_intel_bp.route("/volume-plan")
 @login_required
 def volume_plan():

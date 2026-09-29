@@ -1,10 +1,16 @@
-# Placeholder for Google Ads API client wiring.
-# You'd initialize the official Google Ads API client here using OAuth2 credentials.
+# Routes GAQL queries through the REST-based utils_ads helpers.
 class GoogleAdsClientWrapper:
     def __init__(self, config):
         self.config = config
-        self.client = None  # TODO: initialize google-ads client
+        self.account_id = config.get("account_id")
 
     def fetch_gaql(self, query: str):
-        # Execute GAQL query and return rows
-        raise NotImplementedError("wire up official Google Ads client here")
+        """Execute a GAQL query and return rows via the REST-based Google Ads helper."""
+        if self.account_id:
+            from app.services.google_ads_intelligence import _ads_gaql
+            return _ads_gaql(self.account_id, query)
+        from app.google.utils_ads import google_ads_search, resolve_ads_context
+        customer_id = self.config.get("customer_id", "")
+        access_token = self.config.get("access_token", "")
+        developer_token = self.config.get("developer_token", "")
+        return google_ads_search(customer_id, query, access_token, developer_token)

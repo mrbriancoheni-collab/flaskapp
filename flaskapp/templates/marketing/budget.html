@@ -1,0 +1,170 @@
+{% extends "base_app.html" %}
+{% set active_nav = 'budget' %}
+{% block title %}Budget Pacing — FieldSprout{% endblock %}
+
+{% block content %}
+{% include "marketing/_nav.html" %}
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 space-y-6">
+
+  <div class="flex items-center justify-between flex-wrap gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Budget Pacing</h1>
+      <p class="text-sm text-gray-500 mt-0.5">Current month spend vs. budget</p>
+    </div>
+    <button onclick="document.getElementById('set-budget-modal').classList.remove('hidden')"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
+      <i class="fa-solid fa-sliders"></i> Set Budget
+    </button>
+  </div>
+
+  {# Overall pacing card #}
+  {% if pacing and pacing.total_budget_cents %}
+  {% set p = pacing %}
+  {% set pct_used = ((p.actual_pct or 0) * 100) %}
+  {% set pct_elapsed = (p.pacing_pct * 100) %}
+  <div class="bg-white rounded-xl border border-gray-200 p-6">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <p class="text-lg font-semibold text-gray-900">Total Marketing Budget</p>
+        <p class="text-sm text-gray-500">Day {{ p.days_elapsed }} of {{ p.days_in_month }} — {{ "{:.0f}".format(pct_elapsed) }}% of month elapsed</p>
+      </div>
+      <div class="text-right">
+        <p class="text-3xl font-bold {% if p.status == 'overspending' %}text-red-600{% elif p.status == 'underspending' %}text-amber-500{% else %}text-green-600{% endif %}">
+          ${{ "{:,.0f}".format(p.total_spent_cents / 100) }}
+        </p>
+        <p class="text-sm text-gray-500">of ${{ "{:,.0f}".format(p.total_budget_cents / 100) }}</p>
+      </div>
+    </div>
+    <div class="relative h-4 bg-gray-100 rounded-full overflow-hidden mb-2">
+      <div class="absolute h-full rounded-full
+                  {% if p.status == 'overspending' %}bg-red-500{% elif p.status == 'underspending' %}bg-amber-400{% else %}bg-green-500{% endif %}"
+           style="width: {{ [pct_used, 100]|min }}%"></div>
+      <div class="absolute top-0 h-full w-0.5 bg-gray-700 opacity-50" style="left: {{ "{:.1f}".format(pct_elapsed) }}%"></div>
+    </div>
+    <div class="flex justify-between text-xs text-gray-500">
+      <span>{{ "{:.1f}".format(pct_used) }}% spent</span>
+      <span class="{% if p.status == 'overspending' %}text-red-600 font-semibold{% elif p.status == 'underspending' %}text-amber-600 font-semibold{% else %}text-green-600 font-semibold{% endif %}">
+        {% if p.status == 'overspending' %}Over budget{% elif p.status == 'underspending' %}Underspending{% else %}On pace{% endif %}
+      </span>
+    </div>
+  </div>
+
+  {# Per-channel breakdown #}
+  {% if p.per_channel %}
+  <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100">
+      <h2 class="font-semibold text-gray-900">Per-Channel Pacing</h2>
+    </div>
+    <div class="divide-y divide-gray-50">
+      {% for ch in p.per_channel %}
+      {% set ch_pct = ((ch.actual_pct or 0) * 100) %}
+      <div class="px-5 py-4">
+        <div class="flex items-center justify-between mb-2">
+          <div>
+            <p class="font-medium text-gray-900 text-sm">{{ ch.channel_name }}</p>
+            <p class="text-xs text-gray-400">{{ ch.channel_type }}</p>
+          </div>
+          <div class="text-right">
+            <p class="text-sm font-semibold text-gray-800">${{ "{:,.0f}".format(ch.spent_cents / 100) }}</p>
+            {% if ch.budget_cents %}
+            <p class="text-xs text-gray-400">of ${{ "{:,.0f}".format(ch.budget_cents / 100) }}</p>
+            {% else %}
+            <p class="text-xs text-gray-400">no budget set</p>
+            {% endif %}
+          </div>
+        </div>
+        {% if ch.budget_cents %}
+        <div class="relative h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div class="absolute h-full rounded-full
+                      {% if ch.status == 'overspending' %}bg-red-400{% elif ch.status == 'underspending' %}bg-amber-300{% else %}bg-green-400{% endif %}"
+               style="width: {{ [ch_pct, 100]|min }}%"></div>
+          <div class="absolute top-0 h-full w-0.5 bg-gray-500 opacity-40" style="left: {{ "{:.1f}".format(p.pacing_pct * 100) }}%"></div>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="bg-white rounded-xl border border-gray-200 py-16 text-center">
+    <i class="fa-solid fa-wallet text-gray-200 text-5xl mb-4"></i>
+    <p class="text-gray-500 font-medium">No budget set</p>
+    <p class="text-sm text-gray-400 mt-1">Set a monthly budget to track pacing across all channels.</p>
+    <button onclick="document.getElementById('set-budget-modal').classList.remove('hidden')"
+            class="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition">
+      <i class="fa-solid fa-sliders"></i> Set Budget
+    </button>
+  </div>
+  {% endif %}
+
+  {# Historical budget list #}
+  {% if budget_list %}
+  <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100">
+      <h2 class="font-semibold text-gray-900">Budget History</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-100">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Period</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Budget</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Notes</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for b in budget_list %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-5 py-3 text-sm font-medium text-gray-900">{{ b.period_year }}-{{ "%02d"|format(b.period_month) }}</td>
+            <td class="px-4 py-3 text-right text-sm text-gray-700">${{ "{:,.0f}".format(b.total_budget_cents / 100) }}</td>
+            <td class="px-4 py-3 text-sm text-gray-500">{{ b.notes or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+{# ── Set Budget Modal ── #}
+<div id="set-budget-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md">
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+      <h3 class="font-semibold text-gray-900">Set Monthly Budget</h3>
+      <button onclick="document.getElementById('set-budget-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+        <i class="fa-solid fa-xmark text-xl"></i>
+      </button>
+    </div>
+    <form method="post" action="/account/marketing/budget" class="px-6 py-5 space-y-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Year</label>
+          <input name="year" type="number" placeholder="2026" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Month</label>
+          <input name="month" type="number" min="1" max="12" placeholder="5" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Total Monthly Budget ($)</label>
+        <input name="total_budget" type="number" step="1" min="0" required placeholder="10000" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+        <input name="notes" placeholder="Q2 push, added billboard" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </div>
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" onclick="document.getElementById('set-budget-modal').classList.add('hidden')"
+                class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancel</button>
+        <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">Save Budget</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

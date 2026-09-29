@@ -1,0 +1,158 @@
+{% extends "base_app.html" %}
+{% block title %}Daily Health Digest — FieldSprout{% endblock %}
+{% block content %}
+<div class="px-4 py-6 max-w-3xl mx-auto">
+
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Daily Health Digest</h1>
+      <p class="text-gray-500 text-sm mt-0.5">Preview of what will be delivered to your phone or email each morning.</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="{{ url_for('marketing_bp.notification_settings') }}"
+         class="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+        <i class="fa-solid fa-gear mr-1"></i> Settings
+      </a>
+      <button onclick="sendDigest()"
+              class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">
+        <i class="fa-solid fa-paper-plane"></i> Send Now
+      </button>
+    </div>
+  </div>
+
+  <!-- Digest status -->
+  {% if settings %}
+  <div class="bg-{% if settings.daily_digest_enabled %}green{% else %}gray{% endif %}-50
+              border border-{% if settings.daily_digest_enabled %}green{% else %}gray{% endif %}-200
+              rounded-xl p-4 mb-6">
+    <div class="flex items-center gap-3">
+      <i class="fa-solid fa-{% if settings.daily_digest_enabled %}circle-check text-green{% else %}circle-xmark text-gray{% endif %}-500"></i>
+      <div class="text-sm {% if settings.daily_digest_enabled %}text-green-900{% else %}text-gray-600{% endif %}">
+        {% if settings.daily_digest_enabled %}
+          Daily digest is <strong>active</strong> — sends at <strong>{{ settings.daily_digest_hour or 7 }}:00 AM</strong>
+          via <strong>{{ settings.daily_digest_channel or 'SMS' }}</strong>
+          {% if settings.daily_digest_phone %}to {{ settings.daily_digest_phone }}{% endif %}
+        {% else %}
+          Daily digest is disabled.
+          <a href="{{ url_for('marketing_bp.notification_settings') }}" class="underline">Enable it in settings →</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Preview card (SMS format) -->
+  <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+    <div class="flex items-center gap-2 mb-4">
+      <i class="fa-regular fa-message text-indigo-500"></i>
+      <h2 class="font-semibold text-gray-900">SMS Preview — {{ data.date }}</h2>
+    </div>
+    <div class="bg-gray-50 rounded-xl p-4 font-mono text-sm text-gray-800 leading-relaxed whitespace-pre-wrap border border-gray-100">📊 {{ data.date }} digest:
+Leads: {{ data.leads_yesterday }} yesterday • {{ data.leads_week }} this week{% if data.revenue_yesterday > 0 %}
+Revenue: ${{ "%.0f"|format(data.revenue_yesterday) }} yesterday{% endif %}{% if data.missed_calls > 0 %}
+⚠️ {{ data.missed_calls }} missed call(s){% endif %}{% if data.unanswered_reviews > 0 %}
+⭐ {{ data.unanswered_reviews }} review(s) need reply{% endif %}{% if data.pacing_alerts %}
+🔴 {{ data.pacing_alerts[0].channel }} at {{ data.pacing_alerts[0].pace_pct }}% of budget pace{% endif %}{% if data.renewing_agreements > 0 %}
+📋 {{ data.renewing_agreements }} agreement(s) renew this week{% endif %}</div>
+  </div>
+
+  <!-- Full metric cards -->
+  <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="text-xs text-gray-500 font-semibold uppercase mb-1 flex items-center gap-1">
+        <i class="fa-solid fa-user-plus text-indigo-400"></i> Leads Yesterday
+      </div>
+      <div class="text-2xl font-bold text-gray-900">{{ data.leads_yesterday }}</div>
+      <div class="text-xs text-gray-400 mt-0.5">{{ data.leads_week }} this week</div>
+    </div>
+    <div class="bg-white rounded-xl border {% if data.missed_calls > 0 %}border-red-200 bg-red-50{% else %}border-gray-200{% endif %} p-4">
+      <div class="text-xs {% if data.missed_calls > 0 %}text-red-600{% else %}text-gray-500{% endif %} font-semibold uppercase mb-1 flex items-center gap-1">
+        <i class="fa-solid fa-phone-missed {% if data.missed_calls > 0 %}text-red-400{% else %}text-gray-400{% endif %}"></i> Missed Calls
+      </div>
+      <div class="text-2xl font-bold {% if data.missed_calls > 0 %}text-red-700{% else %}text-gray-900{% endif %}">{{ data.missed_calls }}</div>
+      <div class="text-xs {% if data.missed_calls > 0 %}text-red-400{% else %}text-gray-400{% endif %} mt-0.5">yesterday</div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="text-xs text-gray-500 font-semibold uppercase mb-1 flex items-center gap-1">
+        <i class="fa-solid fa-dollar-sign text-green-400"></i> Revenue Yesterday
+      </div>
+      <div class="text-2xl font-bold text-green-700">
+        {% if data.revenue_yesterday > 0 %}${{ "%.0f"|format(data.revenue_yesterday) }}{% else %}—{% endif %}
+      </div>
+      <div class="text-xs text-gray-400 mt-0.5">
+        {% if data.revenue_week > 0 %}${{ "%.0f"|format(data.revenue_week) }} this week{% else %}Connect ServiceTitan{% endif %}
+      </div>
+    </div>
+    <div class="bg-white rounded-xl border {% if data.unanswered_reviews > 0 %}border-amber-200{% else %}border-gray-200{% endif %} p-4">
+      <div class="text-xs text-gray-500 font-semibold uppercase mb-1 flex items-center gap-1">
+        <i class="fa-solid fa-star text-yellow-400"></i> Unanswered Reviews
+      </div>
+      <div class="text-2xl font-bold {% if data.unanswered_reviews > 0 %}text-amber-600{% else %}text-gray-900{% endif %}">{{ data.unanswered_reviews }}</div>
+      <div class="text-xs text-gray-400 mt-0.5">Need a response</div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="text-xs text-gray-500 font-semibold uppercase mb-1 flex items-center gap-1">
+        <i class="fa-brands fa-google text-blue-400"></i> Google CPL (7d)
+      </div>
+      <div class="text-2xl font-bold text-gray-900">
+        {% if data.google_cpl %}${{ "%.0f"|format(data.google_cpl) }}{% else %}—{% endif %}
+      </div>
+      <div class="text-xs text-gray-400 mt-0.5">per lead</div>
+    </div>
+    <div class="bg-white rounded-xl border {% if data.renewing_agreements > 0 %}border-amber-200{% else %}border-gray-200{% endif %} p-4">
+      <div class="text-xs text-gray-500 font-semibold uppercase mb-1 flex items-center gap-1">
+        <i class="fa-solid fa-file-contract text-purple-400"></i> Agreements Renewing
+      </div>
+      <div class="text-2xl font-bold {% if data.renewing_agreements > 0 %}text-amber-600{% else %}text-gray-900{% endif %}">{{ data.renewing_agreements }}</div>
+      <div class="text-xs text-gray-400 mt-0.5">in next 7 days</div>
+    </div>
+  </div>
+
+  <!-- Pacing alerts in digest -->
+  {% if data.pacing_alerts %}
+  <div class="bg-red-50 rounded-xl border border-red-200 p-4">
+    <h3 class="font-semibold text-red-900 mb-3 flex items-center gap-2">
+      <i class="fa-solid fa-triangle-exclamation text-red-500"></i> Budget Pacing Alerts
+    </h3>
+    <div class="space-y-2">
+      {% for alert in data.pacing_alerts %}
+      <div class="flex items-center justify-between text-sm">
+        <span class="text-red-800 font-medium">{{ alert.channel }}</span>
+        <span class="text-red-700">{{ alert.pace_pct }}% of expected pace · ${{ "%.0f"|format(alert.spent) }}/${{ "%.0f"|format(alert.budget) }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+<script nonce="{{ g.csp_nonce }}">
+function sendDigest() {
+  const btn = event.target.closest('button');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
+  fetch('{{ url_for("digest_bp.send_manual") }}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+    }
+  }).then(r => r.json()).then(d => {
+    btn.innerHTML = d.ok
+      ? '<i class="fa-solid fa-check"></i> Sent!'
+      : '<i class="fa-solid fa-xmark"></i> Failed';
+    btn.classList.toggle('bg-green-600', d.ok);
+    btn.classList.toggle('bg-red-500', !d.ok);
+    btn.classList.remove('bg-indigo-600');
+    if (!d.ok) alert(d.message);
+    setTimeout(() => {
+      btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send Now';
+      btn.classList.add('bg-indigo-600');
+      btn.classList.remove('bg-green-600', 'bg-red-500');
+      btn.disabled = false;
+    }, 3000);
+  });
+}
+</script>
+{% endblock %}

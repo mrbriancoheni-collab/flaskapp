@@ -1,0 +1,170 @@
+{% extends "base_app.html" %}
+{% block title %}Broken Pages · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Find Broken Links</h1>
+      <p class="text-gray-500 text-sm mt-1">Check your pages for links that go nowhere. Broken links frustrate customers and hurt your Google ranking.</p>
+    </div>
+    {% if report %}
+    <div class="flex gap-4 text-sm">
+      <span class="text-gray-500">{{ report.total_links }} links checked</span>
+      <span class="{% if report.broken_count > 0 %}text-red-600 font-semibold{% else %}text-green-600 font-semibold{% endif %}">
+        {{ report.broken_count }} broken link{{ 's' if report.broken_count != 1 }}
+      </span>
+    </div>
+    {% endif %}
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+    <div class="rounded-xl px-4 py-3 text-sm font-medium border
+      {% if cat == 'success' %}bg-green-50 border-green-300 text-green-800
+      {% elif cat == 'error' %}bg-red-50 border-red-300 text-red-800
+      {% else %}bg-blue-50 border-blue-300 text-blue-800{% endif %}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {% if error %}
+  <div class="bg-red-50 border border-red-300 rounded-xl p-5 flex items-start gap-3">
+    <i class="fa-solid fa-circle-xmark text-red-500 text-xl mt-0.5"></i>
+    <p class="text-red-900 font-medium">{{ error }}</p>
+  </div>
+  {% endif %}
+
+  {% if not site %}
+  <div class="bg-white rounded-xl shadow-sm border p-12 text-center">
+    <i class="fa-brands fa-wordpress text-gray-300 text-5xl mb-4"></i>
+    <p class="text-gray-600 mb-4">Connect a WordPress site to scan for broken links.</p>
+    <a href="{{ url_for('wp_bp.settings') }}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">Connect WordPress</a>
+  </div>
+  {% else %}
+
+  <!-- Scan trigger -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <form method="POST" action="{{ url_for('wp_bp.broken_links') }}">
+      <div class="flex flex-wrap items-center gap-4">
+        <div>
+          <p class="font-medium text-gray-800">Check your pages for broken links</p>
+          <p class="text-sm text-gray-500 mt-0.5">Looks at up to 30 pages and 80 links. Usually takes 10–30 seconds.</p>
+        </div>
+        <button type="submit"
+                class="ml-auto px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm">
+          <i class="fa-solid fa-magnifying-glass mr-1.5"></i>Check My Pages
+        </button>
+      </div>
+    </form>
+  </div>
+
+  {% if report %}
+
+  {% if report.broken_count == 0 %}
+  <div class="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
+    <i class="fa-solid fa-circle-check text-green-500 text-3xl mb-2"></i>
+    <p class="text-green-800 font-semibold">No broken links found!</p>
+    <p class="text-green-600 text-sm">Checked {{ report.total_links }} links across {{ report.posts_scanned }} posts.</p>
+  </div>
+  {% else %}
+
+  <!-- Summary bar -->
+  <div class="grid grid-cols-3 gap-4">
+    <div class="bg-white rounded-xl border shadow-sm p-4 text-center">
+      <p class="text-2xl font-bold text-gray-800">{{ report.posts_scanned }}</p>
+      <p class="text-xs text-gray-500 mt-1">Pages Checked</p>
+    </div>
+    <div class="bg-white rounded-xl border shadow-sm p-4 text-center">
+      <p class="text-2xl font-bold text-gray-800">{{ report.total_links }}</p>
+      <p class="text-xs text-gray-500 mt-1">Links Checked</p>
+    </div>
+    <div class="bg-white rounded-xl border shadow-sm p-4 text-center">
+      <p class="text-2xl font-bold text-red-600">{{ report.broken_count }}</p>
+      <p class="text-xs text-gray-500 mt-1">Broken Links Found</p>
+    </div>
+  </div>
+
+  <!-- Per-post results — only show posts with broken links first, then others -->
+  {% set broken_posts = report.posts | selectattr('broken_count', '>', 0) | list %}
+  {% set clean_posts  = report.posts | selectattr('broken_count', '==', 0) | list %}
+
+  {% for p in broken_posts %}
+  <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+    <div class="px-5 py-3 bg-red-50 border-b border-red-100 flex items-center gap-3">
+      <i class="fa-solid fa-link-slash text-red-500"></i>
+      <div class="flex-1 min-w-0">
+        <p class="font-semibold text-gray-900 truncate">{{ p.title }}</p>
+        <a href="{{ p.url }}" target="_blank" rel="noopener"
+           class="text-xs text-gray-400 hover:text-indigo-500 truncate block">{{ p.url }}</a>
+      </div>
+      <span class="text-xs font-semibold text-red-600 bg-red-100 px-2 py-0.5 rounded-full whitespace-nowrap">
+        {{ p.broken_count }} broken
+      </span>
+    </div>
+    <table class="min-w-full text-xs">
+      <thead class="bg-gray-50 border-b">
+        <tr>
+          <th class="px-4 py-2 text-left text-gray-600 font-semibold">Link URL</th>
+          <th class="px-4 py-2 text-center text-gray-600 font-semibold w-24">Status</th>
+          <th class="px-4 py-2 text-center text-gray-600 font-semibold w-20">Result</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        {% for lk in p.links %}
+        <tr class="{% if lk.broken %}bg-red-50{% endif %}">
+          <td class="px-4 py-2 text-gray-600 truncate max-w-sm font-mono">{{ lk.url | truncate(80) }}</td>
+          <td class="px-4 py-2 text-center font-semibold
+            {% if lk.status == 200 %}text-green-600
+            {% elif lk.broken %}text-red-600
+            {% else %}text-amber-600{% endif %}">
+            {{ lk.status or lk.error or '?' }}
+          </td>
+          <td class="px-4 py-2 text-center">
+            {% if lk.ok %}
+              <span class="text-green-600"><i class="fa-solid fa-check"></i></span>
+            {% elif lk.broken %}
+              <span class="text-red-600 font-bold"><i class="fa-solid fa-xmark"></i> Broken</span>
+            {% elif lk.error == 'timeout' %}
+              <span class="text-amber-500"><i class="fa-solid fa-clock"></i> Timeout</span>
+            {% elif lk.error %}
+              <span class="text-gray-400">Error</span>
+            {% else %}
+              <span class="text-amber-500">Redirect</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="px-5 py-3 border-t bg-gray-50 text-right">
+      <a href="{{ url_for('wp_bp.edit_post', post_id=p.post_id) }}"
+         class="text-xs text-indigo-600 hover:underline">Edit page to fix links →</a>
+    </div>
+  </div>
+  {% endfor %}
+
+  {% if clean_posts %}
+  <details class="bg-white rounded-xl shadow-sm border">
+    <summary class="px-5 py-3 cursor-pointer text-sm text-gray-500 hover:text-gray-700">
+      <i class="fa-solid fa-circle-check text-green-500 mr-2"></i>
+      {{ clean_posts | length }} post{{ 's' if clean_posts | length != 1 }} with no broken links
+    </summary>
+    <ul class="px-5 pb-4 pt-1 space-y-1 text-sm text-gray-600">
+      {% for p in clean_posts %}
+      <li class="flex items-center gap-2">
+        <i class="fa-solid fa-check text-green-400 text-xs"></i>
+        <a href="{{ p.url }}" target="_blank" rel="noopener" class="hover:text-indigo-600 truncate">{{ p.title }}</a>
+        <span class="text-xs text-gray-300 ml-auto">{{ p.link_count }} links</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </details>
+  {% endif %}
+
+  {% endif %}{# end broken_count > 0 #}
+  {% endif %}{# end report #}
+  {% endif %}{# end site #}
+
+</div>
+{% endblock %}

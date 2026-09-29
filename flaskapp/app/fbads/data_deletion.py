@@ -48,9 +48,34 @@ def facebook_data_deletion():
     if not user_id:
         return jsonify({"error": "missing user_id"}), 400
 
-    # TODO: delete or anonymize any data associated with this user_id in your DB/storage.
-    # For demo, we just mark a request ID + status entry.
-    confirmation_code = f"fbdel_{user_id}_{int(time.time())}"
+    # Anonymize all FB user data associated with this Facebook user_id
+    try:
+        from app import db
+        from sqlalchemy import text
+        db.session.execute(
+            text(
+                "UPDATE fb_accounts SET fb_user_id = NULL, email = NULL,"
+                " access_token = NULL, page_access_token = NULL"
+                " WHERE fb_user_id = :uid"
+            ),
+            {"uid": user_id},
+        )
+        safe_uid = user_id.replace('%', r'\%').replace('_', r'\_').replace('"', '')
+        db.session.execute(
+            text("DELETE FROM fb_leads WHERE raw LIKE :pattern ESCAPE '\\\\'"),
+            {"pattern": f'%"fb_user_id": "{safe_uid}"%'},
+        )
+        db.session.commit()
+    except Exception as _exc:
+        try:
+            from app import db
+            db.session.rollback()
+        except Exception:
+            pass
+        current_app.logger.warning("FB data deletion DB cleanup failed for user_id=%s: %s", user_id, _exc)
+
+    import secrets as _sec
+    confirmation_code = _sec.token_urlsafe(32)
     _DATA_DELETION_REQUESTS[confirmation_code] = {
         "user_id": user_id,
         "status": "scheduled",   # or "completed" after async job
@@ -78,6 +103,5 @@ def facebook_data_deletion_status(code: str):
     return jsonify({
         "ok": True,
         "status": rec["status"],
-        "user_id": rec["user_id"],
         "updated_at": rec["updated_at"]
     }), 200

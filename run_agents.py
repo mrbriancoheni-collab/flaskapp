@@ -26,12 +26,30 @@ def main():
     parser = argparse.ArgumentParser(description='Run Google Ads AI agents')
     parser.add_argument('--layer', choices=['tactical', 'operational', 'strategic', 'negative_keyword', 'all'],
                         default='all', help='Which agent layer to run')
+    parser.add_argument('--force', action='store_true',
+                        help='Ignore cadence throttle and run immediately (for testing)')
     args = parser.parse_args()
 
     from app import create_app
     app = create_app()
 
     with app.app_context():
+        if args.force:
+            from app.services.agent_cadence import force_due
+            from sqlalchemy import text
+            from app import db
+            layers = [args.layer] if args.layer != 'all' else ['tactical', 'operational', 'strategic', 'negative_keyword']
+            try:
+                with db.engine.connect() as conn:
+                    rows = conn.execute(text("SELECT DISTINCT id FROM accounts WHERE status IN ('active','trial')"))
+                    account_ids = [r[0] for r in rows]
+                for aid in account_ids:
+                    for ly in layers:
+                        force_due(aid, 'google', ly)
+                print(f"Force-reset cadence for {len(account_ids)} accounts ({', '.join(layers)})")
+            except Exception as e:
+                print(f"Warning: could not reset cadence: {e}")
+
         from app.tasks.agent_scheduler import run_agents_for_all_accounts
 
         print(f"Running {args.layer} agents...")

@@ -1,0 +1,398 @@
+{% extends "base_app.html" %}
+{% block title %}Ad Copy Performance · Google Ads · {{ app_name }}{% endblock %}
+
+{% block content %}
+{% set gads_active = 'rsa' %}
+{% include "google/components/gads_nav.html" %}
+
+<div class="max-w-6xl mx-auto space-y-6 pb-12">
+
+  {# ── Header ──────────────────────────────────────────────────────────────── #}
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Ad Copy Performance</h1>
+      <p class="text-gray-500 text-sm mt-1">
+        See exactly which headlines and descriptions are winning customers — and which ones are wasting space.
+      </p>
+    </div>
+    <div class="flex items-center gap-3 flex-wrap">
+      <button id="sync-btn"
+              class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 flex items-center gap-2 transition">
+        <i class="fa-solid fa-rotate"></i>Sync Latest Data
+      </button>
+      <button id="promote-btn"
+              class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2 transition">
+        <i class="fa-solid fa-trophy"></i>Auto-Promote Winners
+      </button>
+    </div>
+  </div>
+
+  {# ── Status banner (hidden until action fires) ──────────────────────────── #}
+  <div id="status-banner" class="hidden rounded-xl px-4 py-3 text-sm border"></div>
+
+  {# ── Performance label legend ─────────────────────────────────────────────  #}
+  <div class="bg-white rounded-xl border shadow-sm p-4">
+    <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">How to read this page</h2>
+    <div class="flex flex-wrap gap-4 text-sm">
+      <div class="flex items-center gap-2">
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">BEST</span>
+        <span class="text-gray-600">Google's top pick — keep it &amp; use it in more ads</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">GOOD</span>
+        <span class="text-gray-600">Performing well</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200">LOW</span>
+        <span class="text-gray-600">Underperforming — consider replacing</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-600 border border-gray-200">LEARNING</span>
+        <span class="text-gray-600">Still gathering data</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-50 text-gray-500 border border-gray-200">UNRATED</span>
+        <span class="text-gray-600">Not enough data yet</span>
+      </div>
+    </div>
+  </div>
+
+  {# ── Main two-column layout ──────────────────────────────────────────────── #}
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    {# Left column: What's Working #}
+    <div class="space-y-6">
+      <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b bg-emerald-50 flex items-center gap-2">
+          <i class="fa-solid fa-circle-check text-emerald-600"></i>
+          <h2 class="font-semibold text-gray-800">What's Working</h2>
+          <span class="ml-auto text-xs text-gray-500">Google-confirmed top performers</span>
+        </div>
+
+        {# Best Headlines #}
+        <div class="px-5 py-4 border-b">
+          <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1">
+            <i class="fa-solid fa-heading text-xs text-gray-400"></i> Best Headlines
+          </h3>
+          <div id="best-headlines-list" class="space-y-2">
+            {# Skeleton #}
+            <div class="skeleton-item animate-pulse">
+              <div class="h-4 bg-gray-200 rounded w-3/4 mb-1"></div>
+              <div class="h-3 bg-gray-100 rounded w-1/2"></div>
+            </div>
+            <div class="skeleton-item animate-pulse">
+              <div class="h-4 bg-gray-200 rounded w-2/3 mb-1"></div>
+              <div class="h-3 bg-gray-100 rounded w-1/3"></div>
+            </div>
+          </div>
+        </div>
+
+        {# Best Descriptions #}
+        <div class="px-5 py-4">
+          <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1">
+            <i class="fa-solid fa-align-left text-xs text-gray-400"></i> Best Descriptions
+          </h3>
+          <div id="best-descriptions-list" class="space-y-2">
+            <div class="skeleton-item animate-pulse">
+              <div class="h-4 bg-gray-200 rounded w-full mb-1"></div>
+              <div class="h-3 bg-gray-100 rounded w-2/3"></div>
+            </div>
+            <div class="skeleton-item animate-pulse">
+              <div class="h-4 bg-gray-200 rounded w-5/6 mb-1"></div>
+              <div class="h-3 bg-gray-100 rounded w-1/2"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# Right column: What's Not Working #}
+    <div class="space-y-6">
+      <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b bg-red-50 flex items-center gap-2">
+          <i class="fa-solid fa-triangle-exclamation text-red-500"></i>
+          <h2 class="font-semibold text-gray-800">What's Not Working</h2>
+          <span class="ml-auto text-xs text-gray-500">Replace these to improve performance</span>
+        </div>
+
+        {# Worst Headlines #}
+        <div class="px-5 py-4 border-b">
+          <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1">
+            <i class="fa-solid fa-heading text-xs text-gray-400"></i> Underperforming Headlines
+          </h3>
+          <div id="worst-headlines-list" class="space-y-2">
+            <div class="skeleton-item animate-pulse">
+              <div class="h-4 bg-gray-200 rounded w-3/4 mb-1"></div>
+              <div class="h-3 bg-gray-100 rounded w-1/2"></div>
+            </div>
+            <div class="skeleton-item animate-pulse">
+              <div class="h-4 bg-gray-200 rounded w-2/3 mb-1"></div>
+              <div class="h-3 bg-gray-100 rounded w-1/3"></div>
+            </div>
+          </div>
+        </div>
+
+        {# Worst Descriptions #}
+        <div class="px-5 py-4">
+          <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1">
+            <i class="fa-solid fa-align-left text-xs text-gray-400"></i> Underperforming Descriptions
+          </h3>
+          <div id="worst-descriptions-list" class="space-y-2">
+            <div class="skeleton-item animate-pulse">
+              <div class="h-4 bg-gray-200 rounded w-full mb-1"></div>
+              <div class="h-3 bg-gray-100 rounded w-2/3"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>{# end two-column #}
+
+  {# ── Ads Needing Attention ──────────────────────────────────────────────── #}
+  <div class="bg-white rounded-xl border shadow-sm overflow-hidden" id="ads-attention-section">
+    <div class="px-5 py-4 border-b flex items-center gap-2">
+      <i class="fa-solid fa-flag text-amber-500"></i>
+      <h2 class="font-semibold text-gray-800">Ads Needing Attention</h2>
+      <span class="ml-auto text-xs text-gray-500">Ads with multiple low-performing copy pieces</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm" id="ads-attention-table">
+        <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+          <tr>
+            <th class="text-left px-5 py-3">Campaign</th>
+            <th class="text-left px-5 py-3">Ad Group</th>
+            <th class="text-center px-5 py-3">Low Assets</th>
+            <th class="text-left px-5 py-3">What to do</th>
+          </tr>
+        </thead>
+        <tbody id="ads-attention-body" class="divide-y divide-gray-100">
+          {# Skeleton rows #}
+          <tr class="skeleton-row">
+            <td class="px-5 py-4"><div class="h-4 bg-gray-200 rounded w-32 animate-pulse"></div></td>
+            <td class="px-5 py-4"><div class="h-4 bg-gray-200 rounded w-28 animate-pulse"></div></td>
+            <td class="px-5 py-4"><div class="h-4 bg-gray-200 rounded w-8 mx-auto animate-pulse"></div></td>
+            <td class="px-5 py-4"><div class="h-4 bg-gray-200 rounded w-64 animate-pulse"></div></td>
+          </tr>
+          <tr class="skeleton-row">
+            <td class="px-5 py-4"><div class="h-4 bg-gray-200 rounded w-40 animate-pulse"></div></td>
+            <td class="px-5 py-4"><div class="h-4 bg-gray-200 rounded w-24 animate-pulse"></div></td>
+            <td class="px-5 py-4"><div class="h-4 bg-gray-200 rounded w-8 mx-auto animate-pulse"></div></td>
+            <td class="px-5 py-4"><div class="h-4 bg-gray-200 rounded w-56 animate-pulse"></div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="ads-attention-empty" class="hidden px-5 py-10 text-center">
+      <i class="fa-solid fa-party-horn text-gray-300 text-4xl mb-3"></i>
+      <p class="text-gray-500">All your ads look healthy — no major issues found.</p>
+    </div>
+  </div>
+
+  {# ── AI Recommendations ─────────────────────────────────────────────────── #}
+  <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+    <div class="px-5 py-4 border-b flex items-center gap-2">
+      <i class="fa-solid fa-lightbulb text-indigo-500"></i>
+      <h2 class="font-semibold text-gray-800">Recommendations</h2>
+      <span class="ml-auto text-xs text-gray-500">Personalized tips based on your data</span>
+    </div>
+    <div id="recommendations-list" class="px-5 py-4 space-y-3">
+      {# Skeletons #}
+      <div class="skeleton-item flex items-start gap-3 animate-pulse">
+        <div class="mt-1 h-4 w-4 bg-gray-200 rounded-full flex-shrink-0"></div>
+        <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+      </div>
+      <div class="skeleton-item flex items-start gap-3 animate-pulse">
+        <div class="mt-1 h-4 w-4 bg-gray-200 rounded-full flex-shrink-0"></div>
+        <div class="h-4 bg-gray-200 rounded w-2/3"></div>
+      </div>
+    </div>
+  </div>
+
+</div>{# end max-w container #}
+
+{# ────────────────────────────────────────────────────────────────────────── #}
+{# JavaScript                                                                  #}
+{# ────────────────────────────────────────────────────────────────────────── #}
+<script>
+(function () {
+  "use strict";
+
+  // ── Utility helpers ────────────────────────────────────────────────────────
+
+  const BASE = "{{ url_for('rsa_bp.rsa_page') | replace('/','/',1) }}".replace(/\/$/, "");
+
+  function showBanner(msg, type) {
+    const el = document.getElementById("status-banner");
+    el.textContent = msg;
+    el.className = [
+      "rounded-xl px-4 py-3 text-sm border",
+      type === "ok"
+        ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+        : "bg-red-50 border-red-200 text-red-800",
+    ].join(" ");
+    el.classList.remove("hidden");
+    setTimeout(() => el.classList.add("hidden"), 6000);
+  }
+
+  function labelBadge(label) {
+    const map = {
+      BEST:     "bg-emerald-100 text-emerald-800 border-emerald-200",
+      GOOD:     "bg-blue-100 text-blue-800 border-blue-200",
+      LOW:      "bg-red-100 text-red-800 border-red-200",
+      LEARNING: "bg-gray-100 text-gray-600 border-gray-200",
+    };
+    const cls = map[label] || "bg-gray-50 text-gray-500 border-gray-200";
+    return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold border ${cls}">${label || "UNRATED"}</span>`;
+  }
+
+  function fmtNum(n) {
+    return Number(n || 0).toLocaleString();
+  }
+
+  // ── Render helpers ─────────────────────────────────────────────────────────
+
+  function clearSkeletons(containerId) {
+    document.querySelectorAll(`#${containerId} .skeleton-item, #${containerId} .skeleton-row`)
+      .forEach(el => el.remove());
+  }
+
+  function renderAssetList(containerId, items, emptyMsg) {
+    clearSkeletons(containerId);
+    const container = document.getElementById(containerId);
+    if (!items || items.length === 0) {
+      container.innerHTML = `<p class="text-sm text-gray-400 italic">${emptyMsg}</p>`;
+      return;
+    }
+    container.innerHTML = items.slice(0, 10).map(item => {
+      const campaigns = item.campaigns && item.campaigns.length
+        ? `<span class="text-gray-400">${item.campaigns.slice(0, 2).join(", ")}${item.campaigns.length > 2 ? " +more" : ""}</span>`
+        : "";
+      return `
+        <div class="flex items-start justify-between gap-2 py-1.5 border-b border-gray-50 last:border-0">
+          <div class="flex-1 min-w-0">
+            <p class="text-sm text-gray-900 font-medium truncate" title="${item.text}">${item.text}</p>
+            <p class="text-xs text-gray-400 mt-0.5">
+              In ${item.ad_count} ad${item.ad_count !== 1 ? "s" : ""} &nbsp;·&nbsp;
+              ${fmtNum(item.impressions)} times shown
+              ${campaigns ? `&nbsp;·&nbsp; ${campaigns}` : ""}
+            </p>
+          </div>
+          <div class="flex-shrink-0">${labelBadge(item.label)}</div>
+        </div>`;
+    }).join("");
+  }
+
+  function renderAdsAttention(rows) {
+    document.querySelectorAll("#ads-attention-body .skeleton-row").forEach(el => el.remove());
+    const tbody = document.getElementById("ads-attention-body");
+    const emptyEl = document.getElementById("ads-attention-empty");
+
+    if (!rows || rows.length === 0) {
+      document.getElementById("ads-attention-table").classList.add("hidden");
+      emptyEl.classList.remove("hidden");
+      return;
+    }
+
+    tbody.innerHTML = rows.map(row => `
+      <tr class="hover:bg-gray-50 transition">
+        <td class="px-5 py-3 text-sm text-gray-900 font-medium">${row.campaign || "—"}</td>
+        <td class="px-5 py-3 text-sm text-gray-600">${row.ad_group || "—"}</td>
+        <td class="px-5 py-3 text-center">
+          <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-red-100 text-red-700 text-xs font-bold">
+            ${row.low_count}
+          </span>
+        </td>
+        <td class="px-5 py-3 text-sm text-gray-600">${row.message || "Review and replace underperforming copy."}</td>
+      </tr>`).join("");
+  }
+
+  function renderRecommendations(recs) {
+    clearSkeletons("recommendations-list");
+    const container = document.getElementById("recommendations-list");
+    if (!recs || recs.length === 0) {
+      container.innerHTML = `<p class="text-sm text-gray-400 italic">No recommendations yet — sync your data first.</p>`;
+      return;
+    }
+    container.innerHTML = recs.map(rec => `
+      <div class="flex items-start gap-3">
+        <i class="fa-solid fa-circle-arrow-right text-indigo-400 mt-0.5 flex-shrink-0"></i>
+        <p class="text-sm text-gray-700">${rec}</p>
+      </div>`).join("");
+  }
+
+  // ── Load report data ───────────────────────────────────────────────────────
+
+  function loadReport() {
+    const url = window.location.pathname.replace(/\/$/, "") + "/report.json";
+    fetch(url, { credentials: "same-origin" })
+      .then(r => r.json())
+      .then(data => {
+        renderAssetList("best-headlines-list", data.best_headlines, "No BEST headlines yet — sync to check.");
+        renderAssetList("best-descriptions-list", data.best_descriptions, "No BEST descriptions yet.");
+        renderAssetList("worst-headlines-list", data.worst_headlines, "No LOW headlines — great job!");
+        renderAssetList("worst-descriptions-list", data.worst_descriptions, "No LOW descriptions — great job!");
+        renderAdsAttention(data.ads_with_low_assets);
+        renderRecommendations(data.recommendations);
+      })
+      .catch(err => {
+        console.error("RSA report load error:", err);
+        ["best-headlines-list","best-descriptions-list","worst-headlines-list","worst-descriptions-list","recommendations-list"]
+          .forEach(id => {
+            clearSkeletons(id);
+            document.getElementById(id).innerHTML =
+              `<p class="text-sm text-red-400 italic">Could not load data.</p>`;
+          });
+        document.querySelectorAll("#ads-attention-body .skeleton-row").forEach(el => el.remove());
+      });
+  }
+
+  // ── Button handlers ────────────────────────────────────────────────────────
+
+  document.getElementById("sync-btn").addEventListener("click", function () {
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Syncing…`;
+
+    const url = window.location.pathname.replace(/\/$/, "") + "/sync";
+    fetch(url, { method: "POST", credentials: "same-origin" })
+      .then(r => r.json())
+      .then(data => {
+        showBanner(data.message || "Sync complete.", data.ok ? "ok" : "err");
+        if (data.ok) loadReport();
+      })
+      .catch(() => showBanner("Sync failed — check your Google Ads connection.", "err"))
+      .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-rotate"></i>Sync Latest Data`;
+      });
+  });
+
+  document.getElementById("promote-btn").addEventListener("click", function () {
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Working…`;
+
+    const url = window.location.pathname.replace(/\/$/, "") + "/auto-promote";
+    fetch(url, { method: "POST", credentials: "same-origin" })
+      .then(r => {
+        if (window.handle402(r)) return null;
+        return r.json();
+      })
+      .then(data => {
+        if (!data) return;
+        showBanner(data.message || "Done.", data.ok ? "ok" : "err");
+      })
+      .catch(() => showBanner("Auto-promote failed.", "err"))
+      .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-trophy"></i>Auto-Promote Winners`;
+      });
+  });
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  loadReport();
+
+})();
+</script>
+{% endblock %}

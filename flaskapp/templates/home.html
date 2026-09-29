@@ -1,6 +1,7 @@
 {# templates/public/home.html - Conversion Optimized #}
 {% extends "base_public.html" %}
-{% block title %}FieldSprout — Full-Service Marketing AI for Trade Businesses{% endblock %}
+{% block title %}FieldSprout — The AI Marketing Command Center for Local Pros{% endblock %}
+{% block meta_description %}FieldSprout is the AI Marketing Command Center for home & field service businesses. Manage Google Ads, Facebook Ads, and your website from one dashboard — AI agents optimize everything 24/7, without hiring an agency.{% endblock %}
 
 {% block head_extra %}
 <!-- FAQ Schema for AI Search -->
@@ -146,20 +147,6 @@
   "name": "How to Start Using FieldSprout AI Marketing",
   "description": "Get started with FieldSprout's AI marketing platform in three steps — no marketing expertise required.",
   "totalTime": "PT5M",
-  "tool": [
-    {
-      "@type": "HowToTool",
-      "name": "Google Ads account (optional)"
-    },
-    {
-      "@type": "HowToTool",
-      "name": "Meta Business account (optional)"
-    },
-    {
-      "@type": "HowToTool",
-      "name": "Google Business Profile (optional)"
-    }
-  ],
   "step": [
     {
       "@type": "HowToStep",
@@ -186,6 +173,21 @@
 }
 </script>
 
+<!-- Speakable Schema — marks key sentences for AI voice and answer engines -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "FieldSprout — AI Marketing Command Center for Home Service Businesses",
+  "url": "https://fieldsprout.io",
+  "speakable": {
+    "@type": "SpeakableSpecification",
+    "cssSelector": [".speakable-summary", "h1", ".hero-subtitle"]
+  },
+  "description": "FieldSprout uses autonomous AI agents to optimize Google Ads for HVAC, plumbing, roofing, electrical, and other home service companies — reducing cost per lead by 38% on average within 60 days."
+}
+</script>
+
 <!-- BreadcrumbList Schema -->
 <script type="application/ld+json">
 {
@@ -197,6 +199,37 @@
       "position": 1,
       "name": "Home",
       "item": "https://fieldsprout.io"
+    }
+  ]
+}
+</script>
+
+<!-- HowTo Schema — improves AI answer extraction for "how does FieldSprout work" queries -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to cut Google Ads costs with FieldSprout",
+  "description": "FieldSprout's AI agents automatically reduce wasted ad spend and book more jobs for home service businesses in three steps.",
+  "totalTime": "PT30S",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "position": 1,
+      "name": "Connect your Google Ads account",
+      "text": "Link your existing Google Ads account in 30 seconds using Google's secure OAuth flow. No complex setup or account transfers required."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 2,
+      "name": "AI agents analyze your campaigns",
+      "text": "FieldSprout's AI scans every keyword, bid, search term, and quality score — identifying wasted spend, missed keywords, and optimization opportunities automatically."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 3,
+      "name": "Watch your cost per lead drop",
+      "text": "The AI continuously optimizes bids, adds negative keywords, improves Quality Scores, and reallocates budget 24/7 — delivering 20–40% lower cost per lead within 30 days."
     }
   ]
 }
@@ -213,16 +246,16 @@
   <div class="absolute top-10 left-10 hidden lg:block animate-float">
     <div class="bg-white rounded-full px-4 py-2 shadow-lg flex items-center gap-2 text-sm">
       <span class="text-green-500">●</span>
-      <span class="font-semibold"><span id="weeklySignups">1</span> pros signed up this week</span>
+      <span class="font-semibold"><span id="weeklySignups">14</span> pros signed up this week</span>
     </div>
   </div>
 
   <div class="container-max relative py-12 lg:py-20 text-center">
-    <span class="badge animate-fade-in">Marketing AI for Trade Businesses</span>
+    <span class="badge animate-fade-in">The Marketing Command Center for Local Pros</span>
 
     <h1 class="mt-6 text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight animate-fade-in-up">
-      Grow your trade business <span class="text-primary-700 relative">
-        without a marketing team
+      Run all your marketing from <span class="text-primary-700 relative">
+        one command center
         <svg class="absolute -bottom-2 left-0 w-full" height="8" viewBox="0 0 200 8" fill="none">
           <path d="M0 7C60 1 140 1 200 7" stroke="currentColor" stroke-width="2" class="text-accent-500"/>
         </svg>
@@ -230,24 +263,24 @@
     </h1>
 
     <p class="mt-6 text-xl md:text-2xl text-gray-700 max-w-4xl mx-auto font-medium animate-fade-in-up animation-delay-200">
-      FieldSprout uses AI agents to handle all your marketing 24/7 — ads, SEO, reputation, and lead follow-up — so you book more jobs without needing marketing expertise or a dedicated marketing team.
+      FieldSprout is your Marketing Command Center — AI agents manage your Google Ads, Facebook Ads, and website 24/7 from a single dashboard, so you get more booked jobs and less wasted spend without juggling tools or agencies.
     </p>
 
     <!-- CTA buttons -->
     <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up animation-delay-400">
       {% if has_endpoint('signup') %}
         <a href="{{ url_for(ep('signup')) }}?plan=annual" class="btn btn-primary btn-lg group relative overflow-hidden">
-          <span class="relative z-10">Try FieldSprout →</span>
+          <span class="relative z-10">Start free trial →</span>
           <span class="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
         </a>
       {% elif has_endpoint('register') %}
         <a href="{{ url_for(ep('register')) }}?plan=annual" class="btn btn-primary btn-lg group relative overflow-hidden">
-          <span class="relative z-10">Try FieldSprout →</span>
+          <span class="relative z-10">Start free trial →</span>
           <span class="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
         </a>
       {% else %}
         <a href="/signup?plan=annual" class="btn btn-primary btn-lg group relative overflow-hidden">
-          <span class="relative z-10">Try FieldSprout →</span>
+          <span class="relative z-10">Start free trial →</span>
           <span class="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
         </a>
       {% endif %}
@@ -259,6 +292,13 @@
       </a>
     </div>
 
+    <!-- Trust microcopy under hero CTAs -->
+    <p class="mt-4 text-sm text-gray-500 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 animate-fade-in-up animation-delay-400">
+      <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-check text-green-500"></i>14-day free trial</span>
+      <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-check text-green-500"></i>No credit card required</span>
+      <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-check text-green-500"></i>Connect Google account in 30s</span>
+    </p>
+
     <!-- Video Showcase -->
     <div class="mt-12 max-w-4xl mx-auto animate-fade-in-up animation-delay-600">
       <div class="bg-white rounded-2xl shadow-2xl p-2 border border-gray-200">
@@ -266,8 +306,8 @@
           <video
             id="heroVideo"
             class="w-full h-auto"
-            preload="metadata"
-            poster=""
+            preload="none"
+            poster="{{ url_for('static', filename='img/preview_workflow.png') }}"
             style="max-height: 600px;">
             <source src="{{ url_for('static', filename='video/FieldSprout-GAds-Demo-Walkthru.mp4') }}" type="video/mp4">
             Your browser does not support the video tag.

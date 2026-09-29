@@ -1,0 +1,286 @@
+{% extends "base_app.html" %}
+{% block title %}Revenue & LTV Dashboard — FieldSprout{% endblock %}
+{% block content %}
+<div class="px-4 py-6 max-w-7xl mx-auto">
+
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Revenue & LTV Dashboard</h1>
+      <p class="text-gray-500 text-sm mt-0.5">Job revenue, average ticket, repeat customers, and lifetime value — from ServiceTitan.</p>
+    </div>
+    <select onchange="window.location.search='?days='+this.value"
+            class="border border-gray-200 rounded-lg px-3 py-2 text-sm">
+      {% for d in [30,60,90,180,365] %}
+        <option value="{{ d }}" {% if days==d %}selected{% endif %}>Last {{ d }} days</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  {% if not has_st %}
+  <div class="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-6 flex items-start gap-3">
+    <i class="fa-solid fa-wrench text-amber-500 flex-shrink-0 mt-0.5 text-lg"></i>
+    <div class="flex-1">
+      <h3 class="font-semibold text-amber-900">Connect ServiceTitan to unlock revenue data</h3>
+      <p class="text-amber-700 text-sm mt-1 mb-3">FieldSprout pulls job revenue, average ticket size, and repeat customer data directly from ServiceTitan — giving you true LTV and ROAS across every channel.</p>
+      <a href="{{ url_for('marketing_bp.aggregators') }}"
+         class="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700">
+        <i class="fa-solid fa-plug"></i> Connect ServiceTitan
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- KPI strip -->
+  {% if totals %}
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Jobs Completed</p>
+      <p class="text-2xl font-bold text-gray-900 mt-1">{{ totals[0] or 0 }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Total Revenue</p>
+      <p class="text-2xl font-bold text-green-700 mt-1">${{ "%.0f"|format(totals[1] or 0) }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Avg Job Ticket</p>
+      <p class="text-2xl font-bold text-gray-900 mt-1">${{ "%.0f"|format(totals[2] or 0) }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Repeat Customers</p>
+      <p class="text-2xl font-bold text-indigo-600 mt-1">{{ repeat }}</p>
+      <p class="text-xs text-gray-400 mt-0.5">
+        {% if totals[3] %}{{ (repeat / totals[3] * 100)|round(1) }}% of customers{% endif %}
+      </p>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if monthly %}
+  <!-- Monthly revenue trend -->
+  <div class="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+    <h2 class="font-semibold text-gray-900 mb-4">Monthly Revenue Trend</h2>
+    <div class="flex items-end gap-2 h-40">
+      {% set max_rev = monthly | map(attribute=1) | map('float') | max %}
+      {% for row in monthly %}
+      {% set pct = (row[1]|float / max_rev * 100)|round(1) if max_rev else 0 %}
+      <div class="flex-1 flex flex-col items-center gap-1 group relative">
+        <div class="absolute -top-7 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+          ${{ "%.0f"|format(row[1]|float) }} · {{ row[2] }} jobs
+        </div>
+        <div class="w-full rounded-t-md bg-indigo-500 hover:bg-indigo-600 transition-colors cursor-default"
+             style="height: {{ [pct, 4]|max }}%"></div>
+        <div class="text-xs text-gray-400 truncate w-full text-center">{{ row[0][-5:] }}</div>
+      </div>
+      {% endfor %}
+{% set active_nav = 'revenue' %}
+{% block title %}Revenue & LTV — FieldSprout{% endblock %}
+
+{% block content %}
+{% include "marketing/_nav.html" %}
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 space-y-6">
+
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">Revenue & Lifetime Value</h1>
+    <p class="text-sm text-gray-500 mt-0.5">LTV by channel · revenue trends · customer retention</p>
+  </div>
+
+  {# Top KPIs #}
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">Repeat Customer Rate</p>
+      <p class="text-2xl font-bold {% if repeat_rate >= 40 %}text-green-600{% elif repeat_rate >= 20 %}text-amber-600{% else %}text-red-600{% endif %} mt-1">
+        {{ repeat_rate }}%
+      </p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">Avg Jobs / Customer</p>
+      <p class="text-2xl font-bold text-gray-900 mt-1">{{ avg_jobs_per_customer }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">Revenue Sources</p>
+      <p class="text-2xl font-bold text-gray-900 mt-1">{{ ltv_data|length }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">Channels Tracked</p>
+      <p class="text-2xl font-bold text-gray-900 mt-1">{{ attribution.get('channels', [])|length }}</p>
+    </div>
+  </div>
+
+  {# Monthly Revenue Trend #}
+  {% if monthly_revenue %}
+  <div class="bg-white rounded-xl border border-gray-200 p-5">
+    <h2 class="font-semibold text-gray-900 mb-4">Monthly Revenue Trend (Last 12 Months)</h2>
+    <div class="overflow-x-auto">
+      <div class="flex items-end gap-2 min-w-max h-40">
+        {% set max_rev = monthly_revenue|map(attribute='revenue')|map('float')|max if monthly_revenue else 1 %}
+        {% for row in monthly_revenue %}
+        {% set h = ((row.revenue|float / max_rev) * 130)|int %}
+        <div class="flex flex-col items-center gap-1 w-14">
+          <p class="text-xs text-gray-500">${{ "{:,.0f}".format(row.revenue|float / 1000) }}k</p>
+          <div class="w-10 bg-indigo-500 rounded-t-md hover:bg-indigo-600 transition" style="height: {{ h }}px;" title="{{ row.yr }}-{{ row.mo }}: ${{ '{:,.0f}'.format(row.revenue|float) }}"></div>
+          <p class="text-xs text-gray-400 whitespace-nowrap">{{ row.yr }}-{{ "%02d"|format(row.mo|int) }}</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Revenue by job type -->
+  {% if by_type %}
+  <div class="bg-white rounded-xl border border-gray-200 overflow-hidden mb-6">
+    <div class="px-5 py-4 border-b border-gray-100">
+      <h2 class="font-semibold text-gray-900">Revenue by Job Type</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="bg-gray-50 border-b border-gray-200 text-left">
+          <th class="px-4 py-3 font-semibold text-gray-600">Job Type</th>
+          <th class="px-4 py-3 font-semibold text-gray-600 text-right">Jobs</th>
+          <th class="px-4 py-3 font-semibold text-gray-600 text-right">Revenue</th>
+          <th class="px-4 py-3 font-semibold text-gray-600 text-right">Avg Ticket</th>
+          <th class="px-4 py-3 font-semibold text-gray-600">Revenue Share</th>
+        </tr></thead>
+        <tbody class="divide-y divide-gray-100">
+          {% set total_rev = by_type | map(attribute=2) | map('float') | sum %}
+          {% for row in by_type %}
+          {% set share = (row[2]|float / total_rev * 100)|round(1) if total_rev else 0 %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 font-medium text-gray-900">{{ row[0] or 'Unclassified' }}</td>
+            <td class="px-4 py-3 text-right text-gray-700">{{ row[1] }}</td>
+            <td class="px-4 py-3 text-right font-semibold text-green-700">${{ "%.0f"|format(row[2]|float) }}</td>
+            <td class="px-4 py-3 text-right text-gray-600">${{ "%.0f"|format(row[3]|float) }}</td>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-2">
+                <div class="flex-1 bg-gray-100 rounded-full h-2">
+                  <div class="bg-indigo-500 h-2 rounded-full" style="width: {{ share }}%"></div>
+                </div>
+                <span class="text-xs text-gray-500 w-10 text-right">{{ share }}%</span>
+              </div>
+            </td>
+  {# LTV by Channel #}
+  {% if ltv_data %}
+  <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100">
+      <h2 class="font-semibold text-gray-900">LTV by Channel</h2>
+      <p class="text-xs text-gray-400 mt-0.5">Based on attributed jobs and repeat customer history</p>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-100">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Channel</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Customers</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Avg Ticket</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Repeat Jobs</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">LTV</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">CAC</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">LTV:CAC</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for row in ltv_data %}
+          {% set linfo = channel_type_labels.get(row.get('channel_type', ''), ('Other', 'fa-solid fa-circle', 'gray')) %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-5 py-3">
+              <div class="flex items-center gap-2">
+                <i class="{{ linfo[1] }} text-{{ linfo[2] }}-500 w-4"></i>
+                <span class="text-sm font-medium text-gray-900">{{ row.get('channel_name', '—') }}</span>
+              </div>
+            </td>
+            <td class="px-4 py-3 text-right text-sm text-gray-700">{{ row.get('unique_customers', 0) }}</td>
+            <td class="px-4 py-3 text-right text-sm text-gray-700">
+              {% if row.get('avg_ticket_cents') %}${{ "{:,.0f}".format(row.avg_ticket_cents / 100) }}{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right text-sm text-gray-700">{{ "{:.1f}".format(row.get('avg_jobs_per_customer', 1)) }}</td>
+            <td class="px-4 py-3 text-right">
+              {% if row.get('ltv_cents') %}
+              <span class="text-sm font-bold text-green-700">${{ "{:,.0f}".format(row.ltv_cents / 100) }}</span>
+              {% else %}<span class="text-gray-400 text-sm">—</span>{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right text-sm text-gray-700">
+              {% if row.get('cac_cents') %}${{ "{:,.0f}".format(row.cac_cents / 100) }}{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right">
+              {% if row.get('ltv_cac_ratio') %}
+              <span class="text-sm font-bold {% if row.ltv_cac_ratio >= 3 %}text-green-600{% elif row.ltv_cac_ratio >= 1.5 %}text-amber-600{% else %}text-red-600{% endif %}">
+                {{ "{:.1f}".format(row.ltv_cac_ratio) }}x
+              </span>
+              {% else %}<span class="text-gray-400 text-sm">—</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- LTV estimate -->
+  {% if totals and totals[0] and totals[2] %}
+  {% set avg_ticket = totals[2]|float %}
+  {% set repeat_rate = (repeat / totals[3] if totals[3] else 0)|float %}
+  {% set estimated_ltv = avg_ticket * (1 + repeat_rate * 2)|round(0) %}
+  <div class="bg-indigo-50 rounded-xl border border-indigo-200 p-5">
+    <h3 class="font-semibold text-indigo-900 mb-3 flex items-center gap-2">
+      <i class="fa-solid fa-users text-indigo-600"></i> Estimated Customer LTV
+    </h3>
+    <div class="grid grid-cols-3 gap-4 text-center">
+      <div>
+        <div class="text-2xl font-bold text-indigo-800">${{ "%.0f"|format(avg_ticket) }}</div>
+        <div class="text-xs text-indigo-600 mt-0.5">Avg Job Value</div>
+      </div>
+      <div>
+        <div class="text-2xl font-bold text-indigo-800">{{ (repeat_rate * 100)|round(1) }}%</div>
+        <div class="text-xs text-indigo-600 mt-0.5">Repeat Rate</div>
+      </div>
+      <div>
+        <div class="text-2xl font-bold text-indigo-800">${{ "%.0f"|format(estimated_ltv) }}</div>
+        <div class="text-xs text-indigo-600 mt-0.5">Est. LTV (2-year)</div>
+      </div>
+    </div>
+    <p class="text-xs text-indigo-500 mt-3">LTV = avg ticket × (1 + repeat_rate × 2 years). Connect more historical data for a more accurate estimate.</p>
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
+    <i class="fa-solid fa-chart-pie text-4xl text-gray-300 mb-4"></i>
+    <h3 class="text-lg font-semibold text-gray-700 mb-2">No revenue data available</h3>
+    <p class="text-gray-500 text-sm">Connect ServiceTitan to see job revenue, average ticket sizes, and customer LTV.</p>
+  {% endif %}
+
+  {# Top Job Types #}
+  {% if top_job_types %}
+  <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100">
+      <h2 class="font-semibold text-gray-900">Top Job Types by Revenue</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-100">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">#</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Job Type</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Jobs</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Revenue</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Avg Ticket</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for jt in top_job_types %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-5 py-3 text-sm text-gray-400 font-medium">{{ loop.index }}</td>
+            <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ jt.job_type_name or 'Unknown' }}</td>
+            <td class="px-4 py-3 text-right text-sm text-gray-700">{{ jt.jobs }}</td>
+            <td class="px-4 py-3 text-right text-sm font-semibold text-gray-900">${{ "{:,.0f}".format(jt.revenue|float) }}</td>
+            <td class="px-4 py-3 text-right text-sm text-gray-700">${{ "{:,.0f}".format(jt.avg_ticket|float) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

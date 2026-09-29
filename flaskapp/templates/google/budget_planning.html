@@ -10,8 +10,8 @@
 
   <div class="flex items-start justify-between flex-wrap gap-4 mb-6">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">Budget & Forecast</h1>
-      <p class="text-sm text-gray-500 mt-0.5">Budget groups · Auto-adjustment · 12-month forecast</p>
+      <h1 class="text-2xl font-bold text-gray-900">Budget planning</h1>
+      <p class="text-sm text-gray-500 mt-0.5">Group your campaigns · set spend limits · see next month's forecast</p>
     </div>
   </div>
 
@@ -36,25 +36,27 @@
   <div id="tab-groups" class="{{ '' if tab == 'groups' else 'hidden' }}">
     <div class="flex items-center justify-between mb-4">
       <h2 class="text-lg font-semibold text-gray-900">Budget Groups</h2>
-      <a href="{{ url_for('budget_bp.budget_groups') }}" class="text-sm text-indigo-600 hover:underline">
-        Full manager <i class="fas fa-external-link-alt text-xs ml-1"></i>
-      </a>
+      <button onclick="document.getElementById('newGroupModal').classList.remove('hidden')"
+              class="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
+        <i class="fas fa-plus"></i> New Group
+      </button>
     </div>
 
     {% if budget_groups %}
     <div class="space-y-4">
       {% for group in budget_groups %}
-      {% set budget_dollars = (group.monthly_budget_cents or group.estimated_monthly_cents or 0) / 100 %}
-      {% set spend_dollars = (group.current_spend_cents or 0) / 100 %}
+      {% set budget_dollars = ((group.monthly_budget_target or (group.estimated_monthly_cents or 0) / 100) | float) %}
+      {% set spend_dollars = (group.current_spend_dollars or 0) | float %}
       {% set pct = ((spend_dollars / budget_dollars * 100) | int) if budget_dollars > 0 else 0 %}
+      {% set is_active = group.enabled %}
       <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
         <div class="flex items-start justify-between flex-wrap gap-2 mb-3">
           <div>
             <h3 class="font-semibold text-gray-900">{{ group.name }}</h3>
             {% if group.description %}<p class="text-xs text-gray-500">{{ group.description }}</p>{% endif %}
           </div>
-          <span class="text-xs px-2 py-0.5 rounded bg-{{ 'green' if group.status == 'active' else 'gray' }}-100 text-{{ 'green' if group.status == 'active' else 'gray' }}-700">
-            {{ group.status | capitalize }}
+          <span class="text-xs px-2 py-0.5 rounded bg-{{ 'green' if is_active else 'gray' }}-100 text-{{ 'green' if is_active else 'gray' }}-700">
+            {{ 'Active' if is_active else 'Paused' }}
           </span>
         </div>
         <div class="grid grid-cols-3 gap-4 mb-3 text-sm">
@@ -97,9 +99,10 @@
       <i class="fas fa-layer-group text-gray-300 text-4xl mb-4"></i>
       <h3 class="text-lg font-semibold text-gray-700 mb-2">No Budget Groups</h3>
       <p class="text-gray-500 text-sm mb-4">Create budget groups to track spend across campaign sets.</p>
-      <a href="{{ url_for('budget_bp.budget_groups') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
+      <button onclick="document.getElementById('newGroupModal').classList.remove('hidden')"
+              class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
         <i class="fas fa-plus"></i> Create Budget Group
-      </a>
+      </button>
     </div>
     {% endif %}
   </div>
@@ -200,30 +203,15 @@
     {% else %}
     {# Forecast controls #}
     <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm mb-6">
-      <div class="grid grid-cols-3 gap-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Campaign</label>
-          <select id="forecastCampaign" class="block w-full rounded-lg border-gray-300 shadow-sm sm:text-sm">
-            <option value="">Select a campaign…</option>
-            {% for c in forecast_campaigns %}
-            <option value="{{ c.id }}">{{ c.name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Service Type</label>
-          <select id="forecastServiceType" class="block w-full rounded-lg border-gray-300 shadow-sm sm:text-sm">
-            <option value="hvac_ac">HVAC – Air Conditioning</option>
-            <option value="hvac_heat">HVAC – Heating</option>
-            <option value="plumbing">Plumbing</option>
-            <option value="electrical">Electrical</option>
-            <option value="roofing">Roofing</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
-          <input type="text" id="forecastZip" value="10001" class="block w-full rounded-lg border-gray-300 shadow-sm sm:text-sm">
-        </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Campaign</label>
+        <select id="forecastCampaign" class="block w-full rounded-lg border-gray-300 shadow-sm sm:text-sm">
+          <option value="">Select a campaign…</option>
+          {% for c in forecast_campaigns %}
+          <option value="{{ c.id }}">{{ c.name }}</option>
+          {% endfor %}
+        </select>
+        <p class="text-xs text-gray-500 mt-1">Service type and location are inferred from your account profile and campaign name.</p>
       </div>
       <button onclick="loadForecast()" class="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
         <i class="fas fa-chart-line"></i> Generate Forecast
@@ -265,8 +253,11 @@
 
     {# 12-month seasonal plan #}
     <div id="forecastSeasonalPlan" class="hidden bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-      <div class="px-5 py-4 border-b border-gray-100">
+      <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-wrap gap-2">
         <h2 class="font-semibold text-gray-900">12-Month Budget Plan</h2>
+        <span id="seasonalModelBadge" class="hidden text-xs px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+          <i class="fas fa-flask mr-1"></i><span id="seasonalModelText"></span>
+        </span>
       </div>
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-100 text-sm">
@@ -278,6 +269,7 @@
               <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Change</th>
               <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Proj. Leads</th>
               <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Seasonality</th>
+              <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Why</th>
             </tr>
           </thead>
           <tbody id="seasonalPlanBody" class="divide-y divide-gray-50 bg-white"></tbody>
@@ -290,6 +282,14 @@
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
 function getCsrfToken() {
   return document.querySelector('meta[name="csrf-token"]')?.content || '';
 }
@@ -306,16 +306,13 @@ async function saveAutoBudgetSettings() {
       }),
     });
     const data = await res.json();
-    alert(data.success ? 'Auto-budget settings saved.' : 'Error: ' + (data.error || 'unknown'));
-  } catch(e) { alert('Error: ' + e.message); }
+    showToast(data.success ? 'Auto-budget settings saved.' : 'Error: ' + (data.error || 'unknown'), data.success ? 'success' : 'error');
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
 }
 
 async function loadForecast() {
   const campaignId = document.getElementById('forecastCampaign').value;
-  if (!campaignId) { alert('Please select a campaign.'); return; }
-
-  const serviceType = document.getElementById('forecastServiceType').value;
-  const zip = document.getElementById('forecastZip').value;
+  if (!campaignId) { showToast('Please select a campaign.', 'error'); return; }
 
   // Show sections
   document.getElementById('forecastKpis').classList.remove('hidden');
@@ -344,7 +341,7 @@ async function loadForecast() {
     const res = await fetch('/account/google/ads/forecasting/api/forecast/monthly', {
       method: 'POST',
       headers: {'Content-Type':'application/json','X-CSRFToken':csrf},
-      body: JSON.stringify({campaign_id: campaignId, service_type: serviceType, month, year}),
+      body: JSON.stringify({campaign_id: campaignId, month, year}),
     });
     const data = await res.json();
     if (data.success && data.forecast) {
@@ -365,15 +362,20 @@ async function loadForecast() {
     const res = await fetch('/account/google/ads/forecasting/api/forecast/seasonal', {
       method: 'POST',
       headers: {'Content-Type':'application/json','X-CSRFToken':csrf},
-      body: JSON.stringify({campaign_id: campaignId, service_type: serviceType, current_monthly_budget: 5000}),
+      body: JSON.stringify({campaign_id: campaignId, current_monthly_budget: 5000}),
     });
     const data = await res.json();
     if (data.success && data.recommendations) {
+      if (data.service_type_label) {
+        document.getElementById('seasonalModelText').textContent = 'Model: ' + data.service_type_label;
+        document.getElementById('seasonalModelBadge').classList.remove('hidden');
+      }
       const tbody = document.getElementById('seasonalPlanBody');
       tbody.innerHTML = '';
       for (const rec of data.recommendations) {
         const chg = rec.budget_change_pct;
         const cls = chg >= 20 ? 'text-red-600' : chg >= 10 ? 'text-orange-600' : chg <= -10 ? 'text-green-600' : 'text-gray-900';
+        const note = (rec.note || '').replace(/</g, '&lt;');
         tbody.innerHTML += `
           <tr class="hover:bg-gray-50">
             <td class="px-5 py-3 font-medium text-gray-900">${rec.month} ${rec.year}</td>
@@ -382,11 +384,111 @@ async function loadForecast() {
             <td class="px-4 py-3 text-right font-semibold ${cls}">${chg > 0 ? '+' : ''}${(chg || 0).toFixed(1)}%</td>
             <td class="px-4 py-3 text-right text-gray-700">${rec.projected_leads || 0}</td>
             <td class="px-4 py-3 text-right text-gray-700">${(rec.seasonality_factor || 1).toFixed(2)}x</td>
+            <td class="px-5 py-3 text-gray-600 text-xs">${note}</td>
           </tr>
         `;
       }
     }
   } catch(e) {}
 }
+
+// ── Create Budget Group modal ──────────────────────────────────────
+async function submitNewGroup() {
+  const name = document.getElementById('ngName').value.trim();
+  const budget = parseFloat(document.getElementById('ngBudget').value) || 0;
+  const desc = document.getElementById('ngDesc').value.trim();
+  const btn = document.getElementById('ngSubmitBtn');
+  const err = document.getElementById('ngError');
+
+  err.classList.add('hidden');
+  if (!name) { err.textContent = 'Name is required.'; err.classList.remove('hidden'); return; }
+  if (budget <= 0) { err.textContent = 'Monthly budget must be greater than 0.'; err.classList.remove('hidden'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Creating…';
+
+  try {
+    const res = await fetch('/account/google/ads/api/budget-groups', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || csrf,
+      },
+      body: JSON.stringify({
+        name,
+        monthly_budget_target: budget,
+        description: desc,
+        customer_id: document.getElementById('ngCustomerId').value || '',
+      }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      window.location.reload();
+    } else {
+      err.textContent = data.error || 'Failed to create group.';
+      err.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Create';
+    }
+  } catch(e) {
+    err.textContent = 'Network error — please try again.';
+    err.classList.remove('hidden');
+    btn.disabled = false;
+    btn.textContent = 'Create';
+  }
+}
 </script>
+
+{# ── New Budget Group Modal ── #}
+<div id="newGroupModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
+    <div class="flex items-center justify-between mb-5">
+      <h3 class="text-lg font-semibold text-gray-900">New Budget Group</h3>
+      <button onclick="document.getElementById('newGroupModal').classList.add('hidden')"
+              class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+    </div>
+
+    <input type="hidden" id="ngCustomerId" value="{{ ads_customer_id }}">
+
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Group Name <span class="text-red-500">*</span></label>
+        <input id="ngName" type="text" placeholder="e.g. HVAC — General"
+               class="block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Monthly Budget ($) <span class="text-red-500">*</span></label>
+        <input id="ngBudget" type="number" min="1" step="50"
+               value="{{ detected_budget | int if detected_budget else '' }}"
+               placeholder="e.g. 1500"
+               class="block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
+        {% if detected_budget %}
+        <p class="text-xs text-gray-400 mt-0.5">
+          Pre-filled from your {{ 'auto-budget cap' if auto_budget_settings.get('total_monthly_budget_cents') else 'Google Ads campaigns' }}.
+          Adjust as needed.
+        </p>
+        {% endif %}
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+        <textarea id="ngDesc" rows="2" placeholder="Optional description"
+                  class="block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+      </div>
+    </div>
+
+    <p id="ngError" class="hidden mt-3 text-sm text-red-600"></p>
+
+    <div class="flex gap-3 mt-6">
+      <button onclick="document.getElementById('newGroupModal').classList.add('hidden')"
+              class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
+        Cancel
+      </button>
+      <button id="ngSubmitBtn" onclick="submitNewGroup()"
+              class="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
+        Create
+      </button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}

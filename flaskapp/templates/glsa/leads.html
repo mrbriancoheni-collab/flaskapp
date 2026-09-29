@@ -9,8 +9,8 @@
 
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-semibold tracking-tight">Local Services Ads — Leads</h1>
-      <p class="text-gray-500 text-sm">Review, filter, and take action on your GLSA leads.</p>
+      <h1 class="text-2xl font-semibold tracking-tight">Leads from your Google Guaranteed ads</h1>
+      <p class="text-gray-500 text-sm">Everyone who called or messaged through your Local Services Ads listing.</p>
     </div>
     <div class="flex items-center gap-2">
       {% if not _connected %}
@@ -57,21 +57,24 @@
 
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
     <div class="rounded-xl border bg-white p-4">
-      <div class="text-xs uppercase text-gray-500">Leads</div>
+      <div class="text-xs uppercase text-gray-500 font-medium">Total leads</div>
       <div class="text-2xl font-semibold mt-1">{{ _count }}</div>
+      <div class="text-xs text-gray-400 mt-0.5">People who called or messaged</div>
     </div>
     <div class="rounded-xl border bg-white p-4">
-      <div class="text-xs uppercase text-gray-500">Pipeline</div>
+      <div class="text-xs uppercase text-gray-500 font-medium">Working on</div>
       <div class="text-2xl font-semibold mt-1">{{ _pipeline }}</div>
-      <div class="text-xs text-gray-500">Contacted + Qualified</div>
+      <div class="text-xs text-gray-400 mt-0.5">Reached out + qualified</div>
     </div>
     <div class="rounded-xl border bg-white p-4">
-      <div class="text-xs uppercase text-gray-500">Won</div>
+      <div class="text-xs uppercase text-gray-500 font-medium">Booked &amp; won</div>
       <div class="text-2xl font-semibold mt-1">{{ _won }}</div>
+      <div class="text-xs text-gray-400 mt-0.5">Jobs that closed</div>
     </div>
     <div class="rounded-xl border bg-white p-4">
-      <div class="text-xs uppercase text-gray-500">Est. Revenue</div>
+      <div class="text-xs uppercase text-gray-500 font-medium">Revenue from won</div>
       <div class="text-2xl font-semibold mt-1">${{ '%.0f'|format(_revenue) }}</div>
+      <div class="text-xs text-gray-400 mt-0.5">Estimated from booked leads</div>
     </div>
   </div>
 

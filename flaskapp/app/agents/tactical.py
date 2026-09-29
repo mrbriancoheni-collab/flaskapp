@@ -74,7 +74,7 @@ class KeywordOptimizerAgent(BaseAgent):
                 AgentCapability.BID_OPTIMIZATION,
                 AgentCapability.AUTONOMOUS_EXECUTION,
             ],
-            auto_execute_threshold=0.92,
+            auto_execute_threshold=0.80,
             **kwargs
         )
 
@@ -169,7 +169,9 @@ class KeywordOptimizerAgent(BaseAgent):
                         'severity': 'low',
                         'search_query': term_text,
                         'conversions': term_convs,
-                        'cpa': term_cpa
+                        'cpa': term_cpa,
+                        'campaign_id': term.get('campaign_id', ''),
+                        'ad_group_id': term.get('ad_group_id', ''),
                     })
 
         return opportunities
@@ -219,7 +221,7 @@ class KeywordOptimizerAgent(BaseAgent):
                     },
                     risk_level=DecisionRiskLevel.LOW,
                     requires_approval=False,
-                    confidence=0.88
+                    confidence=0.92
                 )
                 decisions.append(decision)
 
@@ -233,13 +235,16 @@ class KeywordOptimizerAgent(BaseAgent):
                     reasoning="Proven performer as search term - add as keyword",
                     account_id=0,
                     customer_id='',
+                    ad_group_id=opp.get('ad_group_id', ''),
                     action_data={
                         'keyword_text': opp['search_query'],
-                        'match_type': 'PHRASE'
+                        'match_type': 'PHRASE',
+                        'ad_group_id': opp.get('ad_group_id', ''),
+                        'campaign_id': opp.get('campaign_id', ''),
                     },
                     risk_level=DecisionRiskLevel.LOW,
                     requires_approval=False,
-                    confidence=0.85,
+                    confidence=0.90,
                     expected_monthly_leads=2
                 )
                 decisions.append(decision)
@@ -361,6 +366,26 @@ class NegativeKeywordAgent(BaseAgent):
         # with zero conversions is wasteful regardless of account size (floor $5).
         total_spend_90d = context.get('performance_90d', {}).get('spend', 0) or 0
         fallback_threshold = max(5.0, total_spend_90d * 0.005)
+
+        # Pre-classified waste terms from the latest grader report (high confidence —
+        # the grader already matched these against WASTE_PATTERNS with live API data).
+        grader_ctx = context.get('grader_context', {})
+        for wt in grader_ctx.get('waste_terms', []):
+            term_text = (wt.get('term') or wt.get('text') or '').lower()
+            if not term_text or term_text in pattern_matched_queries:
+                continue
+            opportunities.append({
+                'type': 'add_negative_keyword',
+                'severity': 'high',
+                'confidence': 0.97,
+                'search_query': term_text,
+                'campaign_id': wt.get('campaign_id', ''),
+                'campaign_name': wt.get('campaign_name', ''),
+                'cost': float(wt.get('cost', 0)),
+                'conversions': int(wt.get('conversions', 0)),
+                'reason': 'Grader-identified waste term (informational/non-buyer intent)',
+            })
+            pattern_matched_queries.add(term_text)
 
         search_terms = context.get('search_terms', [])
 
@@ -572,9 +597,16 @@ Return a JSON array:
         campaign_id = decision.campaign_id or decision.action_data.get('campaign_id', '')
 
         if not campaign_id:
+            import logging as _log
+            _log.getLogger(__name__).warning(
+                "NegativeKeywordAgent: skipping '%s' — no campaign_id in decision or action_data. "
+                "Ensure grader_context.waste_terms and search_terms include campaign_id.",
+                decision.action_data.get('keyword_text', ''),
+            )
             return {
                 'success': False,
-                'error': 'Missing campaign_id - cannot add negative keyword without target campaign'
+                'skipped': True,
+                'error': 'Missing campaign_id — negative keyword not added (no campaign to target)',
             }
 
         if isinstance(google_ads_client, GoogleAdsAgentExecutor):

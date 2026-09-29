@@ -22,35 +22,19 @@
   }
 }
 </script>
+
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Service",
-  "name": "AI Marketing Automation for Plumbing Contractors",
-  "serviceType": "Marketing Automation",
-  "provider": {
-    "@type": "Organization",
-    "name": "FieldSprout",
-    "url": "https://fieldsprout.io"
-  },
-  "areaServed": {
-    "@type": "Country",
-    "name": "United States"
-  },
-  "description": "FieldSprout's AI agents manage Google Ads, Local Services Ads, and reputation for plumbing businesses 24/7 — maximizing emergency call volume and reducing cost per booked job.",
-  "offers": {
-    "@type": "Offer",
-    "price": "200",
-    "priceCurrency": "USD",
-    "priceSpecification": {
-      "@type": "UnitPriceSpecification",
-      "price": "200",
-      "priceCurrency": "USD",
-      "unitText": "MONTH"
-    }
-  }
+  "serviceType": "Google Ads Management for Plumbing Companies",
+  "provider": {"@type": "Organization", "name": "FieldSprout", "url": "https://fieldsprout.io"},
+  "areaServed": {"@type": "Country", "name": "United States"},
+  "description": "AI-powered Google Ads optimization for plumbers — captures emergency searches, eliminates wasted spend, and books more drain, pipe, and water heater calls.",
+  "offers": {"@type": "Offer", "price": "200", "priceCurrency": "USD", "priceSpecification": {"@type": "UnitPriceSpecification", "unitText": "MONTH"}}
 }
 </script>
+
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -58,42 +42,42 @@
   "mainEntity": [
     {
       "@type": "Question",
-      "name": "How do plumbing companies get more emergency calls?",
+      "name": "How much should a plumbing company spend on Google Ads?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Google Ads is the fastest source of emergency plumbing calls — people search 'emergency plumber near me' the moment a pipe bursts. Running Search ads with location targeting, call extensions, and 24/7 ad scheduling directly captures this demand. Pair with Google Local Services Ads for maximum top-of-page coverage."
+        "text": "Most plumbing companies spend $2,000–$8,000 per month on Google Ads depending on market size and service area. The key is not how much you spend, but how efficiently that budget converts. FieldSprout-managed plumbing accounts generate 41+ leads per $4,000 in ad spend versus an industry average of 18 leads."
       }
     },
     {
       "@type": "Question",
-      "name": "What should a plumber spend on Google Ads?",
+      "name": "What are the best Google Ads keywords for plumbers?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Most plumbing markets require $1,500–$3,000/month to generate consistent lead volume. Emergency-service keywords are highly competitive ($15–$35 CPC in metro areas). FieldSprout's AI monitors auction pressure and adjusts bids daily to maintain target CPL without overspending."
+        "text": "The highest-converting keywords for plumbing Google Ads include 'emergency plumber near me', 'burst pipe repair', 'drain cleaning service', 'water heater replacement', and 'sewer line repair'. FieldSprout automatically filters out non-buyer searches like 'how to unclog a drain' and 'plumbing apprenticeship' using a continuously updated negative keyword list."
       }
     },
     {
       "@type": "Question",
-      "name": "How important are Google reviews for a plumbing business?",
+      "name": "Why do plumbers lose emergency leads on Google Ads?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Extremely important. Google's Local Pack (the map results) heavily weights review count, recency, and rating. A plumber with 50+ recent reviews at 4.8 stars will outrank competitors in map results even with a smaller ad budget. FieldSprout automates review requests via SMS and email after every job."
+        "text": "Plumbers lose emergency leads because their ads run 24/7 but their phones may be off, because their bids aren't high enough for 'near me' searches on mobile, or because competitors have higher Quality Scores that win the top ad position. FieldSprout automatically adjusts bids for emergency intent signals and ensures your ads appear at the top when it matters most."
       }
     },
     {
       "@type": "Question",
-      "name": "What is a typical cost per lead for plumbing?",
+      "name": "How long does it take for Google Ads to work for a plumbing company?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Residential plumbing leads average $45–$100 depending on market competition and service type. Emergency jobs (burst pipes, sewer backups) command higher CPL but also higher average job value. FieldSprout targets the service types with the best CPL-to-revenue ratio for your business."
+        "text": "Most plumbing Google Ads accounts start generating calls within the first week, but meaningful optimization takes 30–60 days for the algorithm to accumulate data. With FieldSprout, AI optimization begins immediately — most accounts see a 20–30% drop in cost per lead within the first 30 days."
       }
     },
     {
       "@type": "Question",
-      "name": "How does FieldSprout help plumbing companies compete with larger chains?",
+      "name": "Is FieldSprout worth it for small plumbing companies?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "AI-level optimization was previously only available to large chains with full marketing teams. FieldSprout gives independent plumbers the same 24/7 optimization, keyword management, and reputation automation — at a fraction of an agency's cost and without requiring any marketing expertise."
+        "text": "Yes. Even small plumbing companies spending $1,500–$3,000 per month on Google Ads typically waste 25–35% of that budget. FieldSprout at $200 per month usually pays for itself by recovering wasted spend in the first few days of optimization."
       }
     }
   ]
@@ -121,8 +105,11 @@
         </p>
         <div class="flex flex-col sm:flex-row gap-4">
           {% if has_endpoint('ads_grader_bp.index') %}
-          <a href="{{ url_for('ads_grader_bp.index') }}"
+          <a href="{{ url_for('ads_grader_bp.strength_test') }}"
              class="btn btn-primary btn-lg">Grade My Plumbing Ads — Free</a>
+          {% endif %}
+          {% if has_endpoint('public_bp.maps_audit') %}
+          <a href="{{ url_for('public_bp.maps_audit') }}" class="btn btn-secondary btn-lg">Free Google Maps Audit</a>
           {% endif %}
           <a href="/pricing" class="btn btn-secondary btn-lg">See Plans &amp; Pricing</a>
         </div>
@@ -274,7 +261,7 @@
     </p>
     <div class="flex flex-col sm:flex-row gap-4 justify-center">
       {% if has_endpoint('ads_grader_bp.index') %}
-      <a href="{{ url_for('ads_grader_bp.index') }}" class="btn btn-secondary btn-lg">Grade My Account — Free</a>
+      <a href="{{ url_for('ads_grader_bp.strength_test') }}" class="btn btn-secondary btn-lg">Grade My Account — Free</a>
       {% endif %}
       <a href="/pricing" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">View Plans</a>
     </div>

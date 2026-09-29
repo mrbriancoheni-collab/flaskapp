@@ -1,0 +1,147 @@
+{# templates/public/sitemap.html #}
+{% extends "base_public.html" %}
+{% block title %}Sitemap — FieldSprout{% endblock %}
+
+{% block content %}
+<div class="container-lg py-16 md:py-24">
+  <div class="max-w-4xl mx-auto">
+
+    <div class="mb-12">
+      <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-3">Sitemap</h1>
+      <p class="text-lg text-gray-500">Every page on FieldSprout, organized for easy navigation.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+
+      {# Main #}
+      <div>
+        <h2 class="text-xs font-semibold uppercase tracking-widest text-purple-600 mb-4">Main</h2>
+        <ul class="space-y-2">
+          {% if has_endpoint('main_bp.home') %}
+          <li><a href="{{ url_for('main_bp.home') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">Home</a></li>
+          {% endif %}
+          {% if has_endpoint('main_bp.pricing') %}
+          <li><a href="{{ url_for('main_bp.pricing') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">Pricing</a></li>
+          {% endif %}
+          {% if has_endpoint('public_bp.free_tools') %}
+          <li><a href="{{ url_for('public_bp.free_tools') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">Free Tools</a></li>
+          {% endif %}
+          {% if has_endpoint('public_bp.roadmap') %}
+          <li><a href="{{ url_for('public_bp.roadmap') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">Roadmap</a></li>
+          {% endif %}
+          {% if has_endpoint('public_bp.podcast') %}
+          <li><a href="{{ url_for('public_bp.podcast') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">Podcast</a></li>
+          {% endif %}
+          {% if has_endpoint('public_bp.vs_agency') %}
+          <li><a href="{{ url_for('public_bp.vs_agency') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">FieldSprout vs. Agency</a></li>
+          {% endif %}
+        </ul>
+      </div>
+
+      {# Products #}
+      <div>
+        <h2 class="text-xs font-semibold uppercase tracking-widest text-purple-600 mb-4">Products</h2>
+        <ul class="space-y-2">
+          {% if has_endpoint('public_bp.product_google_ads') %}
+          <li><a href="{{ url_for('public_bp.product_google_ads') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">Google Ads</a></li>
+          {% endif %}
+          {% if has_endpoint('public_bp.product_glsa') %}
+          <li><a href="{{ url_for('public_bp.product_glsa') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">Google Local Services Ads</a></li>
+          {% endif %}
+          {% if has_endpoint('public_bp.product_gbp') %}
+          <li><a href="{{ url_for('public_bp.product_gbp') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">Google Business Profile</a></li>
+          {% endif %}
+          {% if has_endpoint('public_bp.product_facebook_ads') %}
+          <li><a href="{{ url_for('public_bp.product_facebook_ads') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">Facebook Ads</a></li>
+          {% endif %}
+          {% if has_endpoint('public_bp.product_reviews') %}
+          <li><a href="{{ url_for('public_bp.product_reviews') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">Reviews</a></li>
+          {% endif %}
+          {% if has_endpoint('public_bp.product_listings') %}
+          <li><a href="{{ url_for('public_bp.product_listings') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">Listings</a></li>
+          {% endif %}
+          {% if has_endpoint('public_bp.product_forms_chat') %}
+          <li><a href="{{ url_for('public_bp.product_forms_chat') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">Forms &amp; Chat</a></li>
+          {% endif %}
+        </ul>
+      </div>
+
+      {# Solutions #}
+      <div>
+        <h2 class="text-xs font-semibold uppercase tracking-widest text-purple-600 mb-4">Solutions</h2>
+        <ul class="space-y-2">
+          {% if has_endpoint('public_bp.solution_lead_gen') %}
+          <li><a href="{{ url_for('public_bp.solution_lead_gen') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">Lead Generation</a></li>
+          {% endif %}
+          {% if has_endpoint('public_bp.solution_multi_location') %}
+          <li><a href="{{ url_for('public_bp.solution_multi_location') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">Multi-Location</a></li>
+          {% endif %}
+          {% if has_endpoint('public_bp.lower_ad_cost') %}
+          <li><a href="{{ url_for('public_bp.lower_ad_cost') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">Lower Ad Cost</a></li>
+          {% endif %}
+          {% if has_endpoint('public_bp.get_more_reviews') %}
+          <li><a href="{{ url_for('public_bp.get_more_reviews') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">Get More Reviews</a></li>
+          {% endif %}
+          {% if has_endpoint('public_bp.spend_when_open') %}
+          <li><a href="{{ url_for('public_bp.spend_when_open') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">Spend Only When Open</a></li>
+          {% endif %}
+          {% if has_endpoint('public_bp.see_what_works') %}
+          <li><a href="{{ url_for('public_bp.see_what_works') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">See What Works</a></li>
+          {% endif %}
+        </ul>
+      </div>
+
+      {# Industries #}
+      <div>
+        <h2 class="text-xs font-semibold uppercase tracking-widest text-purple-600 mb-4">Industries</h2>
+        <ul class="space-y-2">
+          {% for ep, label in [
+            ('public_bp.industry_hvac',        'HVAC'),
+            ('public_bp.industry_plumbing',    'Plumbing'),
+            ('public_bp.industry_electricians','Electricians'),
+            ('public_bp.industry_roofing',     'Roofing'),
+            ('public_bp.industry_pest_control','Pest Control'),
+            ('public_bp.industry_landscaping', 'Landscaping'),
+            ('public_bp.industry_garage_door', 'Garage Door'),
+            ('public_bp.industry_pool_service','Pool Service'),
+            ('public_bp.industry_solar',       'Solar'),
+          ] %}
+            {% if has_endpoint(ep) %}
+            <li><a href="{{ url_for(ep) }}" class="text-gray-700 hover:text-purple-600 transition text-sm">{{ label }}</a></li>
+            {% endif %}
+          {% endfor %}
+        </ul>
+      </div>
+
+      {# Free Tools #}
+      <div>
+        <h2 class="text-xs font-semibold uppercase tracking-widest text-purple-600 mb-4">Free Tools</h2>
+        <ul class="space-y-2">
+          {% if has_endpoint('ads_grader_bp.demo') %}
+          <li><a href="{{ url_for('ads_grader_bp.demo') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">Google Ads Grader</a></li>
+          {% endif %}
+          {% if has_endpoint('fb_ads_grader_bp.demo') %}
+          <li><a href="{{ url_for('fb_ads_grader_bp.demo') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">Facebook Ads Grader</a></li>
+          {% endif %}
+        </ul>
+      </div>
+
+      {# Company #}
+      <div>
+        <h2 class="text-xs font-semibold uppercase tracking-widest text-purple-600 mb-4">Company</h2>
+        <ul class="space-y-2">
+          <li><a href="{{ url_for('public_bp.privacy_policy') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">Privacy Policy</a></li>
+          <li><a href="{{ url_for('public_bp.terms_of_service') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">Terms of Service</a></li>
+          {% if has_endpoint('auth_bp.register') %}
+          <li><a href="{{ url_for('auth_bp.register') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">Sign Up</a></li>
+          {% endif %}
+          {% if has_endpoint('auth_bp.login') %}
+          <li><a href="{{ url_for('auth_bp.login') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">Log In</a></li>
+          {% endif %}
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

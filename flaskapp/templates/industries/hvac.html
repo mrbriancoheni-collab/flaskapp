@@ -22,35 +22,19 @@
   }
 }
 </script>
+
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Service",
-  "name": "AI Google Ads Management for HVAC Companies",
-  "serviceType": "Marketing Automation",
-  "provider": {
-    "@type": "Organization",
-    "name": "FieldSprout",
-    "url": "https://fieldsprout.io"
-  },
-  "areaServed": {
-    "@type": "Country",
-    "name": "United States"
-  },
-  "description": "Autonomous AI agents optimize Google Ads, Local Services Ads, and reputation management for HVAC contractors 24/7 — reducing wasted spend and filling service calendars with tune-ups, repairs, and installations.",
-  "offers": {
-    "@type": "Offer",
-    "price": "200",
-    "priceCurrency": "USD",
-    "priceSpecification": {
-      "@type": "UnitPriceSpecification",
-      "price": "200",
-      "priceCurrency": "USD",
-      "unitText": "MONTH"
-    }
-  }
+  "serviceType": "Google Ads Management for HVAC Companies",
+  "provider": {"@type": "Organization", "name": "FieldSprout", "url": "https://fieldsprout.io"},
+  "areaServed": {"@type": "Country", "name": "United States"},
+  "description": "AI-powered Google Ads optimization for HVAC businesses — cuts wasted spend, improves Quality Scores, and books more AC repair, furnace, and tune-up calls.",
+  "offers": {"@type": "Offer", "price": "200", "priceCurrency": "USD", "priceSpecification": {"@type": "UnitPriceSpecification", "unitText": "MONTH"}}
 }
 </script>
+
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -58,42 +42,42 @@
   "mainEntity": [
     {
       "@type": "Question",
-      "name": "How much does it cost to advertise on Google Ads for HVAC?",
+      "name": "How much does Google Ads cost per lead for HVAC companies?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "HVAC Google Ads typically cost $12–$30 per click depending on market. Budget $2,000–$4,000/month to generate 20–40 qualified service leads. FieldSprout's AI reduces wasted spend so more of your budget goes to converting clicks."
+        "text": "The average cost per lead for HVAC Google Ads ranges from $80 to $180 depending on market competition and campaign optimization. FieldSprout-managed HVAC accounts average $89 per lead after AI optimization, reduced from a typical $147 starting point."
       }
     },
     {
       "@type": "Question",
-      "name": "How do HVAC companies get more service calls?",
+      "name": "What Google Ads keywords work best for HVAC companies?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "The most effective channels are Google Ads (captures emergency and seasonal demand), Google Local Services Ads (appears above regular search results with a Google Guaranteed badge), and a strong Google Business Profile with recent reviews. Most HVAC companies see 30–50% more calls within 60 days of optimizing all three channels."
+        "text": "High-converting HVAC keywords include 'AC repair near me', 'furnace replacement cost', 'HVAC tune-up', 'emergency AC service', and 'heat pump installation'. FieldSprout automatically adds 200+ industry-specific negative keywords such as 'HVAC school' and 'DIY AC repair' to prevent wasted spend on non-buyers."
       }
     },
     {
       "@type": "Question",
-      "name": "What is a good cost per lead for HVAC?",
+      "name": "When should HVAC companies increase their Google Ads budget?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "A healthy HVAC cost per lead ranges from $40–$90 for residential service calls. Emergency repairs tend to have higher CPL but higher job value. FieldSprout's AI agents track CPL continuously and reallocate budget to the channels producing the lowest-cost qualified leads."
+        "text": "HVAC companies should increase budgets in late spring (May–June) for summer AC demand and early fall (September–October) for furnace season. FieldSprout's seasonal intelligence automatically ramps budget before demand peaks and reduces it in slow months."
       }
     },
     {
       "@type": "Question",
-      "name": "How long before Google Ads works for an HVAC company?",
+      "name": "Why are my HVAC Google Ads costing so much per lead?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Most HVAC accounts see first leads within 1–2 weeks, but the algorithm reaches efficient performance between weeks 6 and 12 as it accumulates conversion data. Seasonal demand spikes (summer AC, winter heat) accelerate learning if campaigns are live before peak season."
+        "text": "Most HVAC Google Ads accounts waste 30–45% of their budget on non-buyer searches, off-hours clicks, and low Quality Scores that inflate cost per click. Low Quality Scores can increase your CPC by 40–60% compared to well-optimized competitors. FieldSprout identifies and fixes these issues automatically within the first week."
       }
     },
     {
       "@type": "Question",
-      "name": "Does FieldSprout work for both residential and commercial HVAC?",
+      "name": "Is AI better than a marketing agency for managing HVAC Google Ads?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes. FieldSprout serves both B2C (homeowner service calls, tune-ups, replacements) and B2B (commercial HVAC maintenance contracts, facility management relationships). The AI adjusts targeting, ad copy, and keywords based on the audience type you set."
+        "text": "FieldSprout optimizes HVAC Google Ads every 24 hours for $200 per month, versus agencies that charge $2,000–$5,000 per month and typically make changes once or twice a month. HVAC companies using FieldSprout typically see 40–60% lower cost per lead compared to agency-managed accounts, while maintaining full control of their ad account."
       }
     }
   ]
@@ -121,8 +105,11 @@
         </p>
         <div class="flex flex-col sm:flex-row gap-4">
           {% if has_endpoint('ads_grader_bp.index') %}
-          <a href="{{ url_for('ads_grader_bp.index') }}"
+          <a href="{{ url_for('ads_grader_bp.strength_test') }}"
              class="btn btn-primary btn-lg">Grade My HVAC Ads — Free</a>
+          {% endif %}
+          {% if has_endpoint('public_bp.maps_audit') %}
+          <a href="{{ url_for('public_bp.maps_audit') }}" class="btn btn-secondary btn-lg">Free Google Maps Audit</a>
           {% endif %}
           <a href="/pricing" class="btn btn-secondary btn-lg">See Plans &amp; Pricing</a>
         </div>
@@ -272,7 +259,7 @@
     </p>
     <div class="flex flex-col sm:flex-row gap-4 justify-center">
       {% if has_endpoint('ads_grader_bp.index') %}
-      <a href="{{ url_for('ads_grader_bp.index') }}" class="btn btn-secondary btn-lg">Grade My Account — Free</a>
+      <a href="{{ url_for('ads_grader_bp.strength_test') }}" class="btn btn-secondary btn-lg">Grade My Account — Free</a>
       {% endif %}
       <a href="/pricing" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">View Plans</a>
     </div>

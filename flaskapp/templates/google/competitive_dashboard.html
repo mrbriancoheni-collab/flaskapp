@@ -10,7 +10,7 @@
   <div class="mb-8">
     <h1 class="text-3xl font-bold text-gray-900">
       <i class="fas fa-chess text-purple-600 mr-2"></i>
-      Competitive Intelligence
+      How you stack up against competitors
     </h1>
     <p class="mt-2 text-sm text-gray-600">
       Analyze your competitive landscape from Google Ads Auction Insights
@@ -189,6 +189,14 @@
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
 function getCsrfToken() {
   const meta = document.querySelector('meta[name="csrf-token"]');
   if (meta && meta.content) return meta.content;
@@ -218,7 +226,7 @@ document.getElementById('periodSelect').addEventListener('change', function() {
 
 document.getElementById('btnFetchInsights').addEventListener('click', function() {
   if (!selectedCampaignId) {
-    alert('Please select a campaign first');
+    showToast('Please select a campaign first', 'error');
     return;
   }
   fetchInsights();
@@ -227,7 +235,7 @@ document.getElementById('btnFetchInsights').addEventListener('click', function()
 document.getElementById('btnTrackCompetitor').addEventListener('click', function() {
   const domain = document.getElementById('competitorDomain').value.trim();
   if (!domain || !selectedCampaignId) {
-    alert('Please select a campaign and enter a competitor domain');
+    showToast('Please select a campaign and enter a competitor domain', 'error');
     return;
   }
   trackCompetitor(domain);
@@ -255,15 +263,15 @@ async function fetchInsights() {
     const data = await response.json();
 
     if (data.success) {
-      alert('Insights fetched successfully! Refreshing data...');
+      showToast('Insights updated! Reloading...', 'success');
       loadTopCompetitors();
       loadMarketShare();
     } else {
-      alert('Error: ' + (data.error || 'Failed to fetch insights'));
+      showToast('Error: ' + (data.error || 'Failed to fetch insights'), 'error');
     }
   } catch (error) {
     console.error('Error fetching insights:', error);
-    alert('Error fetching insights: ' + error.message);
+    showToast('Error fetching insights: ' + error.message, 'error');
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Fetch Latest Insights';

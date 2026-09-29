@@ -499,17 +499,90 @@ def _update_keyword_bid(account_id: int, keyword_id: int, new_bid: float):
 
 
 def _add_exact_keyword(account_id: int, campaign_id: int, ad_group_id: int, keyword_text: str):
-    """Add exact match keyword."""
-    # This would integrate with Google Ads API
-    logger.info(f"[SELF_HEALING] Adding exact keyword: [{keyword_text}] to campaign {campaign_id}")
-    pass
+    """Add an exact-match keyword to an ad group via the Google Ads REST API."""
+    try:
+        from app.google.utils_ads import resolve_ads_context, ads_headers, _get_ads_api_base
+        from app.google.token_utils import ensure_access_token
+        import requests as _req
+
+        ctx = resolve_ads_context(account_id)
+        customer_id = ctx["customer_id"]
+        access_token, _ = ensure_access_token(account_id, ("ads",))
+        headers = ads_headers(access_token, ctx.get("login_customer_id"))
+
+        body = {
+            "operations": [{
+                "create": {
+                    "adGroup": f"customers/{customer_id}/adGroups/{ad_group_id}",
+                    "status": "ENABLED",
+                    "keyword": {"text": keyword_text, "matchType": "EXACT"},
+                }
+            }]
+        }
+        url = f"{_get_ads_api_base()}/customers/{customer_id}/adGroupCriteria:mutate"
+        resp = _req.post(url, headers=headers, json=body, timeout=30)
+        resp.raise_for_status()
+        logger.info("[SELF_HEALING] Added exact keyword [%s] to ad_group_id=%s", keyword_text, ad_group_id)
+    except Exception as exc:
+        logger.error("[SELF_HEALING] _add_exact_keyword failed: %s", exc)
 
 
 def _add_negative_keyword(account_id: int, keyword_text: str, match_type: str, level: str):
-    """Add negative keyword."""
-    # This would integrate with Google Ads API
-    logger.info(f"[SELF_HEALING] Adding negative keyword: {keyword_text} ({match_type}) at {level} level")
-    pass
+    """Add a negative keyword at campaign or ad-group level via the Google Ads REST API."""
+    try:
+        from app.google.utils_ads import resolve_ads_context, ads_headers, _get_ads_api_base, google_ads_search
+        from app.google.token_utils import ensure_access_token
+        import requests as _req
+
+        ctx = resolve_ads_context(account_id)
+        customer_id = ctx["customer_id"]
+        login_customer_id = ctx.get("login_customer_id")
+        access_token, _ = ensure_access_token(account_id, ("ads",))
+        headers = ads_headers(access_token, login_customer_id)
+        base = _get_ads_api_base()
+
+        match_map = {"exact": "EXACT", "phrase": "PHRASE", "broad": "BROAD"}
+        gads_match = match_map.get(match_type.lower(), "BROAD")
+
+        if level in ("campaign", "account"):
+            rows = google_ads_search(
+                access_token, customer_id,
+                "SELECT campaign.id FROM campaign WHERE campaign.status = 'ENABLED' LIMIT 50",
+                login_customer_id,
+            )
+            for row in rows:
+                cid = (row.get("campaign") or {}).get("id")
+                if not cid:
+                    continue
+                body = {"operations": [{"create": {
+                    "campaign": f"customers/{customer_id}/campaigns/{cid}",
+                    "keyword": {"text": keyword_text, "matchType": gads_match},
+                    "negative": True,
+                }}]}
+                _req.post(f"{base}/customers/{customer_id}/campaignCriteria:mutate",
+                          headers=headers, json=body, timeout=30).raise_for_status()
+        else:
+            rows = google_ads_search(
+                access_token, customer_id,
+                "SELECT ad_group.id FROM ad_group WHERE ad_group.status = 'ENABLED' LIMIT 100",
+                login_customer_id,
+            )
+            for row in rows:
+                agid = (row.get("adGroup") or {}).get("id")
+                if not agid:
+                    continue
+                body = {"operations": [{"create": {
+                    "adGroup": f"customers/{customer_id}/adGroups/{agid}",
+                    "keyword": {"text": keyword_text, "matchType": gads_match},
+                    "negative": True,
+                }}]}
+                _req.post(f"{base}/customers/{customer_id}/adGroupCriteria:mutate",
+                          headers=headers, json=body, timeout=30).raise_for_status()
+
+        logger.info("[SELF_HEALING] Added negative keyword '%s' (%s) at %s level",
+                    keyword_text, match_type, level)
+    except Exception as exc:
+        logger.error("[SELF_HEALING] _add_negative_keyword failed: %s", exc)
 
 
 def _mark_negative_suggestion_applied(suggestion_id: int):
@@ -577,7 +650,14 @@ def reallocate_budgets(account_id: int, dry_run: bool = False) -> Dict[str, Any]
         overperformers = []   # Good CPA, budget remaining
         poor_performers = []  # Bad CPA
 
-        target_cpa = 50.0  # TODO: Get from account settings
+        target_cpa = 50.0  # default fallback
+        try:
+            from app.models_ads import AdsAccountGoal
+            goal = AdsAccountGoal.query.filter_by(account_id=account_id).first()
+            if goal and goal.target_cpa_cents:
+                target_cpa = goal.target_cpa_cents / 100.0
+        except Exception:
+            pass
 
         for campaign in campaigns:
             cpa = campaign['cpa']

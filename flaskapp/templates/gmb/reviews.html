@@ -9,8 +9,8 @@
   <!-- Header -->
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-semibold tracking-tight">Google Business Profile — Reviews</h1>
-      <p class="text-gray-500 text-sm">Monitor, filter, and reply to your latest reviews.</p>
+      <h1 class="text-2xl font-semibold tracking-tight">Your Google reviews</h1>
+      <p class="text-gray-500 text-sm">Read, filter, and reply to every review customers leave on Google.</p>
     </div>
     <div class="flex items-center gap-2">
       {% if not _connected %}
@@ -50,23 +50,27 @@
   <!-- KPI cards -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
     <div class="rounded-xl border bg-white p-4">
-      <div class="text-xs uppercase text-gray-500">Average Rating</div>
+      <div class="text-xs uppercase text-gray-500 font-medium">Star rating</div>
       <div class="mt-1 flex items-end gap-2">
         <div class="text-2xl font-semibold">{{ '%.1f'|format(_summary.avg) }}</div>
-        <div class="text-xs text-gray-500">/ 5</div>
+        <div class="text-xs text-gray-500">out of 5</div>
       </div>
+      <p class="text-xs text-gray-400 mt-0.5">{% if _summary.avg >= 4.5 %}Excellent{% elif _summary.avg >= 4.0 %}Good{% elif _summary.avg >= 3.5 %}Fair{% else %}Needs work{% endif %}</p>
     </div>
     <div class="rounded-xl border bg-white p-4">
-      <div class="text-xs uppercase text-gray-500">Total Reviews</div>
+      <div class="text-xs uppercase text-gray-500 font-medium">Total reviews</div>
       <div class="text-2xl font-semibold mt-1">{{ _summary.count }}</div>
+      <p class="text-xs text-gray-400 mt-0.5">All time on Google</p>
     </div>
     <div class="rounded-xl border bg-white p-4">
-      <div class="text-xs uppercase text-gray-500">New (30d)</div>
+      <div class="text-xs uppercase text-gray-500 font-medium">New this month</div>
       <div class="text-2xl font-semibold mt-1">{{ _summary.last30 }}</div>
+      <p class="text-xs text-gray-400 mt-0.5">Last 30 days</p>
     </div>
     <div class="rounded-xl border bg-white p-4">
-      <div class="text-xs uppercase text-gray-500">Response Rate</div>
+      <div class="text-xs uppercase text-gray-500 font-medium">You've replied to</div>
       <div class="text-2xl font-semibold mt-1">{{ (100 * _summary.responseRate)|round(0) }}%</div>
+      <p class="text-xs text-gray-400 mt-0.5">{% if _summary.responseRate >= 0.9 %}Great — very responsive{% elif _summary.responseRate >= 0.7 %}Good — aim for 90%{% else %}Low — reply more to boost ranking{% endif %}</p>
     </div>
   </div>
 

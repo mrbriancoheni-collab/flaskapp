@@ -7,7 +7,7 @@ from typing import Optional, List, Tuple
 from sqlalchemy import text
 
 from app import db
-from app.models.wp_job import WPJob
+from app.models_wp import WPJob  # noqa: F401 — kept for ORM identity; process_wp_jobs delegates to wp._process_queue
 
 
 # =========================
@@ -39,7 +39,14 @@ def run_minutely(app, db):
 def run_hourly(app, db):
     """Periodic housekeeping. Keep this light; heavy jobs belong in run_daily."""
     app.logger.info("[CRON] hourly tick at %s", datetime.utcnow().isoformat())
-    # TODO: queue blog drafts, refresh sitemaps, sync analytics, etc.
+
+    try:
+        from app.services.appointment_reminder_service import process_pending_appointment_reminders
+        n = process_pending_appointment_reminders()
+        if n:
+            app.logger.info("[CRON] sent %s appointment reminders", n)
+    except Exception:
+        app.logger.exception("[CRON] appointment reminders failed")
 
 
 def run_daily(app, db):
@@ -73,6 +80,52 @@ def run_daily(app, db):
     except Exception:
         app.logger.exception("[CRON] Lead automation run failed")
 
+    # Estimate follow-up sequences (day 2 + day 5 nudges)
+    try:
+        from app.services.estimate_followup_service import process_pending_estimate_followups
+        n = process_pending_estimate_followups()
+        if n:
+            app.logger.info("[CRON] sent %s estimate follow-ups", n)
+    except Exception:
+        app.logger.exception("[CRON] estimate follow-ups failed")
+
+    # Invoice payment follow-ups (7 days after invoicing, if unpaid)
+    try:
+        from app.services.invoice_followup_service import process_pending_invoice_followups
+        n = process_pending_invoice_followups()
+        if n:
+            app.logger.info("[CRON] sent %s invoice follow-ups", n)
+    except Exception:
+        app.logger.exception("[CRON] invoice follow-ups failed")
+
+    # NPS satisfaction surveys (daily)
+    try:
+        from app.services.nps_service import process_pending_nps_surveys
+        n = process_pending_nps_surveys()
+        if n:
+            app.logger.info("[CRON] sent %s NPS surveys", n)
+    except Exception:
+        app.logger.exception("[CRON] NPS surveys failed")
+
+    # Referral requests (daily)
+    try:
+        from app.services.referral_service import process_pending_referral_requests
+        n = process_pending_referral_requests()
+        if n:
+            app.logger.info("[CRON] sent %s referral requests", n)
+    except Exception:
+        app.logger.exception("[CRON] referral requests failed")
+
+    # Reactivation / win-back campaign (Mondays only)
+    if datetime.utcnow().weekday() == 0:
+        try:
+            from app.services.reactivation_service import process_reactivation_campaign
+            n = process_reactivation_campaign()
+            if n:
+                app.logger.info("[CRON] sent %s reactivation messages", n)
+        except Exception:
+            app.logger.exception("[CRON] reactivation campaign failed")
+
     # Safety layer: rollback detection for all autonomous accounts
     try:
         _run_daily_safety_checks(app)
@@ -103,6 +156,48 @@ def run_daily(app, db):
     except Exception:
         app.logger.exception("[CRON] AI actions digest failed")
 
+    # Weekly SEO AI agents (content recommendations, freshness plan, roadmap)
+    try:
+        _run_weekly_seo_ai_agents(app)
+    except Exception:
+        app.logger.exception("[CRON] SEO AI agents failed")
+
+    # Weekly freshness scan (runs Sunday, saves to SEOScanResult)
+    try:
+        _run_weekly_freshness_scan(app)
+    except Exception:
+        app.logger.exception("[CRON] Weekly freshness scan failed")
+
+    # Weekly image SEO scan (runs Sunday, saves to SEOScanResult)
+    try:
+        _run_weekly_image_seo_scan(app)
+    except Exception:
+        app.logger.exception("[CRON] Weekly image SEO scan failed")
+
+    # Daily: queue AI content jobs from topic cluster recommendations
+    try:
+        _run_daily_content_queue(app)
+    except Exception:
+        app.logger.exception("[CRON] Daily content queue failed")
+
+    # Daily: refresh agent knowledge cache from approved external sources
+    try:
+        _run_daily_knowledge_refresh(app)
+    except Exception:
+        app.logger.exception("[CRON] Agent knowledge refresh failed")
+
+    # Auto review requests: send to customers who completed jobs in the last 24 hours
+    try:
+        from app.reputation import _auto_queue_review_requests
+        from app.models import Account
+        accounts = Account.query.filter_by(status='active').all()
+        total_sent = 0
+        for acct in accounts:
+            total_sent += _auto_queue_review_requests(acct.id)
+        app.logger.info("[CRON] Auto review requests: sent %d request(s) across %d account(s)", total_sent, len(accounts))
+    except Exception:
+        app.logger.exception("[CRON] Auto review requests failed")
+
 
 # =========================
 # WordPress job runner
@@ -110,60 +205,21 @@ def run_daily(app, db):
 
 def process_wp_jobs(app) -> bool:
     """
-    Pick the oldest queued job and run it.
-    Returns True if a job was processed, else False.
+    Process one queued WP job per site and return True if any were processed.
+    Delegates to the wp module's _process_queue which handles publish and ai_generate kinds.
     """
-    now = datetime.utcnow()
-
-    job = (
-        WPJob.query
-        .filter(WPJob.status == "queued")
-        .order_by(
-            WPJob.scheduled_at.is_(None),
-            WPJob.scheduled_at.asc(),
-            WPJob.priority.desc(),
-            WPJob.created_at.asc(),
-        )
-        .first()
-    )
-    if not job:
-        return False
-
     try:
-        job.status = "running"
-        job.started_at = now
-        db.session.commit()
-
-        if job.action == "publish_manual":
-            # TODO: replace with your real WP publish call
-            title = (job.payload or {}).get("title") or "Untitled"
-            content = (job.payload or {}).get("content") or ""
-            # result = publish_to_wordpress(title, content, ...)
-            job.result = {"preview_url": None, "wp_post_id": None, "title": title}
-            job.status = "done"
-
-        elif job.action == "generate_ai_post":
-            # TODO: call your AI writer (OpenAI/Claude) and optionally publish/save draft
-            brief = job.payload or {}
-            # draft = generate_ai_article(brief)
-            # optionally post to WP as draft
-            job.result = {"draft_title": brief.get("primary_keyword") or "AI Draft", "wp_post_id": None}
-            job.status = "done"
-
-        else:
-            job.error = f"Unknown action: {job.action}"
-            job.status = "failed"
-
-        job.completed_at = datetime.utcnow()
-        db.session.commit()
-        return True
-
-    except Exception as e:
-        app.logger.exception("WP job failed")
-        job.status = "failed"
-        job.error = str(e)
-        job.retries = (job.retries or 0) + 1
-        db.session.commit()
+        from app.models_wp import WPSite
+        from app.wp import _process_queue
+        sites = WPSite.query.all()
+        any_processed = False
+        for site in sites:
+            result = _process_queue(max_jobs=1, site=site)
+            if result.get("processed", 0) > 0:
+                any_processed = True
+        return any_processed
+    except Exception:
+        app.logger.exception("[CRON] process_wp_jobs failed")
         return False
 
 
@@ -411,17 +467,37 @@ def _accounts_with_google_ads_tokens(max_candidates: int = 200) -> List[int]:
 
 
 def _last_google_ads_analysis_time(aid: int) -> Optional[datetime]:
-    """
-    Return the most recent analysis time for this account.
-    For now, we'll use a simple approach - check if we have a table to track this.
-    If not, we'll store it in a metadata table or just run it every interval.
+    """Return the most recent optimization run time for this account, or None if never run."""
+    try:
+        with db.engine.connect() as conn:
+            row = conn.execute(
+                text(
+                    "SELECT ran_at FROM google_ads_optimization_runs"
+                    " WHERE account_id = :aid"
+                    " ORDER BY ran_at DESC LIMIT 1"
+                ),
+                {"aid": aid},
+            ).fetchone()
+        return row[0] if row else None
+    except Exception:
+        return None
 
-    TODO: Create a google_ads_optimization_runs table to track when analysis was last run.
-    For now, return None to always run.
-    """
-    # TODO: Implement tracking table
-    # For now, return None so it runs every time (respects the interval via manual tracking)
-    return None
+
+def _record_google_ads_analysis_time(aid: int) -> None:
+    """Upsert the latest optimization run timestamp for this account."""
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(
+                text(
+                    "INSERT INTO google_ads_optimization_runs (account_id, ran_at)"
+                    " VALUES (:aid, NOW())"
+                    " ON DUPLICATE KEY UPDATE ran_at = NOW()"
+                ),
+                {"aid": aid},
+            )
+            conn.commit()
+    except Exception:
+        pass
 
 
 def _generate_google_ads_optimizations_for_account(app, aid: int) -> bool:
@@ -505,6 +581,7 @@ def _generate_google_ads_optimizations_for_account(app, aid: int) -> bool:
                 "[CRON] Google Ads optimization email sent to %s for account %s (%d optimizations, $%,.0f/mo)",
                 user.email, account.name, len(analysis['opportunities']), total_monthly_value
             )
+            _record_google_ads_analysis_time(aid)
             return True
         else:
             app.logger.warning("[CRON] Failed to send email to %s for account_id=%s", user.email, aid)
@@ -961,3 +1038,392 @@ def _run_weekly_ai_actions_digest(app):
 
         except Exception as e:
             app.logger.exception(f"[CRON] AI actions digest error: {e}")
+
+
+# =========================
+# SEO AI Agents (Weekly)
+# =========================
+
+def _run_weekly_seo_ai_agents(app) -> None:
+    """
+    Run SEO AI agents weekly (Sundays) for all accounts with GSC connected.
+    Generates content recommendations, freshness plans, and SEO roadmaps.
+    Throttled to once per 7 days per account.
+    """
+    if datetime.utcnow().weekday() != 6:  # Sunday only
+        return
+
+    app.logger.info("[CRON] Starting weekly SEO AI agents")
+
+    try:
+        from sqlalchemy import text as _text
+        with db.engine.connect() as conn:
+            rows = conn.execute(_text("""
+                SELECT DISTINCT account_id
+                FROM google_oauth_tokens
+                WHERE LOWER(product) IN ('gsc', 'search_console', 'searchconsole')
+                  AND refresh_token IS NOT NULL
+                ORDER BY account_id ASC
+                LIMIT 100
+            """)).fetchall()
+        accounts = [int(r[0]) for r in rows]
+    except Exception:
+        app.logger.exception("[CRON] SEO AI agents: failed to load GSC accounts")
+        return
+
+    if not accounts:
+        app.logger.info("[CRON] SEO AI agents: no GSC-connected accounts")
+        return
+
+    app.logger.info("[CRON] SEO AI agents: processing %d accounts", len(accounts))
+
+    for aid in accounts:
+        with app.app_context():
+            try:
+                from app.seo.keyword_gaps import run_keyword_gap_analysis
+                from app.google import _is_connected, _get_gsc_selected_site
+                from app.ai_clients import get_ai_client
+                import json, re as _re
+
+                if not _is_connected(aid, "gsc"):
+                    continue
+
+                gsc_url = _get_gsc_selected_site(aid)
+                if not gsc_url:
+                    continue
+
+                gap = run_keyword_gap_analysis(aid, gsc_url)
+                if gap.get("error"):
+                    continue
+
+                client = get_ai_client()
+
+                # --- Content Recommendations ---
+                missing = gap.get("missing_content", [])[:10]
+                wins = gap.get("quick_wins", [])[:10]
+                clusters = gap.get("clusters", [])[:8]
+                gap_context = (
+                    f"Missing content opportunities: {json.dumps(missing)}\n"
+                    f"Quick wins (positions 4-20): {json.dumps(wins)}\n"
+                    f"Keyword clusters: {json.dumps(clusters)}"
+                )
+
+                # Load prompt from DB or use default
+                try:
+                    from app.models_ads import AIPrompt
+                    p = AIPrompt.query.filter_by(prompt_key="seo_content_recommendations", is_active=True).first()
+                    tmpl = p.prompt_template if p else None
+                except Exception:
+                    tmpl = None
+
+                prompt = (tmpl or (
+                    "Based on this keyword gap analysis data, recommend topic clusters.\n\n"
+                    "{gap_context}\n\n"
+                    "Return a JSON array of 6-8 topic cluster recommendations with: "
+                    "cluster_name, pillar_topic, supporting_topics (3-5 titles), "
+                    "monthly_searches_potential, rationale. JSON only."
+                )).replace("{gap_context}", gap_context)
+
+                resp = client.messages.create(
+                    model="claude-haiku-4-5-20251001",
+                    max_tokens=1800,
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                raw = resp.content[0].text
+                match = _re.search(r'\[.*\]', raw, _re.DOTALL)
+                if match:
+                    # Store result — save to a simple log or future SEOScanResult table
+                    from app.models_seo import SEOScanResult
+                    SEOScanResult.save_result(
+                        account_id=aid,
+                        site_id=None,
+                        scan_type="content_recommendations",
+                        issue_count=0,
+                        item_count=len(json.loads(match.group())),
+                        data={"recommendations": json.loads(match.group()), "generated_at": datetime.utcnow().isoformat()},
+                    )
+                    app.logger.info("[CRON] SEO content recommendations saved for account %d", aid)
+
+            except Exception:
+                app.logger.exception("[CRON] SEO AI agents failed for account %d", aid)
+
+    app.logger.info("[CRON] Weekly SEO AI agents complete")
+
+
+def _run_weekly_freshness_scan(app):
+    """Weekly freshness scan — runs Sunday only. Saves staleness data to SEOScanResult."""
+    if datetime.utcnow().weekday() != 6:  # Sunday only
+        return
+
+    with app.app_context():
+        try:
+            from app.models_wp import WPSite
+            from app.models_seo import SEOScanResult
+            from datetime import timedelta
+            import re as _re
+
+            sites = WPSite.query.filter(WPSite.account_id.isnot(None)).all()
+            for site in sites:
+                try:
+                    from app.wp.wp_client import WPClient
+                    c = WPClient(site.base_url, site.username, site.app_password)
+                    posts = c.list_posts(per_page=100, status="publish")
+                    if not posts:
+                        continue
+
+                    now = datetime.utcnow()
+                    stale_posts = []
+                    for p in posts:
+                        modified_str = p.get("modified") or p.get("date") or ""
+                        try:
+                            modified = datetime.strptime(modified_str[:19], "%Y-%m-%dT%H:%M:%S")
+                        except Exception:
+                            continue
+                        days_old = (now - modified).days
+                        # Age component: 0-50
+                        age_score = min(50, int(days_old / 365 * 50))
+                        staleness = age_score
+                        title = _re.sub(r"<[^>]+>", "", (p.get("title") or {}).get("rendered", "") or "")
+                        if staleness >= 40:
+                            stale_posts.append({
+                                "url": p.get("link", ""),
+                                "title": title,
+                                "days_old": days_old,
+                                "staleness": staleness,
+                            })
+
+                    stale_posts.sort(key=lambda x: x["staleness"], reverse=True)
+                    SEOScanResult.save_result(
+                        account_id=site.account_id,
+                        site_id=site.id,
+                        scan_type="freshness",
+                        issue_count=len(stale_posts),
+                        item_count=len(posts),
+                        data={
+                            "stale_count": len(stale_posts),
+                            "total": len(posts),
+                            "top_stale": stale_posts[:10],
+                        },
+                    )
+                    app.logger.info(f"[CRON] freshness scan for site {site.id}: {len(stale_posts)} stale posts")
+                except Exception:
+                    app.logger.exception(f"[CRON] freshness scan failed for site {site.id}")
+        except Exception:
+            app.logger.exception("[CRON] _run_weekly_freshness_scan outer failure")
+
+
+def _run_weekly_image_seo_scan(app):
+    """Weekly image SEO scan — runs Sunday only. Saves alt text gaps to SEOScanResult."""
+    if datetime.utcnow().weekday() != 6:  # Sunday only
+        return
+
+    with app.app_context():
+        try:
+            from app.models_wp import WPSite
+            from app.models_seo import SEOScanResult
+            import re as _re
+
+            sites = WPSite.query.filter(WPSite.account_id.isnot(None)).all()
+            for site in sites:
+                try:
+                    from app.wp.wp_client import WPClient
+                    c = WPClient(site.base_url, site.username, site.app_password)
+                    posts = c.list_posts(per_page=100, status="publish")
+                    if not posts:
+                        continue
+
+                    missing_alt = []
+                    total_images = 0
+                    for p in posts:
+                        content = (p.get("content") or {}).get("rendered", "") or ""
+                        imgs = _re.findall(r'<img[^>]+>', content, _re.IGNORECASE)
+                        total_images += len(imgs)
+                        for img in imgs:
+                            alt_m = _re.search(r'alt=["\']([^"\']*)["\']', img, _re.IGNORECASE)
+                            alt = alt_m.group(1).strip() if alt_m else ""
+                            if not alt:
+                                title = _re.sub(r"<[^>]+>", "", (p.get("title") or {}).get("rendered", "") or "")
+                                src_m = _re.search(r'src=["\']([^"\']+)["\']', img, _re.IGNORECASE)
+                                missing_alt.append({
+                                    "post_url": p.get("link", ""),
+                                    "post_title": title,
+                                    "img_src": src_m.group(1) if src_m else "",
+                                })
+
+                    SEOScanResult.save_result(
+                        account_id=site.account_id,
+                        site_id=site.id,
+                        scan_type="image_seo",
+                        issue_count=len(missing_alt),
+                        item_count=total_images,
+                        data={
+                            "missing_alt_count": len(missing_alt),
+                            "total_images": total_images,
+                            "missing_alt_samples": missing_alt[:20],
+                        },
+                    )
+                    app.logger.info(f"[CRON] image_seo scan for site {site.id}: {len(missing_alt)}/{total_images} missing alt")
+                except Exception:
+                    app.logger.exception(f"[CRON] image_seo scan failed for site {site.id}")
+        except Exception:
+            app.logger.exception("[CRON] _run_weekly_image_seo_scan outer failure")
+
+
+def _run_daily_content_queue(app):
+    """
+    Daily: read the latest content_recommendations for every autopilot-enabled WP site
+    and queue ai_generate jobs up to each site's autopilot_daily_new limit.
+
+    Deduplication: skips any topic title that already has a queued or done WPJob
+    with a matching primary_keyword in its payload (prevents re-queueing the same post).
+    """
+    with app.app_context():
+        try:
+            from app.models_wp import WPSite, WPJob
+            from app.models_seo import SEOScanResult
+            from app import db
+
+            sites = (
+                WPSite.query
+                .filter(WPSite.account_id.isnot(None), WPSite.autopilot_enabled == True)
+                .all()
+            )
+            if not sites:
+                app.logger.info("[CRON] content_queue: no autopilot-enabled sites")
+                return
+
+            for site in sites:
+                try:
+                    daily_limit = max(1, site.autopilot_daily_new or 1)
+                    needs_approval = bool(site.autopilot_require_approval)
+
+                    # Load the latest content_recommendations for this account
+                    rec_row = SEOScanResult.latest(
+                        site.account_id, "content_recommendations"
+                    )
+                    if not rec_row or not rec_row.data:
+                        app.logger.info(
+                            "[CRON] content_queue: no recommendations for account %d", site.account_id
+                        )
+                        continue
+
+                    recommendations = rec_row.data.get("recommendations") or []
+                    if not recommendations:
+                        continue
+
+                    # Collect all keyword titles already queued or done for this site
+                    existing_jobs = WPJob.query.filter(
+                        WPJob.site_id == site.id,
+                        WPJob.status.in_(["queued", "running", "done"]),
+                        WPJob.kind == "ai_generate",
+                    ).all()
+                    existing_keywords = {
+                        (j.payload or {}).get("primary_keyword", "").lower().strip()
+                        for j in existing_jobs
+                    }
+
+                    queued_today = 0
+
+                    for cluster in recommendations:
+                        if queued_today >= daily_limit:
+                            break
+
+                        cluster_name = cluster.get("cluster_name") or ""
+                        pillar_topic = cluster.get("pillar_topic") or ""
+                        supporting = cluster.get("supporting_topics") or []
+
+                        # Queue pillar post first if not already written
+                        topics_to_write = []
+                        if pillar_topic:
+                            topics_to_write.append({
+                                "title": pillar_topic,
+                                "is_pillar": True,
+                            })
+                        for st in supporting:
+                            topics_to_write.append({
+                                "title": st if isinstance(st, str) else (st.get("title") or ""),
+                                "is_pillar": False,
+                            })
+
+                        for topic in topics_to_write:
+                            if queued_today >= daily_limit:
+                                break
+                            kw = topic["title"].strip()
+                            if not kw:
+                                continue
+                            if kw.lower() in existing_keywords:
+                                app.logger.debug(
+                                    "[CRON] content_queue: skipping already-queued topic '%s'", kw
+                                )
+                                continue
+
+                            payload = {
+                                "primary_keyword": kw,
+                                "cluster_name": cluster_name,
+                                "is_pillar": topic["is_pillar"],
+                                "supporting_context": (
+                                    f"This post is part of the '{cluster_name}' topic cluster. "
+                                    f"Pillar topic: {pillar_topic}. "
+                                    f"Other supporting topics: {', '.join(t['title'] for t in topics_to_write if t['title'] != kw)}"
+                                ),
+                                "word_count": "1200" if topic["is_pillar"] else "900",
+                                "status": "draft" if needs_approval else "publish",
+                                "needs_approval": needs_approval,
+                                "require_approval": needs_approval,
+                                "source": "autopilot_cluster",
+                                # AEO optimisation flags
+                                "content_format": "aeo_optimized",
+                                "icp": "field_service",
+                                "include_schema": ["FAQPage", "HowTo"],
+                                "aeo_signals": {
+                                    "use_question_headings": True,
+                                    "direct_answer_per_h2": True,
+                                },
+                            }
+
+                            job = WPJob(
+                                site_id=site.id,
+                                kind="ai_generate",
+                                payload=payload,
+                            )
+                            db.session.add(job)
+                            existing_keywords.add(kw.lower())
+                            queued_today += 1
+                            app.logger.info(
+                                "[CRON] content_queue: queued '%s' for site %d (cluster: %s)",
+                                kw, site.id, cluster_name,
+                            )
+
+                    if queued_today:
+                        db.session.commit()
+                        app.logger.info(
+                            "[CRON] content_queue: queued %d post(s) for site %d", queued_today, site.id
+                        )
+
+                except Exception:
+                    app.logger.exception("[CRON] content_queue failed for site %d", site.id)
+
+        except Exception:
+            app.logger.exception("[CRON] _run_daily_content_queue outer failure")
+
+
+def _run_daily_knowledge_refresh(app):
+    """
+    Daily: refresh the agent knowledge cache from all approved external sources.
+    Sources flagged as 'weekly' are only fetched if their last fetch was >6 days ago.
+    Skipped if the ANTHROPIC_API_KEY is not configured (summarisation requires Claude).
+    """
+    with app.app_context():
+        try:
+            if not (app.config.get("ANTHROPIC_API_KEY") or __import__("os").getenv("ANTHROPIC_API_KEY")):
+                app.logger.info("[CRON] knowledge_refresh: ANTHROPIC_API_KEY not set — skipping")
+                return
+
+            from app.services.agent_knowledge_service import refresh_all_approved_sources
+            counts = refresh_all_approved_sources(force=False)
+            app.logger.info(
+                "[CRON] knowledge_refresh: %d updated, %d skipped, %d failed",
+                counts["success"], counts["skipped"], counts["failed"],
+            )
+        except Exception:
+            app.logger.exception("[CRON] _run_daily_knowledge_refresh outer failure")

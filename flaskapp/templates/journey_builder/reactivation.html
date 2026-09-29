@@ -1,0 +1,231 @@
+{% extends "base_app.html" %}
+{% block title %}Customer Reactivation · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto py-8 px-4 space-y-6">
+
+  {# ── Header ─────────────────────────────────────────────────────────────── #}
+  <div class="flex items-start gap-4">
+    <a href="{{ url_for('journey_bp.index') }}"
+       class="mt-1 inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-indigo-600">
+      <i class="fa-solid fa-arrow-left text-xs"></i>Back
+    </a>
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shrink-0">
+        <i class="fa-solid fa-rotate-right text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-2xl font-extrabold text-gray-900">Customer Reactivation</h1>
+        <p class="text-gray-500 text-sm">Re-engage customers who haven't booked in over 12 months.</p>
+      </div>
+    </div>
+  </div>
+
+  {# ── Stats Row ──────────────────────────────────────────────────────────── #}
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="bg-white border border-gray-200 rounded-xl p-5 flex items-center gap-4">
+      <div class="w-11 h-11 bg-amber-100 rounded-xl flex items-center justify-center shrink-0">
+        <i class="fa-solid fa-users text-amber-600 text-lg"></i>
+      </div>
+      <div>
+        <p class="text-2xl font-extrabold text-gray-900">{{ total_count }}</p>
+        <p class="text-sm text-gray-500">Overdue customers</p>
+      </div>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-xl p-5 flex items-center gap-4">
+      <div class="w-11 h-11 bg-indigo-100 rounded-xl flex items-center justify-center shrink-0">
+        <i class="fa-solid fa-envelope-open-text text-indigo-600 text-lg"></i>
+      </div>
+      <div>
+        <p class="text-2xl font-extrabold text-gray-900">{{ sent_count }}</p>
+        <p class="text-sm text-gray-500">Reactivations sent</p>
+      </div>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-xl p-5 flex items-center gap-4">
+      <div class="w-11 h-11 bg-green-100 rounded-xl flex items-center justify-center shrink-0">
+        <i class="fa-solid fa-dollar-sign text-green-600 text-lg"></i>
+      </div>
+      <div>
+        <p class="text-2xl font-extrabold text-gray-900">
+          ${{ "{:,.0f}".format(customers | sum(attribute='lifetime_value') | float) if customers else '0' }}
+        </p>
+        <p class="text-sm text-gray-500">Lifetime value at risk</p>
+      </div>
+    </div>
+  </div>
+
+  {# ── Campaign Setup ─────────────────────────────────────────────────────── #}
+  <div class="bg-white border border-gray-200 rounded-xl p-6 space-y-4">
+    <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+      <i class="fa-solid fa-sliders text-indigo-500"></i>Campaign Settings
+    </h2>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div>
+        <label for="service_type" class="block text-sm font-medium text-gray-700 mb-1">Service Type</label>
+        <input id="service_type" type="text" value="Annual Tune-Up"
+               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+               placeholder="e.g. HVAC Tune-Up, Plumbing Inspection…">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Select All</label>
+        <button onclick="toggleAll(this)"
+                class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+          <i class="fa-solid fa-check-square text-indigo-500"></i>
+          Select All {{ total_count }} Customers
+        </button>
+      </div>
+    </div>
+
+    <div>
+      <label for="campaign_message" class="block text-sm font-medium text-gray-700 mb-1">
+        Personal Message <span class="text-gray-400 font-normal">(optional — added to email body)</span>
+      </label>
+      <textarea id="campaign_message" rows="3"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="e.g. As a valued customer, we'd like to offer you a complimentary inspection with any booked service…"></textarea>
+    </div>
+  </div>
+
+  {# ── Customer List ──────────────────────────────────────────────────────── #}
+  <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Overdue Customers</h2>
+      <span id="selected-count" class="text-xs font-medium text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">0 selected</span>
+    </div>
+
+    {% if customers %}
+    <div class="divide-y divide-gray-100 max-h-[520px] overflow-y-auto">
+      {% for c in customers %}
+      <label class="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 cursor-pointer group transition-colors">
+        <input type="checkbox" class="customer-check w-4 h-4 accent-indigo-600 shrink-0 rounded"
+               data-customer-id="{{ c.id }}">
+        <div class="min-w-0 flex-1 grid grid-cols-1 sm:grid-cols-4 gap-1 sm:gap-4 items-center">
+          <div class="col-span-1">
+            <p class="text-sm font-semibold text-gray-900 truncate">{{ c.name or 'Unknown' }}</p>
+            <p class="text-xs text-gray-500 truncate">{{ c.email or '—' }}</p>
+          </div>
+          <div class="hidden sm:block text-sm text-gray-700">
+            <span class="text-xs text-gray-400 block">Last service</span>
+            {{ c.last_service or '—' }}
+          </div>
+          <div class="hidden sm:block text-sm text-gray-700 truncate">
+            <span class="text-xs text-gray-400 block">Job type</span>
+            {{ c.last_job_type or '—' }}
+          </div>
+          <div class="hidden sm:block text-right">
+            <span class="text-xs text-gray-400 block">Lifetime value</span>
+            <span class="text-sm font-semibold text-gray-800">
+              ${{ "{:,.0f}".format(c.lifetime_value | float) if c.lifetime_value else '—' }}
+            </span>
+          </div>
+        </div>
+      </label>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="px-5 py-12 text-center">
+      <div class="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+        <i class="fa-solid fa-circle-check text-gray-400 text-2xl"></i>
+      </div>
+      <p class="text-gray-600 font-medium">No overdue customers found.</p>
+      <p class="text-sm text-gray-400 mt-1">All your customers have had service within the last 12 months — great job!</p>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ── Launch Button ──────────────────────────────────────────────────────── #}
+  {% if customers %}
+  <div class="flex items-center justify-between">
+    <p class="text-sm text-gray-500">
+      <i class="fa-solid fa-circle-info text-indigo-400 mr-1"></i>
+      Only customers with an email address on file will receive the campaign.
+    </p>
+    <button id="launch-btn" onclick="launchCampaign()"
+            class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-100">
+      <i class="fa-solid fa-paper-plane"></i>
+      Launch Reactivation Campaign
+    </button>
+  </div>
+  {% endif %}
+
+  {# ── Result Banner (hidden until launch) ───────────────────────────────── #}
+  <div id="result-banner" class="hidden"></div>
+
+</div>
+
+<script nonce="{{ g.csp_nonce }}">
+  // Track selected count
+  document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('customer-check')) {
+      updateCount();
+    }
+  });
+
+  function updateCount() {
+    const checked = document.querySelectorAll('.customer-check:checked').length;
+    document.getElementById('selected-count').textContent = checked + ' selected';
+  }
+
+  function toggleAll(btn) {
+    const boxes = document.querySelectorAll('.customer-check');
+    const anyUnchecked = Array.from(boxes).some(b => !b.checked);
+    boxes.forEach(b => { b.checked = anyUnchecked; });
+    updateCount();
+    btn.querySelector('i').className = anyUnchecked ? 'fa-solid fa-square text-gray-400' : 'fa-solid fa-check-square text-indigo-500';
+    btn.lastChild.textContent = anyUnchecked ? ' Deselect All' : ' Select All {{ total_count }} Customers';
+  }
+
+  async function launchCampaign() {
+    const selectedIds = Array.from(document.querySelectorAll('.customer-check:checked'))
+                             .map(b => parseInt(b.dataset.customerId));
+    if (selectedIds.length === 0) {
+      showBanner('error', 'Please select at least one customer to continue.');
+      return;
+    }
+
+    const message  = document.getElementById('campaign_message').value.trim();
+    const svcType  = document.getElementById('service_type').value.trim() || 'Annual Service';
+    const btn      = document.getElementById('launch-btn');
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending…';
+
+    try {
+      const resp = await fetch('{{ url_for("journey_bp.reactivation_launch") }}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({ customer_ids: selectedIds, message: message, service_type: svcType })
+      });
+      const data = await resp.json();
+      if (data.ok) {
+        showBanner('success', `Campaign sent! <strong>${data.sent}</strong> emails delivered, <strong>${data.failed}</strong> failed.`);
+      } else {
+        showBanner('error', data.error || 'Something went wrong. Please try again.');
+      }
+    } catch (err) {
+      showBanner('error', 'Network error — please try again.');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Launch Reactivation Campaign';
+    }
+  }
+
+  function showBanner(type, html) {
+    const el = document.getElementById('result-banner');
+    const styles = {
+      success: 'bg-green-50 border border-green-200 text-green-800',
+      error:   'bg-red-50 border border-red-200 text-red-800',
+    };
+    const icons = { success: 'fa-circle-check text-green-500', error: 'fa-circle-exclamation text-red-500' };
+    el.className = `rounded-xl px-5 py-4 flex items-start gap-3 ${styles[type]}`;
+    el.innerHTML = `<i class="fa-solid ${icons[type]} mt-0.5 shrink-0"></i><span>${html}</span>`;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+</script>
+{% endblock %}

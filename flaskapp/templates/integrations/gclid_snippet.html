@@ -1,0 +1,203 @@
+{% extends 'base_app.html' %}
+{% block title %}Website Tracking Snippet{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-3xl">
+
+  <!-- ── Header ──────────────────────────────────────────────────────────── -->
+  <div class="mb-6">
+    <h1 class="text-2xl font-semibold">Website Tracking Snippet</h1>
+    <p class="text-gray-500 mt-1">
+      Add this one-line script to your website to automatically capture Google Ads clicks
+      when visitors submit forms — no CallRail required.
+    </p>
+  </div>
+
+  <!-- ── Step-by-step ───────────────────────────────────────────────────── -->
+  <div class="bg-white border rounded-xl p-6 mb-6">
+    <h2 class="text-base font-semibold text-gray-700 mb-4">Setup (3 steps)</h2>
+
+    <!-- Step 1 -->
+    <div class="flex gap-4 mb-5">
+      <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold">1</div>
+      <div class="flex-1">
+        <p class="font-medium text-gray-800 mb-2">Copy this code</p>
+        <div class="relative">
+          <pre id="snippetCode" class="bg-gray-50 border rounded-lg px-4 py-3 text-xs text-gray-700 overflow-x-auto whitespace-pre-wrap break-all font-mono">{{ script_tag }}</pre>
+          <button onclick="copySnippet()"
+            class="absolute top-2 right-2 px-2 py-1 bg-white border rounded text-xs text-gray-600 hover:bg-gray-50 transition">
+            Copy
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="flex gap-4 mb-5">
+      <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold">2</div>
+      <div class="flex-1">
+        <p class="font-medium text-gray-800">Paste it before <code class="bg-gray-100 px-1 rounded text-sm">&lt;/body&gt;</code> on every page of your website</p>
+        <p class="text-sm text-gray-500 mt-1">
+          Most website builders (WordPress, Wix, Squarespace, Webflow) have a "Custom Code" or
+          "Footer Scripts" setting where you can paste this once and it appears on every page.
+        </p>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="flex gap-4">
+      <div class="flex-shrink-0 w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center text-sm font-bold">3</div>
+      <div class="flex-1">
+        <p class="font-medium text-gray-800">That's it — we'll automatically capture Google Ads clicks</p>
+        <p class="text-sm text-gray-500 mt-1">
+          When a visitor arrives from a Google Ad (URL has a <code class="bg-gray-100 px-1 rounded">gclid=</code> parameter)
+          and submits a form, we store their phone/email mapped to that click.
+          When Skimmer later delivers their completed job, we match it automatically.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── What it captures ───────────────────────────────────────────────── -->
+  <div class="bg-white border rounded-xl p-6 mb-6">
+    <h2 class="text-base font-semibold text-gray-700 mb-3">What the snippet captures</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div class="flex items-start gap-2">
+        <span class="text-green-500 mt-0.5">✓</span>
+        <div>
+          <p class="text-sm font-medium text-gray-700">GCLID (Google Click ID)</p>
+          <p class="text-xs text-gray-500">From the URL when a visitor clicks your ad</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-2">
+        <span class="text-green-500 mt-0.5">✓</span>
+        <div>
+          <p class="text-sm font-medium text-gray-700">Phone number</p>
+          <p class="text-xs text-gray-500">From any phone field in the form</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-2">
+        <span class="text-green-500 mt-0.5">✓</span>
+        <div>
+          <p class="text-sm font-medium text-gray-700">Email address</p>
+          <p class="text-xs text-gray-500">From any email field in the form</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-2">
+        <span class="text-green-500 mt-0.5">✓</span>
+        <div>
+          <p class="text-sm font-medium text-gray-700">UTM parameters</p>
+          <p class="text-xs text-gray-500">utm_source, utm_medium, utm_campaign, keyword</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Test it ─────────────────────────────────────────────────────────── -->
+  <div class="bg-white border rounded-xl p-6 mb-6" id="manual">
+    <h2 class="text-base font-semibold text-gray-700 mb-1">Test It</h2>
+    <p class="text-sm text-gray-500 mb-4">
+      Fire a test capture to confirm the endpoint is working for your account.
+    </p>
+    <button onclick="runTest()"
+      class="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition">
+      Send Test Capture
+    </button>
+    <div id="testResult" class="mt-4 hidden text-sm"></div>
+  </div>
+
+  <!-- ── Manual Upload ───────────────────────────────────────────────────── -->
+  <div class="bg-white border rounded-xl p-6 mb-6">
+    <h2 class="text-base font-semibold text-gray-700 mb-1">Manual CSV Upload</h2>
+    <p class="text-sm text-gray-500 mb-4">
+      Upload a CSV of past customer contacts with GCLIDs to back-fill historical matches.
+      Maximum 5,000 rows per upload.
+    </p>
+    <p class="text-xs text-gray-400 mb-3 font-mono">Expected columns: <strong>phone, email, gclid, utm_campaign, keyword, date</strong></p>
+    <form id="uploadForm" class="flex gap-3 items-end flex-wrap">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">CSV File</label>
+        <input type="file" id="csvFile" accept=".csv" required
+          class="border rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+      </div>
+      <button type="submit"
+        class="px-5 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition">
+        Upload
+      </button>
+    </form>
+    <div id="uploadResult" class="mt-4 hidden text-sm"></div>
+  </div>
+
+</div>
+
+<script>
+var ACCOUNT_ID = {{ account_id }};
+var CAPTURE_URL = "{{ capture_url }}";
+
+function copySnippet() {
+  var pre = document.getElementById("snippetCode");
+  if (!pre) return;
+  navigator.clipboard.writeText(pre.textContent.trim())
+    .then(function() { showResult("testResult", "Snippet copied to clipboard!", true); })
+    .catch(function() { showResult("testResult", "Could not copy — please select and copy manually.", false); });
+}
+
+function runTest() {
+  var payload = {
+    account_id: ACCOUNT_ID,
+    gclid: "TEST-gclid-" + Date.now(),
+    phone: "5550000000",
+    email: "test@example.com",
+    utm_source: "google",
+    utm_medium: "cpc",
+    utm_campaign: "TEST",
+    keyword: "test keyword",
+    landing_page: window.location.href
+  };
+  fetch(CAPTURE_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.ok) {
+      showResult("testResult", "Success! Stored: " + (d.stored || []).join(", ") + ". The snippet is working.", true);
+    } else {
+      showResult("testResult", "Error: " + (d.error || JSON.stringify(d)), false);
+    }
+  })
+  .catch(function(err) {
+    showResult("testResult", "Request failed: " + err, false);
+  });
+}
+
+document.getElementById("uploadForm").addEventListener("submit", function(e) {
+  e.preventDefault();
+  var file = document.getElementById("csvFile").files[0];
+  if (!file) return;
+  var fd = new FormData();
+  fd.append("file", file);
+  fetch("/track/manual-upload", { method: "POST", body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.error) {
+        showResult("uploadResult", "Error: " + d.error, false);
+      } else {
+        var msg = "Imported " + d.imported + " rows, skipped " + d.skipped + ".";
+        if (d.errors && d.errors.length) msg += " First errors: " + d.errors.slice(0,3).join("; ");
+        showResult("uploadResult", msg, d.imported > 0);
+      }
+    })
+    .catch(function(err) { showResult("uploadResult", "Upload failed: " + err, false); });
+});
+
+function showResult(id, msg, ok) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.className = "mt-4 text-sm px-4 py-3 rounded-lg " + (ok ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200");
+  el.classList.remove("hidden");
+}
+</script>
+{% endblock %}

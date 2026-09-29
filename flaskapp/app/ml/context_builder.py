@@ -309,11 +309,31 @@ class ContextBuilder:
         return '\n'.join(sections)
 
     # ------------------------------------------------------------------
+    # Knowledge base + decision learning context
+    # ------------------------------------------------------------------
+
+    def build_knowledge_context(self, agent_type: str) -> str:
+        """Inject cached expert knowledge summaries for this agent type."""
+        try:
+            from app.models_knowledge import AgentKnowledgeCache
+            return AgentKnowledgeCache.get_context_for_agent(agent_type)
+        except Exception:
+            return ""
+
+    def build_decision_learnings_context(self, agent_type: str) -> str:
+        """Inject recent decision outcomes so the agent learns from history."""
+        try:
+            from app.services.agent_knowledge_service import get_decision_learnings_context
+            return get_decision_learnings_context(agent_type, self.account_id)
+        except Exception:
+            return ""
+
+    # ------------------------------------------------------------------
     # Unified context for any agent
     # ------------------------------------------------------------------
 
     def build_context_for_agent(self, agent_type: str) -> str:
-        """Build context string for a specific agent type."""
+        """Build context string for a specific agent type, including knowledge + learnings."""
         builders = {
             'strategic_director': self.build_strategic_context,
             'campaign_manager': self.build_campaign_manager_context,
@@ -324,12 +344,26 @@ class ContextBuilder:
             'ad_copy': self.build_ad_copy_context,
         }
 
+        sections = []
+
         builder = builders.get(agent_type)
         if builder:
             try:
-                return builder()
+                sections.append(builder())
             except Exception as e:
                 logger.error(f"Error building context for {agent_type}: {e}")
-                return f"ML context unavailable: {e}"
+                sections.append(f"ML context unavailable: {e}")
+        else:
+            sections.append("No specialized ML context for this agent type.")
 
-        return "No specialized ML context for this agent type."
+        # Append expert knowledge from approved external sources
+        knowledge = self.build_knowledge_context(agent_type)
+        if knowledge:
+            sections.append(knowledge)
+
+        # Append recent decision outcome learnings
+        learnings = self.build_decision_learnings_context(agent_type)
+        if learnings:
+            sections.append(learnings)
+
+        return "\n\n".join(s for s in sections if s)

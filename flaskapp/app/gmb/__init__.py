@@ -20,6 +20,7 @@ from flask import (
     flash,
     jsonify,
 )
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from sqlalchemy import text
 
 from app import db
@@ -122,6 +123,21 @@ def _oauth_client() -> Tuple[Optional[str], Optional[str], str]:
     csec = current_app.config.get("GOOGLE_GMB_SECRET") or os.getenv("GOOGLE_GMB_SECRET")
     cb = _callback_uri()
     return cid, csec, cb
+
+
+def _make_gmb_state(aid: int) -> str:
+    """Sign the account id into the OAuth state param (no session needed)."""
+    s = URLSafeTimedSerializer(current_app.secret_key, salt="gmb-oauth-state")
+    return s.dumps(aid)
+
+
+def _verify_gmb_state(state: str, max_age: int = 900) -> int | None:
+    """Return the account_id encoded in state, or None if invalid/expired."""
+    s = URLSafeTimedSerializer(current_app.secret_key, salt="gmb-oauth-state")
+    try:
+        return s.loads(state, max_age=max_age)
+    except (BadSignature, SignatureExpired):
+        return None
 
 
 def _store_tokens(
@@ -760,9 +776,8 @@ def start():
         "access_type": "offline",
         "include_granted_scopes": "true",
         "prompt": "consent",
-        "state": secrets.token_urlsafe(24),
+        "state": _make_gmb_state(current_account_id()),
     }
-    session["gmb_oauth_state"] = params["state"]
 
     from urllib.parse import urlencode
     return redirect(f"{GOOGLE_AUTH_URL}?{urlencode(params)}")
@@ -779,10 +794,10 @@ def callback():
 
     code = request.args.get("code")
     state = request.args.get("state")
-    if not code or not state or state != session.get("gmb_oauth_state"):
+    aid = _verify_gmb_state(state) if state else None
+    if not code or not aid:
         flash("Invalid or missing OAuth state.", "error")
         return redirect(url_for("gmb_bp.index"))
-    session.pop("gmb_oauth_state", None)
 
     client_id, client_secret, redirect_uri = _oauth_client()
     if not client_id or not client_secret:
@@ -809,8 +824,13 @@ def callback():
         return redirect(url_for("gmb_bp.index"))
 
     try:
-        aid = current_account_id()
-        _store_tokens(aid, token_json, product="gbp")
+        from app.models_google import GoogleOAuthToken
+        tok = GoogleOAuthToken.query.filter_by(account_id=aid, product="gmb").first()
+        if tok is None:
+            tok = GoogleOAuthToken(account_id=aid, product="gmb")
+            db.session.add(tok)
+        tok.credentials_json = json.dumps(token_json)
+        db.session.commit()
         if not _get_session_profile():
             _set_session_profile(dict(_SAMPLE_PROFILE))
     except Exception:
@@ -891,13 +911,34 @@ def photos():
 
 
 # --------- Profile: AI optimize pipeline ----------
+def _optimizer_base_profile(aid: int, requested_location: str = "") -> Dict[str, Any]:
+    """
+    Best available profile for the AI optimizer: real GBP location data when
+    connected, then session-edited profile, then the demo sample.
+    """
+    if _is_connected(aid):
+        try:
+            at = _gbp_access_token_for(aid)
+            loc = _resolve_location(at, requested_location) if at else None
+            if at and loc:
+                from .audit import get_location_details, location_to_profile
+                location = get_location_details(at, loc)
+                if location:
+                    profile = location_to_profile(location)
+                    _set_session_profile(profile)
+                    return profile
+        except Exception:
+            current_app.logger.exception("Fetching real GBP profile for optimizer failed")
+        return _get_session_profile() or dict(_SAMPLE_PROFILE)
+    return dict(_SAMPLE_PROFILE)
+
+
 @gmb_bp.route("/optimize", methods=["GET"], endpoint="optimize_profile")
 @login_required
 def optimize_profile():
-    """Runs AI optimizer and stores suggestions in session for the UI."""
+    """Runs AI optimizer against the real GBP profile and stores suggestions."""
     aid = current_account_id()
-    connected = _is_connected(aid)
-    base = _get_session_profile() if connected else _SAMPLE_PROFILE
+    base = _optimizer_base_profile(aid, request.args.get("location", ""))
     suggestions = _ai_optimize_profile(base)
     _set_suggestions(suggestions)
     flash("AI suggestions generated.", "success")
@@ -908,8 +949,8 @@ def optimize_profile():
 @gmb_bp.route("/optimize.json", methods=["POST"], endpoint="optimize_profile_json")
 @login_required
 def optimize_profile_json():
-    connected = _is_connected(current_account_id())
-    base = _get_session_profile() if connected else _SAMPLE_PROFILE
+    aid = current_account_id()
+    base = _optimizer_base_profile(aid, request.args.get("location", ""))
     try:
         suggestions = _ai_optimize_profile(base)
         _set_suggestions(suggestions)
@@ -971,8 +1012,7 @@ def apply_suggestions():
 @login_required
 def update_profile():
     """
-    Save posted profile fields.
-    TODO: If connected, push to Google Business Profile API.
+    Save posted profile fields and push to Google Business Profile API if connected.
     """
     aid = current_account_id()
     allow_demo = (request.args.get("demo") == "1")
@@ -997,9 +1037,54 @@ def update_profile():
         "attributes": _csv("attributes"),
     }
 
-    # TODO: call GBP Business Information API to update live profile if connected.
     _set_session_profile(payload)
-    flash("Profile saved.", "success")
+
+    # Push to GBP Business Information API if connected
+    if _is_connected(aid) and not allow_demo:
+        try:
+            at = _gbp_access_token_for(aid)
+            # Push to the location the user selected, not blindly the first one
+            loc = _resolve_location(at, request.form.get("location_name", "")) if at else None
+            if at and loc:
+                gbp_body: Dict[str, Any] = {}
+                update_fields = []
+                if payload.get("name"):
+                    gbp_body["title"] = payload["name"]
+                    update_fields.append("title")
+                if payload.get("phone"):
+                    gbp_body["phoneNumbers"] = {"primaryPhone": payload["phone"]}
+                    update_fields.append("phoneNumbers")
+                if payload.get("website"):
+                    gbp_body["websiteUri"] = payload["website"]
+                    update_fields.append("websiteUri")
+                if payload.get("description"):
+                    gbp_body["profile"] = {"description": payload["description"]}
+                    update_fields.append("profile")
+                if gbp_body and update_fields:
+                    update_mask = ",".join(update_fields)
+                    resp = requests.patch(
+                        f"https://mybusinessbusinessinformation.googleapis.com/v1/{loc}",
+                        params={"updateMask": update_mask},
+                        headers={"Authorization": f"Bearer {at}", "Content-Type": "application/json"},
+                        json=gbp_body,
+                        timeout=15,
+                    )
+                    if resp.ok:
+                        flash("Profile saved and synced to Google Business.", "success")
+                    else:
+                        current_app.logger.warning("GBP profile update failed: %s %s",
+                                                   resp.status_code, resp.text[:200])
+                        flash("Profile saved locally (Google sync failed — check permissions).", "warning")
+                else:
+                    flash("Profile saved.", "success")
+            else:
+                flash("Profile saved (could not reach Google Business API).", "warning")
+        except Exception:
+            current_app.logger.exception("GBP profile push failed for account_id=%s", aid)
+            flash("Profile saved locally (Google sync error).", "warning")
+    else:
+        flash("Profile saved.", "success")
+
     return redirect(url_for("gmb_bp.index"))
 
 
@@ -1045,16 +1130,103 @@ def reviews_ai_draft():
         return jsonify(ok=False, error=str(e)), 500
 
 
+# --------- Maps optimization audit ----------
+def _find_account_for_location(access_token: str, location_name: str) -> Optional[str]:
+    """Return the parent 'accounts/XXX' resource for a location, or None."""
+    for acct in _gbp_list_all_accounts_and_locations(access_token):
+        for loc in acct.get("locations") or []:
+            if loc.get("location_name") == location_name:
+                return acct.get("account_name")
+    return None
+
+
+def _resolve_location(access_token: str, requested: str = "") -> Optional[str]:
+    """Use the requested location if given, else fall back to the first one."""
+    return requested or _gbp_list_first_location_name(access_token)
+
+
+@gmb_bp.route("/audit", methods=["GET"], endpoint="audit")
+@login_required
+def audit():
+    """
+    Google Maps optimization audit: pulls the real location, reviews, and
+    photos via the GBP APIs and scores the profile with a prioritized fix list.
+    """
+    from .audit import (
+        get_location_details, fetch_reviews_summary, fetch_media_count,
+        build_audit, location_to_profile,
+    )
+
+    aid = current_account_id()
+    if not _is_connected(aid):
+        flash("Connect Google Business to run a Maps optimization audit.", "warning")
+        return redirect(url_for("gmb_bp.index"))
+
+    at = _gbp_access_token_for(aid)
+    if not at:
+        flash("Could not refresh your Google connection. Please reconnect.", "error")
+        return redirect(url_for("gmb_bp.index"))
+
+    location_name = _resolve_location(at, request.args.get("location", ""))
+    if not location_name:
+        flash("No locations found on this Google Business account.", "error")
+        return redirect(url_for("gmb_bp.index"))
+
+    location = get_location_details(at, location_name)
+    if not location:
+        flash("Could not load this location from Google. Try again shortly.", "error")
+        return redirect(url_for("gmb_bp.index"))
+
+    account_name = _find_account_for_location(at, location_name)
+    reviews = fetch_reviews_summary(at, account_name, location_name) if account_name else None
+    media_count = fetch_media_count(at, account_name, location_name) if account_name else None
+
+    result = build_audit(location, reviews=reviews, media_count=media_count)
+    profile = location_to_profile(location)
+
+    # Keep the profile form + AI optimizer in sync with real data
+    _set_session_profile(profile)
+
+    return render_template(
+        "gmb/audit.html",
+        connected=True,
+        audit=result,
+        profile=profile,
+        location_name=location_name,
+        location_title=location.get("title", ""),
+    )
+
+
 # --------- Insights pages ----------
 @gmb_bp.route("/insights", methods=["GET"], endpoint="insights")
 @login_required
 def insights():
     """
-    Show last saved insights (if any) and allow regeneration.
+    Show last saved insights. Auto-generates on first visit or when stale (>6 h).
     """
     aid = current_account_id()
     connected = _is_connected(aid)
     latest = _load_latest_insights(aid)
+
+    if connected:
+        stale = not latest or (
+            datetime.utcnow() - latest["generated_at"]
+        ).total_seconds() > 21600  # 6 hours
+        if stale:
+            try:
+                at = _gbp_access_token_for(aid)
+                if at:
+                    loc = _gbp_list_first_location_name(at)
+                    if loc:
+                        metrics = _gbp_fetch_performance(at, loc, days=28)
+                        summary = _gbp_metrics_to_prompt(metrics)
+                        html = _openai_insights_from_metrics(summary)
+                        _save_insights(aid, html)
+                        session["gmb_insights_html"] = html
+                        latest = {"generated_at": datetime.utcnow(), "html": html}
+            except Exception:
+                current_app.logger.exception("Auto-insights generation failed")
+
     session_html = session.get("gmb_insights_html")
     return render_template(
         "gmb/insights.html",
@@ -1095,7 +1267,9 @@ def insights_regenerate():
 
 
 # --------- Blueprint-level error handler ----------
-@gmb_bp.app_errorhandler(Exception)
+# NOTE: errorhandler (not app_errorhandler) — app_errorhandler hijacked every
+# unhandled exception in the whole app and redirected users to the GMB page.
+@gmb_bp.errorhandler(Exception)
 def _gmb_any_err(e: Exception):
     current_app.logger.exception("Unhandled error in GMB blueprint")
     wants_json = request.accept_mimetypes.get("application/json", 0) >= request.accept_mimetypes.get("text/html", 0)

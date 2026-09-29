@@ -1,0 +1,151 @@
+{# templates/gmb/audit.html #}
+{% extends "base_app.html" %}
+{% set SECTION = 'gmb' %}
+{% block title %}Google Maps Optimization Audit{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold">Google Maps Optimization</h1>
+      <p class="text-gray-500">
+        How complete and competitive your profile is on Google Maps
+        {% if location_title %}&mdash; <span class="font-medium text-gray-700">{{ location_title }}</span>{% endif %}
+      </p>
+    </div>
+    <a href="{{ url_for('gmb_bp.index', selected_location=location_name) }}"
+       class="rounded-md border px-3 py-2 text-gray-700 hover:bg-gray-50">Back to Google Business</a>
+  </div>
+
+  {# Score card #}
+  <div class="rounded-lg border bg-white p-6">
+    <div class="flex flex-col sm:flex-row items-center gap-6">
+      {% set score = audit.score %}
+      {% set ring = 'text-green-600' if score >= 80 else ('text-amber-500' if score >= 55 else 'text-red-500') %}
+      <div class="relative h-32 w-32 shrink-0">
+        <svg viewBox="0 0 36 36" class="h-32 w-32 -rotate-90">
+          <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" stroke-width="3.5"></circle>
+          <circle cx="18" cy="18" r="15.9" fill="none" stroke="currentColor" stroke-width="3.5"
+                  class="{{ ring }}" stroke-linecap="round"
+                  stroke-dasharray="{{ score }}, 100"></circle>
+        </svg>
+        <div class="absolute inset-0 flex items-center justify-center">
+          <span class="text-3xl font-bold {{ ring }}">{{ score }}</span>
+        </div>
+      </div>
+      <div class="flex-1 text-center sm:text-left">
+        <div class="text-lg font-semibold">
+          {% if score >= 80 %}Strong profile — keep it fresh
+          {% elif score >= 55 %}Good start — a few fixes will move the needle
+          {% else %}Your profile is holding you back on Maps{% endif %}
+        </div>
+        <p class="text-gray-500 mt-1 text-sm">
+          {{ audit.passed_count }} of {{ audit.checks|length }} checks passing.
+          Fixing the items below directly improves how often you show up in the
+          local pack and Google Maps searches.
+        </p>
+        <div class="mt-3 flex flex-wrap justify-center sm:justify-start gap-2">
+          <a href="{{ url_for('gmb_bp.optimize_profile', location=location_name) }}"
+             class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700 text-sm">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Fix with AI Optimizer
+          </a>
+          {% if audit.maps_uri %}
+          <a href="{{ audit.maps_uri }}" target="_blank" rel="noopener"
+             class="inline-flex items-center gap-2 rounded-md border px-4 py-2 hover:bg-gray-50 text-sm">
+            <i class="fa-solid fa-map-location-dot"></i> View on Google Maps
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Top priority actions #}
+  {% if audit.top_actions %}
+  <div class="rounded-lg border bg-white">
+    <div class="p-6 border-b">
+      <h2 class="text-lg font-medium">Do these first</h2>
+      <p class="text-sm text-gray-500 mt-1">Highest-impact fixes, in order</p>
+    </div>
+    <ol class="divide-y">
+      {% for c in audit.top_actions %}
+      <li class="p-5 flex gap-4">
+        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white text-sm font-semibold">{{ loop.index }}</span>
+        <div>
+          <div class="font-medium">{{ c.label }}</div>
+          <div class="text-sm text-gray-500 mt-0.5">{{ c.detail }}</div>
+          <div class="text-sm text-gray-700 mt-1.5">{{ c.action }}</div>
+        </div>
+      </li>
+      {% endfor %}
+    </ol>
+  </div>
+  {% endif %}
+
+  {# Unanswered reviews nudge #}
+  {% if audit.reviews and audit.reviews.recent_unreplied %}
+  <div class="rounded-lg border border-amber-200 bg-amber-50 p-5">
+    <div class="flex items-start gap-3">
+      <i class="fa-regular fa-comment-dots text-amber-600 mt-1"></i>
+      <div class="flex-1">
+        <div class="font-medium text-amber-900">
+          {{ audit.reviews.unreplied_count }} review{{ 's' if audit.reviews.unreplied_count != 1 }} waiting for a reply
+        </div>
+        <p class="text-sm text-amber-800 mt-1">
+          Google rewards profiles that respond. Draft replies in one click:
+        </p>
+        <a href="{{ url_for('gmb_bp.reviews') }}"
+           class="mt-2 inline-flex items-center gap-2 rounded-md bg-amber-600 px-3 py-1.5 text-white hover:bg-amber-700 text-sm">
+          <i class="fa-solid fa-robot"></i> Reply with AI
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Full checklist #}
+  <div class="rounded-lg border bg-white">
+    <div class="p-6 border-b">
+      <h2 class="text-lg font-medium">Full checklist</h2>
+    </div>
+    <ul class="divide-y">
+      {% for c in audit.checks %}
+      <li class="p-4 flex items-start gap-3">
+        {% if c.passed %}
+          <i class="fa-solid fa-circle-check text-green-600 mt-0.5"></i>
+        {% elif c.passed is none %}
+          <i class="fa-solid fa-circle-question text-gray-400 mt-0.5"></i>
+        {% else %}
+          <i class="fa-solid fa-circle-xmark text-red-500 mt-0.5"></i>
+        {% endif %}
+        <div class="flex-1">
+          <div class="flex items-center justify-between gap-3">
+            <span class="font-medium {{ 'text-gray-400' if c.passed is none }}">{{ c.label }}</span>
+            <span class="text-xs text-gray-400 whitespace-nowrap">{{ c.points }}/{{ c.max_points }} pts</span>
+          </div>
+          <div class="text-sm text-gray-500">{{ c.detail }}</div>
+          {% if not c.passed %}
+          <div class="text-sm text-gray-700 mt-1">{{ c.action }}</div>
+          {% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  {% if audit.new_review_uri %}
+  <div class="rounded-lg border bg-white p-5 flex items-center justify-between gap-4 flex-wrap">
+    <div>
+      <div class="font-medium">Your direct review link</div>
+      <p class="text-sm text-gray-500">Send this to happy customers — it opens the review box directly.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <input id="review-link" type="text" readonly value="{{ audit.new_review_uri }}"
+             class="w-72 max-w-full rounded-md border px-3 py-2 text-sm text-gray-600 bg-gray-50">
+      <button onclick="navigator.clipboard.writeText(document.getElementById('review-link').value); this.innerText='Copied!'"
+              class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Copy</button>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

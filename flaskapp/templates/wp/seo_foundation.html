@@ -1,0 +1,125 @@
+{% extends "base_app.html" %}
+{% block title %}SEO Foundation · {{ app_name }}{% endblock %}
+
+{% macro status_icon(status) %}
+  {% if status == 'pass' %}<i class="fa-solid fa-circle-check text-green-500"></i>
+  {% elif status == 'warn' %}<i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+  {% else %}<i class="fa-solid fa-circle-xmark text-red-500"></i>{% endif %}
+{% endmacro %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Is your site set up correctly for Google?</h1>
+      <p class="text-gray-500 text-sm mt-1">We check the basics every site needs — your sitemap, whether Google can crawl your pages, and your SEO plugin setup</p>
+    </div>
+    {% if score is not none %}
+    <div class="flex items-center gap-2">
+      <div class="relative w-14 h-14">
+        <svg viewBox="0 0 36 36" class="w-14 h-14 -rotate-90">
+          <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" stroke-width="3.5"/>
+          <circle cx="18" cy="18" r="15.9" fill="none"
+            stroke="{{ '#22c55e' if score >= 80 else ('#f59e0b' if score >= 50 else '#ef4444') }}"
+            stroke-width="3.5" stroke-dasharray="{{ score }}, 100" stroke-linecap="round"/>
+        </svg>
+        <span class="absolute inset-0 flex items-center justify-center text-sm font-bold
+          {% if score >= 80 %}text-green-700{% elif score >= 50 %}text-amber-600{% else %}text-red-600{% endif %}">
+          {{ score }}
+        </span>
+      </div>
+      <div>
+        <p class="text-sm font-semibold text-gray-800">Foundation Score</p>
+        <p class="text-xs text-gray-400">{{ 'Solid' if score >= 80 else ('Needs fixes' if score >= 50 else 'Critical issues') }}</p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+    <div class="rounded-xl px-4 py-3 text-sm border
+      {% if cat == 'error' %}bg-red-50 border-red-200 text-red-800{% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {% if not site %}
+  <div class="bg-white rounded-xl shadow-sm border p-12 text-center">
+    <i class="fa-brands fa-wordpress text-gray-300 text-5xl mb-4"></i>
+    <p class="text-gray-600 mb-4">Connect a WordPress site to run the foundation check.</p>
+    <a href="{{ url_for('wp_bp.settings') }}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">Connect WordPress</a>
+  </div>
+  {% else %}
+
+  <!-- Scan trigger -->
+  <div class="bg-white rounded-xl shadow-sm border p-5">
+    <form method="POST" action="{{ url_for('wp_bp.seo_foundation') }}" class="flex flex-wrap items-center gap-4">
+      <div>
+        <p class="font-medium text-gray-800">Check SEO foundation for <span class="text-indigo-600">{{ site.base_url }}</span></p>
+        <p class="text-sm text-gray-500 mt-0.5">10-point checklist: HTTPS, sitemap, robots.txt, indexing, SEO plugin, meta tags, schema, and more.</p>
+      </div>
+      <button type="submit" class="ml-auto px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">
+        <i class="fa-solid fa-check-double mr-1"></i>Run Check
+      </button>
+    </form>
+  </div>
+
+  {% if checks %}
+
+  <!-- Checklist -->
+  <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+    <div class="px-5 py-3 border-b bg-gray-50">
+      <h2 class="font-semibold text-gray-800">Foundation Check Results
+        <span class="text-xs font-normal text-gray-400 ml-2">{{ site_url_checked }}</span>
+      </h2>
+    </div>
+    <div class="divide-y">
+      {% for check in checks %}
+      <div class="px-5 py-4 flex items-start gap-4
+        {% if check.status == 'fail' %}bg-red-50{% elif check.status == 'warn' %}bg-amber-50{% endif %}">
+        <div class="text-lg mt-0.5 flex-shrink-0">{{ status_icon(check.status) }}</div>
+        <div class="flex-1">
+          <p class="font-medium text-gray-900">{{ check.label }}</p>
+          <p class="text-sm text-gray-600 mt-0.5">{{ check.detail }}</p>
+          {% if check.fix %}
+          <p class="text-xs text-indigo-700 mt-1.5 bg-indigo-50 rounded px-2 py-1 inline-block">
+            <i class="fa-solid fa-lightbulb mr-1"></i>{{ check.fix }}
+          </p>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Quick links to fix tools -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+    <a href="{{ url_for('wp_bp.schema_gen') }}"
+       class="bg-white rounded-xl border shadow-sm p-4 flex items-center gap-3 hover:border-indigo-300 hover:bg-indigo-50 transition">
+      <i class="fa-solid fa-code text-indigo-400 text-xl"></i>
+      <div><p class="font-medium text-gray-800">Schema Generator</p><p class="text-xs text-gray-400">Fix missing structured data</p></div>
+    </a>
+    <a href="{{ url_for('wp_bp.bulk_meta') }}"
+       class="bg-white rounded-xl border shadow-sm p-4 flex items-center gap-3 hover:border-indigo-300 hover:bg-indigo-50 transition">
+      <i class="fa-solid fa-tags text-indigo-400 text-xl"></i>
+      <div><p class="font-medium text-gray-800">Bulk Meta Editor</p><p class="text-xs text-gray-400">Fix title tags &amp; meta descriptions</p></div>
+    </a>
+    <a href="{{ url_for('seo_bp.local_seo') }}"
+       class="bg-white rounded-xl border shadow-sm p-4 flex items-center gap-3 hover:border-indigo-300 hover:bg-indigo-50 transition">
+      <i class="fa-solid fa-location-dot text-indigo-400 text-xl"></i>
+      <div><p class="font-medium text-gray-800">Local SEO Audit</p><p class="text-xs text-gray-400">Fix NAP &amp; LocalBusiness schema</p></div>
+    </a>
+  </div>
+
+  {% else %}
+  <div class="bg-white rounded-xl shadow-sm border p-12 text-center text-gray-400">
+    <i class="fa-solid fa-check-double text-5xl mb-4"></i>
+    <p class="text-gray-600">Click "Run Check" to audit your WordPress SEO fundamentals.</p>
+    <p class="text-xs mt-1 text-gray-400">Checks HTTPS, sitemap, robots.txt, indexing, SEO plugin, meta tags, canonicals, Open Graph, and schema.</p>
+  </div>
+  {% endif %}
+
+  {% endif %}
+</div>
+{% endblock %}

@@ -9,6 +9,7 @@ and delegate tactical work to specialist agents.
 from typing import Dict, List, Any
 from datetime import datetime, timedelta
 from .base import BaseAgent, AgentDecision, AgentCapability, DecisionRiskLevel
+from .fb_agent_executor import _fb_execute_action
 
 import logging
 logger = logging.getLogger(__name__)
@@ -268,10 +269,45 @@ class FBCampaignManagerAgent(BaseAgent):
         return decisions
 
     def _execute_impl(self, decision: AgentDecision, fb_ads_client: Any) -> Dict[str, Any]:
-        """Execute operational decisions."""
+        """Execute operational decisions via real API where possible."""
         decision_type = decision.decision_type
+        account_id = decision.account_id
 
-        # Most operational decisions are investigations or require manual action
+        if decision_type == 'fix_delivery_issue':
+            # Re-enable an ad set that has a delivery problem (status NOT_DELIVERING)
+            adset_id = decision.ad_group_id
+            if adset_id:
+                result = _fb_execute_action(
+                    account_id=account_id,
+                    entity_id=str(adset_id),
+                    entity_type='adset',
+                    action='enable',
+                )
+                return {
+                    **result,
+                    'decision_type': decision_type,
+                    'adset_id': adset_id,
+                }
+            return {'success': False, 'error': 'Missing adset_id', 'decision_type': decision_type}
+
+        if decision_type == 'fix_learning_limited':
+            # Increase budget slightly to help ad set exit learning-limited status
+            adset_id = decision.ad_group_id
+            if adset_id and decision.action_data.get('conversions_needed'):
+                # Bump budget by 30% as a heuristic — caller can override
+                # We don't have the current budget here so we skip the API call and
+                # surface a manual-work note instead of breaking with bad data.
+                pass
+            # Fall through to investigation-style response for this one
+            return {
+                'success': True,
+                'decision_type': decision_type,
+                'action_taken': 'recommendation_generated',
+                'steps': decision.action_data.get('options', []),
+                'note': 'Budget increase requires current budget value — apply via Ads Manager',
+            }
+
+        # Purely investigation / monitoring decisions — non-mutating is correct
         return {
             'success': True,
             'decision_type': decision_type,
@@ -515,10 +551,32 @@ class FBBudgetGuardianAgent(BaseAgent):
         return decisions
 
     def _execute_impl(self, decision: AgentDecision, fb_ads_client: Any) -> Dict[str, Any]:
-        """Execute budget protection decisions."""
+        """Execute budget protection decisions via real API where possible."""
         decision_type = decision.decision_type
+        account_id = decision.account_id
 
-        # Most budget decisions require approval or investigation
+        if decision_type == 'adjust_pacing':
+            # Reduce the campaign's daily budget to correct lifetime overpacing
+            campaign_id = decision.campaign_id
+            needed_pace = decision.action_data.get('needed_pace')
+            if campaign_id and needed_pace is not None:
+                result = _fb_execute_action(
+                    account_id=account_id,
+                    entity_id=str(campaign_id),
+                    entity_type='campaign',
+                    action='adjust_budget',
+                    params={'daily_budget': float(needed_pace)},
+                )
+                return {
+                    **result,
+                    'decision_type': decision_type,
+                    'campaign_id': campaign_id,
+                    'new_daily_budget': needed_pace,
+                }
+            return {'success': False, 'error': 'Missing campaign_id or needed_pace', 'decision_type': decision_type}
+
+        # High-risk decisions (account_limit_warning, review_cost_cap, investigate_spend_anomaly)
+        # require approval or investigation — non-mutating is correct
         return {
             'success': True,
             'decision_type': decision_type,

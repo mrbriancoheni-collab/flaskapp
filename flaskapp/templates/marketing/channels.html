@@ -1,0 +1,208 @@
+{% extends "base_app.html" %}
+{% set active_nav = 'channels' %}
+{% block title %}Marketing Channels — FieldSprout{% endblock %}
+
+{% block content %}
+{% include "marketing/_nav.html" %}
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 space-y-6">
+
+  <div class="flex items-center justify-between flex-wrap gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Marketing Channels</h1>
+      <p class="text-sm text-gray-500 mt-0.5">All lead sources — digital and offline</p>
+    </div>
+    <button onclick="document.getElementById('add-channel-modal').classList.remove('hidden')"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
+      <i class="fa-solid fa-plus"></i> New Channel
+    </button>
+  </div>
+
+  {# Flash messages #}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+  <div class="rounded-lg p-3 text-sm {% if cat == 'error' %}bg-red-50 text-red-700 border border-red-200{% else %}bg-green-50 text-green-700 border border-green-200{% endif %}">
+    {{ msg }}
+  </div>
+  {% endfor %}
+  {% endwith %}
+
+  {# Channel list #}
+  {% if channel_list %}
+  <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-100">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Channel</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Type</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Monthly Budget</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Tracking #</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Vendor</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for ch in channel_list %}
+          {% set linfo = channel_type_labels.get(ch.channel_type, ('Other', 'fa-solid fa-circle', 'gray')) %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-5 py-3">
+              <div class="flex items-center gap-2">
+                <i class="{{ linfo[1] }} text-{{ linfo[2] }}-500 w-4"></i>
+                <span class="font-medium text-gray-900 text-sm">{{ ch.name }}</span>
+              </div>
+              {% if ch.notes %}<p class="text-xs text-gray-400 ml-6 mt-0.5 truncate max-w-xs">{{ ch.notes }}</p>{% endif %}
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-600">{{ linfo[0] }}</td>
+            <td class="px-4 py-3 text-right text-sm text-gray-700">
+              {% if ch.monthly_budget_cents %}${{ "{:,.0f}".format(ch.monthly_budget_cents / 100) }}{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-600">{{ ch.tracking_phone or '—' }}</td>
+            <td class="px-4 py-3 text-sm text-gray-600">{{ ch.vendor_name or '—' }}</td>
+            <td class="px-4 py-3">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+                           {% if ch.is_active %}bg-green-100 text-green-700{% else %}bg-gray-100 text-gray-500{% endif %}">
+                {% if ch.is_active %}Active{% else %}Paused{% endif %}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-right">
+              <div class="flex items-center justify-end gap-2">
+                <button onclick="openEditModal({{ ch.id }}, {{ ch|tojson|replace("'", "&#39;") }})"
+                        class="text-xs text-indigo-600 hover:underline">Edit</button>
+                <form method="post" action="/account/marketing/channels/{{ ch.id }}/spend" class="inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="button" onclick="openSpendModal({{ ch.id }}, '{{ ch.name|e }}')"
+                          class="text-xs text-gray-500 hover:text-gray-700">Log Spend</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="bg-white rounded-xl border border-gray-200 py-16 text-center">
+    <i class="fa-solid fa-layer-group text-gray-200 text-5xl mb-4"></i>
+    <p class="text-gray-500 font-medium">No channels yet</p>
+    <p class="text-sm text-gray-400 mt-1">Add every lead source — Google Ads, billboards, Angi, direct mail, etc.</p>
+  </div>
+  {% endif %}
+
+</div>
+
+{# ── Add Channel Modal ── #}
+<div id="add-channel-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+      <h3 class="font-semibold text-gray-900">New Marketing Channel</h3>
+      <button onclick="document.getElementById('add-channel-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+        <i class="fa-solid fa-xmark text-xl"></i>
+      </button>
+    </div>
+    <form method="post" action="/account/marketing/channels" class="px-6 py-5 space-y-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Channel Name</label>
+        <input name="name" required placeholder="e.g. Q4 Billboard I-35" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Channel Type</label>
+        <select name="channel_type" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          {% for ct in channel_types %}
+          {% set linfo = channel_type_labels.get(ct, (ct, '', '')) %}
+          <option value="{{ ct }}">{{ linfo[0] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Monthly Budget ($)</label>
+          <input name="monthly_budget" type="number" step="1" min="0" placeholder="0" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Tracking Phone</label>
+          <input name="tracking_phone" placeholder="+15125550100" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Vendor Name</label>
+          <input name="vendor_name" placeholder="Lamar Outdoor" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Promo Code</label>
+          <input name="promo_code" placeholder="SPRING25" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+        <textarea name="notes" rows="2" placeholder="Contract details, creative specs, etc." class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+      </div>
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" onclick="document.getElementById('add-channel-modal').classList.add('hidden')"
+                class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancel</button>
+        <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
+          Create Channel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Log Spend Modal ── #}
+<div id="spend-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md">
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+      <h3 class="font-semibold text-gray-900">Log Spend — <span id="spend-modal-channel-name"></span></h3>
+      <button onclick="document.getElementById('spend-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+        <i class="fa-solid fa-xmark text-xl"></i>
+      </button>
+    </div>
+    <form method="post" id="spend-form" action="" class="px-6 py-5 space-y-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Year</label>
+          <input name="year" type="number" placeholder="2026" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Month</label>
+          <input name="month" type="number" min="1" max="12" placeholder="5" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Amount Spent ($)</label>
+        <input name="amount" type="number" step="0.01" min="0" required placeholder="0.00" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Leads Generated</label>
+        <input name="leads" type="number" min="0" placeholder="0" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Jobs Booked</label>
+        <input name="booked" type="number" min="0" placeholder="0" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </div>
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" onclick="document.getElementById('spend-modal').classList.add('hidden')"
+                class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancel</button>
+        <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openSpendModal(channelId, channelName) {
+  document.getElementById('spend-modal-channel-name').textContent = channelName;
+  document.getElementById('spend-form').action = '/account/marketing/channels/' + channelId + '/spend';
+  document.getElementById('spend-modal').classList.remove('hidden');
+}
+function openEditModal(id, ch) {
+  // Navigate to a simple edit page for now
+  window.location.href = '/account/marketing/channels/' + id + '/edit';
+}
+</script>
+{% endblock %}

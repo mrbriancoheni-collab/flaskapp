@@ -1,5 +1,6 @@
 # app/public/__init__.py (or wherever your public routes live)
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, abort, redirect, url_for
+from jinja2.exceptions import TemplateNotFound
 
 public_bp = Blueprint(
     "public_bp",
@@ -137,3 +138,108 @@ def industry_sub(trade, channel):
         return render_template(f"industries/{trade}-{channel}.html")
     except Exception:
         abort(404)
+
+
+_INDUSTRY_TEMPLATE_OVERRIDES = {
+    'electricians-google-ads':        'industries/electrical-google-ads.html',
+    'electricians-local-service-ads': 'industries/electrical-local-service-ads.html',
+    'electricians-meta-ads':          'industries/electrical-meta-ads.html',
+    'electricians-website-cro':       'industries/electrical-website-cro.html',
+    'pool-service-google-ads':        'industries/pools-google-ads.html',
+    'pool-service-local-service-ads': 'industries/pools-local-service-ads.html',
+    'pool-service-meta-ads':          'industries/pools-meta-ads.html',
+    'pool-service-website-cro':       'industries/pools-website-cro.html',
+}
+
+
+@public_bp.route("/industries/<slug>", endpoint="industry_subpage")
+def industry_subpage(slug):
+    template = _INDUSTRY_TEMPLATE_OVERRIDES.get(slug, f'industries/{slug}.html')
+    try:
+        return render_template(template)
+    except TemplateNotFound:
+        abort(404)
+
+
+@public_bp.route("/sitemap.html", endpoint="sitemap")
+def sitemap():
+    return render_template("public/sitemap.html")
+
+
+@public_bp.route("/lifetime/<tier>", endpoint="lifetime_deal")
+def lifetime_deal(tier):
+    if tier not in ("499", "999"):
+        from flask import abort
+        abort(404)
+    return render_template("public/lifetime_deal.html", tier=tier)
+
+
+# Public Maps audit funnel (registers /maps-audit on this blueprint)
+from app.public import maps_audit  # noqa: E402,F401
+# Public LSA lead-cost estimator (registers /lsa-estimator on this blueprint)
+from app.public import lsa_estimator  # noqa: E402,F401
+
+
+# ---------------------------------------------------------------------------
+# 301 redirects for legacy / wrong-path URLs that show up as 404s in Search
+# Console. Each points at the canonical page so link equity isn't lost.
+# ---------------------------------------------------------------------------
+_LEGACY_REDIRECTS = {
+    "/lower-ad-cost":   "public_bp.lower_ad_cost",     # -> /solutions/lower-ad-cost
+    "/demo":            "public_bp.product_ads_demo",  # -> /products/ads-demo
+    "/connect/google":  "public_bp.product_google_ads",# -> /products/ads
+    "/industries":      "main_bp.home",                # no hub page -> homepage
+}
+
+
+def _make_legacy_redirect(target_endpoint):
+    def _redir():
+        return redirect(url_for(target_endpoint), code=301)
+    return _redir
+
+
+for _path, _endpoint in _LEGACY_REDIRECTS.items():
+    public_bp.add_url_rule(
+        _path,
+        endpoint=f"legacy_redirect_{_path.strip('/').replace('/', '_')}",
+        view_func=_make_legacy_redirect(_endpoint),
+    )
+
+
+@public_bp.route("/lsa-report/<share_token>", endpoint="lsa_shared_report")
+def lsa_shared_report(share_token: str):
+    """Public, no-login view of a shared LSA history archive."""
+    from app.services.lsa_archive_service import get_archive
+    archive = get_archive(share_token=share_token)
+    if not archive:
+        abort(404)
+    return render_template(
+        "glsa/archive_report.html",
+        archive=archive,
+        snapshot=archive.get("snapshot") or {},
+        public=True,
+        share_token=share_token,
+    )
+
+
+@public_bp.route("/nps/<token>", endpoint="nps_respond")
+def nps_respond(token: str):
+    """Public NPS survey response endpoint — no login required."""
+    from flask import request, make_response
+    try:
+        score = int(request.args.get("score", 0))
+    except (ValueError, TypeError):
+        score = 0
+
+    if score < 1 or score > 10:
+        from flask import abort
+        abort(400)
+
+    try:
+        from app.services.nps_service import record_nps_response, build_response_page
+        survey = record_nps_response(token, score)
+        html = build_response_page(survey, score)
+    except Exception:
+        html = "<p>Thank you for your feedback!</p>"
+
+    return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})

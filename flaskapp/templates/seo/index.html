@@ -1,9 +1,207 @@
 {% extends "base_app.html" %}
-{% block title %}SEO{% endblock %}
+{% block title %}How your site is doing on Google · {{ app_name }}{% endblock %}
+
 {% block content %}
-<h1 class="text-2xl font-semibold mb-4">SEO</h1>
-<p class="text-gray-600">Track rankings from Google Search Console.</p>
-<div class="mt-3">
-  <a href="{{ url_for('seo_bp.rankings') }}" class="px-3 py-2 border rounded">GSC Rankings</a>
+<div class="space-y-6">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">How your site is doing on Google</h1>
+      <p class="text-sm text-gray-500 mt-1">A simple look at where your pages show up on Google, how fast your site loads, and what to fix next.</p>
+      {% if site_url %}
+        <p class="text-sm text-gray-500 mt-0.5">{{ site_url }}</p>
+      {% endif %}
+    </div>
+    {% if not gsc_connected %}
+    <a href="{{ url_for('google_bp.index') }}"
+       class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-700 transition flex items-center gap-2">
+      <i class="fa-brands fa-google"></i> Connect Google Search Console
+    </a>
+    {% endif %}
+  </div>
+
+  {% if error %}
+  <div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-700">
+    <i class="fa-solid fa-triangle-exclamation mr-2"></i>{{ error }}
+  </div>
+  {% endif %}
+
+  {% if not gsc_connected %}
+  <!-- Not connected state -->
+  <div class="rounded-xl border bg-white p-10 text-center">
+    <i class="fa-brands fa-google text-5xl text-gray-200 mb-4"></i>
+    <h2 class="text-lg font-semibold text-gray-700 mb-2">Connect Google Search Console</h2>
+    <p class="text-sm text-gray-500 max-w-md mx-auto mb-6">
+      Link your Google Search Console account to see where your pages show up on Google, how many people clicked, and which topics you should write about but haven't.
+    </p>
+    <a href="{{ url_for('google_bp.index') }}"
+       class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition font-medium">
+      <i class="fa-brands fa-google"></i> Connect Now
+    </a>
+  </div>
+
+  {% else %}
+
+  <!-- GSC KPI tiles -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    {% set kpis = [
+      (summary.get('clicks', 0) | int,      'Clicks',       'fa-arrow-pointer',   'text-indigo-600'),
+      (summary.get('impressions', 0) | int,  'Impressions',  'fa-eye',             'text-purple-600'),
+      ((summary.get('avg_ctr', 0) * 100) | round(1),  'Avg CTR %',   'fa-percent',         'text-green-600'),
+      (summary.get('avg_position', 0) | round(1),     'Average spot on Google','fa-ranking-star',    'text-amber-600'),
+    ] %}
+    {% for value, label, icon, color in kpis %}
+    <div class="rounded-xl border bg-white p-5 flex flex-col items-center gap-1">
+      <i class="fa-solid {{ icon }} text-2xl {{ color }}"></i>
+      <div class="text-3xl font-bold text-gray-900">
+        {% if value == value | int %}{{ '{:,}'.format(value | int) }}{% else %}{{ value }}{% endif %}
+      </div>
+      <div class="text-xs text-gray-500">{{ label }} (28d)</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Two-column: top queries + health -->
+  <div class="grid md:grid-cols-2 gap-6">
+
+    <!-- Top queries -->
+    <div class="rounded-xl border bg-white p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-semibold text-gray-800">What people searched to find you (last 28 days)</h2>
+        <a href="{{ url_for('seo_bp.rankings') }}" class="text-xs text-indigo-600 hover:underline">View all →</a>
+      </div>
+      {% if top_queries %}
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-xs text-gray-400 border-b">
+            <th class="pb-2">Query</th>
+            <th class="pb-2 text-right">Clicks</th>
+            <th class="pb-2 text-right">Pos</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for q in top_queries %}
+          <tr>
+            <td class="py-2 text-gray-700 truncate max-w-[180px]">{{ q.get('query', '') }}</td>
+            <td class="py-2 text-right text-gray-600">{{ q.get('clicks', 0) }}</td>
+            <td class="py-2 text-right font-medium
+              {% set pos = q.get('position', 99) %}
+              {% if pos <= 3 %}text-green-600{% elif pos <= 10 %}text-amber-600{% else %}text-red-500{% endif %}">
+              {{ pos | round(1) }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="text-sm text-gray-400 py-4 text-center">No query data yet — data may take 2–3 days to appear after connecting.</p>
+      {% endif %}
+    </div>
+
+    <!-- Health & alerts -->
+    <div class="space-y-4">
+
+      <!-- Site health score -->
+      {% if latest_snapshot %}
+      <div class="rounded-xl border bg-white p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-semibold text-gray-800">Site Health</h2>
+          <a href="{{ url_for('seo_bp.monitor') }}" class="text-xs text-indigo-600 hover:underline">Track how your site is doing →</a>
+        </div>
+        <div class="flex items-center gap-5">
+          {% set score = latest_snapshot.health_score %}
+          <div class="relative w-16 h-16 shrink-0">
+            {% set dash = 2 * 3.14159 * 28 %}
+            {% set offset = dash * (1 - score / 100) %}
+            <svg viewBox="0 0 64 64" class="w-16 h-16 -rotate-90">
+              <circle cx="32" cy="32" r="28" fill="none" stroke="#e5e7eb" stroke-width="7"/>
+              <circle cx="32" cy="32" r="28" fill="none" stroke-width="7"
+                stroke="{{ '#22c55e' if score >= 80 else ('#f59e0b' if score >= 50 else '#ef4444') }}"
+                stroke-dasharray="{{ dash }}" stroke-dashoffset="{{ offset }}" stroke-linecap="round"/>
+            </svg>
+            <span class="absolute inset-0 flex items-center justify-center text-base font-bold rotate-90 {{ 'text-green-600' if score >= 80 else ('text-amber-600' if score >= 50 else 'text-red-600') }}">{{ score }}</span>
+          </div>
+          <div class="text-sm space-y-1">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid {% if latest_snapshot.sitemap_ok %}fa-check text-green-500{% else %}fa-xmark text-red-500{% endif %} w-4"></i>
+              <span class="text-gray-600">Sitemap</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <i class="fa-solid {% if latest_snapshot.robots_ok %}fa-check text-green-500{% else %}fa-xmark text-red-500{% endif %} w-4"></i>
+              <span class="text-gray-600">Robots.txt</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <i class="fa-solid {% if latest_snapshot.homepage_status == 200 %}fa-check text-green-500{% else %}fa-xmark text-red-500{% endif %} w-4"></i>
+              <span class="text-gray-600">Homepage ({{ latest_snapshot.homepage_status }})</span>
+            </div>
+          </div>
+        </div>
+        <p class="text-xs text-gray-400 mt-3">Last checked {{ latest_snapshot.created_at.strftime('%b %d, %H:%M') }}</p>
+      </div>
+      {% else %}
+      <div class="rounded-xl border bg-white p-5">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="font-semibold text-gray-800">Site Health</h2>
+          <a href="{{ url_for('seo_bp.monitor') }}" class="text-xs text-indigo-600 hover:underline">Run check →</a>
+        </div>
+        <p class="text-sm text-gray-400">No health check run yet. Visit Monitor to start tracking.</p>
+      </div>
+      {% endif %}
+
+      <!-- Unread alerts -->
+      <div class="rounded-xl border p-5
+        {% if unread_alerts %}bg-amber-50 border-amber-200{% else %}bg-white{% endif %}">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-bell {% if unread_alerts %}text-amber-500{% else %}text-gray-300{% endif %}"></i>
+            <h2 class="font-semibold text-gray-800">Alerts</h2>
+            {% if unread_alerts %}
+            <span class="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">{{ unread_alerts }} unread</span>
+            {% endif %}
+          </div>
+          <a href="{{ url_for('seo_bp.monitor') }}" class="text-xs text-indigo-600 hover:underline">View all →</a>
+        </div>
+        {% if not unread_alerts %}
+        <p class="text-sm text-gray-400 mt-2">No unread alerts. Your site looks healthy.</p>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+
+  {% endif %}{# gsc_connected #}
+
+  <!-- Tool cards (always visible) -->
+  <div>
+    <h2 class="font-semibold text-gray-700 mb-3">Tools to help you get found on Google</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {% set tools = [
+        ('seo_bp.rankings',   'fa-chart-line',             'indigo', 'Where you show up on Google',         'See which spot your pages take when people search.'),
+        ('seo_bp.gaps',       'fa-layer-group',            'purple', 'Topics you should write about',     'Quick wins, topics you should write about but haven\'t, and pages competing with each other.'),
+        ('seo_bp.monitor',    'fa-bell',                   'amber',  'Track how your site is doing', 'Automatic checks and alerts when something changes.'),
+        ('wp_bp.seo_audit',   'fa-magnifying-glass-chart', 'blue',   'Page check + AI tool readiness',  'Score each page on how Google reads it and how well AI tools (ChatGPT, Google AI) understand it.'),
+        ('wp_bp.tech_seo',    'fa-spider',                 'gray',   'Behind-the-scenes site check',    'Can Google read your site, how fast it loads, and is it secure.'),
+        ('wp_bp.schema_gen',  'fa-code',                   'green',  'Add hidden tags for Google', 'Build the special tags Google uses to better understand your pages.'),
+        ('seo_bp.optimize',   'fa-wand-magic-sparkles',    'rose',   'AI suggestions','Suggestions based on your real Google data.'),
+      ] %}
+      {% for endpoint, icon, color, title, desc in tools %}
+      {% if has_endpoint(endpoint) %}
+      <a href="{{ url_for(endpoint) }}"
+         class="rounded-xl border bg-white p-5 hover:shadow-sm hover:border-indigo-300 transition group">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center
+            bg-{{ color }}-100 text-{{ color }}-600 group-hover:bg-{{ color }}-200 transition">
+            <i class="fa-solid {{ icon }}"></i>
+          </div>
+          <span class="font-semibold text-gray-900">{{ title }}</span>
+        </div>
+        <p class="text-xs text-gray-500">{{ desc }}</p>
+      </a>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
 </div>
 {% endblock %}

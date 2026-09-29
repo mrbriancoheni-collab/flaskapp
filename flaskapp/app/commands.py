@@ -1099,6 +1099,88 @@ def cleanup_email_contacts_command(days, dry_run):
     click.echo(f"{'='*70}\n")
 
 
+@click.command('purge-blocked-domain-contacts')
+@click.option('--dry-run', is_flag=True,
+              help='Show what would change without writing to the database')
+@with_appcontext
+def purge_blocked_domain_contacts_command(dry_run):
+    """
+    Null out emails and mark as invalid any LeadContact whose address
+    belongs to a non-commercial domain (.edu, .gov, .mil, .k12.*).
+
+    These addresses consistently bounce or get blocked by Brevo, wasting
+    the daily send quota and harming sender reputation.
+
+    The contact record itself is kept (name/title may still be useful),
+    but the email field is cleared so the contact never enters the
+    outreach queue again.
+
+    Examples:
+        flask purge-blocked-domain-contacts --dry-run   # Preview first
+        flask purge-blocked-domain-contacts             # Apply changes
+    """
+    from app import db
+    from app.models_leads import LeadContact, LeadContactEmail
+
+    BLOCKED_TLDS = {'.edu', '.gov', '.mil', '.k12'}
+
+    def is_blocked(email: str) -> bool:
+        if not email or '@' not in email:
+            return False
+        domain = email.split('@')[-1].lower()
+        return any(domain == tld.lstrip('.') or domain.endswith(tld)
+                   for tld in BLOCKED_TLDS)
+
+    mode = "DRY RUN" if dry_run else "LIVE"
+    click.echo(f"\n{'='*70}")
+    click.echo(f"PURGE BLOCKED-DOMAIN CONTACTS  [{mode}]")
+    click.echo(f"Blocked TLDs: {', '.join(sorted(BLOCKED_TLDS))}")
+    click.echo(f"{'='*70}\n")
+
+    # Find affected contacts
+    all_with_email = LeadContact.query.filter(
+        LeadContact.email.isnot(None),
+        LeadContact.email != '',
+    ).all()
+
+    blocked_contacts = [c for c in all_with_email if is_blocked(c.email)]
+
+    if not blocked_contacts:
+        click.echo("No contacts with blocked-domain emails found. Nothing to do.\n")
+        return
+
+    # Tally domain breakdown
+    from collections import Counter
+    domain_counts = Counter(c.email.split('@')[-1].lower() for c in blocked_contacts)
+    click.echo(f"Contacts with blocked-domain emails: {len(blocked_contacts)}")
+    click.echo("Breakdown by domain:")
+    for domain, count in domain_counts.most_common():
+        click.echo(f"  {domain}: {count}")
+
+    # Count associated email records
+    blocked_ids = [c.id for c in blocked_contacts]
+    affected_email_records = LeadContactEmail.query.filter(
+        LeadContactEmail.contact_id.in_(blocked_ids)
+    ).count()
+    click.echo(f"\nAssociated LeadContactEmail records: {affected_email_records}")
+
+    if dry_run:
+        click.echo("\nDry run — no changes written.")
+        click.echo(f"{'='*70}\n")
+        return
+
+    # Apply changes
+    for contact in blocked_contacts:
+        contact.email = None
+        contact.email_status = 'invalid'
+
+    db.session.commit()
+
+    click.echo(f"\nCleared email from {len(blocked_contacts)} contact(s) and marked as invalid.")
+    click.echo(f"({affected_email_records} associated send record(s) left in place for audit history.)")
+    click.echo(f"{'='*70}\n")
+
+
 @click.command('dedup-decisions')
 @click.option('--dry-run', is_flag=True, help='Show what would be deleted without writing')
 @with_appcontext
@@ -1158,6 +1240,7 @@ def register_commands(app):
     app.cli.add_command(run_all_ai_command)
     app.cli.add_command(train_ml_command)
     app.cli.add_command(cleanup_email_contacts_command)
+    app.cli.add_command(purge_blocked_domain_contacts_command)
     app.cli.add_command(dedup_decisions_command)
     # Note: seed_ai_actions_command intentionally not registered by default
     # It's a development-only tool that should not be used on real accounts

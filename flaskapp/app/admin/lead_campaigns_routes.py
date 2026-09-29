@@ -130,12 +130,11 @@ def automation_status():
     service = LeadAutomationService()
     progress = service.get_progress_report()
 
-    # Get today's stats
     today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # Today's activity
     today_scraped = Lead.query.filter(Lead.created_at >= today_start).count()
     today_enriched = Lead.query.filter(Lead.enriched_at >= today_start).count()
-
-    # Count emails from both tables
     today_legacy_emails = db.session.query(func.count(LeadEmail.id)).filter(
         LeadEmail.sent_at >= today_start
     ).scalar() or 0
@@ -144,23 +143,114 @@ def automation_status():
     ).scalar() or 0
     today_emails = today_legacy_emails + today_contact_emails
 
-    # Check if automation is enabled
-    state_file = os.getenv('AUTOMATION_STATE_FILE', 'automation_state.json')
-    automation_enabled = os.path.exists(state_file)
-    last_run = None
+    # Pipeline totals
+    total_leads = Lead.query.count()
+    total_campaigns = LeadCampaign.query.count()
+    leads_pending_enrichment = Lead.query.filter_by(enrichment_status='pending').count()
+    leads_enriched = Lead.query.filter_by(enrichment_status='completed').count()
 
-    if automation_enabled and os.path.exists(state_file):
-        with open(state_file, 'r') as f:
-            state = json.load(f)
-            last_run = state.get('last_run_date')
+    # Email pipeline
+    contacts_pending = LeadContact.query.filter(
+        LeadContact.email_status == 'pending',
+        LeadContact.email.isnot(None),
+        LeadContact.email != ''
+    ).count()
+    contacts_sent = LeadContact.query.filter(LeadContact.email_status == 'sent').count()
+    legacy_pending = Lead.query.filter(
+        Lead.email_status == 'pending',
+        Lead.enrichment_status == 'completed',
+        Lead.decision_maker_email.isnot(None)
+    ).outerjoin(LeadContact, LeadContact.lead_id == Lead.id).filter(
+        LeadContact.id.is_(None)
+    ).count()
+    total_emails_sent = (
+        db.session.query(func.count(LeadEmail.id)).filter(LeadEmail.status == 'sent').scalar() or 0
+    ) + (
+        db.session.query(func.count(LeadContactEmail.id)).filter(LeadContactEmail.status == 'sent').scalar() or 0
+    )
+
+    # Recent emails (last 5)
+    recent_emails = (
+        LeadContactEmail.query
+        .filter(LeadContactEmail.sent_at.isnot(None))
+        .order_by(LeadContactEmail.sent_at.desc())
+        .limit(5).all()
+    )
+
+    # State file
+    state_file = os.getenv('AUTOMATION_STATE_FILE', 'automation_state.json')
+    last_run = None
+    if os.path.exists(state_file):
+        try:
+            with open(state_file, 'r') as f:
+                state = json.load(f)
+                last_run = state.get('last_run')
+        except Exception:
+            pass
 
     return render_template('admin/lead_campaigns/automation_status.html',
                          progress=progress,
                          today_scraped=today_scraped,
                          today_enriched=today_enriched,
                          today_emails=today_emails,
-                         automation_enabled=automation_enabled,
+                         total_leads=total_leads,
+                         total_campaigns=total_campaigns,
+                         leads_pending_enrichment=leads_pending_enrichment,
+                         leads_enriched=leads_enriched,
+                         contacts_pending=contacts_pending,
+                         contacts_sent=contacts_sent,
+                         legacy_pending=legacy_pending,
+                         total_emails_sent=total_emails_sent,
+                         recent_emails=recent_emails,
                          last_run=last_run)
+
+
+@lead_campaigns_bp.route('/run-scraping', methods=['POST'])
+@require_admin
+def run_scraping_now():
+    """Trigger lead scraping immediately."""
+    from app.services.lead_automation_service import LeadAutomationService
+    from flask import current_app
+    try:
+        service = LeadAutomationService()
+        result = service.run_scraping()
+        flash(f"Scraping complete: {result.get('scraped', 0)} campaigns scraped.", 'success')
+    except Exception as e:
+        current_app.logger.exception("Manual scraping failed")
+        flash(f"Scraping failed: {e}", 'error')
+    return redirect(url_for('lead_campaigns_bp.automation_status'))
+
+
+@lead_campaigns_bp.route('/run-enrichment', methods=['POST'])
+@require_admin
+def run_enrichment_now():
+    """Trigger lead enrichment immediately."""
+    from app.services.lead_automation_service import LeadAutomationService
+    from flask import current_app
+    try:
+        service = LeadAutomationService()
+        result = service.run_enrichment()
+        flash(f"Enrichment complete: {result.get('enriched', 0)} leads enriched.", 'success')
+    except Exception as e:
+        current_app.logger.exception("Manual enrichment failed")
+        flash(f"Enrichment failed: {e}", 'error')
+    return redirect(url_for('lead_campaigns_bp.automation_status'))
+
+
+@lead_campaigns_bp.route('/run-emails', methods=['POST'])
+@require_admin
+def run_emails_now():
+    """Trigger email outreach immediately."""
+    from app.services.lead_automation_service import LeadAutomationService
+    from flask import current_app
+    try:
+        service = LeadAutomationService()
+        result = service.run_email_outreach()
+        flash(f"Email run complete: {result.get('sent', 0)} emails sent.", 'success')
+    except Exception as e:
+        current_app.logger.exception("Manual email run failed")
+        flash(f"Email run failed: {e}", 'error')
+    return redirect(url_for('lead_campaigns_bp.automation_status'))
 
 
 @lead_campaigns_bp.route('/activity')
@@ -1019,6 +1109,7 @@ def reset_email_sending(campaign_id: int):
 
     # Delete LeadContactEmail tracking records
     contact_emails_deleted = 0
+    legacy_emails_deleted = 0
     if lead_ids:
         contact_ids = [
             c.id for c in LeadContact.query.filter(LeadContact.lead_id.in_(lead_ids)).with_entities(LeadContact.id)
@@ -1027,6 +1118,11 @@ def reset_email_sending(campaign_id: int):
             contact_emails_deleted = LeadContactEmail.query.filter(
                 LeadContactEmail.contact_id.in_(contact_ids)
             ).delete(synchronize_session='fetch')
+
+        # Also delete legacy LeadEmail records — these block the global dedup check even after reset
+        legacy_emails_deleted = LeadEmail.query.filter(
+            LeadEmail.lead_id.in_(lead_ids)
+        ).delete(synchronize_session='fetch')
 
         # Reset LeadContact email_status
         LeadContact.query.filter(LeadContact.lead_id.in_(lead_ids)).update(
@@ -1048,7 +1144,7 @@ def reset_email_sending(campaign_id: int):
     contacts_reset = LeadContact.query.filter(LeadContact.lead_id.in_(lead_ids)).count() if lead_ids else 0
     flash(
         f'Reset email sending for "{campaign.name}": '
-        f'{contacts_reset} contacts → pending, {contact_emails_deleted} send records removed.',
+        f'{contacts_reset} contacts → pending, {contact_emails_deleted} send records + {legacy_emails_deleted} legacy records removed.',
         'success'
     )
     return redirect(url_for('lead_campaigns_bp.view_campaign', campaign_id=campaign_id))
@@ -2170,6 +2266,88 @@ def bulk_send_emails_all():
     return send_daily()
 
 
+# ==================== Bounce Sync ====================
+
+@lead_campaigns_bp.route('/sync-bounces', methods=['POST'])
+@require_admin
+def sync_bounces():
+    """Pull hard bounces and spam complaints from Brevo and auto-suppress them.
+
+    Adds each bounced/complained-about address to the EmailUnsubscribe table so
+    future sends are blocked, and marks the corresponding LeadContactEmail records
+    as 'bounced'. Call this periodically (or via a scheduled task) to keep the
+    suppression list current without needing inbound webhooks.
+    """
+    try:
+        from app.services.brevo_outreach import BrevoOutreachService
+        brevo = BrevoOutreachService()
+
+        # Fetch hard bounces and spam complaints for the last 30 days
+        hard_bounced = set(brevo.get_all_events_by_type('hardBounces', days=30))
+        spam_reported = set(brevo.get_all_events_by_type('spam', days=30))
+        all_suppressed = hard_bounced | spam_reported
+
+        new_suppressions = 0
+        updated_records = 0
+
+        for email in all_suppressed:
+            email = email.lower().strip()
+            if not email:
+                continue
+
+            # Add to global unsubscribe list if not already there
+            if not EmailUnsubscribe.query.filter_by(email=email).first():
+                db.session.add(EmailUnsubscribe(
+                    email=email,
+                    reason='hard_bounce' if email in hard_bounced else 'spam_complaint'
+                ))
+                new_suppressions += 1
+
+            # Mark all LeadContactEmail records for this address as bounced
+            records = LeadContactEmail.query.filter(
+                db.func.lower(LeadContactEmail.to_email) == email,
+                LeadContactEmail.status.notin_(['bounced', 'failed'])
+            ).all()
+            for rec in records:
+                rec.status = 'bounced'
+                updated_records += 1
+
+            # Mark legacy LeadEmail records too
+            from app.models_leads import LeadEmail as _LeadEmail
+            legacy = _LeadEmail.query.filter(
+                db.func.lower(_LeadEmail.to_email) == email,
+                _LeadEmail.status != 'bounced'
+            ).all()
+            for rec in legacy:
+                rec.status = 'bounced'
+                updated_records += 1
+
+        db.session.commit()
+
+        # Invalidate the dedup service cache so it picks up new suppressions immediately
+        try:
+            from app.services.email_dedup_service import get_dedup_service
+            get_dedup_service().clear_cache()
+        except Exception:
+            pass
+
+        logger.info(
+            f"Bounce sync: {len(hard_bounced)} hard bounces, {len(spam_reported)} spam reports. "
+            f"New suppressions: {new_suppressions}. Records updated: {updated_records}."
+        )
+        return jsonify({
+            'success': True,
+            'hard_bounces_found': len(hard_bounced),
+            'spam_reports_found': len(spam_reported),
+            'new_suppressions': new_suppressions,
+            'records_updated': updated_records
+        })
+
+    except Exception as e:
+        logger.error(f"Bounce sync failed: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 # ==================== Unsubscribe ====================
 
 @lead_campaigns_bp.route('/unsubscribe', methods=['GET', 'POST'])
@@ -2798,9 +2976,10 @@ def email_monitoring_dashboard():
     ).limit(25).all()
 
     # =======================
-    # UNSUBSCRIBE COUNT
+    # UNSUBSCRIBE COUNT + LIST
     # =======================
     unsubscribe_count = db.session.query(func.count(EmailUnsubscribe.id)).scalar() or 0
+    suppressions = EmailUnsubscribe.query.order_by(desc(EmailUnsubscribe.created_at)).limit(200).all()
 
     return render_template(
         'admin/lead_campaigns/email_monitoring.html',
@@ -2824,6 +3003,152 @@ def email_monitoring_dashboard():
         campaign_stats=campaign_data,
         # Recent emails
         recent_emails=recent_emails,
+        # Suppression list
+        suppressions=suppressions,
         # Filters
         days=days
     )
+
+
+# ── Manual suppression management ───────────────────────────────────────────
+
+@lead_campaigns_bp.route('/manual-suppress', methods=['POST'])
+@require_admin
+def manual_suppress():
+    """Add one or more emails to the suppression list."""
+    from app.services.email_dedup_service import get_dedup_service
+    raw = request.form.get('emails', '') or (request.json or {}).get('emails', '')
+    # Accept newline- or comma-separated addresses
+    candidates = [e.strip().lower() for e in raw.replace(',', '\n').splitlines() if e.strip()]
+    if not candidates:
+        return jsonify(success=False, error='No email addresses provided'), 400
+
+    added = []
+    skipped = []
+    for email in candidates:
+        if EmailUnsubscribe.query.filter_by(email=email).first():
+            skipped.append(email)
+        else:
+            db.session.add(EmailUnsubscribe(email=email, reason='manually suppressed by admin'))
+            added.append(email)
+
+    if added:
+        db.session.commit()
+        try:
+            get_dedup_service().clear_cache()
+        except Exception:
+            pass
+
+    return jsonify(success=True, added=len(added), skipped=len(skipped), added_emails=added)
+
+
+@lead_campaigns_bp.route('/manual-suppress/<int:unsub_id>', methods=['DELETE'])
+@require_admin
+def manual_suppress_delete(unsub_id):
+    """Remove an entry from the suppression list."""
+    from app.services.email_dedup_service import get_dedup_service
+    record = EmailUnsubscribe.query.get_or_404(unsub_id)
+    db.session.delete(record)
+    db.session.commit()
+    try:
+        get_dedup_service().clear_cache()
+    except Exception:
+        pass
+    return jsonify(success=True)
+
+
+# ── Purge non-business email addresses ──────────────────────────────────────
+
+@lead_campaigns_bp.route('/purge-nonbusiness-emails', methods=['POST'])
+@require_admin
+def purge_nonbusiness_emails():
+    """
+    Scan all LeadContact and Lead records and mark as invalid / remove those
+    whose email address belongs to a non-business domain (Yelp, Quora, social
+    media platforms, review aggregators, etc.) using the existing validation
+    function.  Also optionally verifies remaining addresses via Hunter.io.
+    """
+    from app.services.email_validation import validate_email_for_outreach
+
+    purged_contacts = 0
+    purged_legacy = 0
+    campaign_filter = request.form.get('campaign_id', type=int)
+
+    try:
+        # ── LeadContact records ──────────────────────────────────────────────
+        contact_q = LeadContact.query.filter(LeadContact.email.isnot(None))
+        if campaign_filter:
+            lead_ids = [l.id for l in Lead.query.filter_by(campaign_id=campaign_filter).with_entities(Lead.id)]
+            contact_q = contact_q.filter(LeadContact.lead_id.in_(lead_ids))
+
+        contacts = contact_q.all()
+        for contact in contacts:
+            if not contact.email:
+                continue
+            valid, reason = validate_email_for_outreach(contact.email)
+            if not valid and reason in ('noncompany_domain', 'free_provider', 'role_based'):
+                contact.email = None
+                contact.email_status = 'invalid'
+                purged_contacts += 1
+
+        # ── Legacy Lead.decision_maker_email ────────────────────────────────
+        legacy_q = Lead.query.filter(Lead.decision_maker_email.isnot(None))
+        if campaign_filter:
+            legacy_q = legacy_q.filter(Lead.campaign_id == campaign_filter)
+
+        legacy_leads = legacy_q.all()
+        for lead in legacy_leads:
+            if not lead.decision_maker_email:
+                continue
+            valid, reason = validate_email_for_outreach(lead.decision_maker_email)
+            if not valid and reason in ('noncompany_domain', 'free_provider', 'role_based'):
+                lead.decision_maker_email = None
+                purged_legacy += 1
+
+        db.session.commit()
+        flash(
+            f'Purged {purged_contacts} contact emails + {purged_legacy} legacy decision-maker emails '
+            f'that belong to non-business domains (Yelp, Quora, social media, etc.).',
+            'success'
+        )
+    except Exception as exc:
+        db.session.rollback()
+        logger.exception("purge_nonbusiness_emails failed")
+        flash(f'Error during purge: {exc}', 'error')
+
+    if campaign_filter:
+        return redirect(url_for('lead_campaigns_bp.view_campaign', campaign_id=campaign_filter))
+    return redirect(url_for('lead_campaigns_bp.index'))
+
+
+@lead_campaigns_bp.route('/reset-all-campaigns', methods=['POST'])
+@require_admin
+def reset_all_campaigns():
+    """Reset email sending state for ALL campaigns so every contact can receive
+    each sequence email exactly once from scratch."""
+    try:
+        # Delete all send tracking records
+        LeadContactEmail.query.delete(synchronize_session='fetch')
+        LeadEmail.query.delete(synchronize_session='fetch')
+
+        # Reset all contacts and leads to pending
+        LeadContact.query.update(
+            {'email_status': 'pending', 'current_sequence_step': 0, 'last_email_sent_at': None},
+            synchronize_session='fetch'
+        )
+        Lead.query.update(
+            {'email_status': 'pending', 'current_sequence_step': 0, 'last_email_sent_at': None},
+            synchronize_session='fetch'
+        )
+
+        # Reset campaign stats
+        LeadCampaign.query.update({'emails_sent': 0}, synchronize_session='fetch')
+
+        db.session.commit()
+        flash('Reset all campaigns: every contact is now pending and will receive the sequence fresh.', 'success')
+    except Exception as exc:
+        db.session.rollback()
+        logger.exception("reset_all_campaigns failed")
+        flash(f'Error: {exc}', 'error')
+
+    return redirect(url_for('lead_campaigns_bp.index'))

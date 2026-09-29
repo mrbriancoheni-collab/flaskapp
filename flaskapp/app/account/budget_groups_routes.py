@@ -25,9 +25,14 @@ def dashboard():
     user = g.user
     account_id = user.account_id if user and hasattr(user, 'account_id') else None
 
-    # For now, set customer_id to None - will be retrieved from user's Google Ads connection
-    # TODO: Get from user's Google Ads account settings
     customer_id = None
+    if account_id:
+        try:
+            from app.google.utils_ads import resolve_ads_context
+            ctx = resolve_ads_context(account_id)
+            customer_id = ctx.get("customer_id")
+        except Exception:
+            pass
 
     return render_template("account/budget_groups_dashboard.html", user=user, account_id=account_id, customer_id=customer_id)
 

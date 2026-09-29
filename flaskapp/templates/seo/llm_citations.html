@@ -1,0 +1,159 @@
+{% extends "base_app.html" %}
+{% block title %}LLM Citation Tracker · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Does ChatGPT mention your business?</h1>
+      <p class="text-gray-500 text-sm mt-1">Ask AI assistants questions your customers search for and see if your business comes up</p>
+    </div>
+    {% if result %}
+    <div class="flex items-center gap-2">
+      <div class="relative w-14 h-14">
+        <svg viewBox="0 0 36 36" class="w-14 h-14 -rotate-90">
+          <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" stroke-width="3.5"/>
+          <circle cx="18" cy="18" r="15.9" fill="none"
+            stroke="{{ '#22c55e' if result.score >= 60 else ('#f59e0b' if result.score >= 30 else '#ef4444') }}"
+            stroke-width="3.5" stroke-dasharray="{{ result.score }}, 100" stroke-linecap="round"/>
+        </svg>
+        <span class="absolute inset-0 flex items-center justify-center text-sm font-bold
+          {% if result.score >= 60 %}text-green-700{% elif result.score >= 30 %}text-amber-600{% else %}text-red-600{% endif %}">
+          {{ result.score }}%
+        </span>
+      </div>
+      <div>
+        <p class="text-sm font-semibold text-gray-800">Citation Rate</p>
+        <p class="text-xs text-gray-400">{{ result.cited_count }}/{{ result.total_queries }} queries</p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+    <div class="rounded-xl px-4 py-3 text-sm border
+      {% if cat == 'error' %}bg-red-50 border-red-200 text-red-800{% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- Form -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <form method="POST" action="{{ url_for('seo_bp.llm_citations') }}" class="space-y-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Brand Name <span class="text-red-500">*</span></label>
+          <input type="text" name="brand" required
+                 value="{{ result.brand if result else '' }}"
+                 placeholder="e.g. Sunrise Plumbing"
+                 class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Website Domain</label>
+          <input type="text" name="domain"
+                 value="{{ result.domain if result else prefill_domain }}"
+                 placeholder="https://yoursite.com"
+                 class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300 focus:outline-none">
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Industry / Niche <span class="text-gray-300">(optional)</span></label>
+          <input type="text" name="industry"
+                 placeholder="e.g. HVAC services, digital marketing, e-commerce"
+                 class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300 focus:outline-none">
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Test Queries <span class="text-red-500">*</span></label>
+          <textarea name="queries" rows="6" required
+                    placeholder="Best HVAC companies in Austin TX&#10;Who should I call for AC repair?&#10;Top-rated plumbers near me&#10;What is the best digital marketing agency?"
+                    class="w-full border rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-indigo-300 focus:outline-none resize-y">{% if result %}{% for r in result.results %}{{ r.query }}
+{% endfor %}{% endif %}</textarea>
+          <p class="text-xs text-gray-400 mt-1">One query per line · Up to 10 queries · Use natural language questions your customers would ask</p>
+        </div>
+      </div>
+      <div class="flex justify-end pt-1">
+        <button type="submit" class="px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">
+          <i class="fa-solid fa-magnifying-glass mr-1"></i>Check Citations
+        </button>
+      </div>
+    </form>
+  </div>
+
+  {% if result %}
+
+  <!-- Results -->
+  <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+    <div class="px-5 py-3 border-b bg-gray-50">
+      <h2 class="font-semibold text-gray-800">Citation Results for <span class="text-indigo-600">{{ result.brand }}</span></h2>
+    </div>
+    <div class="divide-y">
+      {% for r in result.results %}
+      <div class="px-5 py-4">
+        <div class="flex items-start gap-3">
+          <div class="mt-0.5 flex-shrink-0">
+            {% if r.cited %}
+            <i class="fa-solid fa-circle-check text-green-500 text-lg"></i>
+            {% elif r.get('error') %}
+            <i class="fa-solid fa-circle-exclamation text-gray-400 text-lg"></i>
+            {% else %}
+            <i class="fa-solid fa-circle-xmark text-red-500 text-lg"></i>
+            {% endif %}
+          </div>
+          <div class="flex-1">
+            <p class="font-medium text-gray-900">{{ r.query }}</p>
+            {% if r.cited and r.snippet %}
+            <p class="text-xs text-green-700 bg-green-50 rounded px-2 py-1 mt-1.5 inline-block">
+              <i class="fa-solid fa-quote-left mr-1"></i>{{ r.snippet }}
+            </p>
+            {% elif r.get('error') %}
+            <p class="text-xs text-gray-400 mt-1">Error: {{ r.error }}</p>
+            {% else %}
+            <p class="text-xs text-gray-500 mt-1">Brand not mentioned in AI response.</p>
+            {% endif %}
+            {% if r.response_preview and not r.cited %}
+            <details class="mt-1.5">
+              <summary class="text-xs text-gray-400 cursor-pointer hover:text-gray-600">View AI response</summary>
+              <p class="text-xs text-gray-500 mt-1 bg-gray-50 rounded p-2 font-mono leading-relaxed">{{ r.response_preview }}</p>
+            </details>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if result.recommendations %}
+  <!-- Recommendations -->
+  <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+    <div class="px-5 py-3 border-b bg-indigo-50">
+      <h2 class="font-semibold text-indigo-800"><i class="fa-solid fa-lightbulb text-indigo-500 mr-2"></i>Content to Create for Better GEO Visibility</h2>
+      <p class="text-xs text-indigo-600 mt-0.5">AI-generated recommendations based on your uncited queries</p>
+    </div>
+    <ul class="divide-y">
+      {% for rec in result.recommendations %}
+      <li class="px-5 py-3 flex items-start gap-3 text-sm">
+        <i class="fa-solid fa-pen-to-square text-indigo-400 mt-0.5 flex-shrink-0"></i>
+        <span class="text-gray-800">{{ rec }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {% endif %}
+
+  <!-- What is GEO -->
+  <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-5 text-sm text-indigo-800 space-y-2">
+    <p class="font-semibold"><i class="fa-solid fa-robot mr-2 text-indigo-500"></i>What is GEO?</p>
+    <p class="text-indigo-700">Generative Engine Optimization (GEO) is the practice of ensuring your brand gets cited when AI systems like ChatGPT, Gemini, Perplexity, and Claude answer questions. Unlike traditional SEO, GEO requires being a well-documented, credibly cited brand — not just a high-ranking page.</p>
+    <ul class="list-disc list-inside space-y-1 text-indigo-700 mt-1">
+      <li>Publish authoritative content cited by other sites</li>
+      <li>Get listed in industry directories and review platforms</li>
+      <li>Earn press mentions and backlinks from credible sources</li>
+      <li>Use structured data so AI systems can easily extract facts about your business</li>
+    </ul>
+  </div>
+
+</div>
+{% endblock %}

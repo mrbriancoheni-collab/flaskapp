@@ -9,7 +9,7 @@ Allows admins to configure:
 - Override risk levels per decision type
 - Define business rules for decision making
 """
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, g
+from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, g, abort
 from sqlalchemy import text
 import json
 
@@ -51,11 +51,19 @@ def configure_list():
     )
 
 
+_VALID_AGENT_IDS = frozenset([
+    "strategic_director", "campaign_manager", "budget_guardian",
+    "quality_score_agent", "keyword_optimizer", "negative_keyword_agent", "ad_copy_agent",
+])
+
+
 @agent_config_bp.route("/configure/global/<agent_id>", methods=["GET", "POST"])
 @login_required
 @require_admin
 def configure_global(agent_id: str):
     """Configure global defaults for an agent."""
+    if agent_id not in _VALID_AGENT_IDS:
+        abort(404)
 
     if request.method == "POST":
         # Update configuration
@@ -190,6 +198,9 @@ def configure_global(agent_id: str):
 @require_admin
 def configure_account(account_id: int, agent_id: str):
     """Configure agent for a specific account (overrides global defaults)."""
+    if agent_id not in _VALID_AGENT_IDS:
+        abort(404)
+
     from app.models import Account
 
     account = Account.query.get_or_404(account_id)
@@ -279,6 +290,53 @@ def configure_account(account_id: int, agent_id: str):
     )
 
 
+# ============================================================================
+# AI Prompt Management
+# ============================================================================
+
+@agent_config_bp.route("/prompts")
+@login_required
+@require_admin
+def prompts_list():
+    """List all editable AI prompts."""
+    from app.models_ads import AIPrompt
+    prompts = AIPrompt.query.order_by(AIPrompt.prompt_key).all()
+    return render_template("admin/ai_prompts_list.html", prompts=prompts)
+
+
+@agent_config_bp.route("/prompts/<prompt_key>", methods=["GET", "POST"])
+@login_required
+@require_admin
+def prompt_edit(prompt_key: str):
+    """Edit a single AI prompt."""
+    from app.models_ads import AIPrompt
+
+    prompt = AIPrompt.query.filter_by(prompt_key=prompt_key).first_or_404()
+
+    if request.method == "POST":
+        action = request.form.get("action", "save")
+
+        if action == "revert":
+            from app.services.ai_prompts_init import initialize_ai_prompts
+            initialize_ai_prompts(force=True)
+            flash("All prompts reverted to defaults.", "success")
+            return redirect(url_for("agent_config_bp.prompt_edit", prompt_key=prompt_key))
+
+        prompt.name = request.form.get("name", prompt.name).strip()
+        prompt.description = request.form.get("description", "").strip() or None
+        prompt.system_message = request.form.get("system_message", "").strip()
+        prompt.prompt_template = request.form.get("prompt_template", "").strip()
+        prompt.model = request.form.get("model", prompt.model).strip()
+        prompt.temperature = float(request.form.get("temperature", prompt.temperature))
+        prompt.max_tokens = int(request.form.get("max_tokens", prompt.max_tokens))
+        prompt.is_active = request.form.get("is_active") == "on"
+        db.session.commit()
+        flash(f"Prompt '{prompt.name}' saved.", "success")
+        return redirect(url_for("agent_config_bp.prompts_list"))
+
+    return render_template("admin/ai_prompt_edit.html", prompt=prompt)
+
+
 @agent_config_bp.route("/configure/<int:config_id>/delete", methods=["POST"])
 @login_required
 @require_admin
@@ -316,27 +374,53 @@ def evaluate_business_rule(rule: dict, context: dict) -> bool:
         return False
 
     try:
-        # Simple expression evaluation (DANGER: eval is unsafe in production!)
-        # TODO: Replace with safe expression evaluator (e.g., simpleeval library)
-        # For now, using restrictive whitelist
+        import ast
+        import operator as _op
 
-        # Allow only safe variable names and operators
-        import re
-        allowed_pattern = r'^[\w\s\.\(\)<>=!&|+\-*/]+$'
+        _BINOPS = {
+            ast.Add: _op.add, ast.Sub: _op.sub,
+            ast.Mult: _op.mul, ast.Div: _op.truediv,
+        }
+        _CMPOPS = {
+            ast.Lt: _op.lt, ast.LtE: _op.le,
+            ast.Gt: _op.gt, ast.GtE: _op.ge,
+            ast.Eq: _op.eq, ast.NotEq: _op.ne,
+        }
 
-        if not re.match(allowed_pattern, condition):
-            return False
+        def _eval(node):
+            if isinstance(node, ast.Constant):
+                return node.value
+            if isinstance(node, ast.Name):
+                if node.id not in context:
+                    raise ValueError(f"Unknown variable: {node.id}")
+                return context[node.id]
+            if isinstance(node, ast.BoolOp):
+                if isinstance(node.op, ast.And):
+                    return all(_eval(v) for v in node.values)
+                return any(_eval(v) for v in node.values)
+            if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+                return not _eval(node.operand)
+            if isinstance(node, ast.BinOp):
+                fn = _BINOPS.get(type(node.op))
+                if fn:
+                    return fn(_eval(node.left), _eval(node.right))
+            if isinstance(node, ast.Compare):
+                left = _eval(node.left)
+                for op, comp in zip(node.ops, node.comparators):
+                    fn = _CMPOPS.get(type(op))
+                    if not fn:
+                        raise ValueError(f"Unsupported op: {op}")
+                    if not fn(left, _eval(comp)):
+                        return False
+                    left = _eval(comp)
+                return True
+            raise ValueError(f"Unsupported node: {type(node).__name__}")
 
-        # Replace context variables
-        for key, value in context.items():
-            condition = condition.replace(key, str(value))
-
-        # Evaluate (UNSAFE - replace with safe evaluator)
-        result = eval(condition)
-        return bool(result)
+        expr = condition.replace(" AND ", " and ").replace(" OR ", " or ")
+        tree = ast.parse(expr, mode='eval')
+        return bool(_eval(tree.body))
 
     except Exception:
-        # If evaluation fails, rule doesn't match
         return False
 
 

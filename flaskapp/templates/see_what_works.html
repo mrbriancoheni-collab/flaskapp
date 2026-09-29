@@ -9,10 +9,36 @@
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "WebPage",
-  "name": "See What Works — Marketing Attribution for Home Services",
-  "description": "Full attribution analytics for home service businesses — from ad click to booked job, across Google, GLSA, Facebook, and more.",
-  "url": "https://fieldsprout.io/solutions/see-what-works"
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://fieldsprout.io/see-what-works#webpage",
+      "name": "Google Ads Analytics for Home Service Businesses | FieldSprout",
+      "description": "See exactly which campaigns, keywords, and ads drive phone calls. FieldSprout translates Google Ads data into plain-English insights you can act on.",
+      "url": "https://fieldsprout.io/see-what-works",
+      "isPartOf": {"@id": "https://fieldsprout.io/#website"}
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How do I know which Google Ads are actually driving calls?",
+          "acceptedAnswer": {"@type": "Answer", "text": "FieldSprout connects call tracking to your campaigns so you can see exactly which keywords and ads generated phone calls, not just clicks."}
+        },
+        {
+          "@type": "Question",
+          "name": "Can I see performance by campaign, ad group, and keyword?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Yes. FieldSprout's analytics dashboard breaks down cost, clicks, calls, and conversion rate at every level — campaign, ad group, keyword, and even individual ad copy."}
+        },
+        {
+          "@type": "Question",
+          "name": "How often is my performance data updated?",
+          "acceptedAnswer": {"@type": "Answer", "text": "FieldSprout syncs with Google Ads daily and surfaces weekly summary insights so you always have a current picture of what's working and what's wasting money."}
+        }
+      ]
+    }
+  ]
 }
 </script>
 {% endblock %}
@@ -152,7 +178,7 @@
     <div class="grid md:grid-cols-3 gap-6">
       {% for quote, name, co, result in [
         ('"I used to spend 3 hours every Monday pulling numbers from Google Ads, GLSA, and Facebook. Now I get one email on Monday morning with everything I need. Changed my week."', 'Allen K.', 'K&T HVAC', '3 hrs saved every week'),
-        ('"FieldSprout\'s attribution showed us that a $500/mo Facebook campaign was driving 28% of our revenue. We\'d been about to cut it because \'Facebook doesn\'t work for plumbing.\'", "Pete O.", "Reliable Plumbing", "28% of revenue attributed to Facebook"'),
+        ("\"FieldSprout's attribution showed us that a $500/mo Facebook campaign was driving 28% of our revenue. We'd been about to cut it because 'Facebook doesn't work for plumbing.'\"", "Pete O.", "Reliable Plumbing", "28% of revenue attributed to Facebook"),
         ('"Knowing CSR booking rates by person was a game changer. One of our reps was converting 71% of GLSA calls. Another was at 34%. Now we coach the second to copy the first."', 'Lisa M.', 'Pro Electric Services', 'CSR coaching with real data'),
       ] %}
       <div class="bg-white rounded-2xl p-6 border">

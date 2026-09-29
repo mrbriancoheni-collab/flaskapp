@@ -1,325 +1,439 @@
 {% extends "base_app.html" %}
 {% set gads_active = 'ai_control' %}
 
-{% block title %}AI Agent Dashboard - FieldSprout{% endblock %}
+{% block title %}Your AI Team - FieldSprout{% endblock %}
 
 {% block content %}
 {% include "google/components/gads_nav.html" %}
-<div class="container mx-auto px-4 py-8">
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-8">
+<div class="container mx-auto px-4 py-8 space-y-8">
+
+  {# ── Header ──────────────────────────────────────────────────────────── #}
+  <div class="flex items-start justify-between flex-wrap gap-4">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900 mb-1">
+        <i class="fa-solid fa-robot text-indigo-600 mr-2"></i>Your AI Team
+      </h1>
+      <p class="text-gray-600">Specialised AI agents that watch your account 24/7 and make changes that save money or get you more leads.</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <a href="{{ url_for('agents_bp.approval_queue') }}"
+         class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg font-semibold text-sm transition">
+        <i class="fa-solid fa-clipboard-check"></i> Suggestions to review
+      </a>
+      <a href="{{ url_for('alerts_bp.alerts_dashboard') }}"
+         class="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2.5 rounded-lg text-sm font-medium transition">
+        <i class="fa-solid fa-bell text-amber-500"></i> Alerts
+      </a>
+      <a href="{{ url_for('budget_bp.budget_groups') }}"
+         class="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2.5 rounded-lg text-sm font-medium transition">
+        <i class="fa-solid fa-dollar-sign text-green-600"></i> Budget Groups
+      </a>
+      <a href="{{ url_for('forecasting_bp.forecasting_dashboard') }}"
+         class="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2.5 rounded-lg text-sm font-medium transition">
+        <i class="fa-solid fa-chart-line text-purple-600"></i> Forecasting
+      </a>
+    </div>
+  </div>
+
+  {# ── Bottom-line summary ────────────────────────────────────────────── #}
+  <div class="rounded-2xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-purple-50 p-6 shadow-sm">
+    <div class="flex items-start gap-4">
+      <div class="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center shrink-0">
+        <i class="fa-solid fa-circle-check text-indigo-600 text-xl"></i>
+      </div>
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-1">
+          <h2 class="text-lg font-bold text-gray-900">What your AI team has done</h2>
+          <span class="text-xs font-semibold text-indigo-700 bg-white border border-indigo-200 px-2 py-0.5 rounded-full uppercase tracking-wide">The Bottom Line</span>
+        </div>
+        <p class="text-gray-700 leading-relaxed">
+          {% if total_executed and total_executed > 0 %}
+          Your AI agents have made <strong>{{ total_executed }} optimisation{{ 's' if total_executed != 1 else '' }}</strong> to your account, saving you an estimated <strong>${{ "%.0f"|format(total_savings) }} every month</strong>{% if total_leads %} and helping bring in an estimated <strong>{{ total_leads }} extra lead{{ 's' if total_leads != 1 else '' }} per month</strong>{% endif %}. Below you can see exactly what each agent does.
+          {% else %}
+          Your AI agents are connected and ready to go. They'll start finding savings as soon as enough data has been collected — usually within the first week.
+          {% endif %}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  {# ── Headline metrics ──────────────────────────────────────────────── #}
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-1.5">
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Optimisations made</p>
+        <i class="fa-solid fa-bolt text-indigo-400"></i>
+      </div>
+      <p class="text-3xl font-bold text-gray-900">{{ total_executed }}</p>
+      <p class="text-xs text-gray-500 mt-1">Changes the AI made for you</p>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-1.5">
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Money saved / month</p>
+        <i class="fa-solid fa-piggy-bank text-green-500"></i>
+      </div>
+      <p class="text-3xl font-bold text-green-600">${{ "%.0f"|format(total_savings) }}</p>
+      <p class="text-xs text-gray-500 mt-1">Ongoing savings from blocking waste</p>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-1.5">
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Extra leads / month</p>
+        <i class="fa-solid fa-user-plus text-orange-500"></i>
+      </div>
+      <p class="text-3xl font-bold text-orange-600">+{{ total_leads }}</p>
+      <p class="text-xs text-gray-500 mt-1">Estimated additional calls/forms</p>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-1.5">
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Suggestions made</p>
+        <i class="fa-solid fa-lightbulb text-purple-500"></i>
+      </div>
+      <p class="text-3xl font-bold text-gray-900">{{ total_decisions }}</p>
+      <p class="text-xs text-gray-500 mt-1">Total ideas your AI has surfaced</p>
+    </div>
+  </div>
+
+  {# ── Per-agent performance ────────────────────────────────────────── #}
+  <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100">
+      <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+        <i class="fa-solid fa-users text-indigo-500"></i>How each AI agent is performing
+      </h2>
+      <p class="text-xs text-gray-500 mt-1">Each agent focuses on one part of your account. "Track record" tells you how often their changes have worked.</p>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50">
+          <tr class="border-b border-gray-200">
+            <th class="text-left py-3 px-4 font-semibold text-gray-600 uppercase text-xs tracking-wide">Agent</th>
+            <th class="text-center py-3 px-4 font-semibold text-gray-600 uppercase text-xs tracking-wide">
+              <span class="inline-flex items-center gap-1">
+                Suggestions
+                <span class="relative group">
+                  <i class="fa-solid fa-circle-question text-gray-300 hover:text-gray-500 text-[10px] cursor-help"></i>
+                  <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-20 w-48 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg normal-case font-normal leading-relaxed">Total ideas this agent has generated</span>
+                </span>
+              </span>
+            </th>
+            <th class="text-center py-3 px-4 font-semibold text-gray-600 uppercase text-xs tracking-wide">
+              <span class="inline-flex items-center gap-1">
+                Acted on
+                <span class="relative group">
+                  <i class="fa-solid fa-circle-question text-gray-300 hover:text-gray-500 text-[10px] cursor-help"></i>
+                  <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-20 w-48 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg normal-case font-normal leading-relaxed">Suggestions that were applied to your account (auto or after your approval)</span>
+                </span>
+              </span>
+            </th>
+            <th class="text-center py-3 px-4 font-semibold text-gray-600 uppercase text-xs tracking-wide">
+              <span class="inline-flex items-center gap-1">
+                How sure
+                <span class="relative group">
+                  <i class="fa-solid fa-circle-question text-gray-300 hover:text-gray-500 text-[10px] cursor-help"></i>
+                  <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-20 w-48 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg normal-case font-normal leading-relaxed">How confident the AI was, on average, in its suggestions. Higher = it had stronger data backing them.</span>
+                </span>
+              </span>
+            </th>
+            <th class="text-center py-3 px-4 font-semibold text-gray-600 uppercase text-xs tracking-wide">
+              <span class="inline-flex items-center gap-1">
+                Track record
+                <span class="relative group">
+                  <i class="fa-solid fa-circle-question text-gray-300 hover:text-gray-500 text-[10px] cursor-help"></i>
+                  <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-20 w-48 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg normal-case font-normal leading-relaxed">How often this agent's changes turned out to improve performance. 80%+ = highly reliable.</span>
+                </span>
+              </span>
+            </th>
+            <th class="text-right py-3 px-4 font-semibold text-gray-600 uppercase text-xs tracking-wide">Savings impact</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for stat in agent_stats %}
+          {% set conf_pct = ((stat.avg_confidence or 0) * 100)|int %}
+          {% set acc_pct  = ((stat.avg_accuracy or 0) * 100)|int %}
+          <tr class="hover:bg-gray-50">
+            <td class="py-4 px-4 font-semibold text-gray-900">{{ stat.agent_type }}</td>
+            <td class="text-center py-4 px-4 text-gray-700">{{ stat.total_decisions }}</td>
+            <td class="text-center py-4 px-4">
+              <span class="text-green-600 font-semibold">{{ stat.executed_count }}</span>
+              {% if stat.approved_count and stat.approved_count != stat.executed_count %}
+              <span class="text-xs text-gray-400">+ {{ stat.approved_count - stat.executed_count }} approved</span>
+              {% endif %}
+            </td>
+            <td class="text-center py-4 px-4">
+              {% if conf_pct >= 85 %}
+                <span class="inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded-full">★★★ Strong</span>
+              {% elif conf_pct >= 70 %}
+                <span class="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">★★ Confident</span>
+              {% elif conf_pct > 0 %}
+                <span class="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">★ Reasonable</span>
+              {% else %}<span class="text-gray-300 text-xs">—</span>{% endif %}
+            </td>
+            <td class="text-center py-4 px-4">
+              {% if stat.avg_accuracy %}
+                {% if acc_pct >= 80 %}
+                  <span class="inline-flex items-center gap-1.5 text-sm font-semibold text-green-700">
+                    <i class="fa-solid fa-circle-check"></i>Reliable ({{ acc_pct }}%)
+                  </span>
+                {% elif acc_pct >= 60 %}
+                  <span class="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-600">
+                    <i class="fa-solid fa-circle-info"></i>Mixed ({{ acc_pct }}%)
+                  </span>
+                {% else %}
+                  <span class="inline-flex items-center gap-1.5 text-sm font-semibold text-red-600">
+                    <i class="fa-solid fa-triangle-exclamation"></i>Needs review ({{ acc_pct }}%)
+                  </span>
+                {% endif %}
+              {% else %}
+              <span class="text-xs text-gray-400">Not enough data yet</span>
+              {% endif %}
+            </td>
+            <td class="text-right py-4 px-4 font-semibold text-green-600">
+              {% if stat.total_expected_savings and stat.total_expected_savings > 0 %}
+              ${{ "%.0f"|format(stat.total_expected_savings) }}/mo
+              {% else %}<span class="text-gray-300">—</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# ── Two-column: auto-executed + recent activity ────────────────── #}
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    {# Auto-executed by type #}
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-100">
+        <h2 class="font-bold text-gray-900 flex items-center gap-2">
+          <i class="fa-solid fa-bolt text-indigo-500"></i>Auto-applied changes by type
+        </h2>
+        <p class="text-xs text-gray-500 mt-1">Low-risk changes the AI applied automatically without needing your approval.</p>
+      </div>
+      <div class="p-5 space-y-2">
+        {% if auto_exec_stats %}
+          {% for stat in auto_exec_stats %}
+          <div class="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition rounded-lg">
+            <div>
+              <p class="font-semibold text-gray-900 text-sm">{{ stat.decision_type|replace('_', ' ')|title }}</p>
+              {% set conf_pct = ((stat.avg_confidence or 0) * 100)|int %}
+              <p class="text-xs text-gray-500 mt-0.5">
+                {% if conf_pct >= 85 %}Strong recommendation
+                {% elif conf_pct >= 70 %}Confident
+                {% else %}Reasonable
+                {% endif %} ({{ conf_pct }}%)
+              </p>
+            </div>
+            <div class="text-right">
+              <p class="text-2xl font-bold text-indigo-600">{{ stat.count }}</p>
+              {% if stat.total_savings %}
+              <p class="text-xs text-green-600 font-medium">+${{ "%.0f"|format(stat.total_savings) }}/mo saved</p>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+        <p class="text-sm text-gray-400 text-center py-6">The AI hasn't applied any changes yet. It will start once it has enough data.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Recent activity #}
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-100">
+        <h2 class="font-bold text-gray-900 flex items-center gap-2">
+          <i class="fa-solid fa-clock-rotate-left text-indigo-500"></i>Recent activity
+        </h2>
+        <p class="text-xs text-gray-500 mt-1">The latest things your AI agents have done or suggested.</p>
+      </div>
+      <div class="divide-y divide-gray-50 max-h-96 overflow-y-auto">
+        {% set status_meta = {
+          'executed': {'icon': 'fa-circle-check',   'color': 'text-green-600', 'bg': 'bg-green-100 text-green-800', 'label': 'Applied'},
+          'approved': {'icon': 'fa-thumbs-up',      'color': 'text-blue-600',  'bg': 'bg-blue-100 text-blue-800',   'label': 'You approved'},
+          'rejected': {'icon': 'fa-circle-xmark',   'color': 'text-red-500',   'bg': 'bg-red-100 text-red-800',     'label': 'You rejected'},
+          'pending':  {'icon': 'fa-clock',          'color': 'text-amber-500', 'bg': 'bg-amber-100 text-amber-800', 'label': 'Waiting for you'},
+        } %}
+        {% if recent_activity %}
+          {% for activity in recent_activity %}
+          {% set sm = status_meta.get(activity.status, status_meta['pending']) %}
+          <div class="flex items-start gap-3 px-5 py-3 hover:bg-gray-50 transition">
+            <i class="fa-solid {{ sm.icon }} {{ sm.color }} mt-0.5 text-lg shrink-0"></i>
+            <div class="flex-1 min-w-0">
+              <p class="font-medium text-gray-900 text-sm">{{ activity.title }}</p>
+              <div class="flex items-center gap-2 mt-1 flex-wrap">
+                <span class="text-xs text-gray-500">{{ activity.agent_type }}</span>
+                <span class="text-xs px-2 py-0.5 rounded-full font-medium {{ sm.bg }}">{{ sm.label }}</span>
+                {% if activity.created_at %}<span class="text-xs text-gray-400">{{ activity.created_at.strftime('%b %d') }}</span>{% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+        <p class="text-sm text-gray-400 text-center py-8 px-5">No recent activity yet. Your AI team will start showing actions here once it gets going.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ── Your AI agent team ────────────────────────────────────────── #}
+  <div class="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-2xl p-7 shadow-sm">
+    <h2 class="text-xl font-bold text-gray-900 mb-1">
+      <i class="fa-solid fa-people-group text-indigo-600 mr-2"></i>Meet your AI team
+    </h2>
+    <p class="text-sm text-gray-600 mb-6">FieldSprout uses different AI agents for different jobs — like having a specialised team running your ads.</p>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div class="bg-white rounded-xl p-5 shadow-sm border border-white">
+        <h3 class="text-base font-bold text-indigo-700 mb-1">The Strategist</h3>
+        <p class="text-xs text-gray-500 mb-4">Big-picture planning</p>
+        <ul class="space-y-2 text-sm text-gray-700">
+          <li class="flex items-start gap-2"><i class="fa-solid fa-chess-king text-indigo-500 mt-0.5"></i>
+            <div><strong>Strategic Director</strong><br><span class="text-xs text-gray-500">Decides where to spend more or less</span></div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="bg-white rounded-xl p-5 shadow-sm border border-white">
+        <h3 class="text-base font-bold text-blue-700 mb-1">The Watchers</h3>
+        <p class="text-xs text-gray-500 mb-4">Daily monitoring &amp; protection</p>
+        <ul class="space-y-2 text-sm text-gray-700">
+          <li class="flex items-start gap-2"><i class="fa-solid fa-chart-line text-blue-500 mt-0.5"></i>
+            <div><strong>Campaign Manager</strong><br><span class="text-xs text-gray-500">Catches unusual spending patterns</span></div>
+          </li>
+          <li class="flex items-start gap-2"><i class="fa-solid fa-shield-halved text-blue-500 mt-0.5"></i>
+            <div><strong>Budget Guardian</strong><br><span class="text-xs text-gray-500">Stops campaigns blowing through budget</span></div>
+          </li>
+          <li class="flex items-start gap-2"><i class="fa-solid fa-star text-blue-500 mt-0.5"></i>
+            <div><strong>Quality Score Doctor</strong><br><span class="text-xs text-gray-500">Improves the score Google uses to set your CPC</span></div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="bg-white rounded-xl p-5 shadow-sm border border-white">
+        <h3 class="text-base font-bold text-green-700 mb-1">The Optimisers</h3>
+        <p class="text-xs text-gray-500 mb-4">Hands-on improvements</p>
+        <ul class="space-y-2 text-sm text-gray-700">
+          <li class="flex items-start gap-2"><i class="fa-solid fa-key text-green-500 mt-0.5"></i>
+            <div><strong>Keyword Optimiser</strong><br><span class="text-xs text-gray-500">Adjusts bids on individual keywords</span></div>
+          </li>
+          <li class="flex items-start gap-2"><i class="fa-solid fa-ban text-green-500 mt-0.5"></i>
+            <div><strong>Negative Keyword Agent</strong><br><span class="text-xs text-gray-500">Blocks searches that waste your money</span></div>
+          </li>
+          <li class="flex items-start gap-2"><i class="fa-solid fa-pen text-green-500 mt-0.5"></i>
+            <div><strong>Ad Copy Scientist</strong><br><span class="text-xs text-gray-500">Tests new headlines &amp; descriptions</span></div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  {# ── AI Settings ──────────────────────────────────────────────── #}
+  <div>
+    <h2 class="text-xl font-bold text-gray-900 mb-1">
+      <i class="fa-solid fa-sliders text-indigo-600 mr-2"></i>Settings — Teach your AI about your business
+    </h2>
+    <p class="text-sm text-gray-500 mb-6">The more your AI knows about what you do (and don't do), the better its suggestions get.</p>
+
+    {# Business Context #}
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6 mb-6">
+      <h3 class="text-base font-semibold text-gray-900 mb-1">What does your business do?</h3>
+      <p class="text-sm text-gray-500 mb-4">A short description helps the AI judge whether a search term is a real customer or someone unrelated.</p>
+      <div class="space-y-5">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">
-                <i class="fa-solid fa-chart-line text-indigo-600 mr-2"></i>
-                AI Agent Performance Dashboard
-            </h1>
-            <p class="text-gray-600">Monitor your autonomous AI agents optimizing your Google Ads</p>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Business description</label>
+          <textarea id="biz-description" rows="3"
+            placeholder="e.g. Pool maintenance, cleaning and servicing for existing pool owners in Sydney."
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
         </div>
-        <div class="flex items-center space-x-4">
-            <a href="{{ url_for('agents_bp.approval_queue') }}" class="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 font-semibold">
-                <i class="fa-solid fa-clipboard-check mr-2"></i>
-                Approval Queue
-            </a>
-            <a href="{{ url_for('budget_bp.budget_groups') }}" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-semibold">
-                <i class="fa-solid fa-dollar-sign mr-2"></i>
-                Budget Groups
-            </a>
-            <a href="{{ url_for('forecasting_bp.forecasting_dashboard') }}" class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 font-semibold">
-                <i class="fa-solid fa-crystal-ball mr-2"></i>
-                Forecasting
-            </a>
-            <a href="{{ url_for('alerts_bp.alerts_dashboard') }}" class="bg-yellow-600 text-white px-6 py-3 rounded-lg hover:bg-yellow-700 font-semibold">
-                <i class="fa-solid fa-bell mr-2"></i>
-                Google Ads Alerts
-            </a>
-        </div>
-    </div>
-
-    <!-- Overall Metrics -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-indigo-100 text-sm mb-1">Total Decisions</p>
-                    <p class="text-4xl font-bold">{{ total_decisions }}</p>
-                </div>
-                <i class="fa-solid fa-brain text-white opacity-20 text-5xl"></i>
-            </div>
-        </div>
-
-        <div class="bg-gradient-to-br from-green-500 to-teal-600 rounded-lg shadow-lg p-6 text-white">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-green-100 text-sm mb-1">Executed</p>
-                    <p class="text-4xl font-bold">{{ total_executed }}</p>
-                </div>
-                <i class="fa-solid fa-check-circle text-white opacity-20 text-5xl"></i>
-            </div>
-        </div>
-
-        <div class="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg shadow-lg p-6 text-white">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-blue-100 text-sm mb-1">Monthly Savings</p>
-                    <p class="text-4xl font-bold">${{ "%.0f"|format(total_savings) }}</p>
-                </div>
-                <i class="fa-solid fa-piggy-bank text-white opacity-20 text-5xl"></i>
-            </div>
-        </div>
-
-        <div class="bg-gradient-to-br from-orange-500 to-red-600 rounded-lg shadow-lg p-6 text-white">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-orange-100 text-sm mb-1">Extra Leads/mo</p>
-                    <p class="text-4xl font-bold">+{{ total_leads }}</p>
-                </div>
-                <i class="fa-solid fa-user-plus text-white opacity-20 text-5xl"></i>
-            </div>
-        </div>
-    </div>
-
-    <!-- Agent Performance by Type -->
-    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
-        <h2 class="text-2xl font-bold text-gray-900 mb-6">
-            <i class="fa-solid fa-users mr-2"></i>
-            Agent Performance by Type
-        </h2>
-
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead>
-                    <tr class="border-b-2 border-gray-200">
-                        <th class="text-left py-3 px-4 font-semibold text-gray-700">Agent Type</th>
-                        <th class="text-center py-3 px-4 font-semibold text-gray-700">Total Decisions</th>
-                        <th class="text-center py-3 px-4 font-semibold text-gray-700">Executed</th>
-                        <th class="text-center py-3 px-4 font-semibold text-gray-700">Approved</th>
-                        <th class="text-center py-3 px-4 font-semibold text-gray-700">Avg Confidence</th>
-                        <th class="text-center py-3 px-4 font-semibold text-gray-700">Avg Accuracy</th>
-                        <th class="text-right py-3 px-4 font-semibold text-gray-700">Expected Savings</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for stat in agent_stats %}
-                    <tr class="border-b border-gray-100 hover:bg-gray-50">
-                        <td class="py-4 px-4">
-                            <span class="font-semibold text-gray-900">{{ stat.agent_type }}</span>
-                        </td>
-                        <td class="text-center py-4 px-4 text-gray-700">{{ stat.total_decisions }}</td>
-                        <td class="text-center py-4 px-4">
-                            <span class="text-green-600 font-semibold">{{ stat.executed_count }}</span>
-                        </td>
-                        <td class="text-center py-4 px-4">
-                            <span class="text-blue-600 font-semibold">{{ stat.approved_count }}</span>
-                        </td>
-                        <td class="text-center py-4 px-4">
-                            <span class="font-semibold">{{ "%.0f"|format((stat.avg_confidence or 0) * 100) }}%</span>
-                        </td>
-                        <td class="text-center py-4 px-4">
-                            {% if stat.avg_accuracy %}
-                            <span class="font-semibold {% if stat.avg_accuracy > 0.8 %}text-green-600{% elif stat.avg_accuracy > 0.6 %}text-yellow-600{% else %}text-red-600{% endif %}">
-                                {{ "%.0f"|format(stat.avg_accuracy * 100) }}%
-                            </span>
-                            {% else %}
-                            <span class="text-gray-400">N/A</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-right py-4 px-4">
-                            <span class="text-green-600 font-semibold">${{ "%.0f"|format(stat.total_expected_savings or 0) }}</span>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        <!-- Auto-Execution Stats -->
-        <div class="bg-white rounded-lg shadow-lg p-6">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6">
-                <i class="fa-solid fa-bolt mr-2"></i>
-                Auto-Executed Decisions
-            </h2>
-
-            <div class="space-y-3">
-                {% for stat in auto_exec_stats %}
-                <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
-                    <div>
-                        <p class="font-semibold text-gray-900">{{ stat.decision_type|replace('_', ' ')|title }}</p>
-                        <p class="text-sm text-gray-600">Confidence: {{ "%.0f"|format((stat.avg_confidence or 0) * 100) }}%</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-2xl font-bold text-indigo-600">{{ stat.count }}</p>
-                        <p class="text-xs text-gray-500">${{ "%.0f"|format(stat.total_savings or 0) }} saved</p>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-
-        <!-- Recent Activity -->
-        <div class="bg-white rounded-lg shadow-lg p-6">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6">
-                <i class="fa-solid fa-history mr-2"></i>
-                Recent Activity
-            </h2>
-
-            <div class="space-y-3 max-h-96 overflow-y-auto">
-                {% for activity in recent_activity %}
-                <div class="flex items-start space-x-3 p-3 border-b border-gray-100">
-                    <div class="flex-shrink-0">
-                        {% if activity.status == 'executed' %}
-                        <i class="fa-solid fa-check-circle text-green-500 text-xl"></i>
-                        {% elif activity.status == 'approved' %}
-                        <i class="fa-solid fa-thumbs-up text-blue-500 text-xl"></i>
-                        {% elif activity.status == 'rejected' %}
-                        <i class="fa-solid fa-times-circle text-red-500 text-xl"></i>
-                        {% else %}
-                        <i class="fa-solid fa-clock text-gray-400 text-xl"></i>
-                        {% endif %}
-                    </div>
-                    <div class="flex-1">
-                        <p class="font-semibold text-gray-900 text-sm">{{ activity.title }}</p>
-                        <div class="flex items-center space-x-3 mt-1">
-                            <span class="text-xs text-gray-500">{{ activity.agent_type }}</span>
-                            <span class="text-xs px-2 py-0.5 rounded {% if activity.status == 'executed' %}bg-green-100 text-green-800{% elif activity.status == 'approved' %}bg-blue-100 text-blue-800{% elif activity.status == 'rejected' %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-800{% endif %}">
-                                {{ activity.status }}
-                            </span>
-                            <span class="text-xs text-gray-500">{{ activity.created_at.strftime('%b %d') if activity.created_at else '' }}</span>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-
-    <!-- Agent Explanations -->
-    <div class="bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-xl shadow-lg p-8">
-        <h2 class="text-2xl font-bold text-gray-900 mb-6">
-            <i class="fa-solid fa-robot text-indigo-600 mr-2"></i>
-            Your AI Agent Team
-        </h2>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- Strategic Layer -->
-            <div class="bg-white rounded-lg p-6 shadow">
-                <h3 class="text-lg font-bold text-indigo-600 mb-3">Strategic Layer</h3>
-                <ul class="space-y-2 text-sm text-gray-700">
-                    <li><i class="fa-solid fa-chess-king text-indigo-600 mr-2"></i>Strategic Director</li>
-                    <li class="text-xs text-gray-600 ml-6">Budget allocation, scaling, quarterly goals</li>
-                </ul>
-            </div>
-
-            <!-- Operational Layer -->
-            <div class="bg-white rounded-lg p-6 shadow">
-                <h3 class="text-lg font-bold text-blue-600 mb-3">Operational Layer</h3>
-                <ul class="space-y-2 text-sm text-gray-700">
-                    <li><i class="fa-solid fa-chart-line text-blue-600 mr-2"></i>Campaign Manager</li>
-                    <li><i class="fa-solid fa-shield text-blue-600 mr-2"></i>Budget Guardian</li>
-                    <li><i class="fa-solid fa-star text-blue-600 mr-2"></i>Quality Score Doctor</li>
-                    <li class="text-xs text-gray-600 ml-6">Daily monitoring, anomaly detection</li>
-                </ul>
-            </div>
-
-            <!-- Tactical Layer -->
-            <div class="bg-white rounded-lg p-6 shadow">
-                <h3 class="text-lg font-bold text-green-600 mb-3">Tactical Layer</h3>
-                <ul class="space-y-2 text-sm text-gray-700">
-                    <li><i class="fa-solid fa-key text-green-600 mr-2"></i>Keyword Optimizer</li>
-                    <li><i class="fa-solid fa-ban text-green-600 mr-2"></i>Negative Keyword Agent</li>
-                    <li><i class="fa-solid fa-pen text-green-600 mr-2"></i>Ad Copy Scientist</li>
-                    <li class="text-xs text-gray-600 ml-6">Keyword bids, ad testing, waste blocking</li>
-                </ul>
-            </div>
-        </div>
-    </div>
-
-    <!-- ── AI Settings ──────────────────────────────────────────────────── -->
-    <div class="mt-10">
-        <h2 class="text-2xl font-bold text-gray-900 mb-6">
-            <i class="fa-solid fa-sliders text-indigo-600 mr-2"></i>AI Agent Settings
-        </h2>
-
-        <!-- Business Context -->
-        <div class="bg-white rounded-lg shadow p-6 mb-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-1">Business Context</h3>
-            <p class="text-sm text-gray-500 mb-4">Used by the AI to understand what's relevant to your business when evaluating search terms.</p>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Business Description</label>
-                    <textarea id="biz-description" rows="3" placeholder="e.g. Pool maintenance, cleaning and servicing for existing pool owners in Sydney."
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Negative Keyword Examples</label>
-                    <p class="text-xs text-gray-400 mb-1">Describe what IS and ISN'T relevant. Be specific — the AI uses this verbatim.</p>
-                    <textarea id="nk-examples" rows="6" placeholder="WHAT THIS BUSINESS DOES:
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Examples for the AI</label>
+          <p class="text-xs text-gray-500 mb-2">List specific search types that ARE and AREN'T your customers. The more specific the better.</p>
+          <textarea id="nk-examples" rows="6"
+            placeholder="WHAT THIS BUSINESS DOES:
 Pool maintenance, cleaning and servicing.
 
-RELEVANT INTENT (do NOT block):
+RELEVANT (do NOT block these searches):
 - pool service, pool cleaning, pool maintenance
 
-IRRELEVANT INTENT (block these):
-1. Buying a pool: plunge pool, cocktail pool, fiberglass pool price
-2. DIY: pool chemicals guide, clean pool yourself"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-                </div>
-                <div class="flex items-center gap-3">
-                    <button onclick="saveAiSettings()" class="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">Save Business Context</button>
-                    <span id="ai-settings-msg" class="text-sm text-gray-500 hidden"></span>
-                </div>
-            </div>
+NOT RELEVANT (block these):
+1. People trying to buy a pool: plunge pool, fiberglass pool price
+2. DIY searches: pool chemicals guide, clean pool yourself"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
         </div>
-
-        <!-- Intent Groups -->
-        <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-1">Negative Keyword Intent Groups</h3>
-            <p class="text-sm text-gray-500 mb-4">
-                Toggle groups on/off and add extra patterns specific to your business.
-                Custom groups let you define entirely new categories.
-            </p>
-
-            <div id="intent-groups-container" class="space-y-4">
-                <p class="text-sm text-gray-400">Loading intent groups…</p>
-            </div>
-
-            <!-- Custom Group Builder -->
-            <div class="mt-6 border-t pt-5">
-                <h4 class="font-medium text-gray-700 mb-3">Add Custom Intent Group</h4>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <input id="custom-group-name" type="text" placeholder="Group name (e.g. Pool buyers)"
-                        class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                    <input id="custom-group-patterns" type="text" placeholder="Patterns, comma-separated"
-                        class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none md:col-span-2">
-                </div>
-                <button onclick="addCustomGroup()" class="mt-3 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700">
-                    + Add Group
-                </button>
-            </div>
-
-            <div class="mt-6 flex items-center gap-3">
-                <button onclick="saveIntentGroups()" class="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">Save Intent Groups</button>
-                <span id="intent-groups-msg" class="text-sm text-gray-500 hidden"></span>
-            </div>
+        <div class="flex items-center gap-3">
+          <button onclick="saveAiSettings()"
+                  class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm font-medium transition">
+            Save business context
+          </button>
+          <span id="ai-settings-msg" class="text-sm text-gray-500 hidden"></span>
         </div>
+      </div>
     </div>
+
+    {# Intent Groups #}
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+      <h3 class="text-base font-semibold text-gray-900 mb-1">Pre-built lists of searches to block</h3>
+      <p class="text-sm text-gray-500 mb-4">
+        Each list groups together searches that usually aren't real customers (people looking up info, DIY-ers, job seekers, etc.). Toggle on the ones that apply to your business.
+      </p>
+
+      <div id="intent-groups-container" class="space-y-4">
+        <p class="text-sm text-gray-400">Loading lists…</p>
+      </div>
+
+      <div class="mt-6 border-t pt-5">
+        <h4 class="font-medium text-gray-700 mb-2">Add your own list</h4>
+        <p class="text-xs text-gray-500 mb-3">For example, if your business doesn't serve commercial customers, add a list called "Commercial" with patterns like "office, business, warehouse".</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <input id="custom-group-name" type="text" placeholder="Name (e.g. Commercial)"
+                 class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          <input id="custom-group-patterns" type="text" placeholder="Words to block (comma-separated)"
+                 class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none md:col-span-2">
+        </div>
+        <button onclick="addCustomGroup()"
+                class="mt-3 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+          + Add list
+        </button>
+      </div>
+
+      <div class="mt-6 flex items-center gap-3">
+        <button onclick="saveIntentGroups()"
+                class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm font-medium transition">
+          Save lists
+        </button>
+        <span id="intent-groups-msg" class="text-sm text-gray-500 hidden"></span>
+      </div>
+    </div>
+  </div>
+
 </div>
 
-<script>
-// ── State ────────────────────────────────────────────────────────────────────
+<script nonce="{{ g.csp_nonce }}">
 let intentGroupsData = { groups: [], custom_groups: [] };
 
-// ── Load on page ready ───────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     loadIntentGroups();
     loadAiSettings();
 });
 
-// ── Business Context ─────────────────────────────────────────────────────────
 async function loadAiSettings() {
-    // Settings are embedded via Jinja if available; otherwise leave blank for user input
-    // (They're saved/loaded via the API so no separate load endpoint needed here)
+    try {
+        const res = await fetch("{{ url_for('agents_bp.get_ai_settings') }}", {
+            headers: { 'Accept': 'application/json' }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && data.success) {
+            const bd = document.getElementById('biz-description');
+            const nk = document.getElementById('nk-examples');
+            if (bd && data.business_description) bd.value = data.business_description;
+            if (nk && data.negative_keyword_examples) nk.value = data.negative_keyword_examples;
+        }
+    } catch (e) {
+        console.error('Failed to load AI settings:', e);
+    }
 }
 
 async function saveAiSettings() {
@@ -342,11 +456,10 @@ async function saveAiSettings() {
     msg.className = 'text-sm ' + (data.success ? 'text-green-600' : 'text-red-600');
     msg.classList.remove('hidden');
     btn.disabled = false;
-    btn.textContent = 'Save Business Context';
+    btn.textContent = 'Save business context';
     setTimeout(() => msg.classList.add('hidden'), 4000);
 }
 
-// ── Intent Groups ────────────────────────────────────────────────────────────
 async function loadIntentGroups() {
     const container = document.getElementById('intent-groups-container');
     try {
@@ -354,7 +467,7 @@ async function loadIntentGroups() {
         intentGroupsData = await res.json();
         renderIntentGroups();
     } catch (e) {
-        container.innerHTML = '<p class="text-sm text-red-500">Failed to load intent groups.</p>';
+        container.innerHTML = '<p class="text-sm text-red-500">Could not load the lists. Please refresh the page.</p>';
     }
 }
 
@@ -363,25 +476,28 @@ function renderIntentGroups() {
     const { groups, custom_groups } = intentGroupsData;
 
     let html = groups.map(g => `
-        <div class="border border-gray-200 rounded-lg p-4" data-group-key="${g.key}">
-            <div class="flex items-start justify-between gap-3">
-                <div class="flex-1">
-                    <div class="flex items-center gap-3">
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" class="sr-only peer group-enabled-toggle"
-                                ${g.enabled ? 'checked' : ''} data-key="${g.key}">
-                            <div class="w-9 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
-                        </label>
-                        <span class="font-medium text-gray-800">${g.name}</span>
-                        ${g.enabled_by_default ? '' : '<span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Off by default</span>'}
+        <div class="border border-gray-200 rounded-lg p-4 ${g.enabled ? 'bg-white' : 'bg-gray-50'}" data-group-key="${g.key}">
+            <div class="flex items-start gap-3">
+                <label class="relative inline-flex items-center cursor-pointer mt-0.5 shrink-0">
+                    <input type="checkbox" class="sr-only peer group-enabled-toggle"
+                        ${g.enabled ? 'checked' : ''} data-key="${g.key}">
+                    <div class="w-9 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                </label>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="font-semibold text-gray-900">${g.name}</span>
+                        ${g.enabled_by_default ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Recommended</span>' : ''}
                     </div>
-                    <p class="text-xs text-gray-500 mt-1 ml-12">${g.description}</p>
-                    <div class="mt-2 ml-12 flex flex-wrap gap-1">
-                        ${g.patterns.map(p => `<span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">${p}</span>`).join('')}
-                    </div>
-                    <div class="mt-2 ml-12">
+                    <p class="text-xs text-gray-600 mt-1">${g.description}</p>
+                    <details class="mt-2">
+                        <summary class="text-xs text-indigo-600 cursor-pointer hover:underline">Show example phrases (${g.patterns.length})</summary>
+                        <div class="mt-2 flex flex-wrap gap-1">
+                            ${g.patterns.map(p => `<span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">${p}</span>`).join('')}
+                        </div>
+                    </details>
+                    <div class="mt-2">
                         <input type="text" class="extra-patterns-input w-full border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                            placeholder="Extra patterns for this group (comma-separated)"
+                            placeholder="Add your own words to this list (comma-separated)"
                             value="${g.extra_patterns.join(', ')}" data-key="${g.key}">
                     </div>
                 </div>
@@ -389,19 +505,18 @@ function renderIntentGroups() {
         </div>
     `).join('');
 
-    // Render custom groups
     if (custom_groups.length) {
-        html += '<h4 class="font-medium text-gray-700 mt-4 mb-2">Custom Groups</h4>';
+        html += '<h4 class="font-medium text-gray-700 mt-5 mb-2">Your custom lists</h4>';
         html += custom_groups.map((cg, i) => `
             <div class="border border-green-200 bg-green-50 rounded-lg p-4" data-custom-index="${i}">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <span class="font-medium text-gray-800">${cg.name}</span>
-                        <div class="mt-1 flex flex-wrap gap-1">
-                            ${cg.patterns.map(p => `<span class="text-xs bg-white border border-green-200 text-gray-600 px-2 py-0.5 rounded">${p}</span>`).join('')}
+                <div class="flex items-start justify-between gap-3">
+                    <div class="flex-1 min-w-0">
+                        <span class="font-semibold text-gray-900">${cg.name}</span>
+                        <div class="mt-1.5 flex flex-wrap gap-1">
+                            ${cg.patterns.map(p => `<span class="text-xs bg-white border border-green-200 text-gray-700 px-2 py-0.5 rounded">${p}</span>`).join('')}
                         </div>
                     </div>
-                    <button onclick="removeCustomGroup(${i})" class="text-red-400 hover:text-red-600 text-sm">Remove</button>
+                    <button onclick="removeCustomGroup(${i})" class="text-red-500 hover:text-red-700 text-sm shrink-0">Remove</button>
                 </div>
             </div>
         `).join('');
@@ -414,8 +529,14 @@ function addCustomGroup() {
     const name = document.getElementById('custom-group-name').value.trim();
     const patternsRaw = document.getElementById('custom-group-patterns').value;
     const patterns = patternsRaw.split(',').map(p => p.trim()).filter(Boolean);
-    if (!name || !patterns.length) { alert('Please enter a group name and at least one pattern.'); return; }
-
+    if (!name || !patterns.length) {
+      const msg = document.getElementById('intent-groups-msg');
+      msg.textContent = 'Please enter a name and at least one word to block.';
+      msg.className = 'text-sm text-red-600';
+      msg.classList.remove('hidden');
+      setTimeout(() => msg.classList.add('hidden'), 4000);
+      return;
+    }
     intentGroupsData.custom_groups.push({ name, patterns, enabled: true });
     document.getElementById('custom-group-name').value = '';
     document.getElementById('custom-group-patterns').value = '';
@@ -460,7 +581,7 @@ async function saveIntentGroups() {
     msg.className = 'text-sm ' + (data.success ? 'text-green-600' : 'text-red-600');
     msg.classList.remove('hidden');
     btn.disabled = false;
-    btn.textContent = 'Save Intent Groups';
+    btn.textContent = 'Save lists';
     setTimeout(() => msg.classList.add('hidden'), 4000);
 }
 

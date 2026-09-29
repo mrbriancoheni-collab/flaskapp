@@ -54,28 +54,35 @@ def merge_ai_recommendations(
     don't need changes.
     """
     merged = []
+    seen_titles: set = set()
+
+    def _add(item: dict) -> None:
+        key = item["title"].strip().lower()
+        if key and key not in seen_titles:
+            seen_titles.add(key)
+            merged.append(item)
 
     for rec in (ai_analysis.get("top_5_recommendations") or []):
-        merged.append({
+        _add({
             "title": rec.get("title", ""),
-            "description": rec.get("expected_impact", ""),
-            "layman_summary": rec.get("implementation", ""),
+            "description": rec.get("implementation", ""),
+            "layman_summary": rec.get("expected_impact", ""),
             "category": rec.get("category", "general"),
-            "severity": int(rec.get("rank", 3)),
+            "severity": int(rec.get("rank") or 3),
             "roi": {},
             "effort": {},
-            "action_steps": [rec.get("implementation", "")],
+            "action_steps": [rec.get("implementation", "")] if rec.get("implementation") else [],
             "ai_generated": True,
         })
 
     for rec in (ai_analysis.get("recommendations") or []):
         action = rec.get("action") or {}
-        merged.append({
+        _add({
             "title": rec.get("title", ""),
             "description": rec.get("description", ""),
             "layman_summary": rec.get("expected_impact", ""),
             "category": rec.get("category", "general"),
-            "severity": int(rec.get("severity", 3)),
+            "severity": int(rec.get("severity") or 3),
             "roi": {},
             "effort": {},
             "action_steps": [v for v in action.values() if v] if action else [],

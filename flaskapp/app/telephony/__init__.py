@@ -147,6 +147,7 @@ def twilio_status():
 
     # Only persist terminal events (avoid double-writes for ringing/in-progress)
     terminal_statuses = {"completed", "no-answer", "busy", "failed", "canceled"}
+    account_id = None
     if call_status in terminal_statuses:
         account_id = _account_id_from_to_number(to_number) or _fallback_account_id()
         if account_id:
@@ -157,21 +158,34 @@ def twilio_status():
             except Exception:
                 current_app.logger.exception("Failed to store CallEvent")
 
-    # Missed-call SMS follow-up
+    # Missed-call SMS follow-up (all tracking numbers, per-account message)
     if call_status in ("no-answer", "busy", "failed"):
-        _send_missed_call_sms(payload)
+        _send_missed_call_sms(payload, account_id)
+        # Ingest as a lead so it appears in the Universal Lead Inbox
+        _ingest_missed_call_as_lead(account_id, payload, to_number)
 
     return ("", 200)
 
 
-def _send_missed_call_sms(payload: Dict[str, Any]) -> None:
-    """Send an automated SMS when a call isn't answered."""
+def _send_missed_call_sms(payload: Dict[str, Any], account_id=None) -> None:
+    """Send an automated SMS when a call isn't answered (per-account message if configured)."""
     creds     = _twilio_creds()
     to_number = payload.get("From") or payload.get("Caller")
-    body      = os.getenv(
-        "MISSED_CALL_SMS",
-        "Sorry we missed your call — text us here and we'll help right away."
-    )
+
+    # Prefer per-account body from LeadIntakeConfig, fall back to env var
+    body = None
+    if account_id:
+        try:
+            from app.models_tooling import LeadIntakeConfig
+            cfg = LeadIntakeConfig.query.filter_by(account_id=account_id).first()
+            body = cfg.missed_call_sms_body if cfg else None
+        except Exception:
+            pass
+    if not body:
+        body = os.getenv(
+            "MISSED_CALL_SMS",
+            "Sorry we missed your call — text us here and we'll help right away."
+        )
 
     if creds and to_number:
         try:
@@ -187,6 +201,56 @@ def _send_missed_call_sms(payload: Dict[str, Any]) -> None:
             current_app.logger.exception("Missed-call SMS failed")
     else:
         current_app.logger.info("Simulated missed-call SMS to %s: %s", to_number, body)
+
+
+def _ingest_missed_call_as_lead(account_id, payload: Dict[str, Any], to_number: str) -> None:
+    """Create a LeadIngest record for a missed call so it shows in the Lead Inbox."""
+    if not account_id:
+        return
+    try:
+        from datetime import datetime
+        from app import db
+        from app.models_tooling import LeadIngest, LeadIntakeConfig
+
+        caller = payload.get("From") or payload.get("Caller")
+        if not caller:
+            return
+
+        # Determine lead source from tracking number config
+        source = "phone"
+        try:
+            cfg = LeadIntakeConfig.query.filter_by(account_id=account_id).first()
+            if cfg and cfg.elocal_tracking_number and to_number == cfg.elocal_tracking_number:
+                source = "elocal"
+        except Exception:
+            pass
+
+        existing = LeadIngest.query.filter_by(
+            account_id=account_id, phone=caller, source=source
+        ).order_by(LeadIngest.created_at.desc()).first()
+        # Don't duplicate if we've seen this number in the last hour
+        if existing:
+            from datetime import timedelta
+            if (datetime.utcnow() - existing.created_at).total_seconds() < 3600:
+                return
+
+        city = payload.get("CallerCity") or None
+        state = payload.get("CallerState") or None
+        location = ", ".join(filter(None, [city, state])) or None
+
+        lead = LeadIngest(
+            account_id=account_id,
+            source=source,
+            phone=caller,
+            city=location,
+            status="new",
+            occurred_at=datetime.utcnow(),
+            raw={"twilio_payload": payload, "type": "missed_call"},
+        )
+        db.session.add(lead)
+        db.session.commit()
+    except Exception:
+        current_app.logger.exception("Failed to ingest missed call as lead")
 
 
 # ── API: tracking number management ───────────────────────────────────────────

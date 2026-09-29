@@ -1,0 +1,72 @@
+{% extends "base_app.html" %}
+{% set SECTION = 'glsa' %}
+{% block title %}LSA History Archive{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8 space-y-6">
+  <div class="flex items-start justify-between gap-4 flex-wrap">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Local Services Ads — History Archive</h1>
+      <p class="text-gray-500 text-sm mt-1 max-w-2xl">
+        Google is moving Local Services Ads into Google Ads starting August 2026, and the old dashboard's
+        historical reports won't transfer. Snapshot your lead history now so you keep it forever.
+      </p>
+    </div>
+    <form method="post" action="{{ url_for('glsa_bp.archive_create') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit"
+              class="rounded-lg bg-indigo-600 text-white px-4 py-2.5 font-semibold hover:bg-indigo-700 transition whitespace-nowrap">
+        <i class="fa-solid fa-camera mr-2"></i>Archive my LSA history now
+      </button>
+    </form>
+  </div>
+
+  <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 flex items-start gap-3">
+    <i class="fa-solid fa-triangle-exclamation text-amber-600 mt-0.5"></i>
+    <div><span class="font-semibold">Do this before your migration notice arrives.</span>
+    Google gives 14 days' notice, and reports don't transfer after the account moves. Each snapshot is a
+    permanent, shareable record of your leads, spend, bookings, and job-type mix.</div>
+  </div>
+
+  {% if archives and archives|length > 0 %}
+  <div class="rounded-xl border bg-white overflow-hidden">
+    <table class="min-w-full text-sm">
+      <thead class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
+        <tr>
+          <th class="text-left px-4 py-3">Archived</th>
+          <th class="text-left px-4 py-3">Period</th>
+          <th class="text-right px-4 py-3">Leads</th>
+          <th class="text-right px-4 py-3">Spend</th>
+          <th class="text-right px-4 py-3">Booked</th>
+          <th class="text-left px-4 py-3">Share</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y">
+        {% for a in archives %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-3 whitespace-nowrap text-gray-500">{{ a.created_at.strftime('%b %d, %Y') if a.created_at.strftime is defined else a.created_at }}</td>
+          <td class="px-4 py-3 whitespace-nowrap text-gray-500">{{ a.period_start or '—' }} → {{ a.period_end or '—' }}</td>
+          <td class="px-4 py-3 text-right">{{ '{:,}'.format(a.total_leads or 0) }}</td>
+          <td class="px-4 py-3 text-right">${{ '{:,.0f}'.format(a.total_spend or 0) }}</td>
+          <td class="px-4 py-3 text-right">{{ '{:,}'.format(a.booked_leads or 0) }}</td>
+          <td class="px-4 py-3">
+            {% if a.share_token %}<span class="text-green-600 text-xs"><i class="fa-solid fa-link"></i> On</span>
+            {% else %}<span class="text-gray-300 text-xs">Off</span>{% endif %}
+          </td>
+          <td class="px-4 py-3 text-right">
+            <a href="{{ url_for('glsa_bp.archive_report', archive_id=a.id) }}" class="text-indigo-600 hover:underline">View →</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="rounded-xl border border-dashed bg-white p-10 text-center">
+    <div class="text-gray-900 font-medium">No archives yet</div>
+    <p class="text-gray-500 text-sm mt-1">Create your first snapshot to lock in your LSA history before migration.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

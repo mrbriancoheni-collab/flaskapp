@@ -1,21 +1,21 @@
 {# templates/linkedin/categories.html #}
 {% extends "base_app.html" %}
 {% set SECTION = 'linkedin' %}
-{% block title %}Thought Leadership Categories{% endblock %}
+{% block title %}Your post topics{% endblock %}
 
 {% block content %}
 <div class="max-w-6xl mx-auto space-y-6">
   <!-- Header -->
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-2xl font-semibold">Thought Leadership Categories</h1>
+      <h1 class="text-2xl font-semibold">Your post topics</h1>
       <p class="text-gray-500 mt-1">
-        Define 3-5 primary content categories with your unique point of view for strategic LinkedIn posts.
+        Pick 3-5 things you want to be known for. We will use these to write posts that sound like you.
       </p>
     </div>
     <a href="{{ url_for('linkedin_bp.category_new') }}"
        class="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 font-medium">
-      <i class="fa-solid fa-plus"></i> Add Category
+      <i class="fa-solid fa-plus"></i> Add a topic
     </a>
   </div>
 
@@ -25,21 +25,21 @@
     <div class="flex items-start gap-4">
       <div class="text-3xl">💡</div>
       <div>
-        <h3 class="font-bold text-blue-900 mb-2">Get Started with Thought Leadership</h3>
+        <h3 class="font-bold text-blue-900 mb-2">Get started</h3>
         <p class="text-sm text-blue-800 mb-3">
-          Create 3-5 content categories that represent your unique expertise. For each category, define:
+          Add 3-5 topics that show what your business is great at. For each one, write down:
         </p>
         <ul class="text-sm text-blue-800 space-y-1 mb-4">
-          <li><i class="fa-solid fa-check text-blue-600 mr-2"></i><strong>Your unique POV</strong> – What makes your perspective different?</li>
-          <li><i class="fa-solid fa-check text-blue-600 mr-2"></i><strong>Specific expertise</strong> – What experience backs up this POV?</li>
-          <li><i class="fa-solid fa-check text-blue-600 mr-2"></i><strong>Topic ideas</strong> – Specific angles you can write about</li>
+          <li><i class="fa-solid fa-check text-blue-600 mr-2"></i><strong>What you believe</strong> – Why your way is better</li>
+          <li><i class="fa-solid fa-check text-blue-600 mr-2"></i><strong>Why you know best</strong> – Real jobs and experience that prove it</li>
+          <li><i class="fa-solid fa-check text-blue-600 mr-2"></i><strong>Post ideas</strong> – Stories or tips to share</li>
         </ul>
         <div class="bg-white border border-blue-200 rounded-lg p-3 text-sm">
-          <strong class="text-blue-900">Example Category:</strong>
+          <strong class="text-blue-900">Example:</strong>
           <div class="mt-2 text-gray-700">
-            <div><strong>Name:</strong> Google Ads Optimization for HVAC</div>
-            <div class="mt-1"><strong>POV:</strong> Most HVAC companies waste 40% of their ad spend because they don't segment campaigns by service type and season</div>
-            <div class="mt-1"><strong>Expertise:</strong> 15+ years optimizing Google Ads specifically for seasonal HVAC campaigns</div>
+            <div><strong>Topic:</strong> Same-day AC repairs in Phoenix</div>
+            <div class="mt-1"><strong>What you believe:</strong> Most AC companies make customers wait 3 days. We show up the same day or the call is free.</div>
+            <div class="mt-1"><strong>Why you know best:</strong> 20 years running same-day service, 5 trucks on the road every day</div>
           </div>
         </div>
       </div>
@@ -76,7 +76,7 @@
 
           <div class="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-4 mb-3">
             <div class="text-xs font-semibold text-indigo-900 mb-1">
-              <i class="fa-solid fa-lightbulb mr-1"></i>Unique Point of View
+              <i class="fa-solid fa-lightbulb mr-1"></i>What you believe
             </div>
             <p class="text-sm text-indigo-900 italic">"{{ category.pov_statement }}"</p>
           </div>
@@ -84,7 +84,7 @@
           {% if category.unique_expertise %}
           <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3">
             <div class="text-xs font-semibold text-gray-700 mb-1">
-              <i class="fa-solid fa-medal mr-1"></i>Expertise
+              <i class="fa-solid fa-medal mr-1"></i>Why you know best
             </div>
             <p class="text-sm text-gray-700">{{ category.unique_expertise }}</p>
           </div>
@@ -94,11 +94,11 @@
           <div class="flex items-center gap-4 text-sm text-gray-600">
             <div>
               <i class="fa-solid fa-file-lines mr-1 text-gray-400"></i>
-              <span class="font-medium">{{ category.posts_generated }}</span> posts generated
+              <span class="font-medium">{{ category.posts_generated }}</span> posts written
             </div>
             <div>
               <i class="fa-solid fa-lightbulb mr-1 text-gray-400"></i>
-              <span class="font-medium">{{ category.topics.count() }}</span> topic ideas
+              <span class="font-medium">{{ category.topics.count() }}</span> post ideas
             </div>
             <div>
               <i class="fa-solid fa-calendar mr-1 text-gray-400"></i>
@@ -135,23 +135,23 @@
   <!-- Help Section -->
   <div class="bg-gray-50 border border-gray-200 rounded-lg p-6">
     <h3 class="font-semibold text-gray-900 mb-3">
-      <i class="fa-solid fa-question-circle mr-2 text-gray-600"></i>Best Practices
+      <i class="fa-solid fa-question-circle mr-2 text-gray-600"></i>Tips
     </h3>
     <div class="grid md:grid-cols-2 gap-4 text-sm text-gray-700">
       <div>
-        <h4 class="font-semibold mb-2">Category Selection</h4>
+        <h4 class="font-semibold mb-2">Picking topics</h4>
         <ul class="space-y-1">
-          <li><i class="fa-solid fa-check text-green-600 mr-2"></i>Focus on 3-5 core expertise areas</li>
-          <li><i class="fa-solid fa-check text-green-600 mr-2"></i>Each should have a distinct POV</li>
-          <li><i class="fa-solid fa-check text-green-600 mr-2"></i>Align with your business goals</li>
+          <li><i class="fa-solid fa-check text-green-600 mr-2"></i>Stick to 3-5 things you are best at</li>
+          <li><i class="fa-solid fa-check text-green-600 mr-2"></i>Each should have its own clear belief</li>
+          <li><i class="fa-solid fa-check text-green-600 mr-2"></i>Match the jobs you want to win</li>
         </ul>
       </div>
       <div>
-        <h4 class="font-semibold mb-2">POV Development</h4>
+        <h4 class="font-semibold mb-2">Saying what you believe</h4>
         <ul class="space-y-1">
-          <li><i class="fa-solid fa-check text-green-600 mr-2"></i>Be specific, not generic</li>
-          <li><i class="fa-solid fa-check text-green-600 mr-2"></i>Back it up with real experience</li>
-          <li><i class="fa-solid fa-check text-green-600 mr-2"></i>Make it contrarian or unique</li>
+          <li><i class="fa-solid fa-check text-green-600 mr-2"></i>Be specific, not vague</li>
+          <li><i class="fa-solid fa-check text-green-600 mr-2"></i>Use real jobs to back it up</li>
+          <li><i class="fa-solid fa-check text-green-600 mr-2"></i>Take a strong stand, not a safe one</li>
         </ul>
       </div>
     </div>
@@ -159,34 +159,63 @@
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+function showConfirm(msg, onConfirm) {
+  const overlay = document.createElement('div');
+  overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+  const box = document.createElement('div');
+  box.className = 'bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl';
+  const msgEl = document.createElement('p');
+  msgEl.className = 'text-sm text-gray-800 mb-4';
+  msgEl.textContent = msg;
+  const btnRow = document.createElement('div');
+  btnRow.className = 'flex gap-2 justify-end';
+  const cancel = document.createElement('button');
+  cancel.className = 'px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 text-sm';
+  cancel.textContent = 'Cancel';
+  cancel.onclick = () => overlay.remove();
+  const ok = document.createElement('button');
+  ok.className = 'px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm';
+  ok.textContent = 'Delete';
+  ok.onclick = () => { overlay.remove(); onConfirm(); };
+  btnRow.appendChild(cancel); btnRow.appendChild(ok);
+  box.appendChild(msgEl); box.appendChild(btnRow);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
 // Handle category deletion
 document.querySelectorAll('.delete-category').forEach(btn => {
   btn.addEventListener('click', async function() {
     const categoryId = this.dataset.categoryId;
     const categoryName = this.dataset.categoryName;
 
-    if (!confirm(`Are you sure you want to delete the category "${categoryName}"?\n\nThis will also delete all topic ideas within this category. This action cannot be undone.`)) {
-      return;
-    }
+    showConfirm(`Delete the topic "${categoryName}"? This also removes every post idea inside it. You cannot undo this.`, async () => {
+      try {
+        const response = await fetch(`{{ url_for('linkedin_bp.category_delete', category_id=0) }}`.replace('/0', `/${categoryId}`), {
+          method: 'DELETE',
+          credentials: 'same-origin'
+        });
 
-    try {
-      const response = await fetch(`{{ url_for('linkedin_bp.category_delete', category_id=0) }}`.replace('/0', `/${categoryId}`), {
-        method: 'DELETE',
-        credentials: 'same-origin'
-      });
+        const data = await response.json();
 
-      const data = await response.json();
-
-      if (data.success) {
-        // Reload page to show updated list
-        window.location.reload();
-      } else {
-        alert('Error: ' + (data.error || 'Failed to delete category'));
+        if (data.success) {
+          showToast('Topic deleted', 'success');
+          setTimeout(() => window.location.reload(), 600);
+        } else {
+          showToast('Error: ' + (data.error || 'Failed to delete topic'), 'error');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        showToast('Failed to delete topic. Please try again.', 'error');
       }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to delete category. Please try again.');
-    }
+    });
   });
 });
 </script>

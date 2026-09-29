@@ -49,6 +49,23 @@
                 <i class="fa-solid fa-plus mr-2"></i>
                 Add Email Sequence
             </a>
+
+            <form method="post" action="{{ url_for('lead_campaigns_bp.purge_nonbusiness_emails') }}" class="inline"
+                  onsubmit="return confirm('Remove all non-business emails (Yelp, Quora, etc.) from this campaign?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="campaign_id" value="{{ campaign.id }}">
+                <button type="submit" class="bg-amber-100 text-amber-700 px-4 py-2 rounded border border-amber-300 hover:bg-amber-200 text-sm font-medium">
+                    <i class="fa-solid fa-filter-circle-xmark mr-2"></i>Purge Bad Emails
+                </button>
+            </form>
+
+            <form method="post" action="{{ url_for('lead_campaigns_bp.reset_email_sending', campaign_id=campaign.id) }}" class="inline"
+                  onsubmit="return confirm('Reset all email sending for this campaign? Every contact will receive the sequence again from step 1.')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="bg-red-100 text-red-700 px-4 py-2 rounded border border-red-300 hover:bg-red-200 text-sm font-medium">
+                    <i class="fa-solid fa-rotate-left mr-2"></i>Reset & Resend
+                </button>
+            </form>
         </div>
     </div>
 

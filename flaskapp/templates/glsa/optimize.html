@@ -9,9 +9,9 @@
     <span id="sync-banner-text">Syncing your LSA data...</span>
   </div>
   <div class="page-header">
-    <h1 class="page-title">Local Services Ads — Optimize</h1>
+    <h1 class="page-title">Improve your Local Services Ads</h1>
     <p class="page-subtitle">
-      Tune your LSA profile, budget, and categories to boost qualified lead flow.
+      We'll review your Google Guaranteed profile and show you exactly what to change to get more leads for the same budget.
     </p>
   </div>
 
@@ -43,17 +43,16 @@
             <strong>Sample mode:</strong> Edit the sample profile below, then open the Optimizer to get recommendations.
           </div>
         {% else %}
-          <p class="muted">
-            The Optimizer can review your current profile and suggest changes to improve lead potential.
-            Switch to the “Optimizer (Profile Audit)” tab to begin.
+          <p class=”muted”>
+            Switch to the “Profile Audit” tab and we'll check your profile against what top-performing Local Services Ads look like — then tell you exactly what to change.
           </p>
         {% endif %}
 
         <hr>
-        <h3>Account context</h3>
+        <h3>Connected account</h3>
         <ul>
-          <li>Customer ID: <code>{{ ctx.customer_id or "—" }}</code></li>
-          <li>Manager (login-customer-id): <code>{{ ctx.login_customer_id or "—" }}</code></li>
+          <li>Account ID: <code>{{ ctx.customer_id or "—" }}</code></li>
+          <li>Manager account: <code>{{ ctx.login_customer_id or "—" }}</code></li>
         </ul>
 
         {% if not connected %}

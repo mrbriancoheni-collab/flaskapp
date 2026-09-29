@@ -79,8 +79,26 @@ def send_daily_budget_report():
             try:
                 user = User.query.get(user_id)
                 if user and user.email:
-                    # TODO: Implement email template and sending
-                    logger.info(f"Would send budget report to {user.email} for {len(trackers)} trackers")
+                    tracker_rows = "".join(
+                        f"<tr><td>{t.name}</td>"
+                        f"<td>${t.spend_amount:,.0f} / ${t.budget_amount:,.0f}</td>"
+                        f"<td>{t.spend_percentage:.0f}%</td></tr>"
+                        for t in trackers
+                    )
+                    html_body = f"""
+<h2>Daily Budget Report</h2>
+<p>Here is your budget spend summary:</p>
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;">
+  <thead><tr><th>Campaign</th><th>Spend / Budget</th><th>% Used</th></tr></thead>
+  <tbody>{tracker_rows}</tbody>
+</table>
+<p>Log in to review and adjust your campaigns.</p>
+"""
+                    send_email(
+                        to_email=user.email,
+                        subject="Your daily Google Ads budget report",
+                        html_body=html_body,
+                    )
                     emails_sent += 1
             except Exception as e:
                 logger.error(f"Failed to send budget report to user {user_id}: {e}")

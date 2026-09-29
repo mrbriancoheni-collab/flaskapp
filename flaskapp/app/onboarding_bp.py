@@ -136,9 +136,10 @@ def save_step():
 
     # Whitelist fields we allow to be updated via onboarding
     ALLOWED = {
-        "business_name", "phone", "website", "service_area",
+        "business_name", "industry", "phone", "website",
+        "years_in_business", "service_area", "employee_count", "avg_job_ticket",
         "services", "top_services", "price_position",
-        "ideal_customers", "urgency", "tone", "lead_channels",
+        "ideal_customers", "urgency", "tone", "lead_channels", "main_challenges",
         "why_choose_us", "current_promo", "hours",
         "primary_goal", "ads_budget",
         "edge_statement", "competitors",
@@ -189,24 +190,75 @@ def complete():
 @onboarding_bp.route("/quick-setup", methods=["GET"], endpoint="quick_setup")
 @login_required
 def quick_setup():
-    """
-    5-minute onboarding flow for new users.
-    Focuses on essentials: business name, industry, phone, service area, and connecting Google Ads.
-    """
-    from app.google.utils_ads import _is_connected
+    """Onboarding wizard: business info → ICP → voice → tool connections."""
     from app.auth.utils import current_account_id
+    from app import db
+    from sqlalchemy import text
 
-    # Check if Google Ads is already connected
     aid = current_account_id()
-    google_ads_connected = False
+
+    # ── Connection status for each tool ──────────────────────────────────────
+    def _google(product):
+        try:
+            with db.engine.connect() as c:
+                return bool(c.execute(text(
+                    "SELECT id FROM google_oauth_tokens WHERE account_id=:a AND product=:p LIMIT 1"
+                ), {"a": aid, "p": product}).first())
+        except Exception:
+            return False
+
+    def _table_has_row(table, col="account_id"):
+        try:
+            with db.engine.connect() as c:
+                return bool(c.execute(text(
+                    f"SELECT id FROM {table} WHERE {col}=:a LIMIT 1"
+                ), {"a": aid}).first())
+        except Exception:
+            return False
+
+    connections = {
+        "google_ads":  _google("ads"),
+        "gmb":         _google("gmb"),
+        "glsa":        _google("lsa") or _table_has_row("glsa_accounts"),
+        "facebook":    _table_has_row("fb_accounts"),
+        "yelp":        _table_has_row("yelp_accounts"),
+        "crm":         _table_has_row("crm_connections"),
+        "call_tracking": _table_has_row("call_tracking_numbers"),
+        "lead_intake": _table_has_row("lead_intake_configs"),
+    }
+
+    # ── Existing profile (pre-fill form) ─────────────────────────────────────
     try:
-        from app.google import _is_connected as google_is_connected
-        google_ads_connected = google_is_connected(aid, "ads")
+        profile = _ensure_profile()
+        profile_data = {
+            "business_name": profile.business_name or "",
+            "industry": profile.industry or "",
+            "phone": profile.phone or "",
+            "website": profile.website or "",
+            "years_in_business": profile.years_in_business or "",
+            "service_area": profile.service_area or "",
+            "employee_count": profile.employee_count or "",
+            "avg_job_ticket": profile.avg_job_ticket or "",
+            "services": profile.services or [],
+            "top_services": profile.top_services or [],
+            "price_position": profile.price_position or "",
+            "ideal_customers": profile.ideal_customers or [],
+            "urgency": profile.urgency or "",
+            "lead_channels": profile.lead_channels or [],
+            "main_challenges": profile.main_challenges or [],
+            "why_choose_us": profile.why_choose_us or "",
+            "tone": profile.tone or "",
+            "primary_goal": profile.primary_goal or "",
+            "ads_budget": profile.ads_budget or "",
+            "approvals_via_email": profile.approvals_via_email,
+            "is_complete": profile.status == "complete",
+        }
     except Exception:
-        pass
+        profile_data = {"is_complete": False}
 
     return render_template(
         "onboarding/quick_setup.html",
-        google_ads_connected=google_ads_connected,
+        connections=connections,
+        profile=profile_data,
     )
 

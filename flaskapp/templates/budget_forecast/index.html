@@ -9,33 +9,33 @@
       <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
         <i class="fa-solid fa-chart-line text-white"></i>
       </div>
-      <h1 class="text-2xl font-extrabold text-gray-900">Budget Forecasting</h1>
+      <h1 class="text-2xl font-extrabold text-gray-900">What would happen if you changed your budget?</h1>
     </div>
-    <p class="text-gray-600">See how budget changes could impact your leads and results.</p>
+    <p class="text-gray-600">Type in a budget amount and we'll predict how many leads you'd get — based on your actual historical performance.</p>
   </div>
 
   <!-- Current Performance Summary -->
   <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
     <h2 class="text-lg font-semibold text-gray-900 mb-4">
       <i class="fa-solid fa-gauge-high text-indigo-600 mr-2"></i>
-      Current Performance
+      Right now, your ads are doing this
     </h2>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
       <div class="text-center p-4 bg-gray-50 rounded-lg">
         <div class="text-2xl font-bold text-gray-900">${{ "%.0f"|format(current_budget) }}</div>
-        <div class="text-xs text-gray-500">Monthly Budget</div>
+        <div class="text-xs text-gray-500">You spend each month</div>
       </div>
       <div class="text-center p-4 bg-gray-50 rounded-lg">
         <div class="text-2xl font-bold text-gray-900">{{ "%.1f"|format(performance.total_conversions) }}</div>
-        <div class="text-xs text-gray-500">Monthly Leads</div>
+        <div class="text-xs text-gray-500">Leads you get each month</div>
       </div>
       <div class="text-center p-4 bg-gray-50 rounded-lg">
         <div class="text-2xl font-bold text-gray-900">${{ "%.0f"|format(performance.avg_cpa) }}</div>
-        <div class="text-xs text-gray-500">Cost Per Lead</div>
+        <div class="text-xs text-gray-500">What each lead costs you</div>
       </div>
       <div class="text-center p-4 bg-gray-50 rounded-lg">
         <div class="text-2xl font-bold text-gray-900">{{ "%.1f"|format(performance.conversion_rate) }}%</div>
-        <div class="text-xs text-gray-500">Conversion Rate</div>
+        <div class="text-xs text-gray-500">Clicks that become leads</div>
       </div>
     </div>
   </div>
@@ -45,7 +45,7 @@
   <div class="mb-6">
     <h2 class="text-lg font-semibold text-gray-900 mb-4">
       <i class="fa-solid fa-lightbulb text-yellow-500 mr-2"></i>
-      AI Recommendations
+      Our suggestions
     </h2>
     <div class="grid md:grid-cols-3 gap-4">
       {% for rec in recommendations %}
@@ -80,18 +80,18 @@
   <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
     <h2 class="text-lg font-semibold text-gray-900 mb-4">
       <i class="fa-solid fa-scale-balanced text-indigo-600 mr-2"></i>
-      Budget Scenarios
+      Side-by-side: what happens at different budgets
     </h2>
-    <p class="text-sm text-gray-600 mb-4">Compare how different budget levels could affect your results.</p>
+    <p class="text-sm text-gray-600 mb-4">Based on your account's real data — not industry averages.</p>
 
     <div class="overflow-x-auto">
       <table class="w-full">
         <thead>
           <tr class="border-b border-gray-200">
             <th class="text-left py-3 px-4 text-sm font-semibold text-gray-700">Scenario</th>
-            <th class="text-right py-3 px-4 text-sm font-semibold text-gray-700">Monthly Budget</th>
-            <th class="text-right py-3 px-4 text-sm font-semibold text-gray-700">Est. Clicks</th>
-            <th class="text-right py-3 px-4 text-sm font-semibold text-gray-700">Est. Leads</th>
+            <th class="text-right py-3 px-4 text-sm font-semibold text-gray-700">Monthly spend</th>
+            <th class="text-right py-3 px-4 text-sm font-semibold text-gray-700">Est. clicks</th>
+            <th class="text-right py-3 px-4 text-sm font-semibold text-gray-700">Est. leads</th>
           </tr>
         </thead>
         <tbody>
@@ -121,11 +121,11 @@
   <div class="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-6">
     <h2 class="text-lg font-semibold text-gray-900 mb-4">
       <i class="fa-solid fa-calculator text-indigo-600 mr-2"></i>
-      Custom Budget Calculator
+      Try your own number
     </h2>
     <div class="grid md:grid-cols-2 gap-6">
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">Enter your desired monthly budget</label>
+        <label class="block text-sm font-medium text-gray-700 mb-2">What monthly budget do you want to try?</label>
         <div class="flex items-center gap-3">
           <span class="text-gray-500">$</span>
           <input type="number" id="customBudget" value="{{ current_budget|int }}"
@@ -138,22 +138,22 @@
         </div>
       </div>
       <div id="forecastResult" class="bg-white rounded-lg p-4 hidden">
-        <h3 class="text-sm font-medium text-gray-700 mb-3">Predicted Results</h3>
+        <h3 class="text-sm font-medium text-gray-700 mb-3">Here's what to expect</h3>
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <div class="text-xs text-gray-500">Est. Clicks</div>
+            <div class="text-xs text-gray-500">Ad clicks per month</div>
             <div id="forecastClicks" class="text-xl font-bold text-gray-900">-</div>
           </div>
           <div>
-            <div class="text-xs text-gray-500">Est. Leads</div>
+            <div class="text-xs text-gray-500">Leads per month</div>
             <div id="forecastConversions" class="text-xl font-bold text-green-600">-</div>
           </div>
           <div>
-            <div class="text-xs text-gray-500">Est. Cost/Lead</div>
+            <div class="text-xs text-gray-500">Cost per lead</div>
             <div id="forecastCPA" class="text-xl font-bold text-gray-900">-</div>
           </div>
           <div>
-            <div class="text-xs text-gray-500">Change</div>
+            <div class="text-xs text-gray-500">Change from today</div>
             <div id="forecastChange" class="text-xl font-bold text-indigo-600">-</div>
           </div>
         </div>
@@ -171,6 +171,15 @@
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
 async function calculateForecast() {
   const budget = parseFloat(document.getElementById('customBudget').value) || 0;
 
@@ -194,7 +203,7 @@ async function calculateForecast() {
     document.getElementById('forecastResult').classList.remove('hidden');
   } catch (error) {
     console.error('Error calculating forecast:', error);
-    alert('Failed to calculate forecast. Please try again.');
+    showToast('Failed to calculate forecast. Please try again.', 'error');
   }
 }
 </script>

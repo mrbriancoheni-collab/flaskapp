@@ -4,10 +4,29 @@
   <div class="flex items-start gap-4 mb-4">
     <div class="flex-shrink-0 text-4xl">🎯</div>
     <div class="flex-1">
-      <h2 class="text-2xl font-bold text-gray-900 mb-2">Start Here: Priority Workflow</h2>
-      <p class="text-gray-700">Follow this step-by-step guide to optimize your account systematically.</p>
+      <h2 class="text-2xl font-bold text-gray-900 mb-1">Start Here: Priority Workflow</h2>
+      <p class="text-gray-700">Want to skip the manual work? Let AI agents handle it for you.</p>
     </div>
   </div>
+
+  <!-- AI-First Option -->
+  {% if not is_demo %}
+  <div class="bg-indigo-600 rounded-xl p-4 mb-5 flex flex-col sm:flex-row items-center gap-4">
+    <div class="flex-1 text-white">
+      <div class="font-bold text-base mb-0.5">
+        <i class="fa-solid fa-robot mr-2"></i>Fastest path: Run AI Agents
+        {% if not is_paid %}<span class="ml-2 text-xs bg-yellow-400 text-yellow-900 font-bold px-2 py-0.5 rounded-full">PAID</span>{% endif %}
+      </div>
+      <div class="text-indigo-200 text-sm">Safe fixes applied automatically. Larger changes queued for your 1-click approval.</div>
+    </div>
+    <button onclick="runAIAgents()"
+            class="flex-shrink-0 inline-flex items-center gap-2 px-6 py-3 bg-white text-indigo-700 font-extrabold rounded-lg hover:bg-indigo-50 transition shadow-lg whitespace-nowrap">
+      {% if not is_paid %}<i class="fa-solid fa-crown text-yellow-500"></i>{% else %}<i class="fa-solid fa-rocket"></i>{% endif %}
+      {% if is_paid %}Launch AI Agents{% else %}Upgrade to Launch{% endif %}
+    </button>
+  </div>
+  <div class="text-center text-xs text-gray-500 mb-5">— or handle it manually step-by-step below —</div>
+  {% endif %}
 
   <!-- Priority Steps -->
   <div class="space-y-3">
@@ -117,31 +136,48 @@
   <!-- Total Time Estimate -->
   {% set total_time = (critical_opps|length * 3) + (high_opps|length * 5) + (medium_opps|length * 3) %}
   <div class="mt-4 bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between flex-wrap gap-4">
       <div>
-        <div class="font-bold text-indigo-900">Total Workflow Time</div>
-        <div class="text-sm text-indigo-700">Complete all steps for maximum impact</div>
+        <div class="font-bold text-indigo-900">Manual Workflow Time</div>
+        <div class="text-sm text-indigo-700">Doing all steps yourself</div>
       </div>
       <div class="text-right">
         <div class="text-3xl font-bold text-indigo-600">~{{ total_time }} min</div>
         <div class="text-xs text-indigo-600">{{ "%.1f"|format(total_time / 60) }} hours</div>
       </div>
+      {% if not is_demo %}
+      <div class="w-full sm:w-auto border-t sm:border-t-0 sm:border-l border-indigo-200 sm:pl-4 pt-3 sm:pt-0">
+        <div class="text-sm font-bold text-green-700">With AI Agents: ~30 seconds</div>
+        <button onclick="runAIAgents()" class="mt-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 underline">
+          {% if is_paid %}Launch AI Agents instead →{% else %}Upgrade to use AI Agents →{% endif %}
+        </button>
+      </div>
+      {% endif %}
     </div>
   </div>
 
   <!-- Quick Actions -->
-  <div class="mt-4 flex gap-3">
+  <div class="mt-4 flex flex-wrap gap-3">
+    {% if not is_demo %}
+    <button
+      onclick="runAIAgents()"
+      class="flex-1 min-w-[160px] px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold text-sm"
+    >
+      {% if not is_paid %}<i class="fa-solid fa-crown text-yellow-300 mr-1"></i>{% else %}<i class="fa-solid fa-robot mr-2"></i>{% endif %}
+      {% if is_paid %}Launch AI Agents{% else %}Upgrade to Launch{% endif %}
+    </button>
+    {% endif %}
     <button
       onclick="document.getElementById('opportunities').scrollIntoView({behavior: 'smooth'})"
-      class="flex-1 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-bold text-sm"
+      class="flex-1 min-w-[140px] px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-bold text-sm"
     >
-      <i class="fa-solid fa-play mr-2"></i>Start Workflow
+      <i class="fa-solid fa-play mr-2"></i>Manual Workflow
     </button>
     <button
       onclick="selectAllPriority('critical')"
       class="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm"
     >
-      <i class="fa-solid fa-check-double mr-2"></i>Select All Critical
+      <i class="fa-solid fa-check-double mr-2"></i>Select Critical
     </button>
   </div>
 </div>

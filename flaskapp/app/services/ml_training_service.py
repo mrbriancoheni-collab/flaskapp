@@ -363,10 +363,55 @@ class MLTrainingService:
         start_date: date,
         end_date: date
     ) -> Dict[date, Dict[str, Any]]:
-        """Fetch real weather data from API (placeholder)."""
-        # TODO: Implement actual weather API integration
-        # For now, return mock data
-        return self._generate_default_weather(start_date, end_date)
+        """Fetch historical weather from Open-Meteo (free, no API key required)."""
+        import requests as _req
+        import os as _os
+
+        # Latitude/longitude from env; defaults to mid-US if not configured
+        lat = float(_os.getenv("WEATHER_LAT", "39.8283"))
+        lon = float(_os.getenv("WEATHER_LON", "-98.5795"))
+
+        resp = _req.get(
+            "https://archive-api.open-meteo.com/v1/archive",
+            params={
+                "latitude": lat,
+                "longitude": lon,
+                "start_date": start_date.isoformat(),
+                "end_date": end_date.isoformat(),
+                "daily": "temperature_2m_max,temperature_2m_min,weathercode",
+                "temperature_unit": "fahrenheit",
+                "timezone": "America/New_York",
+            },
+            timeout=15,
+        )
+        resp.raise_for_status()
+        data = resp.json().get("daily") or {}
+        dates = data.get("time") or []
+        max_temps = data.get("temperature_2m_max") or []
+        min_temps = data.get("temperature_2m_min") or []
+        codes = data.get("weathercode") or []
+
+        result: Dict[date, Dict[str, Any]] = {}
+        for i, d_str in enumerate(dates):
+            d = date.fromisoformat(d_str)
+            code = codes[i] if i < len(codes) else 0
+            # WMO codes: 0=clear, 1-3=partly cloudy, 51-67=rain, 71-77=snow, 80-99=thunderstorm
+            if code >= 80:
+                condition = "stormy"
+            elif code >= 51:
+                condition = "rainy"
+            elif code >= 71:
+                condition = "snowy"
+            elif code >= 1:
+                condition = "cloudy"
+            else:
+                condition = "clear"
+            result[d] = {
+                "temp_high": max_temps[i] if i < len(max_temps) else 70,
+                "temp_low": min_temps[i] if i < len(min_temps) else 50,
+                "condition": condition,
+            }
+        return result
 
     def _generate_default_weather(
         self,
@@ -430,9 +475,14 @@ class MLTrainingService:
         output.close()
 
         if filepath:
-            with open(filepath, 'w') as f:
+            from pathlib import Path
+            resolved = Path(filepath).resolve()
+            allowed_dir = Path('/tmp').resolve()
+            if not str(resolved).startswith(str(allowed_dir)):
+                raise ValueError(f"Export path outside allowed directory: {filepath}")
+            with open(resolved, 'w') as f:
                 f.write(csv_content)
-            return filepath
+            return str(resolved)
 
         return csv_content
 

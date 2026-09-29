@@ -38,7 +38,7 @@ AUTONOMOUS_KEYS = [
 ]
 
 DEFAULTS = {
-    "autonomous_mode_enabled": "0",
+    "autonomous_mode_enabled": "1",
     "autonomy_level": "2",
     "growth_mode": "balanced",
     "target_cpl": "80",
@@ -100,20 +100,20 @@ def _save_setting(account_id: int, key: str, value: str) -> None:
 
 def _get_7day_summary(account_id: int) -> dict:
     """
-    Aggregate executed AI decisions from the last 7 days.
-    Uses agent_decisions as source of truth (ai_actions mirrors every execution).
+    Aggregate executed agent decisions from the last 7 days.
+    Returns counts by decision_type, total savings, total leads.
     """
     cutoff = datetime.utcnow() - timedelta(days=7)
     try:
         sql = text("""
             SELECT
-                decision_type                                                    AS action_type,
-                COUNT(*)                                                         AS cnt,
-                COALESCE(SUM(LEAST(COALESCE(expected_monthly_savings,0), 500)), 0) AS savings
+                decision_type                              AS action_type,
+                COUNT(*)                                   AS cnt,
+                COALESCE(SUM(expected_monthly_savings), 0) AS savings
             FROM agent_decisions
             WHERE account_id = :aid
               AND status      = 'executed'
-              AND COALESCE(executed_at, created_at) >= :cutoff
+              AND executed_at >= :cutoff
             GROUP BY decision_type
         """)
         with db.engine.connect() as conn:
@@ -151,17 +151,22 @@ def _get_7day_summary(account_id: int) -> dict:
 
 
 def _get_recent_feed(account_id: int, limit: int = 10) -> list:
-    """Return the most recent executed AI decisions as feed items."""
+    """Return the most recent executed agent decisions as feed items."""
     try:
         sql = text("""
-            SELECT id, decision_type AS action_type, title, description,
-                   LEAST(COALESCE(expected_monthly_savings, 0), 500) AS estimated_monthly_savings,
-                   COALESCE(executed_at, created_at) AS executed_at,
-                   campaign_id AS campaign_name
-            FROM agent_decisions
-            WHERE account_id = :aid
-              AND status      = 'executed'
-            ORDER BY COALESCE(executed_at, created_at) DESC
+            SELECT ad.id,
+                   ad.decision_type        AS action_type,
+                   ad.title,
+                   ad.description,
+                   ad.expected_monthly_savings AS estimated_monthly_savings,
+                   ad.executed_at,
+                   ac.name                 AS campaign_name
+            FROM agent_decisions ad
+            LEFT JOIN ads_campaigns ac ON ac.google_campaign_id = ad.campaign_id
+                                       AND ac.account_id = :aid
+            WHERE ad.account_id = :aid
+              AND ad.status      = 'executed'
+            ORDER BY ad.executed_at DESC
             LIMIT :lim
         """)
         with db.engine.connect() as conn:

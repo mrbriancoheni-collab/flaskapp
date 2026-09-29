@@ -1,6 +1,56 @@
 {% extends "base_public.html" %}
 {% set SECTION = 'solutions' %}
 {% block title %}Smart Ad Spend — Only When You Have Openings{% endblock %}
+{% block meta_description %}Stop wasting ad spend when your business is closed. FieldSprout's dayparting tool automatically pauses your Google Ads after hours and restarts them when you open.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://fieldsprout.io/spend-when-open#webpage",
+      "name": "Smart Ad Scheduling: Only Spend When Open | FieldSprout",
+      "description": "Automatically pause Google Ads after hours and restart when your business opens. Stop wasting money on clicks you can't answer.",
+      "url": "https://fieldsprout.io/spend-when-open",
+      "isPartOf": {"@id": "https://fieldsprout.io/#website"}
+    },
+    {
+      "@type": "HowTo",
+      "name": "How to Stop Wasting Ad Spend After Business Hours",
+      "description": "Use FieldSprout dayparting to automatically pause Google Ads when your business is closed and restart them when you open.",
+      "step": [
+        {"@type": "HowToStep", "name": "Connect your Google Ads account", "text": "Link your Google Ads account to FieldSprout using secure OAuth — no passwords stored."},
+        {"@type": "HowToStep", "name": "Set your business hours", "text": "Enter your opening and closing times for each day of the week, including weekends."},
+        {"@type": "HowToStep", "name": "Enable smart scheduling", "text": "FieldSprout automatically pauses your campaigns after hours and resumes them when you open."},
+        {"@type": "HowToStep", "name": "Review savings report", "text": "See exactly how much wasted spend was eliminated and how your cost-per-lead improved."}
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Does pausing ads after hours hurt my Quality Score?",
+          "acceptedAnswer": {"@type": "Answer", "text": "No. Google does not penalize Quality Score for scheduled ad pausing. In fact, improving your conversion rate by only showing ads when you can answer calls typically improves Quality Score over time."}
+        },
+        {
+          "@type": "Question",
+          "name": "Can I set different hours for different campaigns?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Yes. FieldSprout lets you set custom schedules per campaign, so emergency services campaigns can run 24/7 while routine service campaigns pause overnight."}
+        },
+        {
+          "@type": "Question",
+          "name": "How much ad spend can I save with smart scheduling?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Most home service businesses save 15–30% of their ad budget by eliminating after-hours clicks they cannot convert into booked jobs."}
+        }
+      ]
+    }
+  ]
+}
+</script>
+{% endblock %}
 
 {% block content %}
 

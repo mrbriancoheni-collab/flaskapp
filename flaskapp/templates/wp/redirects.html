@@ -1,0 +1,152 @@
+{% extends "base_app.html" %}
+{% block title %}Redirect Manager · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Fix broken links & redirects</h1>
+      <p class="text-gray-500 text-sm mt-1">Find pages that send visitors (and Google) to dead ends — and fix them in one click</p>
+    </div>
+    {% if report %}
+    <div class="flex gap-4 text-sm">
+      <span class="text-gray-500">{{ report.total }} URLs checked</span>
+      {% if report.chains_count %}<span class="text-amber-600 font-semibold">{{ report.chains_count }} chains</span>{% endif %}
+      {% if report.broken_count %}<span class="text-red-600 font-semibold">{{ report.broken_count }} broken</span>{% endif %}
+      {% if not report.chains_count and not report.broken_count %}<span class="text-green-600 font-semibold">All clean ✓</span>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+    <div class="rounded-xl px-4 py-3 text-sm border
+      {% if cat == 'error' %}bg-red-50 border-red-200 text-red-800{% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {% if not site %}
+  <div class="bg-white rounded-xl shadow-sm border p-12 text-center">
+    <i class="fa-brands fa-wordpress text-gray-300 text-5xl mb-4"></i>
+    <p class="text-gray-600 mb-4">Connect a WordPress site to scan redirects.</p>
+    <a href="{{ url_for('wp_bp.settings') }}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">Connect WordPress</a>
+  </div>
+  {% else %}
+
+  <!-- Scan trigger -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <form method="POST" action="{{ url_for('wp_bp.redirects') }}" class="flex flex-wrap items-center gap-4">
+      <div>
+        <p class="font-medium text-gray-800">Scan posts &amp; pages for redirect issues</p>
+        <p class="text-sm text-gray-500 mt-0.5">Checks up to 60 URLs. Follows each redirect chain to final destination.</p>
+      </div>
+      <button type="submit" class="ml-auto px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">
+        <i class="fa-solid fa-route mr-1"></i>Run Scan
+      </button>
+    </form>
+  </div>
+
+  {% if report %}
+
+  {% if not report.chains_count and not report.broken_count %}
+  <div class="bg-green-50 border border-green-200 rounded-xl p-8 text-center">
+    <i class="fa-solid fa-circle-check text-green-500 text-4xl mb-3"></i>
+    <p class="text-green-800 font-semibold">No redirect chains or broken URLs found!</p>
+    <p class="text-green-600 text-sm">All {{ report.total }} URLs resolve cleanly in one hop.</p>
+  </div>
+  {% else %}
+
+  <!-- Summary -->
+  <div class="grid grid-cols-3 gap-4">
+    <div class="bg-white rounded-xl border shadow-sm p-4 text-center">
+      <p class="text-2xl font-bold text-gray-800">{{ report.total }}</p>
+      <p class="text-xs text-gray-500 mt-1">URLs Checked</p>
+    </div>
+    <div class="bg-white rounded-xl border shadow-sm p-4 text-center">
+      <p class="text-2xl font-bold {% if report.chains_count %}text-amber-500{% else %}text-green-600{% endif %}">{{ report.chains_count }}</p>
+      <p class="text-xs text-gray-500 mt-1">Redirect Chains</p>
+    </div>
+    <div class="bg-white rounded-xl border shadow-sm p-4 text-center">
+      <p class="text-2xl font-bold {% if report.broken_count %}text-red-600{% else %}text-green-600{% endif %}">{{ report.broken_count }}</p>
+      <p class="text-xs text-gray-500 mt-1">Broken / 4xx</p>
+    </div>
+  </div>
+
+  <!-- Broken URLs -->
+  {% if report.broken %}
+  <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+    <div class="px-5 py-3 border-b bg-red-50">
+      <h2 class="font-semibold text-red-800"><i class="fa-solid fa-circle-xmark text-red-500 mr-2"></i>Broken URLs ({{ report.broken | length }})</h2>
+    </div>
+    <div class="divide-y text-sm">
+      {% for r in report.broken %}
+      <div class="px-5 py-3 flex flex-wrap items-start gap-3">
+        <span class="text-xs font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded flex-shrink-0 mt-0.5">{{ r.final_status or 'ERR' }}</span>
+        <div class="flex-1 min-w-0">
+          <p class="font-medium text-gray-800 truncate">{{ r.title }}</p>
+          <a href="{{ r.original_url }}" target="_blank" rel="noopener"
+             class="text-xs font-mono text-gray-400 hover:text-indigo-500 truncate block">{{ r.original_url }}</a>
+        </div>
+        <a href="{{ url_for('wp_bp.edit_post', post_id=r.id) }}" class="text-xs text-indigo-600 hover:underline flex-shrink-0">Edit →</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Redirect chains -->
+  {% if report.chains %}
+  <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+    <div class="px-5 py-3 border-b bg-amber-50">
+      <h2 class="font-semibold text-amber-800"><i class="fa-solid fa-route text-amber-500 mr-2"></i>Redirect Chains ({{ report.chains | length }})</h2>
+      <p class="text-xs text-amber-600 mt-0.5">Each hop wastes crawl budget and dilutes PageRank. Collapse to a single redirect.</p>
+    </div>
+    <div class="divide-y text-sm">
+      {% for r in report.chains %}
+      <div class="px-5 py-4">
+        <div class="flex items-start gap-3 mb-2">
+          <span class="text-xs font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded flex-shrink-0">{{ r.chain_length }} hops</span>
+          <p class="font-medium text-gray-800 truncate flex-1">{{ r.title }}</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-1.5 text-xs font-mono">
+          {% for hop in r.hops %}
+          <span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded truncate max-w-48">{{ hop.url | truncate(45) }}</span>
+          {% if not loop.last %}<span class="text-amber-500 font-bold">→ {{ hop.status }}</span>{% endif %}
+          {% endfor %}
+        </div>
+        <p class="text-xs text-gray-400 mt-2">
+          Fix: update the source to point directly to
+          <span class="font-mono text-gray-600">{{ r.final_url | truncate(60) }}</span>
+        </p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% endif %}{# end has issues #}
+
+  <!-- Clean URLs (collapsed) -->
+  {% if report.clean %}
+  <details class="bg-white rounded-xl shadow-sm border">
+    <summary class="px-5 py-3 cursor-pointer text-sm text-gray-500 hover:text-gray-700">
+      <i class="fa-solid fa-circle-check text-green-500 mr-2"></i>
+      {{ report.clean | length }} URL{{ 's' if report.clean | length != 1 }} resolved cleanly
+    </summary>
+    <ul class="px-5 pb-4 pt-1 space-y-1 text-xs font-mono text-gray-500 max-h-48 overflow-y-auto">
+      {% for r in report.clean %}
+      <li class="flex items-center gap-2">
+        <span class="text-green-500 font-bold">200</span>
+        <a href="{{ r.original_url }}" target="_blank" rel="noopener" class="hover:text-indigo-500 truncate">{{ r.original_url }}</a>
+      </li>
+      {% endfor %}
+    </ul>
+  </details>
+  {% endif %}
+
+  {% endif %}{# end report #}
+  {% endif %}{# end site #}
+
+</div>
+{% endblock %}

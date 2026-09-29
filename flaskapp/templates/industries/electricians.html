@@ -22,35 +22,7 @@
   }
 }
 </script>
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "Service",
-  "name": "AI Marketing Platform for Electrical Contractors",
-  "serviceType": "Marketing Automation",
-  "provider": {
-    "@type": "Organization",
-    "name": "FieldSprout",
-    "url": "https://fieldsprout.io"
-  },
-  "areaServed": {
-    "@type": "Country",
-    "name": "United States"
-  },
-  "description": "FieldSprout's AI agents continuously optimize Google Ads, local SEO, and reputation management for electrical contractors — driving residential and commercial leads without requiring a marketing team.",
-  "offers": {
-    "@type": "Offer",
-    "price": "200",
-    "priceCurrency": "USD",
-    "priceSpecification": {
-      "@type": "UnitPriceSpecification",
-      "price": "200",
-      "priceCurrency": "USD",
-      "unitText": "MONTH"
-    }
-  }
-}
-</script>
+
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -58,42 +30,42 @@
   "mainEntity": [
     {
       "@type": "Question",
-      "name": "How do electricians get more residential leads from Google?",
+      "name": "How much does Google Ads cost per lead for electricians?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Google Ads and Google Local Services Ads are the top two channels for residential electrical leads. Google LSA gives you a Google Guaranteed badge above the regular search results — ideal for panel upgrades, EV charger installations, and emergency electrical calls. FieldSprout manages both channels simultaneously."
+        "text": "Electrical contractor Google Ads leads typically cost $90–$200 depending on the job type and market. Panel upgrades and EV charger installs generate the highest-value leads. FieldSprout-managed electrical accounts average $97 per lead after AI optimization, down from a typical $162 starting point."
       }
     },
     {
       "@type": "Question",
-      "name": "What do Google Ads cost for an electrical contractor?",
+      "name": "What Google Ads keywords work best for electrical contractors?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Electrical keywords in competitive markets average $8–$20 per click. Budget $1,500–$2,500/month for meaningful lead volume. Commercial electrical keywords are often lower CPC but require longer sales cycles. FieldSprout allocates your budget toward the service types with the best conversion rates."
+        "text": "High-converting electrical keywords include 'electrician near me', 'panel upgrade cost', 'EV charger installation', 'emergency electrician', and 'electrical outlet repair'. FieldSprout automatically adds 120+ negative keywords like 'electrical engineering jobs' and 'DIY wiring' to cut waste."
       }
     },
     {
       "@type": "Question",
-      "name": "How do electrical contractors win commercial work through digital marketing?",
+      "name": "Which electrical services should I advertise on Google Ads?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Commercial electrical leads respond best to LinkedIn targeting, retargeting campaigns, and Google Ads with commercial-intent keywords (office wiring, panel upgrades, industrial electrical). FieldSprout's B2B targeting mode adjusts your keyword list and bidding strategy for commercial audiences."
+        "text": "The highest-ROI services to advertise are panel upgrades, EV charger installations, and emergency electrical calls — they have the highest average ticket values. FieldSprout automatically allocates more budget to these high-value job types based on your conversion data."
       }
     },
     {
       "@type": "Question",
-      "name": "How long does digital marketing take to work for an electrician?",
+      "name": "Why is my electrical Google Ads cost per lead so high?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Expect your first leads within 2 weeks of launching. Google Ads reach efficient performance around weeks 6–10 as the algorithm learns which searches produce bookings for your specific services and location. Organic SEO improvements take 3–6 months but compound over time."
+        "text": "Most electrical Google Ads accounts waste budget on job seekers, DIYers, and out-of-service-area clicks. Low Quality Scores from generic ads also raise CPCs significantly. FieldSprout diagnoses and fixes these issues automatically, typically cutting wasted spend by 30–40% in the first month."
       }
     },
     {
       "@type": "Question",
-      "name": "Is Google LSA worth it for electricians?",
+      "name": "Does FieldSprout work for solo electricians and small electrical companies?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes — Google Local Services Ads typically deliver 30–50% lower CPL than standard Google Search Ads for licensed trades because the Google Guaranteed badge increases trust and the pay-per-lead model means you only pay when someone actually calls or messages. FieldSprout manages LSA bid adjustments alongside your Search campaigns."
+        "text": "Yes. FieldSprout is designed for electrical contractors spending $1,000–$30,000/month on Google Ads. The AI scales optimizations to account size, so a solo electrician gets the same quality of bid management and negative keyword coverage as a large company."
       }
     }
   ]
@@ -121,8 +93,11 @@
         </p>
         <div class="flex flex-col sm:flex-row gap-4">
           {% if has_endpoint('ads_grader_bp.index') %}
-          <a href="{{ url_for('ads_grader_bp.index') }}"
+          <a href="{{ url_for('ads_grader_bp.strength_test') }}"
              class="btn btn-primary btn-lg">Grade My Electrician Ads — Free</a>
+          {% endif %}
+          {% if has_endpoint('public_bp.maps_audit') %}
+          <a href="{{ url_for('public_bp.maps_audit') }}" class="btn btn-secondary btn-lg">Free Google Maps Audit</a>
           {% endif %}
           <a href="/pricing" class="btn btn-secondary btn-lg">See Plans &amp; Pricing</a>
         </div>
@@ -274,7 +249,7 @@
     </p>
     <div class="flex flex-col sm:flex-row gap-4 justify-center">
       {% if has_endpoint('ads_grader_bp.index') %}
-      <a href="{{ url_for('ads_grader_bp.index') }}" class="btn btn-secondary btn-lg">Grade My Account — Free</a>
+      <a href="{{ url_for('ads_grader_bp.strength_test') }}" class="btn btn-secondary btn-lg">Grade My Account — Free</a>
       {% endif %}
       <a href="/pricing" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">View Plans</a>
     </div>

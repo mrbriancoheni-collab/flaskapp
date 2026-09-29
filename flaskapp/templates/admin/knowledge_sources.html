@@ -1,0 +1,229 @@
+{% extends "admin/base.html" %}
+{% block title %}Agent Knowledge Sources{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <!-- Header -->
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h1 class="h3 mb-1">Agent Knowledge Sources</h1>
+      <p class="text-muted mb-0">
+        Approve external sources that agents learn from daily. New sources are fetched,
+        summarized by AI, and injected into each agent's context window.
+      </p>
+    </div>
+    <div class="d-flex gap-2">
+      <form method="POST" action="{{ url_for('knowledge_bp.seed_defaults') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-outline-secondary">
+          Seed Defaults
+        </button>
+      </form>
+      <form method="POST" action="{{ url_for('knowledge_bp.refresh_all') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-outline-primary">
+          Refresh All Now
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Pending Approval -->
+  {% if pending %}
+  <div class="card border-warning mb-4">
+    <div class="card-header bg-warning bg-opacity-10">
+      <h5 class="mb-0 text-warning-emphasis">
+        Pending Approval ({{ pending|length }})
+      </h5>
+    </div>
+    <div class="card-body p-0">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Agent</th>
+            <th>Title</th>
+            <th>URL</th>
+            <th>Type</th>
+            <th>Category</th>
+            <th>Frequency</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for src in pending %}
+          <tr>
+            <td><span class="badge bg-secondary">{{ src.agent_type }}</span></td>
+            <td>{{ src.title }}</td>
+            <td>
+              <a href="{{ src.url }}" target="_blank" rel="noopener" class="text-truncate d-inline-block" style="max-width:260px">
+                {{ src.url }}
+              </a>
+            </td>
+            <td>{{ src.source_type }}</td>
+            <td>{{ src.category }}</td>
+            <td>{{ src.refresh_frequency }}</td>
+            <td>
+              <form method="POST" action="{{ url_for('knowledge_bp.approve_source', source_id=src.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm btn-success">Approve</button>
+              </form>
+              <form method="POST" action="{{ url_for('knowledge_bp.reject_source', source_id=src.id) }}" class="d-inline ms-1">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm btn-outline-danger">Reject</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Add New Source -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">Add New Knowledge Source</h5>
+    </div>
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('knowledge_bp.add_source') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label">Agent Type</label>
+            <select name="agent_type" class="form-select" required>
+              <option value="">Select agent…</option>
+              {% for at in agent_types %}
+              <option value="{{ at }}">{{ at.replace('_', ' ').title() }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Title</label>
+            <input type="text" name="title" class="form-control" required placeholder="e.g. Google Ads Best Practices">
+          </div>
+          <div class="col-md-5">
+            <label class="form-label">URL (https only)</label>
+            <input type="url" name="url" class="form-control" required placeholder="https://...">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Source Type</label>
+            <select name="source_type" class="form-select">
+              <option value="webpage">Webpage</option>
+              <option value="rss">RSS Feed</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Category</label>
+            <select name="category" class="form-select">
+              <option value="best_practices">Best Practices</option>
+              <option value="benchmarks">Benchmarks</option>
+              <option value="news">Industry News</option>
+              <option value="research">Research</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Refresh</label>
+            <select name="refresh_frequency" class="form-select">
+              <option value="weekly">Weekly</option>
+              <option value="daily">Daily</option>
+            </select>
+          </div>
+          <div class="col-md-3 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100">Add (Pending Approval)</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Approved Sources -->
+  <div class="card mb-4">
+    <div class="card-header d-flex align-items-center justify-content-between">
+      <h5 class="mb-0">Approved Sources ({{ approved|length }})</h5>
+    </div>
+    <div class="card-body p-0">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Agent</th>
+            <th>Title</th>
+            <th>Category</th>
+            <th>Refresh</th>
+            <th>Last Fetched</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for src in approved %}
+          <tr>
+            <td><span class="badge bg-primary">{{ src.agent_type }}</span></td>
+            <td>
+              <a href="{{ src.url }}" target="_blank" rel="noopener">{{ src.title }}</a>
+              {% if src.is_default %}<span class="badge bg-light text-muted ms-1">default</span>{% endif %}
+            </td>
+            <td>{{ src.category }}</td>
+            <td>{{ src.refresh_frequency }}</td>
+            <td class="text-muted small">
+              {{ src.last_fetched_at.strftime('%b %d %H:%M') if src.last_fetched_at else 'Never' }}
+            </td>
+            <td>
+              {% if src.fetch_error %}
+                <span class="badge bg-danger" title="{{ src.fetch_error }}">Error</span>
+              {% elif src.last_fetched_at %}
+                <span class="badge bg-success">OK</span>
+              {% else %}
+                <span class="badge bg-secondary">Pending fetch</span>
+              {% endif %}
+            </td>
+            <td>
+              <form method="POST" action="{{ url_for('knowledge_bp.refresh_source', source_id=src.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm btn-outline-primary">Refresh Now</button>
+              </form>
+              <form method="POST" action="{{ url_for('knowledge_bp.reject_source', source_id=src.id) }}" class="d-inline ms-1">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm btn-outline-danger">Disable</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+          {% if not approved %}
+          <tr><td colspan="7" class="text-center text-muted py-3">No approved sources yet. Seed defaults or add sources above.</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Cache Status per Agent -->
+  <div class="card">
+    <div class="card-header"><h5 class="mb-0">Knowledge Cache Status by Agent</h5></div>
+    <div class="card-body p-0">
+      <table class="table mb-0">
+        <thead class="table-light">
+          <tr><th>Agent Type</th><th>Cached Entries</th><th>Last Refreshed</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for at in agent_types %}
+          {% set cs = cache_status.get(at, {}) %}
+          <tr>
+            <td>{{ at.replace('_', ' ').title() }}</td>
+            <td>{{ cs.get('entry_count', 0) }}</td>
+            <td class="text-muted small">
+              {{ cs.get('last_refreshed').strftime('%b %d %H:%M') if cs.get('last_refreshed') else '—' }}
+            </td>
+            <td>
+              <a href="{{ url_for('knowledge_bp.view_cache', agent_type=at) }}" class="btn btn-sm btn-outline-secondary">View</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

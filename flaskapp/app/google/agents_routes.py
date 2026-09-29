@@ -713,8 +713,49 @@ def _execute_agent_decision(account_id: int, decision_row) -> dict:
             keyword_text = action_data.get('keyword_text')
             match_type = action_data.get('match_type', 'PHRASE')
 
-            if not ad_group_id or not keyword_text:
-                return {'success': False, 'error': 'Missing ad_group_id or keyword_text'}
+            if not keyword_text:
+                return {'success': False, 'error': 'Missing keyword_text'}
+
+            # Fallback: look up ad_group_id from local search_terms or ad_groups table
+            if not ad_group_id:
+                campaign_id = action_data.get('campaign_id') or decision_row.get('campaign_id')
+                try:
+                    row = db.session.execute(text("""
+                        SELECT st.ad_group_id
+                        FROM search_terms st
+                        JOIN ads_campaigns ac ON ac.id = st.campaign_id
+                        WHERE ac.account_id = :aid
+                          AND st.query = :kw
+                          AND st.ad_group_id IS NOT NULL
+                        LIMIT 1
+                    """), {"aid": account_id, "kw": keyword_text}).mappings().first()
+                    if row:
+                        ad_group_id = row["ad_group_id"]
+                except Exception:
+                    pass
+
+            # Final fallback: use the top ad group for the campaign
+            if not ad_group_id:
+                campaign_id = action_data.get('campaign_id') or decision_row.get('campaign_id')
+                if campaign_id:
+                    try:
+                        row = db.session.execute(text("""
+                            SELECT ag.id FROM ad_groups ag
+                            JOIN ads_campaigns ac ON ac.id = ag.campaign_id
+                            WHERE ac.account_id = :aid
+                              AND ag.campaign_id = :cid
+                            ORDER BY ag.id LIMIT 1
+                        """), {"aid": account_id, "cid": str(campaign_id)}).mappings().first()
+                        if row:
+                            ad_group_id = row["id"]
+                    except Exception:
+                        pass
+
+            if not ad_group_id:
+                return {'success': False, 'error': (
+                    f'Cannot add keyword "{keyword_text}": no ad group found. '
+                    'Please add it manually in Google Ads.'
+                )}
 
             return executor.add_keyword(str(ad_group_id), keyword_text, match_type)
 
@@ -982,6 +1023,7 @@ def auto_execute_low_risk():
     failed = 0
     skipped = 0
     errors = []
+    executed_ids = []
 
     for row in rows:
         try:
@@ -1009,6 +1051,7 @@ def auto_execute_low_risk():
                 _create_ai_action_from_decision(account_id, row, result)
 
                 executed += 1
+                executed_ids.append(row['id'])
             else:
                 with db.engine.begin() as conn:
                     conn.execute(text("""
@@ -1038,8 +1081,9 @@ def auto_execute_low_risk():
         "message": f"Auto-executed {executed} low-risk decisions ({failed} failed, {skipped} skipped)",
         "total_found": len(rows),
         "executed": executed,
+        "executed_ids": executed_ids,
         "failed": failed,
-        "errors": errors[:10]  # Limit to first 10 errors for readability
+        "errors": errors[:10],
     })
 
 
@@ -1709,6 +1753,34 @@ def save_intent_groups():
     return jsonify({"success": True, "message": "Intent group settings saved."})
 
 
+@agents_bp.route("/api/ai-settings", methods=["GET"])
+@login_required
+def get_ai_settings():
+    """Return the saved business description and negative keyword examples."""
+    from sqlalchemy import text as sqla_text
+
+    account_id = current_account_id()
+    if not account_id:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    try:
+        with db.engine.connect() as conn:
+            row = conn.execute(sqla_text("""
+                SELECT business_description, negative_keyword_examples
+                FROM accounts
+                WHERE id = :aid
+            """), {"aid": account_id}).first()
+    except Exception as e:
+        current_app.logger.error(f"Failed to load AI settings for account {account_id}: {e}")
+        return jsonify({"error": "Failed to load settings"}), 500
+
+    return jsonify({
+        "success": True,
+        "business_description": (row[0] if row else "") or "",
+        "negative_keyword_examples": (row[1] if row else "") or "",
+    })
+
+
 @agents_bp.route("/api/ai-settings", methods=["POST"])
 @login_required
 def save_ai_settings():
@@ -1724,9 +1796,26 @@ def save_ai_settings():
     business_services = (data.get("business_services") or "").strip()
     negative_keyword_examples = (data.get("negative_keyword_examples") or "").strip()
 
+    # Refuse to overwrite existing data with an all-empty submission.
+    # This protects against the form being submitted before the GET load
+    # completes, or against accidental clicks on an empty form.
+    if not business_description and not negative_keyword_examples:
+        return jsonify({
+            "error": "Please enter a business description or negative keyword examples before saving."
+        }), 400
+
     try:
         with db.engine.begin() as conn:
-            conn.execute(sqla_text("""
+            # Ensure columns exist (migrations may not have been run on this DB)
+            for col in ("business_description", "negative_keyword_examples"):
+                try:
+                    conn.execute(sqla_text(
+                        f"ALTER TABLE accounts ADD COLUMN {col} TEXT NULL"
+                    ))
+                except Exception:
+                    pass  # column already exists
+
+            result = conn.execute(sqla_text("""
                 UPDATE accounts
                 SET business_description = :bd,
                     negative_keyword_examples = :nk
@@ -1736,8 +1825,16 @@ def save_ai_settings():
                 "nk": negative_keyword_examples or None,
                 "aid": account_id,
             })
-    except Exception as e:
-        current_app.logger.error(f"Failed to save AI settings for account {account_id}: {e}")
-        return jsonify({"error": "Failed to save settings"}), 500
 
-    return jsonify({"success": True, "message": "AI settings saved."})
+            if result.rowcount == 0:
+                current_app.logger.warning(
+                    f"save_ai_settings: UPDATE matched 0 rows for account_id={account_id}"
+                )
+                return jsonify({
+                    "error": f"Could not find account #{account_id}. Please log out and back in."
+                }), 404
+    except Exception as e:
+        current_app.logger.exception(f"Failed to save AI settings for account {account_id}: {e}")
+        return jsonify({"error": f"Failed to save settings: {e}"}), 500
+
+    return jsonify({"success": True, "message": "AI settings saved successfully."})

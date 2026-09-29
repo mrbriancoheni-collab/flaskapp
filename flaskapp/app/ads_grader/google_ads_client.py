@@ -81,9 +81,10 @@ class GoogleAdsGraderClient:
             "ads": self._get_ad_metrics(start_date, end_date),
             "campaigns": self._get_campaign_structure(),
             "device_performance": self._get_device_performance(start_date, end_date),
+            "device_bid_adjustments": self._get_device_bid_adjustments(),
             "extensions": self._get_ad_extensions(),
             "negative_keywords": self._get_negative_keywords_count(),
-            "landing_pages": self._get_landing_page_count(start_date, end_date),
+            "search_terms": self._get_search_terms(start_date, end_date),
             "impression_share": self._get_impression_share_metrics(start_date, end_date),
         }
 
@@ -175,11 +176,14 @@ class GoogleAdsGraderClient:
             logger.error(f"Error fetching performance metrics: {ex}")
             return {}
 
-    def _get_quality_score_distribution(self, start_date: datetime, end_date: datetime) -> Dict[str, int]:
-        """Get Quality Score distribution across keywords."""
+    def _get_quality_score_distribution(self, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
+        """Get Quality Score distribution and component scores across keywords."""
         query = """
             SELECT
                 ad_group_criterion.quality_info.quality_score,
+                ad_group_criterion.quality_info.post_click_quality_score,
+                ad_group_criterion.quality_info.creative_quality_score,
+                ad_group_criterion.quality_info.search_predicted_ctr,
                 metrics.impressions
             FROM keyword_view
             WHERE segments.date BETWEEN '{start}' AND '{end}'
@@ -192,6 +196,8 @@ class GoogleAdsGraderClient:
         )
 
         distribution = {"1-3": 0, "4-6": 0, "7-8": 0, "9-10": 0}
+        post_click_dist = {"ABOVE_AVERAGE": 0, "AVERAGE": 0, "BELOW_AVERAGE": 0, "UNKNOWN": 0}
+        creative_dist = {"ABOVE_AVERAGE": 0, "AVERAGE": 0, "BELOW_AVERAGE": 0, "UNKNOWN": 0}
         total_score = 0
         keyword_count = 0
 
@@ -203,7 +209,7 @@ class GoogleAdsGraderClient:
 
             for row in response:
                 qs = row.ad_group_criterion.quality_info.quality_score
-                if qs > 0:  # Quality score is available
+                if qs > 0:
                     keyword_count += 1
                     total_score += qs
 
@@ -216,19 +222,40 @@ class GoogleAdsGraderClient:
                     else:
                         distribution["9-10"] += 1
 
+                # Component scores (available even when overall QS isn't shown)
+                try:
+                    post_click = row.ad_group_criterion.quality_info.post_click_quality_score.name
+                    post_click_dist[post_click] = post_click_dist.get(post_click, 0) + 1
+                except Exception:
+                    post_click_dist["UNKNOWN"] = post_click_dist.get("UNKNOWN", 0) + 1
+
+                try:
+                    creative = row.ad_group_criterion.quality_info.creative_quality_score.name
+                    creative_dist[creative] = creative_dist.get(creative, 0) + 1
+                except Exception:
+                    creative_dist["UNKNOWN"] = creative_dist.get("UNKNOWN", 0) + 1
+
             avg_quality_score = (total_score / keyword_count) if keyword_count > 0 else 0
 
             return {
                 "distribution": distribution,
                 "average": avg_quality_score,
                 "keyword_count": keyword_count,
+                "post_click_distribution": post_click_dist,
+                "creative_distribution": creative_dist,
             }
         except GoogleAdsException as ex:
             logger.error(f"Error fetching quality scores: {ex}")
-            return {"distribution": distribution, "average": 0, "keyword_count": 0}
+            return {
+                "distribution": distribution,
+                "average": 0,
+                "keyword_count": 0,
+                "post_click_distribution": post_click_dist,
+                "creative_distribution": creative_dist,
+            }
 
     def _get_keyword_metrics(self, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
-        """Get keyword-level metrics including long-tail analysis."""
+        """Get keyword-level metrics including long-tail analysis and conversion data."""
         query = """
             SELECT
                 ad_group_criterion.keyword.text,
@@ -236,6 +263,7 @@ class GoogleAdsGraderClient:
                 metrics.clicks,
                 metrics.impressions,
                 metrics.cost_micros,
+                metrics.conversions,
                 metrics.ctr
             FROM keyword_view
             WHERE segments.date BETWEEN '{start}' AND '{end}'
@@ -260,7 +288,6 @@ class GoogleAdsGraderClient:
                 keyword_text = row.ad_group_criterion.keyword.text
                 word_count = len(keyword_text.split())
 
-                # Categorize by word count
                 if word_count == 1:
                     word_count_distribution["1-word"] += 1
                 elif word_count == 2:
@@ -274,6 +301,7 @@ class GoogleAdsGraderClient:
                     "clicks": row.metrics.clicks,
                     "impressions": row.metrics.impressions,
                     "cost": row.metrics.cost_micros / 1_000_000,
+                    "conversions": row.metrics.conversions,
                     "ctr": row.metrics.ctr,
                     "word_count": word_count,
                 })
@@ -281,19 +309,18 @@ class GoogleAdsGraderClient:
             return {
                 "total_keywords": len(keywords),
                 "word_count_distribution": word_count_distribution,
-                "keywords": keywords[:100],  # Return top 100 for analysis
+                "keywords": keywords[:200],
             }
         except GoogleAdsException as ex:
             logger.error(f"Error fetching keyword metrics: {ex}")
             return {"total_keywords": 0, "word_count_distribution": word_count_distribution, "keywords": []}
 
     def _get_ad_metrics(self, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
-        """Get ad-level performance metrics."""
+        """Get ad-level performance metrics including RSA ad strength."""
         query = """
             SELECT
                 ad_group_ad.ad.type,
-                ad_group_ad.ad.expanded_text_ad.headline_part1,
-                ad_group_ad.ad.expanded_text_ad.headline_part2,
+                ad_group_ad.ad_strength,
                 metrics.clicks,
                 metrics.impressions,
                 metrics.ctr
@@ -309,6 +336,7 @@ class GoogleAdsGraderClient:
 
         ads = []
         ad_type_counts = {}
+        ad_strength_dist = {"EXCELLENT": 0, "GOOD": 0, "AVERAGE": 0, "POOR": 0, "OTHER": 0}
 
         try:
             response = self.ga_service.search(
@@ -320,6 +348,15 @@ class GoogleAdsGraderClient:
                 ad_type = row.ad_group_ad.ad.type_.name
                 ad_type_counts[ad_type] = ad_type_counts.get(ad_type, 0) + 1
 
+                try:
+                    strength = row.ad_group_ad.ad_strength.name
+                    if strength in ad_strength_dist:
+                        ad_strength_dist[strength] += 1
+                    else:
+                        ad_strength_dist["OTHER"] += 1
+                except Exception:
+                    ad_strength_dist["OTHER"] += 1
+
                 ads.append({
                     "type": ad_type,
                     "clicks": row.metrics.clicks,
@@ -327,19 +364,26 @@ class GoogleAdsGraderClient:
                     "ctr": row.metrics.ctr,
                 })
 
-            # Calculate best and worst performing ads
             ads_sorted_by_ctr = sorted(ads, key=lambda x: x["ctr"], reverse=True)
 
             return {
                 "total_ads": len(ads),
                 "ad_type_counts": ad_type_counts,
+                "ad_strength_distribution": ad_strength_dist,
                 "best_ad": ads_sorted_by_ctr[0] if ads_sorted_by_ctr else None,
                 "worst_ad": ads_sorted_by_ctr[-1] if ads_sorted_by_ctr else None,
                 "avg_ctr": sum(ad["ctr"] for ad in ads) / len(ads) if ads else 0,
             }
         except GoogleAdsException as ex:
             logger.error(f"Error fetching ad metrics: {ex}")
-            return {"total_ads": 0, "ad_type_counts": {}, "best_ad": None, "worst_ad": None, "avg_ctr": 0}
+            return {
+                "total_ads": 0,
+                "ad_type_counts": {},
+                "ad_strength_distribution": ad_strength_dist,
+                "best_ad": None,
+                "worst_ad": None,
+                "avg_ctr": 0,
+            }
 
     def _get_campaign_structure(self) -> Dict[str, Any]:
         """Get campaign and ad group structure."""
@@ -422,13 +466,175 @@ class GoogleAdsGraderClient:
             return {}
 
     def _get_ad_extensions(self) -> Dict[str, bool]:
-        """Check which ad extensions are being used."""
-        # Simplified check - in production, query each extension type
+        """Check which ad extensions / assets are in use."""
+        # Modern accounts use campaign_asset; legacy accounts use campaign_extension_setting
+        asset_types: set = set()
+
+        try:
+            query = """
+                SELECT campaign_asset.asset_type
+                FROM campaign_asset
+                WHERE campaign_asset.status = 'ENABLED'
+                    AND campaign.status = 'ENABLED'
+            """
+            response = self.ga_service.search(customer_id=self.customer_id, query=query)
+            for row in response:
+                try:
+                    asset_types.add(row.campaign_asset.asset_type.name)
+                except Exception:
+                    pass
+        except GoogleAdsException:
+            # Fall back to legacy extension settings
+            try:
+                legacy_query = """
+                    SELECT campaign_extension_setting.extension_type
+                    FROM campaign_extension_setting
+                    WHERE campaign.status = 'ENABLED'
+                """
+                response = self.ga_service.search(customer_id=self.customer_id, query=legacy_query)
+                for row in response:
+                    try:
+                        asset_types.add(row.campaign_extension_setting.extension_type.name)
+                    except Exception:
+                        pass
+            except GoogleAdsException as ex:
+                logger.warning(f"Error fetching ad extensions: {ex}")
+
         return {
-            "sitelinks": False,  # TODO: Query sitelink extensions
-            "callouts": False,   # TODO: Query callout extensions
-            "call_extensions": False,  # TODO: Query call extensions
-            "structured_snippets": False,  # TODO: Query structured snippet extensions
+            "sitelinks": "SITELINK" in asset_types,
+            "callouts": "CALLOUT" in asset_types,
+            "call_extensions": "CALL" in asset_types,
+            "structured_snippets": "STRUCTURED_SNIPPET" in asset_types,
+        }
+
+    def _get_search_terms(self, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
+        """Fetch search terms report to identify wasted spend on irrelevant queries."""
+        query = """
+            SELECT
+                search_term_view.search_term,
+                metrics.clicks,
+                metrics.impressions,
+                metrics.cost_micros,
+                metrics.conversions
+            FROM search_term_view
+            WHERE segments.date BETWEEN '{start}' AND '{end}'
+                AND campaign.status = 'ENABLED'
+            ORDER BY metrics.cost_micros DESC
+            LIMIT 2000
+        """.format(
+            start=start_date.strftime("%Y-%m-%d"),
+            end=end_date.strftime("%Y-%m-%d")
+        )
+
+        # Patterns that strongly indicate non-buyer intent in home services
+        WASTE_PATTERNS = [
+            # DIY / informational intent
+            "how to ", "how do i ", "how do you ", "diy ", "do it yourself",
+            "tutorial", "guide", "tips", "step by step", "can i ",
+            "should i ", "what is ", "what are ", "why is ", "why does ",
+            "definition", "wikipedia", "reddit", "youtube", "forum", "video",
+            # Job seekers / employment
+            " job", " jobs", "career", "careers", " hiring", "salary",
+            "wage", "apprentice", "journeyman", "technician school",
+            "electrician school", "hvac school", "plumbing school",
+            "how to become", "get certified", "certification exam",
+            # Supply / wholesale (wrong buyer type)
+            "wholesale", "supply house", "distributor", "buy parts",
+            " parts", "equipment for sale", "amazon", "home depot parts",
+            "lowes parts", "menards",
+            # Clearly informational
+            "history of", "types of", "different types",
+        ]
+
+        all_terms = []
+        waste_terms = []
+        total_spend = 0.0
+        waste_spend = 0.0
+
+        try:
+            response = self.ga_service.search(customer_id=self.customer_id, query=query)
+
+            for row in response:
+                term = row.search_term_view.search_term
+                term_lower = term.lower()
+                cost = row.metrics.cost_micros / 1_000_000
+                total_spend += cost
+
+                term_data = {
+                    "term": term,
+                    "clicks": row.metrics.clicks,
+                    "impressions": row.metrics.impressions,
+                    "cost": round(cost, 2),
+                    "conversions": row.metrics.conversions,
+                }
+                all_terms.append(term_data)
+
+                is_waste = any(p in term_lower for p in WASTE_PATTERNS)
+                if is_waste:
+                    waste_terms.append(term_data)
+                    waste_spend += cost
+
+            return {
+                "total_terms": len(all_terms),
+                "total_spend": round(total_spend, 2),
+                "waste_terms": waste_terms,
+                "waste_term_count": len(waste_terms),
+                "waste_spend": round(waste_spend, 2),
+                "sample_terms": all_terms[:25],
+            }
+        except GoogleAdsException as ex:
+            logger.error(f"Error fetching search terms: {ex}")
+            return {
+                "total_terms": 0,
+                "total_spend": 0.0,
+                "waste_terms": [],
+                "waste_term_count": 0,
+                "waste_spend": 0.0,
+                "sample_terms": [],
+            }
+
+    def _get_device_bid_adjustments(self) -> Dict[str, Any]:
+        """Fetch device-level bid modifiers to check mobile optimization."""
+        query = """
+            SELECT
+                campaign_criterion.device.type,
+                campaign_criterion.bid_modifier,
+                campaign_criterion.status
+            FROM campaign_criterion
+            WHERE campaign_criterion.type = 'DEVICE'
+                AND campaign.status = 'ENABLED'
+        """
+
+        device_modifiers: Dict[str, list] = {}
+
+        try:
+            response = self.ga_service.search(customer_id=self.customer_id, query=query)
+            for row in response:
+                try:
+                    device = row.campaign_criterion.device.type_.name.lower()
+                    modifier = row.campaign_criterion.bid_modifier
+                    if device not in device_modifiers:
+                        device_modifiers[device] = []
+                    device_modifiers[device].append(modifier)
+                except Exception:
+                    pass
+        except GoogleAdsException as ex:
+            logger.warning(f"Error fetching device bid adjustments: {ex}")
+            return {"has_adjustments": False, "mobile": 1.0, "desktop": 1.0, "tablet": 1.0}
+
+        avg_by_device = {
+            dev: sum(mods) / len(mods)
+            for dev, mods in device_modifiers.items()
+        }
+
+        # Any modifier != 1.0 means an active adjustment
+        has_adjustments = any(abs(v - 1.0) > 0.01 for v in avg_by_device.values())
+
+        return {
+            "has_adjustments": has_adjustments,
+            "mobile": avg_by_device.get("mobile", 1.0),
+            "desktop": avg_by_device.get("desktop", 1.0),
+            "tablet": avg_by_device.get("tablet", 1.0),
         }
 
     def _get_negative_keywords_count(self) -> int:
@@ -458,33 +664,6 @@ class GoogleAdsGraderClient:
             logger.error(f"Error fetching negative keywords: {ex}")
             return 0
 
-    def _get_landing_page_count(self, start_date: datetime, end_date: datetime) -> int:
-        """Count unique landing pages."""
-        query = """
-            SELECT
-                landing_page_view.unexpanded_final_url
-            FROM landing_page_view
-            WHERE segments.date BETWEEN '{start}' AND '{end}'
-        """.format(
-            start=start_date.strftime("%Y-%m-%d"),
-            end=end_date.strftime("%Y-%m-%d")
-        )
-
-        landing_pages = set()
-
-        try:
-            response = self.ga_service.search(
-                customer_id=self.customer_id,
-                query=query
-            )
-
-            for row in response:
-                landing_pages.add(row.landing_page_view.unexpanded_final_url)
-
-            return len(landing_pages)
-        except GoogleAdsException as ex:
-            logger.error(f"Error fetching landing pages: {ex}")
-            return 0
 
     def _get_impression_share_metrics(self, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
         """Get impression share and lost impression share data."""

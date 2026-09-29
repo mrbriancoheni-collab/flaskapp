@@ -1,0 +1,719 @@
+{# templates/social_calendar/index.html #}
+{% extends "base_app.html" %}
+{% set SECTION = 'social_calendar' %}
+{% block title %}Social Media Calendar{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6 pb-12">
+
+  {# ── Header ── #}
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Social Media Calendar</h1>
+      <p class="text-sm text-gray-500 mt-0.5">Plan and track posts across all platforms</p>
+    </div>
+
+    <div class="flex items-center gap-2 flex-wrap">
+      {# Month navigation #}
+      <div class="flex items-center gap-1 bg-white border rounded-lg shadow-sm overflow-hidden">
+        <a href="?platform={{ platform }}&year={{ prev_year }}&month={{ prev_month }}"
+           class="px-3 py-2 hover:bg-gray-50 text-gray-600 transition"
+           title="Previous month">
+          <i class="fa-solid fa-chevron-left text-sm"></i>
+        </a>
+        <span class="px-3 py-2 font-semibold text-gray-800 min-w-[140px] text-center">
+          {{ month_name }} {{ year }}
+        </span>
+        <a href="?platform={{ platform }}&year={{ next_year }}&month={{ next_month }}"
+           class="px-3 py-2 hover:bg-gray-50 text-gray-600 transition"
+           title="Next month">
+          <i class="fa-solid fa-chevron-right text-sm"></i>
+        </a>
+      </div>
+
+      {# Today button #}
+      <a href="?platform={{ platform }}&year={{ today.year }}&month={{ today.month }}"
+         class="px-3 py-2 bg-white border rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
+        Today
+      </a>
+
+      {# Add Post button #}
+      <button
+        onclick="openAddModal(null)"
+        class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
+        style="background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%)">
+        <i class="fa-solid fa-plus"></i>
+        Add Post
+      </button>
+    </div>
+  </div>
+
+  {# ── Platform Connection Cards ── #}
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+
+    {# Facebook #}
+    <div class="bg-white border rounded-xl p-3 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center" style="background:#1877F2">
+        <i class="fa-brands fa-facebook text-white text-lg"></i>
+      </div>
+      <div class="min-w-0">
+        <div class="font-semibold text-sm text-gray-800">Facebook</div>
+        <span class="inline-flex items-center gap-1 text-xs bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full font-medium mt-0.5">
+          <i class="fa-solid fa-clock text-[10px]"></i> Coming Soon
+        </span>
+      </div>
+    </div>
+
+    {# Instagram #}
+    <div class="bg-white border rounded-xl p-3 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center" style="background:linear-gradient(135deg,#7c3aed,#ec4899)">
+        <i class="fa-brands fa-instagram text-white text-lg"></i>
+      </div>
+      <div class="min-w-0">
+        <div class="font-semibold text-sm text-gray-800">Instagram</div>
+        <span class="inline-flex items-center gap-1 text-xs bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full font-medium mt-0.5">
+          <i class="fa-solid fa-clock text-[10px]"></i> Coming Soon
+        </span>
+      </div>
+    </div>
+
+    {# YouTube #}
+    <div class="bg-white border rounded-xl p-3 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center" style="background:#FF0000">
+        <i class="fa-brands fa-youtube text-white text-lg"></i>
+      </div>
+      <div class="min-w-0">
+        <div class="font-semibold text-sm text-gray-800">YouTube</div>
+        <span class="inline-flex items-center gap-1 text-xs bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full font-medium mt-0.5">
+          <i class="fa-solid fa-clock text-[10px]"></i> Coming Soon
+        </span>
+      </div>
+    </div>
+
+    {# LinkedIn — has schedule + post generator #}
+    <div class="bg-white border border-green-200 rounded-xl p-3 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center" style="background:#0A66C2">
+        <i class="fa-brands fa-linkedin text-white text-lg"></i>
+      </div>
+      <div class="min-w-0 flex-1">
+        <div class="font-semibold text-sm text-gray-800">LinkedIn</div>
+        <span class="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 border border-green-200 px-1.5 py-0.5 rounded-full font-medium mt-0.5">
+          <i class="fa-solid fa-circle-check text-[10px]"></i> Active
+        </span>
+      </div>
+      {% if has_endpoint('linkedin_bp.schedule') %}
+      <a href="{{ url_for('linkedin_bp.schedule') }}"
+         class="flex-shrink-0 text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline whitespace-nowrap">
+        Manage →
+      </a>
+      {% endif %}
+    </div>
+
+  </div>
+
+  {# ── Platform Filter Pills ── #}
+  <div class="flex flex-wrap gap-2">
+    {% set current_platform = platform %}
+
+    <a href="?platform=all&year={{ year }}&month={{ month }}"
+       class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition
+              {% if current_platform == 'all' %}bg-gray-700 text-white{% else %}bg-white text-gray-600 border hover:bg-gray-50{% endif %}">
+      All Platforms
+    </a>
+
+    <a href="?platform=facebook&year={{ year }}&month={{ month }}"
+       class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition
+              {% if current_platform == 'facebook' %}bg-blue-600 text-white{% else %}bg-white text-blue-600 border border-blue-200 hover:bg-blue-50{% endif %}">
+      <i class="fa-brands fa-facebook"></i> Facebook
+    </a>
+
+    <a href="?platform=instagram&year={{ year }}&month={{ month }}"
+       class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition
+              {% if current_platform == 'instagram' %}text-white{% else %}bg-white border border-purple-200 hover:opacity-90{% endif %}"
+       {% if current_platform == 'instagram' %}style="background:linear-gradient(135deg,#7c3aed,#ec4899)"{% else %}style="color:#9333ea"{% endif %}>
+      <i class="fa-brands fa-instagram"></i> Instagram
+    </a>
+
+    <a href="?platform=youtube&year={{ year }}&month={{ month }}"
+       class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition
+              {% if current_platform == 'youtube' %}bg-red-600 text-white{% else %}bg-white text-red-600 border border-red-200 hover:bg-red-50{% endif %}">
+      <i class="fa-brands fa-youtube"></i> YouTube
+    </a>
+
+    <a href="?platform=linkedin&year={{ year }}&month={{ month }}"
+       class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition
+              {% if current_platform == 'linkedin' %}bg-blue-700 text-white{% else %}bg-white text-blue-700 border border-blue-300 hover:bg-blue-50{% endif %}">
+      <i class="fa-brands fa-linkedin"></i> LinkedIn
+    </a>
+  </div>
+
+  {# ── Monthly Calendar Grid ── #}
+  <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+    {# Day-of-week header (Sun–Sat) #}
+    <div class="grid grid-cols-7 border-b">
+      {% for dow in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] %}
+        <div class="py-2 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide
+                    {% if not loop.last %}border-r{% endif %}">
+          {{ dow }}
+        </div>
+      {% endfor %}
+    </div>
+
+    {# Calendar cells #}
+    {% set total_cells = first_weekday_sun + days_in_month %}
+    {% set total_rows = ((total_cells - 1) // 7) + 1 %}
+
+    {% for row in range(total_rows) %}
+      <div class="grid grid-cols-7 {% if not loop.last %}border-b{% endif %}">
+        {% for col in range(7) %}
+          {% set cell_index = row * 7 + col %}
+          {% set day_num = cell_index - first_weekday_sun + 1 %}
+          {% set is_valid = day_num >= 1 and day_num <= days_in_month %}
+          {% set is_today = is_valid and day_num == today.day and month == today.month and year == today.year %}
+
+          <div class="min-h-[110px] p-1.5 {% if not loop.last %}border-r{% endif %}
+                      {% if not is_valid %}bg-gray-50{% elif is_today %}bg-purple-50{% else %}hover:bg-gray-50{% endif %}
+                      transition"
+               {% if is_valid %}
+               onclick="openAddModal('{{ year }}-{{ '%02d' | format(month) }}-{{ '%02d' | format(day_num) }}')"
+               style="cursor:pointer"
+               {% endif %}>
+
+            {% if is_valid %}
+              {# Day number #}
+              <div class="text-right mb-1">
+                <span class="inline-flex items-center justify-center w-6 h-6 text-xs font-semibold rounded-full
+                             {% if is_today %}bg-purple-600 text-white{% else %}text-gray-700{% endif %}">
+                  {{ day_num }}
+                </span>
+              </div>
+
+              {# Post chips for this day #}
+              {% set day_posts = posts_by_day.get(day_num, []) %}
+
+              {% for post in day_posts[:3] %}
+                <div class="sc-chip mb-0.5 px-1.5 py-0.5 rounded text-xs font-medium text-white truncate"
+                     data-post="{{ post | tojson | e }}"
+                     style="cursor:pointer;
+                       {% if post.platform == 'facebook' %}background:#1877F2
+                       {% elif post.platform == 'instagram' %}background:linear-gradient(135deg,#7c3aed,#ec4899)
+                       {% elif post.platform == 'youtube' %}background:#FF0000
+                       {% elif post.platform == 'linkedin' %}background:#0A66C2
+                       {% else %}background:#6b7280{% endif %}"
+                     title="{{ (post.copy_text or post.title or '') | truncate(80) | e }}">
+                  <i class="fa-brands fa-{{ post.platform }} mr-1 text-xs opacity-80"></i>
+                  {{ (post.copy_text or post.title or post.post_type or 'Post') | truncate(28) }}
+                </div>
+              {% endfor %}
+
+              {% if day_posts | length > 3 %}
+                <div class="text-xs text-gray-500 font-medium px-1 mt-0.5 hover:text-purple-600"
+                     onclick="event.stopPropagation(); openAddModal('{{ year }}-{{ '%02d' | format(month) }}-{{ '%02d' | format(day_num) }}')"
+                     style="cursor:pointer">
+                  +{{ day_posts | length - 3 }} more
+                </div>
+              {% endif %}
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </div>
+
+  {# ── Upcoming Posts Table ── #}
+  <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-4 border-b">
+      <h2 class="font-semibold text-gray-800">Upcoming Posts</h2>
+      <span class="text-sm text-gray-400">{{ upcoming | length }} post{% if upcoming | length != 1 %}s{% endif %} scheduled</span>
+    </div>
+
+    {% if upcoming %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 border-b">
+            <tr>
+              <th class="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Date</th>
+              <th class="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Platform</th>
+              <th class="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Type</th>
+              <th class="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Copy Preview</th>
+              <th class="text-left py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+              <th class="text-right py-2.5 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            {% for post in upcoming %}
+              <tr class="hover:bg-gray-50 transition">
+                <td class="py-3 px-4 whitespace-nowrap">
+                  <div class="font-medium text-gray-800">{{ post.scheduled_date.strftime('%b %d, %Y') }}</div>
+                  {% if post.scheduled_time %}
+                    <div class="text-xs text-gray-400">{{ post.scheduled_time }}</div>
+                  {% endif %}
+                </td>
+                <td class="py-3 px-4">
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold text-white"
+                        style="{% if post.platform == 'facebook' %}background:#1877F2
+                               {% elif post.platform == 'instagram' %}background:linear-gradient(135deg,#7c3aed,#ec4899)
+                               {% elif post.platform == 'youtube' %}background:#FF0000
+                               {% elif post.platform == 'linkedin' %}background:#0A66C2
+                               {% else %}background:#6b7280{% endif %}">
+                    <i class="fa-brands fa-{{ post.platform }} text-xs"></i>
+                    {{ post.platform | capitalize }}
+                  </span>
+                </td>
+                <td class="py-3 px-4 text-gray-600">{{ post.post_type or '—' }}</td>
+                <td class="py-3 px-4 text-gray-600 max-w-xs">
+                  <span class="truncate block max-w-[200px]" title="{{ (post.copy_text or post.title or '') | e }}">
+                    {{ (post.copy_text or post.title or '—') | truncate(50) }}
+                  </span>
+                </td>
+                <td class="py-3 px-4">
+                  {% set st = post.status %}
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+                               {% if st == 'approved' %}bg-green-100 text-green-700
+                               {% elif st == 'published' %}bg-blue-100 text-blue-700
+                               {% elif st == 'needs_revision' %}bg-amber-100 text-amber-700
+                               {% else %}bg-gray-100 text-gray-600{% endif %}">
+                    {{ st | replace('_', ' ') | title }}
+                  </span>
+                </td>
+                <td class="py-3 px-4 text-right">
+                  <div class="flex items-center justify-end gap-2">
+                    <button
+                      class="sc-edit-btn p-1.5 text-gray-400 hover:text-blue-600 rounded hover:bg-blue-50 transition"
+                      data-post="{{ post.to_dict() | tojson | e }}"
+                      title="Edit">
+                      <i class="fa-solid fa-pen text-xs"></i>
+                    </button>
+                    <button
+                      class="sc-delete-btn p-1.5 text-gray-400 hover:text-red-600 rounded hover:bg-red-50 transition"
+                      data-post-id="{{ post.id }}"
+                      title="Delete">
+                      <i class="fa-solid fa-trash text-xs"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="py-12 text-center">
+        <i class="fa-regular fa-calendar-xmark text-4xl text-gray-300 mb-3 block"></i>
+        <p class="text-gray-500">No upcoming posts scheduled.</p>
+        <button onclick="openAddModal(null)"
+                class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-50 transition">
+          <i class="fa-solid fa-plus text-xs"></i> Add your first post
+        </button>
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+
+{# ── Add / Edit Modal ── #}
+<div id="sc-modal-overlay"
+     class="fixed inset-0 z-50 flex items-center justify-center hidden"
+     style="background:rgba(0,0,0,0.45)">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl mx-4 max-h-[92vh] overflow-y-auto" onclick="event.stopPropagation()">
+    {# Modal header #}
+    <div class="flex items-center justify-between px-6 py-4 border-b">
+      <h2 class="text-lg font-bold text-gray-900" id="scModalTitle">Add Post</h2>
+      <button onclick="scCloseModal()" class="text-gray-400 hover:text-gray-600 transition p-1 rounded">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+
+    {# Modal form #}
+    <form id="scPostForm" class="px-6 py-5 space-y-4" onsubmit="scSubmitForm(event)">
+      <input type="hidden" id="scPostId" value="">
+
+      {# Platform selector #}
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Platform</label>
+        <div class="grid grid-cols-4 gap-2">
+          <button type="button"
+                  class="sc-platform-btn flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl text-sm font-medium text-white transition"
+                  data-platform="facebook"
+                  onclick="scSelectPlatform('facebook')"
+                  style="background:#1877F2">
+            <i class="fa-brands fa-facebook text-lg"></i>
+            <span class="text-xs">Facebook</span>
+          </button>
+          <button type="button"
+                  class="sc-platform-btn flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl text-sm font-medium text-white transition"
+                  data-platform="instagram"
+                  onclick="scSelectPlatform('instagram')"
+                  style="background:linear-gradient(135deg,#7c3aed,#ec4899)">
+            <i class="fa-brands fa-instagram text-lg"></i>
+            <span class="text-xs">Instagram</span>
+          </button>
+          <button type="button"
+                  class="sc-platform-btn flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl text-sm font-medium text-white transition"
+                  data-platform="youtube"
+                  onclick="scSelectPlatform('youtube')"
+                  style="background:#FF0000">
+            <i class="fa-brands fa-youtube text-lg"></i>
+            <span class="text-xs">YouTube</span>
+          </button>
+          <button type="button"
+                  class="sc-platform-btn flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl text-sm font-medium text-white transition"
+                  data-platform="linkedin"
+                  onclick="scSelectPlatform('linkedin')"
+                  style="background:#0A66C2">
+            <i class="fa-brands fa-linkedin text-lg"></i>
+            <span class="text-xs">LinkedIn</span>
+          </button>
+        </div>
+        <input type="hidden" name="platform" id="scPlatform" value="facebook">
+      </div>
+
+      {# Date & Time #}
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label for="scDate" class="block text-sm font-medium text-gray-700 mb-1">Date <span class="text-red-500">*</span></label>
+          <input type="date" id="scDate" name="scheduled_date" required
+                 class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+        </div>
+        <div>
+          <label for="scTime" class="block text-sm font-medium text-gray-700 mb-1">Time</label>
+          <input type="time" id="scTime" name="scheduled_time" value="09:00"
+                 class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+        </div>
+      </div>
+
+      {# Post Type #}
+      <div>
+        <label for="scPostType" class="block text-sm font-medium text-gray-700 mb-1">Post Type</label>
+        <select id="scPostType" name="post_type"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+          <option value="">Select type…</option>
+        </select>
+      </div>
+
+      {# YouTube Title (shown only for YouTube) #}
+      <div id="scTitleWrapper" class="hidden">
+        <label for="scTitle" class="block text-sm font-medium text-gray-700 mb-1">
+          Video Title <span class="text-gray-400 font-normal">(max 70 chars)</span>
+        </label>
+        <input type="text" id="scTitle" name="title" maxlength="100"
+               class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+               placeholder="Compelling video title…"
+               oninput="scUpdateCounter('scTitle', 'scTitleCounter', 70)">
+        <div class="flex justify-end mt-1">
+          <span id="scTitleCounter" class="text-xs text-gray-400">0 / 70</span>
+        </div>
+      </div>
+
+      {# Copy textarea with char counter #}
+      <div>
+        <label for="scCopy" class="block text-sm font-medium text-gray-700 mb-1">
+          Post Copy
+          <span class="text-gray-400 font-normal text-xs" id="scCopyLimitLabel"></span>
+        </label>
+        <textarea id="scCopy" name="copy_text" rows="4"
+                  class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                  placeholder="Write your post copy…"
+                  oninput="scUpdateCopyCounter()"></textarea>
+        <div class="flex justify-end mt-1">
+          <span id="scCopyCounter" class="text-xs text-gray-400">0 chars</span>
+        </div>
+      </div>
+
+      {# Link #}
+      <div>
+        <label for="scLink" class="block text-sm font-medium text-gray-700 mb-1">Link</label>
+        <input type="url" id="scLink" name="link"
+               class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+               placeholder="https://…">
+      </div>
+
+      {# Campaign & Post Owner side by side #}
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label for="scCampaign" class="block text-sm font-medium text-gray-700 mb-1">Campaign</label>
+          <input type="text" id="scCampaign" name="campaign"
+                 class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                 placeholder="Spring Promo…">
+        </div>
+        <div>
+          <label for="scPostOwner" class="block text-sm font-medium text-gray-700 mb-1">Post Owner</label>
+          <input type="text" id="scPostOwner" name="post_owner"
+                 class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                 placeholder="e.g. Jane">
+        </div>
+      </div>
+
+      {# Status #}
+      <div>
+        <label for="scStatus" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+        <select id="scStatus" name="status"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="published">Published</option>
+          <option value="needs_revision">Needs Revision</option>
+        </select>
+      </div>
+
+      {# Submit / Cancel #}
+      <div class="flex items-center justify-end gap-3 pt-2 border-t">
+        <button type="button" onclick="scCloseModal()"
+                class="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+          Cancel
+        </button>
+        <button type="submit" id="scSubmitBtn"
+                class="px-5 py-2 text-sm font-semibold text-white rounded-lg shadow-sm transition hover:opacity-90"
+                style="background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%)">
+          Save Post
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var POST_TYPES = {{ post_types | tojson }};
+  var CHAR_LIMITS = {{ char_limits | tojson }};
+  var currentPlatform = 'facebook';
+
+  var CSRF_TOKEN = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+
+  // ── Modal helpers ──────────────────────────────────────────────────────────
+
+  function getOverlay() { return document.getElementById('sc-modal-overlay'); }
+
+  function scOpenModal(title) {
+    document.getElementById('scModalTitle').textContent = title || 'Post';
+    getOverlay().classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  window.scCloseModal = function () {
+    getOverlay().classList.add('hidden');
+    document.body.style.overflow = '';
+    document.getElementById('scPostForm').reset();
+    document.getElementById('scPostId').value = '';
+    scSelectPlatform('facebook');
+    document.getElementById('scCopyCounter').textContent = '0 chars';
+    document.getElementById('scTitleCounter').textContent = '0 / 70';
+  };
+
+  // ── Open add modal with optional pre-filled date ──────────────────────────
+
+  window.openAddModal = function (dateStr) {
+    document.getElementById('scPostId').value = '';
+    document.getElementById('scSubmitBtn').textContent = 'Save Post';
+    if (dateStr) {
+      document.getElementById('scDate').value = dateStr;
+    } else {
+      var t = new Date();
+      var y = t.getFullYear();
+      var m = String(t.getMonth() + 1).padStart(2, '0');
+      var d = String(t.getDate()).padStart(2, '0');
+      document.getElementById('scDate').value = y + '-' + m + '-' + d;
+    }
+    scSelectPlatform('facebook');
+    scOpenModal('Add Post');
+  };
+
+  // ── Open edit modal pre-populated ─────────────────────────────────────────
+
+  window.openEditModal = function (post) {
+    document.getElementById('scPostId').value = post.id || '';
+    document.getElementById('scSubmitBtn').textContent = 'Update Post';
+    document.getElementById('scDate').value = post.scheduled_date || '';
+    document.getElementById('scTime').value = post.scheduled_time || '09:00';
+    document.getElementById('scCopy').value = post.copy_text || '';
+    document.getElementById('scTitle').value = post.title || '';
+    document.getElementById('scLink').value = post.link || '';
+    document.getElementById('scCampaign').value = post.campaign || '';
+    document.getElementById('scPostOwner').value = post.post_owner || '';
+    document.getElementById('scStatus').value = post.status || 'pending';
+    scSelectPlatform(post.platform || 'facebook');
+    // Set post type after options are populated
+    setTimeout(function () {
+      document.getElementById('scPostType').value = post.post_type || '';
+    }, 15);
+    scUpdateCopyCounter();
+    scOpenModal('Edit Post');
+  };
+
+  // ── Platform selection ─────────────────────────────────────────────────────
+
+  window.scSelectPlatform = function (p) {
+    currentPlatform = p;
+    document.getElementById('scPlatform').value = p;
+
+    // Ring on selected button
+    document.querySelectorAll('.sc-platform-btn').forEach(function (btn) {
+      btn.style.outline = 'none';
+      btn.style.boxShadow = btn.dataset.platform === p
+        ? '0 0 0 3px #7c3aed, 0 0 0 5px white'
+        : 'none';
+    });
+
+    // Populate post types dropdown
+    var sel = document.getElementById('scPostType');
+    sel.innerHTML = '<option value="">Select type…</option>';
+    (POST_TYPES[p] || []).forEach(function (t) {
+      var opt = document.createElement('option');
+      opt.value = t;
+      opt.textContent = t;
+      sel.appendChild(opt);
+    });
+
+    // YouTube title visibility
+    document.getElementById('scTitleWrapper').classList[p === 'youtube' ? 'remove' : 'add']('hidden');
+
+    // Update char limit hint
+    var limit = CHAR_LIMITS[p] || null;
+    var label = document.getElementById('scCopyLimitLabel');
+    label.textContent = limit ? '(recommended max ' + limit + ' chars)' : '';
+
+    scUpdateCopyCounter();
+  };
+
+  // ── Character counters ─────────────────────────────────────────────────────
+
+  window.scUpdateCounter = function (inputId, counterId, limit) {
+    var el = document.getElementById(inputId);
+    var counter = document.getElementById(counterId);
+    if (!el || !counter) return;
+    var len = el.value.length;
+    counter.textContent = len + ' / ' + limit;
+    counter.className = len > limit ? 'text-xs text-red-500 font-semibold' : 'text-xs text-gray-400';
+  };
+
+  window.scUpdateCopyCounter = function () {
+    var el = document.getElementById('scCopy');
+    var counter = document.getElementById('scCopyCounter');
+    if (!el || !counter) return;
+    var len = el.value.length;
+    var limit = CHAR_LIMITS[currentPlatform] || null;
+    if (limit) {
+      counter.textContent = len + ' / ' + limit;
+      counter.className = len > limit ? 'text-xs text-red-500 font-semibold' : 'text-xs text-gray-400';
+    } else {
+      counter.textContent = len + ' chars';
+      counter.className = 'text-xs text-gray-400';
+    }
+  };
+
+  // ── Form submit ────────────────────────────────────────────────────────────
+
+  window.scSubmitForm = function (e) {
+    e.preventDefault();
+
+    var postId = document.getElementById('scPostId').value;
+    var payload = {
+      platform:       document.getElementById('scPlatform').value,
+      scheduled_date: document.getElementById('scDate').value,
+      scheduled_time: document.getElementById('scTime').value,
+      post_type:      document.getElementById('scPostType').value,
+      copy_text:      document.getElementById('scCopy').value,
+      title:          document.getElementById('scTitle').value,
+      link:           document.getElementById('scLink').value,
+      campaign:       document.getElementById('scCampaign').value,
+      post_owner:     document.getElementById('scPostOwner').value,
+      status:         document.getElementById('scStatus').value,
+    };
+
+    var url = postId
+      ? '/account/social-calendar/post/' + postId + '/update'
+      : '/account/social-calendar/post/add';
+
+    var btn = document.getElementById('scSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': CSRF_TOKEN,
+      },
+      body: JSON.stringify(payload),
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.success) {
+        scCloseModal();
+        window.location.reload();
+      } else {
+        alert(data.error || 'Something went wrong. Please try again.');
+        btn.disabled = false;
+        btn.textContent = postId ? 'Update Post' : 'Save Post';
+      }
+    })
+    .catch(function () {
+      alert('Network error. Please try again.');
+      btn.disabled = false;
+      btn.textContent = postId ? 'Update Post' : 'Save Post';
+    });
+  };
+
+  // ── Delete ─────────────────────────────────────────────────────────────────
+
+  window.deletePost = function (postId) {
+    if (!confirm('Delete this post? This cannot be undone.')) return;
+
+    fetch('/account/social-calendar/post/' + postId + '/delete', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': CSRF_TOKEN,
+      },
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.success) {
+        window.location.reload();
+      } else {
+        alert(data.error || 'Delete failed.');
+      }
+    })
+    .catch(function () {
+      alert('Network error. Please try again.');
+    });
+  };
+
+  // ── Wire up data-attribute buttons via event delegation ──────────────────
+  document.addEventListener('DOMContentLoaded', function () {
+    // Close overlay on backdrop click
+    getOverlay().addEventListener('click', function (e) {
+      if (e.target === getOverlay()) window.scCloseModal();
+    });
+
+    // Calendar chips → edit modal
+    document.addEventListener('click', function (e) {
+      var chip = e.target.closest('.sc-chip');
+      if (chip) {
+        e.stopPropagation();
+        try { window.openEditModal(JSON.parse(chip.dataset.post)); } catch (_) {}
+        return;
+      }
+      var editBtn = e.target.closest('.sc-edit-btn');
+      if (editBtn) {
+        e.stopPropagation();
+        try { window.openEditModal(JSON.parse(editBtn.dataset.post)); } catch (_) {}
+        return;
+      }
+      var delBtn = e.target.closest('.sc-delete-btn');
+      if (delBtn) {
+        e.stopPropagation();
+        window.deletePost(delBtn.dataset.postId);
+        return;
+      }
+    });
+
+    // Initial platform highlight
+    scSelectPlatform('facebook');
+  });
+
+}());
+</script>
+{% endblock %}

@@ -14,6 +14,7 @@ These agents handle advanced optimization tasks:
 from typing import Dict, List, Any
 from datetime import datetime, timedelta
 from .base import BaseAgent, AgentDecision, AgentCapability, DecisionRiskLevel
+from .fb_agent_executor import _fb_execute_action
 
 import logging
 logger = logging.getLogger(__name__)
@@ -314,11 +315,54 @@ class FBSpendOptimizerAgent(BaseAgent):
         return decisions
 
     def _execute_impl(self, decision: AgentDecision, fb_ads_client: Any) -> Dict[str, Any]:
-        """Execute spend optimization changes."""
+        """Execute spend optimization changes via real Meta API."""
+        decision_type = decision.decision_type
+        account_id = decision.account_id
+        new_budget = decision.action_data.get('new_budget')
+
+        if decision_type in ('increase_campaign_budget', 'reduce_campaign_budget'):
+            campaign_id = decision.campaign_id or decision.action_data.get('campaign_id')
+            if campaign_id and new_budget is not None:
+                result = _fb_execute_action(
+                    account_id=account_id,
+                    entity_id=str(campaign_id),
+                    entity_type='campaign',
+                    action='adjust_budget',
+                    params={'daily_budget': float(new_budget)},
+                )
+                return {
+                    **result,
+                    'decision_type': decision_type,
+                    'campaign_id': campaign_id,
+                    'old_budget': decision.action_data.get('current_budget'),
+                    'new_budget': new_budget,
+                }
+            return {'success': False, 'error': 'Missing campaign_id or new_budget', 'decision_type': decision_type}
+
+        if decision_type in ('increase_adset_budget', 'reduce_adset_budget'):
+            adset_id = decision.ad_group_id or decision.action_data.get('ad_set_id')
+            if adset_id and new_budget is not None:
+                result = _fb_execute_action(
+                    account_id=account_id,
+                    entity_id=str(adset_id),
+                    entity_type='adset',
+                    action='adjust_budget',
+                    params={'daily_budget': float(new_budget)},
+                )
+                return {
+                    **result,
+                    'decision_type': decision_type,
+                    'adset_id': adset_id,
+                    'old_budget': decision.action_data.get('current_budget'),
+                    'new_budget': new_budget,
+                }
+            return {'success': False, 'error': 'Missing adset_id or new_budget', 'decision_type': decision_type}
+
+        # adjust_monthly_pacing and low_spend_velocity — require manual/approval
         return {
             'success': True,
-            'decision_type': decision.decision_type,
-            'note': 'Budget changes require implementation in Ads Manager',
+            'decision_type': decision_type,
+            'note': 'This action requires approval or manual implementation in Ads Manager',
             'requires_manual_work': True,
             'action_data': decision.action_data
         }

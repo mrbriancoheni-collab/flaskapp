@@ -1,0 +1,123 @@
+{% extends "base_app.html" %}
+{% set SECTION = 'servicetitan' %}
+{% block title %}ServiceTitan Settings – {{ app_name }}{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">ServiceTitan Settings</h1>
+    <p class="text-sm text-gray-500 mt-0.5">Configure your ServiceTitan API connection.</p>
+  </div>
+  <a href="{{ url_for('servicetitan_bp.dashboard') }}" class="px-4 py-2 bg-gray-100 border rounded-lg hover:bg-gray-200 text-sm">
+    <i class="fa-solid fa-arrow-left mr-1"></i> Back to Dashboard
+  </a>
+</div>
+
+<div class="max-w-3xl">
+  <div class="bg-white border rounded-xl p-6">
+    <h2 class="text-lg font-semibold mb-4">API Connection Settings</h2>
+
+    <form method="post" class="space-y-6">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div>
+        <label for="tenant_id" class="block text-sm font-medium text-gray-700 mb-2">
+          Tenant ID <span class="text-red-500">*</span>
+        </label>
+        <input type="text" id="tenant_id" name="tenant_id"
+               value="{{ connection.tenant_id if connection else '' }}"
+               required
+               class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+               placeholder="Your ServiceTitan Tenant ID">
+        <p class="text-xs text-gray-500 mt-1">Found in ServiceTitan Settings → Integrations → API Application Management</p>
+      </div>
+
+      <div>
+        <label for="client_id" class="block text-sm font-medium text-gray-700 mb-2">
+          Client ID <span class="text-red-500">*</span>
+        </label>
+        <input type="text" id="client_id" name="client_id"
+               value="{{ connection.client_id if connection else '' }}"
+               required
+               class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+               placeholder="OAuth Client ID">
+      </div>
+
+      <div>
+        <label for="client_secret" class="block text-sm font-medium text-gray-700 mb-2">
+          Client Secret <span class="text-red-500">*</span>
+        </label>
+        <input type="password" id="client_secret" name="client_secret"
+               value="{{ connection.client_secret if connection else '' }}"
+               required
+               class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+               placeholder="OAuth Client Secret">
+      </div>
+
+      <div>
+        <label for="app_key" class="block text-sm font-medium text-gray-700 mb-2">
+          App Key <span class="text-gray-400">(Optional)</span>
+        </label>
+        <input type="text" id="app_key" name="app_key"
+               value="{{ connection.app_key if connection else '' }}"
+               class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+               placeholder="ServiceTitan App Key">
+      </div>
+
+      <hr>
+
+      <div>
+        <label for="sync_frequency" class="block text-sm font-medium text-gray-700 mb-2">
+          Automatic Sync Frequency
+        </label>
+        <select id="sync_frequency" name="sync_frequency"
+                class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+          <option value="1" {% if connection and connection.sync_frequency_hours == 1 %}selected{% endif %}>Every hour</option>
+          <option value="2" {% if connection and connection.sync_frequency_hours == 2 %}selected{% endif %}>Every 2 hours</option>
+          <option value="4" {% if connection and connection.sync_frequency_hours == 4 %}selected{% endif %}>Every 4 hours (recommended)</option>
+          <option value="6" {% if connection and connection.sync_frequency_hours == 6 %}selected{% endif %}>Every 6 hours</option>
+          <option value="12" {% if connection and connection.sync_frequency_hours == 12 %}selected{% endif %}>Every 12 hours</option>
+          <option value="24" {% if connection and connection.sync_frequency_hours == 24 %}selected{% endif %}>Once daily</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="flex items-center">
+          <input type="checkbox" name="sync_enabled"
+                 {% if not connection or connection.sync_enabled %}checked{% endif %}
+                 class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+          <span class="ml-2 text-sm text-gray-700">Enable automatic synchronization</span>
+        </label>
+        <p class="text-xs text-gray-500 mt-1 ml-6">When disabled, you can still manually sync from the dashboard</p>
+      </div>
+
+      <div class="flex gap-3">
+        <button type="submit"
+                class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">
+          <i class="fa-solid fa-floppy-disk mr-2"></i> Save Settings
+        </button>
+        <a href="{{ url_for('servicetitan_bp.dashboard') }}"
+           class="px-6 py-2 bg-gray-100 border rounded-lg hover:bg-gray-200">
+          Cancel
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <div class="bg-blue-50 border border-blue-200 rounded-xl p-6 mt-6">
+    <h3 class="font-semibold mb-3"><i class="fa-solid fa-circle-info mr-2"></i> How to get your ServiceTitan API credentials</h3>
+    <ol class="text-sm space-y-2 list-decimal list-inside text-gray-700">
+      <li>Log in to your ServiceTitan account</li>
+      <li>Navigate to Settings → Integrations → API Application Management</li>
+      <li>Create a new API application or select an existing one</li>
+      <li>Copy the Tenant ID, Client ID, and Client Secret</li>
+      <li>Grant the application read access for customers, jobs, appointments, and technicians</li>
+      <li>Paste the credentials above and save</li>
+    </ol>
+    <div class="mt-4 pt-4 border-t border-blue-200">
+      <a href="https://developer.servicetitan.io/" target="_blank" rel="noopener" class="text-sm text-blue-600 hover:underline">
+        <i class="fa-solid fa-arrow-up-right-from-square mr-1"></i> ServiceTitan Developer Documentation
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

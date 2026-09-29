@@ -1,0 +1,17 @@
+{# Reusable jargon tooltip macro.
+
+   Renders a small gray question-mark icon that reveals a plain-English
+   explanation on hover. Designed for table headers and form labels where
+   ad-industry jargon would confuse non-marketers.
+
+   Usage:
+     {% from "components/jargon_tip.html" import jargon %}
+     <th>Match Type {{ jargon("Controls how closely a search must match your keyword.") }}</th>
+#}
+{% macro jargon(tip) -%}
+<span class="group relative inline-block align-middle font-normal normal-case tracking-normal">
+  <i class="fa-solid fa-circle-question text-gray-300 group-hover:text-gray-500 text-[11px] cursor-help ml-0.5"
+     aria-label="What does this mean?"></i>
+  <span class="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 top-full mt-1.5 z-30 w-56 whitespace-normal rounded-lg bg-gray-900 px-3 py-2 text-xs leading-snug text-white text-left shadow-lg pointer-events-none">{{ tip }}</span>
+</span>
+{%- endmacro %}

@@ -10,10 +10,10 @@
   <div class="mb-8">
     <h1 class="text-3xl font-bold text-gray-900">
       <i class="fas fa-chart-line text-indigo-600 mr-2"></i>
-      Budget Forecasting & Analysis
+      Plan ahead: how much should you spend next month?
     </h1>
     <p class="mt-2 text-sm text-gray-600">
-      AI-powered budget forecasts using historical data, seasonality curves, weather patterns, and capacity constraints.
+      We look at your past results, the weather forecast, and seasonal patterns for your trade to predict next month's spend, leads, and lead cost.
     </p>
   </div>
 
@@ -94,8 +94,9 @@
     <div class="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg shadow-lg p-6 text-white">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-blue-100 text-sm mb-1">Avg CPL (90d)</p>
+          <p class="text-blue-100 text-sm mb-1">$ per lead (last 90 days)</p>
           <p class="text-4xl font-bold" id="avgCpl">$0</p>
+          <p class="text-blue-100 text-xs mt-1">Home services avg: $40–60</p>
         </div>
         <i class="fas fa-dollar-sign text-white opacity-20 text-5xl"></i>
       </div>
@@ -104,8 +105,9 @@
     <div class="bg-gradient-to-br from-green-500 to-teal-600 rounded-lg shadow-lg p-6 text-white">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-green-100 text-sm mb-1">Avg Leads/Day</p>
+          <p class="text-green-100 text-sm mb-1">Leads per day (typical)</p>
           <p class="text-4xl font-bold" id="avgLeads">0</p>
+          <p class="text-green-100 text-xs mt-1">Based on last 90 days</p>
         </div>
         <i class="fas fa-users text-white opacity-20 text-5xl"></i>
       </div>
@@ -114,8 +116,9 @@
     <div class="bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg shadow-lg p-6 text-white">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-purple-100 text-sm mb-1">ROAS</p>
+          <p class="text-purple-100 text-sm mb-1">Return on ad spend</p>
           <p class="text-4xl font-bold" id="avgRoas">0x</p>
+          <p class="text-purple-100 text-xs mt-1">$ earned per $1 spent</p>
         </div>
         <i class="fas fa-chart-area text-white opacity-20 text-5xl"></i>
       </div>
@@ -124,8 +127,9 @@
     <div class="bg-gradient-to-br from-orange-500 to-red-600 rounded-lg shadow-lg p-6 text-white">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-orange-100 text-sm mb-1">YoY Growth</p>
+          <p class="text-orange-100 text-sm mb-1">Growth vs. last year</p>
           <p class="text-4xl font-bold" id="yoyGrowth">0%</p>
+          <p class="text-orange-100 text-xs mt-1">Same month, prior year</p>
         </div>
         <i class="fas fa-trending-up text-white opacity-20 text-5xl"></i>
       </div>
@@ -137,21 +141,21 @@
 
   <!-- Weather Impact -->
   <div id="weatherImpact" class="hidden mb-8">
-    <h2 class="text-xl font-bold text-gray-900 mb-4">Current Weather Impact</h2>
+    <h2 class="text-xl font-bold text-gray-900 mb-4">How the weather is affecting demand right now</h2>
     <div class="bg-white shadow rounded-lg border border-gray-200 p-6">
       <div class="grid grid-cols-3 gap-6">
         <div>
-          <p class="text-sm text-gray-500">Current Conditions</p>
+          <p class="text-sm text-gray-500">Right now outside</p>
           <p class="text-2xl font-semibold" id="weatherCondition">--</p>
           <p class="text-sm text-gray-600 mt-1" id="weatherTemp">--°F</p>
         </div>
         <div>
-          <p class="text-sm text-gray-500">Demand Impact</p>
+          <p class="text-sm text-gray-500">Demand vs. a normal day</p>
           <p class="text-2xl font-semibold" id="demandMultiplier">--</p>
-          <p class="text-sm text-gray-600 mt-1">vs baseline</p>
+          <p class="text-sm text-gray-600 mt-1">Higher = more people will call</p>
         </div>
         <div>
-          <p class="text-sm text-gray-500">Recommendation</p>
+          <p class="text-sm text-gray-500">What to do</p>
           <p class="text-sm font-medium" id="weatherRecommendation">--</p>
         </div>
       </div>
@@ -160,16 +164,16 @@
 
   <!-- 7-Day Weather Forecast -->
   <div id="weatherForecast" class="hidden mb-8">
-    <h2 class="text-xl font-bold text-gray-900 mb-4">7-Day Demand Forecast</h2>
+    <h2 class="text-xl font-bold text-gray-900 mb-4">Next 7 days: when calls will spike</h2>
     <div class="bg-white shadow rounded-lg border border-gray-200 overflow-hidden">
       <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50">
           <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Day</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Weather</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Temp</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Demand Impact</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recommended Action</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expected call volume</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">What to do</th>
           </tr>
         </thead>
         <tbody id="forecastTableBody" class="bg-white divide-y divide-gray-200">
@@ -180,23 +184,23 @@
 
   <!-- Monthly Forecast -->
   <div id="monthlyForecast" class="hidden mb-8">
-    <h2 class="text-xl font-bold text-gray-900 mb-4">Next Month Forecast</h2>
+    <h2 class="text-xl font-bold text-gray-900 mb-4">What to expect next month</h2>
     <div class="bg-white shadow rounded-lg border border-gray-200 p-6">
       <div class="grid grid-cols-4 gap-6">
         <div>
-          <p class="text-sm text-gray-500">Projected Spend</p>
+          <p class="text-sm text-gray-500">You'll likely spend</p>
           <p class="text-2xl font-semibold" id="projectedSpend">$0</p>
         </div>
         <div>
-          <p class="text-sm text-gray-500">Projected Leads</p>
-          <p class="text-2xl font-semibold" id="projectedLeads">0</p>
+          <p class="text-sm text-gray-500">You'll likely get</p>
+          <p class="text-2xl font-semibold" id="projectedLeads">0 leads</p>
         </div>
         <div>
-          <p class="text-sm text-gray-500">Projected CPL</p>
+          <p class="text-sm text-gray-500">$ per lead</p>
           <p class="text-2xl font-semibold" id="projectedCpl">$0</p>
         </div>
         <div>
-          <p class="text-sm text-gray-500">Confidence</p>
+          <p class="text-sm text-gray-500">How sure we are</p>
           <p class="text-2xl font-semibold" id="forecastConfidence">0%</p>
         </div>
       </div>

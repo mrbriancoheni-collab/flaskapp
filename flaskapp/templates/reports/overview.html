@@ -1,0 +1,301 @@
+{% extends "base_app.html" %}
+{% block title %}Business Pulse · {{ month_label }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-8 pb-12">
+
+  {% if is_sample %}
+  <div class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3 text-sm text-amber-800">
+    <i class="fa-solid fa-flask text-amber-500"></i>
+    <span>Showing sample data — connect your CRM and ad accounts to see your real numbers.</span>
+    <a href="{{ url_for('account_bp.dashboard') }}" class="ml-auto font-semibold underline whitespace-nowrap">Connect accounts</a>
+  </div>
+  {% endif %}
+
+  {# ── HEADER: Grade + Summary ─────────────────────────────────────────── #}
+  <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
+    <div class="flex items-stretch gap-0">
+
+      {# Grade badge #}
+      <div class="flex-shrink-0 flex items-center justify-center px-8 py-6
+        {% if grade == 'A' %}bg-green-500
+        {% elif grade == 'B' %}bg-blue-500
+        {% elif grade == 'C' %}bg-yellow-400
+        {% elif grade == 'D' %}bg-orange-500
+        {% else %}bg-red-500{% endif %}">
+        <div class="text-center text-white">
+          <div class="text-6xl font-black leading-none">{{ grade }}</div>
+          <div class="text-xs font-semibold mt-1 opacity-80 uppercase tracking-widest">This Month</div>
+        </div>
+      </div>
+
+      {# Summary #}
+      <div class="flex-1 px-6 py-5">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <div class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Business Pulse · {{ month_label }}</div>
+            <h1 class="text-xl font-bold text-gray-900 leading-snug">{{ grade_msg }}</h1>
+            <p class="text-sm text-gray-500 mt-1.5">{{ grade_detail }}</p>
+          </div>
+          {% if mom_delta is not none %}
+          <div class="flex-shrink-0 text-right">
+            <div class="text-2xl font-bold {% if mom_delta >= 0 %}text-green-600{% else %}text-red-500{% endif %}">
+              {% if mom_delta >= 0 %}+{% endif %}{{ mom_delta }}%
+            </div>
+            <div class="text-xs text-gray-400">vs last month</div>
+          </div>
+          {% endif %}
+        </div>
+
+        {# 4 Big Numbers #}
+        <div class="grid grid-cols-4 gap-4 mt-5">
+          <div>
+            <div class="text-2xl font-black text-gray-900">${{ '{:,.0f}'.format(total_revenue) }}</div>
+            <div class="text-xs text-gray-500 mt-0.5">revenue earned</div>
+          </div>
+          <div>
+            <div class="text-2xl font-black text-gray-900">{{ total_jobs }}</div>
+            <div class="text-xs text-gray-500 mt-0.5">jobs completed</div>
+          </div>
+          <div>
+            <div class="text-2xl font-black text-gray-900">{{ total_leads }}</div>
+            <div class="text-xs text-gray-500 mt-0.5">leads came in</div>
+          </div>
+          <div>
+            <div class="text-2xl font-black text-gray-900">${{ '{:,.0f}'.format(total_spend) }}</div>
+            <div class="text-xs text-gray-500 mt-0.5">marketing spend</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── WHERE DID CUSTOMERS COME FROM ───────────────────────────────────── #}
+  <div>
+    <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Where your customers came from</h2>
+    <div class="space-y-3">
+      {% for ch in channel_list %}
+      <div class="bg-white rounded-xl border shadow-sm p-4">
+        <div class="flex items-start gap-4">
+
+          {# Icon #}
+          <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center
+            bg-{{ ch.color }}-100 text-{{ ch.color }}-600">
+            <i class="{{ ch.icon }} text-sm"></i>
+          </div>
+
+          {# Main content #}
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-semibold text-gray-900">{{ ch.label }}</span>
+              {% if ch.jobs > 0 %}
+                <span class="text-sm text-gray-600">
+                  sent you <strong>{{ ch.jobs }} customer{% if ch.jobs != 1 %}s{% endif %}</strong>
+                </span>
+              {% elif ch.leads > 0 %}
+                <span class="text-sm text-gray-600">
+                  sent you <strong>{{ ch.leads }} lead{% if ch.leads != 1 %}s{% endif %}</strong>
+                </span>
+              {% endif %}
+              {% if ch.roas %}
+                <span class="ml-auto text-xs font-bold px-2 py-0.5 rounded-full
+                  {% if ch.roas >= 5 %}bg-green-100 text-green-700
+                  {% elif ch.roas >= 3 %}bg-blue-100 text-blue-700
+                  {% else %}bg-orange-100 text-orange-700{% endif %}">
+                  {{ '%.1f' | format(ch.roas) }}x return
+                </span>
+              {% elif ch.spend == 0 and ch.revenue > 0 %}
+                <span class="ml-auto text-xs font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">Free channel</span>
+              {% endif %}
+            </div>
+
+            {# Stats row #}
+            <div class="flex items-center gap-5 mt-2 text-sm text-gray-500 flex-wrap">
+              {% if ch.revenue > 0 %}
+              <span>
+                <span class="font-semibold text-gray-900">${{ '{:,.0f}'.format(ch.revenue) }}</span>
+                revenue
+              </span>
+              {% endif %}
+              {% if ch.spend > 0 %}
+              <span>
+                <span class="font-semibold text-gray-900">${{ '{:,.0f}'.format(ch.spend) }}</span>
+                spent
+              </span>
+              {% endif %}
+              {% if ch.cpr %}
+              <span>
+                <span class="font-semibold text-gray-900">${{ '%.0f' | format(ch.cpr) }}</span>
+                per booking
+              </span>
+              {% elif ch.cpl %}
+              <span>
+                <span class="font-semibold text-gray-900">${{ '%.0f' | format(ch.cpl) }}</span>
+                per lead
+              </span>
+              {% endif %}
+              {% if ch.booked > 0 and ch.leads > 0 %}
+              <span>
+                <span class="font-semibold text-gray-900">{{ (ch.booked / ch.leads * 100) | round | int }}%</span>
+                booking rate
+              </span>
+              {% endif %}
+            </div>
+
+            {# Revenue contribution bar #}
+            {% if ch.rev_share > 0 %}
+            <div class="mt-2.5 flex items-center gap-2">
+              <div class="flex-1 bg-gray-100 rounded-full h-1.5 max-w-xs">
+                <div class="h-1.5 rounded-full bg-{{ ch.color }}-400" style="width: {{ ch.rev_share }}%"></div>
+              </div>
+              <span class="text-xs text-gray-400">{{ ch.rev_share }}% of revenue</span>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+
+      {% if not channel_list %}
+      <div class="bg-white rounded-xl border p-8 text-center text-gray-400">
+        <i class="fa-solid fa-plug text-3xl mb-3"></i>
+        <p class="font-medium">No channel data yet</p>
+        <p class="text-sm mt-1">Connect Google Ads, GLSA, or lead sources to see where customers come from.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── 3 THINGS TO DO THIS WEEK ────────────────────────────────────────── #}
+  {% if actions %}
+  <div>
+    <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">3 things to do this week</h2>
+    <div class="space-y-3">
+      {% for a in actions %}
+      <div class="bg-white rounded-xl border shadow-sm p-5 flex items-start gap-4
+        hover:border-{{ a.color }}-300 transition-colors">
+
+        <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm
+          bg-{{ a.color }}-100 text-{{ a.color }}-700">
+          {{ loop.index }}
+        </div>
+
+        <div class="flex-1">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="font-semibold text-gray-900">{{ a.headline }}</p>
+              <p class="text-sm text-gray-500 mt-1 leading-relaxed">{{ a.body }}</p>
+            </div>
+            <a href="{{ a.url }}"
+               class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-colors
+               bg-{{ a.color }}-100 text-{{ a.color }}-700 hover:bg-{{ a.color }}-200 whitespace-nowrap">
+              {{ a.cta }}
+              <i class="fa-solid fa-arrow-right text-xs"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── 6-MONTH TREND ───────────────────────────────────────────────────── #}
+  {% if monthly_trend %}
+  <div class="bg-white rounded-2xl border shadow-sm p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="font-semibold text-gray-900">Revenue trend</h2>
+      <span class="text-xs text-gray-400">Last {{ monthly_trend | length }} months</span>
+    </div>
+
+    {# SVG bar chart #}
+    {% set max_rev = monthly_trend | map(attribute='revenue') | max %}
+    {% set chart_h = 80 %}
+    {% set bar_w = 32 %}
+    {% set gap = 12 %}
+    {% set n = monthly_trend | length %}
+    {% set total_w = n * (bar_w + gap) - gap %}
+    <svg viewBox="0 0 {{ total_w + 20 }} {{ chart_h + 28 }}" class="w-full" style="max-height:120px">
+      {% for m in monthly_trend %}
+        {% set x = loop.index0 * (bar_w + gap) + 10 %}
+        {% set bar_h = (m.revenue / max_rev * chart_h) | round | int if max_rev > 0 else 4 %}
+        {% set y = chart_h - bar_h %}
+        {% set is_last = loop.last %}
+        <rect x="{{ x }}" y="{{ y }}" width="{{ bar_w }}" height="{{ bar_h }}"
+              rx="4"
+              fill="{{ '#4F46E5' if is_last else '#E0E7FF' }}"/>
+        <text x="{{ x + bar_w / 2 }}" y="{{ chart_h + 16 }}"
+              text-anchor="middle" font-size="9" fill="#9CA3AF">{{ m.month }}</text>
+        {% if is_last %}
+        <text x="{{ x + bar_w / 2 }}" y="{{ y - 5 }}"
+              text-anchor="middle" font-size="9" font-weight="bold" fill="#4F46E5">
+          ${{ '{:,.0f}'.format(m.revenue) }}
+        </text>
+        {% endif %}
+      {% endfor %}
+    </svg>
+
+    {% if mom_delta is not none %}
+    <p class="text-sm text-gray-500 mt-2">
+      {% if mom_delta >= 0 %}
+        Revenue is up <strong class="text-green-600">{{ mom_delta }}%</strong> compared to last month.
+      {% else %}
+        Revenue is down <strong class="text-red-500">{{ mom_delta | abs }}%</strong> compared to last month.
+      {% endif %}
+    </p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# ── QUICK LINKS ─────────────────────────────────────────────────────── #}
+  <div>
+    <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Dig deeper</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <a href="{{ url_for('reports_bp.cpl_dashboard') }}"
+         class="bg-white rounded-xl border p-4 flex items-center gap-3 hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors group">
+        <div class="w-9 h-9 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-200">
+          <i class="fa-solid fa-dollar-sign text-sm"></i>
+        </div>
+        <div>
+          <div class="text-sm font-semibold text-gray-900">Cost per Lead</div>
+          <div class="text-xs text-gray-400">Full breakdown</div>
+        </div>
+      </a>
+
+      <a href="/account/marketing/pricing-intelligence"
+         class="bg-white rounded-xl border p-4 flex items-center gap-3 hover:border-purple-300 hover:bg-purple-50/50 transition-colors group">
+        <div class="w-9 h-9 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600 group-hover:bg-purple-200">
+          <i class="fa-solid fa-tags text-sm"></i>
+        </div>
+        <div>
+          <div class="text-sm font-semibold text-gray-900">Pricing Analysis</div>
+          <div class="text-xs text-gray-400">AI recommendations</div>
+        </div>
+      </a>
+
+      <a href="/account/reputation"
+         class="bg-white rounded-xl border p-4 flex items-center gap-3 hover:border-amber-300 hover:bg-amber-50/50 transition-colors group">
+        <div class="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600 group-hover:bg-amber-200">
+          <i class="fa-solid fa-star text-sm"></i>
+        </div>
+        <div>
+          <div class="text-sm font-semibold text-gray-900">Reviews</div>
+          <div class="text-xs text-gray-400">Reputation &amp; requests</div>
+        </div>
+      </a>
+
+      <a href="/account/journey/reactivation"
+         class="bg-white rounded-xl border p-4 flex items-center gap-3 hover:border-green-300 hover:bg-green-50/50 transition-colors group">
+        <div class="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center text-green-600 group-hover:bg-green-200">
+          <i class="fa-solid fa-rotate-left text-sm"></i>
+        </div>
+        <div>
+          <div class="text-sm font-semibold text-gray-900">Reactivation</div>
+          <div class="text-xs text-gray-400">Win back customers</div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

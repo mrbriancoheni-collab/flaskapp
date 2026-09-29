@@ -393,22 +393,40 @@ def get_ga_performance_data(account_id: int, property_id: str, days: int = 30) -
     Returns:
         Dict with GA performance data
     """
-    # TODO: Integrate with actual GA4 data fetching from your google routes
-    # For now, return sample structure
+    try:
+        from app.google import _fetch_ga_report
+        from datetime import date, timedelta
+        end = date.today() - timedelta(days=1)
+        start = end - timedelta(days=days - 1)
+        # GA4 property_id → property_name format is "properties/{id}"
+        prop = f"properties/{property_id}" if not str(property_id).startswith("properties/") else property_id
+        report = _fetch_ga_report(prop, start.isoformat(), end.isoformat())
+        if report:
+            sessions = report.get("sessions", 0)
+            conversions = report.get("conversions", 0)
+            return {
+                "summary": {
+                    "sessions": sessions,
+                    "users": report.get("users", 0),
+                    "engagement_rate": round(
+                        report.get("engaged_sessions", 0) / max(sessions, 1), 4),
+                    "avg_session_duration": 0.0,
+                    "conversions": conversions,
+                    "conversion_rate": round(conversions / max(sessions, 1), 4),
+                    "revenue": report.get("revenue", 0.0),
+                },
+                "top_pages": report.get("top_pages") or [],
+                "top_sources": report.get("top_sources") or [],
+                "conversions": report.get("conversions_by_event") or [],
+            }
+    except Exception:
+        pass
 
     return {
-        "summary": {
-            "sessions": 0,
-            "users": 0,
-            "engagement_rate": 0.0,
-            "avg_session_duration": 0.0,
-            "conversions": 0,
-            "conversion_rate": 0.0,
-            "revenue": 0.0
-        },
-        "top_pages": [],
-        "top_sources": [],
-        "conversions": []
+        "summary": {"sessions": 0, "users": 0, "engagement_rate": 0.0,
+                    "avg_session_duration": 0.0, "conversions": 0,
+                    "conversion_rate": 0.0, "revenue": 0.0},
+        "top_pages": [], "top_sources": [], "conversions": [],
     }
 
 

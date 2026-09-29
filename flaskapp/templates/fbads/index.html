@@ -3,8 +3,8 @@
 {% block content %}
 <div class="max-w-3xl mx-auto space-y-6">
   <div>
-    <h1 class="text-2xl font-semibold">Facebook Ads</h1>
-    <p class="text-gray-500">Connect Facebook Ads to bring leads and spend into your dashboard.</p>
+    <h1 class="text-2xl font-semibold">Facebook & Instagram Ads</h1>
+    <p class="text-gray-500">Connect your Facebook ad account to track spend and leads from Facebook and Instagram alongside your other channels.</p>
   </div>
 
   <div id="fb-status-container">
@@ -16,23 +16,23 @@
     <!-- Quick Actions -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <a href="{{ url_for('fbads_bp.campaigns') }}" class="p-6 border rounded-lg hover:border-blue-500 hover:shadow-md transition-all">
-        <h3 class="font-semibold text-lg mb-2">View Campaigns</h3>
-        <p class="text-sm text-gray-600">See all your Facebook ad campaigns, ad sets, and ads</p>
+        <h3 class="font-semibold text-lg mb-2">See your ad performance</h3>
+        <p class="text-sm text-gray-600">Spend, clicks, and results for every campaign you're running</p>
       </a>
 
       <a href="{{ url_for('fbads_bp.create_test_campaign') }}" class="p-6 border rounded-lg hover:border-blue-500 hover:shadow-md transition-all bg-blue-50">
-        <h3 class="font-semibold text-lg mb-2 text-blue-900">+ Create Campaign</h3>
-        <p class="text-sm text-gray-600">Create a new test campaign via Marketing API</p>
+        <h3 class="font-semibold text-lg mb-2 text-blue-900">+ Start a new campaign</h3>
+        <p class="text-sm text-gray-600">Launch a new Facebook or Instagram ad from here</p>
       </a>
 
       <a href="{{ url_for('fbads_bp.optimize') }}" class="p-6 border rounded-lg hover:border-blue-500 hover:shadow-md transition-all">
-        <h3 class="font-semibold text-lg mb-2">AI Optimizer</h3>
-        <p class="text-sm text-gray-600">Get AI-powered optimization recommendations</p>
+        <h3 class="font-semibold text-lg mb-2">Get suggestions to improve</h3>
+        <p class="text-sm text-gray-600">We'll point out what's wasting money and what to do about it</p>
       </a>
 
       <a href="{{ url_for('fbads_bp.leads') }}" class="p-6 border rounded-lg hover:border-blue-500 hover:shadow-md transition-all">
-        <h3 class="font-semibold text-lg mb-2">Leads</h3>
-        <p class="text-sm text-gray-600">View and manage leads from Facebook ads</p>
+        <h3 class="font-semibold text-lg mb-2">See leads from Facebook</h3>
+        <p class="text-sm text-gray-600">Everyone who filled out a form on your Facebook or Instagram ads</p>
       </a>
     </div>
     {% else %}
@@ -60,6 +60,13 @@
 
 {% block extra_js %}
 <script nonce="{{ g.csp_nonce }}">
+  function showToast(msg, kind) {
+    const t = document.createElement('div');
+    t.className = 'fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ' + (kind === 'error' ? 'bg-red-600' : 'bg-gray-900');
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 4000);
+  }
   window.fbAsyncInit = function() {
     FB.init({
       appId      : '{{ config.get("FB_APP_ID") or "" }}',
@@ -120,12 +127,12 @@
           // Reload page to show connected status
           window.location.reload();
         } else {
-          alert('Failed to save Facebook connection: ' + (data.error || 'Unknown error'));
+          showToast('Failed to save Facebook connection: ' + (data.error || 'Unknown error'), 'error');
         }
       })
       .catch(error => {
         console.error('Error saving Facebook token:', error);
-        alert('Error connecting to Facebook. Please try again.');
+        showToast('Error connecting to Facebook. Please try again.', 'error');
       });
     } else if (response.status === 'not_authorized') {
       // User is logged into Facebook but hasn't authorized the app

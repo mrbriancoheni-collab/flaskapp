@@ -22,35 +22,7 @@
   }
 }
 </script>
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "Service",
-  "name": "AI Advertising Management for Roofing Contractors",
-  "serviceType": "Marketing Automation",
-  "provider": {
-    "@type": "Organization",
-    "name": "FieldSprout",
-    "url": "https://fieldsprout.io"
-  },
-  "areaServed": {
-    "@type": "Country",
-    "name": "United States"
-  },
-  "description": "FieldSprout's AI agents manage Google Ads and Meta Ads for roofing companies 24/7 — generating residential replacement leads, storm damage calls, and commercial roofing opportunities year-round.",
-  "offers": {
-    "@type": "Offer",
-    "price": "200",
-    "priceCurrency": "USD",
-    "priceSpecification": {
-      "@type": "UnitPriceSpecification",
-      "price": "200",
-      "priceCurrency": "USD",
-      "unitText": "MONTH"
-    }
-  }
-}
-</script>
+
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -58,42 +30,42 @@
   "mainEntity": [
     {
       "@type": "Question",
-      "name": "How do roofing companies get more leads after a storm?",
+      "name": "How much does Google Ads cost per lead for roofing companies?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "The fastest storm-damage lead strategy is Google Ads with real-time budget increases triggered by weather events in your target ZIP codes. FieldSprout's AI monitors weather-correlated performance and automatically adjusts bids and budget during and after storm events to capture peak demand."
+        "text": "Roofing Google Ads leads typically cost $120–$250 depending on your market and campaign quality. FieldSprout-managed roofing accounts average $118 per lead after AI optimization, reduced from a typical $198 starting point — primarily by cutting waste spend on non-buyer searches and improving Quality Scores."
       }
     },
     {
       "@type": "Question",
-      "name": "What should a roofing company spend on Google Ads?",
+      "name": "What Google Ads keywords convert best for roofers?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Roofing is one of the most competitive Google Ads verticals — CPCs range from $10–$40 in storm-prone markets. Budget $3,000–$5,000/month for consistent lead volume in competitive markets. FieldSprout's AI continuously optimizes quality scores to lower your effective CPC."
+        "text": "Top-converting roofing keywords include 'roof replacement cost', 'storm damage roof repair', 'emergency roof leak', 'roof estimate near me', and 'metal roof installation'. FieldSprout automatically adds 150+ negative keywords like 'DIY roof repair', 'roofing jobs', and 'roofing materials' to stop spending on non-buyers."
       }
     },
     {
       "@type": "Question",
-      "name": "Are Facebook Ads effective for roofing companies?",
+      "name": "Should roofers run Google Ads after a storm?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes — Meta Ads are effective for planned roof replacement (not emergency), visual before/after campaigns, and retargeting website visitors. Homeowners considering a new roof respond well to video testimonials and financing offers on Facebook and Instagram. FieldSprout runs both Google and Meta campaigns and balances budget toward the lower-CPL channel month to month."
+        "text": "Yes — storm events are the highest-ROI window for roofing Google Ads. FieldSprout's seasonal intelligence detects hail and wind events and automatically increases bids and budgets in affected zip codes within hours, capturing demand before competitors."
       }
     },
     {
       "@type": "Question",
-      "name": "How do roofing contractors compete with storm-chasing companies in Google Ads?",
+      "name": "Why are my roofing Google Ads so expensive?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Storm chasers often outbid local roofers temporarily. The defense is quality score: ads with high relevance, good CTR, and strong landing pages pay less per click than competitors bidding on the same terms. FieldSprout's continuous quality score optimization means local roofers often pay 20–30% less per click than out-of-market competitors."
+        "text": "Roofing is one of the most competitive Google Ads verticals. Most accounts waste 35–50% of budget on searches from DIYers, insurance adjusters, and job seekers. Low Quality Scores from generic ads also inflate CPC by 40–70%. FieldSprout fixes both problems automatically."
       }
     },
     {
       "@type": "Question",
-      "name": "What is the average cost per roofing lead from Google Ads?",
+      "name": "Is FieldSprout better than a roofing marketing agency?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Roofing leads average $50–$150 from Google Ads, depending on market and search intent (storm damage vs. replacement). Job values typically range from $8,000–$25,000+, so even a $150 CPL represents strong ROI. FieldSprout tracks CPL by service type and routes budget to the best-performing segments."
+        "text": "FieldSprout optimizes roofing Google Ads every hour for $200/month versus agencies charging $2,000–$6,000/month with weekly check-ins. Roofing companies using FieldSprout typically see 35–55% lower cost per lead while maintaining full control of their ad account."
       }
     }
   ]
@@ -121,8 +93,11 @@
         </p>
         <div class="flex flex-col sm:flex-row gap-4">
           {% if has_endpoint('ads_grader_bp.index') %}
-          <a href="{{ url_for('ads_grader_bp.index') }}"
+          <a href="{{ url_for('ads_grader_bp.strength_test') }}"
              class="btn btn-primary btn-lg">Grade My Roofing Ads — Free</a>
+          {% endif %}
+          {% if has_endpoint('public_bp.maps_audit') %}
+          <a href="{{ url_for('public_bp.maps_audit') }}" class="btn btn-secondary btn-lg">Free Google Maps Audit</a>
           {% endif %}
           <a href="/pricing" class="btn btn-secondary btn-lg">See Plans &amp; Pricing</a>
         </div>
@@ -275,7 +250,7 @@
     </p>
     <div class="flex flex-col sm:flex-row gap-4 justify-center">
       {% if has_endpoint('ads_grader_bp.index') %}
-      <a href="{{ url_for('ads_grader_bp.index') }}" class="btn btn-secondary btn-lg">Grade My Account — Free</a>
+      <a href="{{ url_for('ads_grader_bp.strength_test') }}" class="btn btn-secondary btn-lg">Grade My Account — Free</a>
       {% endif %}
       <a href="/pricing" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">View Plans</a>
     </div>

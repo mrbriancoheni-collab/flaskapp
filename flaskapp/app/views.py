@@ -103,20 +103,56 @@ def pricing():
     return render_template("pricing.html")
 
 
-@main_bp.route("/robots.txt", methods=["GET"], endpoint="robots_txt")
+@main_bp.route("/robots.txt")
 def robots_txt():
+    content = """User-agent: *
+Allow: /
+Disallow: /account/
+Disallow: /admin/
+Disallow: /api/
+Disallow: /billing/
+Disallow: /ads-grader/connect/
+Disallow: /fb_ads_grader/
+Disallow: /_deploy_check
+Disallow: /test
+Disallow: /wsgi-check
+# Auth & utility endpoints — no SEO value. Login/register carry a noindex
+# meta instead of a Disallow so Google can crawl them and drop them from the
+# index (a Disallow can't remove an already-indexed page).
+Disallow: /auth/
+Disallow: /connect/
+Disallow: /pv/
+Disallow: /*?next=
+
+# Allow major AI crawlers to index public content
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Googlebot
+Allow: /
+
+Sitemap: https://fieldsprout.io/sitemap.xml
+"""
     from flask import Response
-    body = (
-        "User-agent: *\n"
-        "Allow: /\n"
-        "Disallow: /account/\n"
-        "Disallow: /admin/\n"
-        "Disallow: /api/\n"
-        "Disallow: /_deploy_check\n"
-        "Disallow: /test\n\n"
-        "Sitemap: https://fieldsprout.io/sitemap.xml\n"
-    )
-    return Response(body, mimetype="text/plain")
+    return Response(content, mimetype="text/plain")
 
 
 @main_bp.route("/sitemap.xml", methods=["GET"], endpoint="sitemap_xml")
@@ -125,6 +161,27 @@ def sitemap_xml():
     from datetime import date
     from app.blog_data import POSTS
     today = date.today().isoformat()
+
+    # Sub-route suffixes for industry pages
+    industry_sub_routes = [
+        "-google-ads",
+        "-local-service-ads",
+        "-meta-ads",
+        "-website-cro",
+    ]
+
+    # Main 9 industries (already in sitemap) — add sub-routes
+    main_industries = [
+        "hvac", "plumbing", "electricians", "roofing", "pest-control",
+        "landscaping", "garage-door", "pool-service", "solar",
+    ]
+
+    # Additional industries — add main page + sub-routes
+    additional_industries = [
+        "concrete", "fencing", "irrigation", "lawn-care", "restoration",
+        "windows-doors",
+    ]
+
     pages = [
         ("https://fieldsprout.io/", "1.0", "weekly"),
         ("https://fieldsprout.io/pricing", "0.9", "monthly"),
@@ -134,6 +191,7 @@ def sitemap_xml():
         ("https://fieldsprout.io/vs-agency", "0.8", "monthly"),
         ("https://fieldsprout.io/roadmap", "0.5", "monthly"),
         ("https://fieldsprout.io/products/ads-demo", "0.8", "monthly"),
+        # Main industry pages (existing)
         ("https://fieldsprout.io/industries/hvac", "0.9", "monthly"),
         ("https://fieldsprout.io/industries/plumbing", "0.9", "monthly"),
         ("https://fieldsprout.io/industries/electricians", "0.9", "monthly"),
@@ -143,6 +201,7 @@ def sitemap_xml():
         ("https://fieldsprout.io/industries/garage-door", "0.8", "monthly"),
         ("https://fieldsprout.io/industries/pool-service", "0.8", "monthly"),
         ("https://fieldsprout.io/industries/solar", "0.8", "monthly"),
+        # Product pages
         ("https://fieldsprout.io/products/ads", "0.8", "monthly"),
         ("https://fieldsprout.io/products/glsa", "0.8", "monthly"),
         ("https://fieldsprout.io/products/gbp", "0.8", "monthly"),
@@ -150,20 +209,27 @@ def sitemap_xml():
         ("https://fieldsprout.io/products/reviews", "0.8", "monthly"),
         ("https://fieldsprout.io/products/listings", "0.8", "monthly"),
         ("https://fieldsprout.io/products/forms-chat", "0.7", "monthly"),
+        # Solution pages
         ("https://fieldsprout.io/solutions/lead-generation", "0.8", "monthly"),
         ("https://fieldsprout.io/solutions/multi-location", "0.8", "monthly"),
         ("https://fieldsprout.io/solutions/lower-ad-cost", "0.8", "monthly"),
         ("https://fieldsprout.io/solutions/get-more-reviews", "0.7", "monthly"),
         ("https://fieldsprout.io/solutions/spend-when-open", "0.7", "monthly"),
         ("https://fieldsprout.io/solutions/see-what-works", "0.7", "monthly"),
+        # Tools & graders
         ("https://fieldsprout.io/ads-grader", "0.9", "weekly"),
         ("https://fieldsprout.io/ga4-audit", "0.9", "weekly"),
         ("https://fieldsprout.io/blog/", "0.8", "weekly"),
+        ("https://fieldsprout.io/maps-audit", "0.9", "weekly"),
+        ("https://fieldsprout.io/lsa-estimator", "0.9", "weekly"),
+        # Legal
         ("https://fieldsprout.io/privacy-policy", "0.3", "yearly"),
         ("https://fieldsprout.io/terms-of-service", "0.3", "yearly"),
         ("https://fieldsprout.io/security", "0.4", "yearly"),
+        # llms.txt
+        ("https://fieldsprout.io/llms.txt", "0.3", "monthly"),
     ]
-    # Industry sub-pages (trade/channel combinations)
+    # Industry sub-pages (trade/channel combinations — two-segment URL style)
     _industry_subs = [
         ("hvac", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
         ("plumbing", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
@@ -187,6 +253,17 @@ def sitemap_xml():
                 "0.7",
                 "monthly",
             ))
+
+    # Add sub-routes for main 9 industries (single-segment slug style)
+    for industry in main_industries:
+        for sub in industry_sub_routes:
+            pages.append((f"https://fieldsprout.io/industries/{industry}{sub}", "0.7", "monthly"))
+
+    # Add sub-routes only for additional industries (no main-page template yet)
+    for industry in additional_industries:
+        for sub in industry_sub_routes:
+            pages.append((f"https://fieldsprout.io/industries/{industry}{sub}", "0.7", "monthly"))
+
     # Dynamically include all blog posts
     for post in POSTS:
         pages.append((

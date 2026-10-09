@@ -1169,6 +1169,17 @@ def create_app():
     except Exception:
         app.logger.exception("Failed to register campaign_health_bp")
 
+    # --- Social Listening (admin: crawl LI/Twitter/News, AI drafts, email approval) ---
+    try:
+        from app.social_listen import social_listen_bp
+        from app.social_listen.models import ensure_tables as _sl_ensure_tables
+        app.register_blueprint(social_listen_bp)
+        with app.app_context():
+            _sl_ensure_tables()
+        app.logger.info("social_listen_bp registered at /admin/social-listen")
+    except Exception:
+        app.logger.exception("Failed to register social_listen_bp")
+
     # ---- Apply CSRF exemptions AFTER blueprints are registered -------------
     try:
         for ep in (

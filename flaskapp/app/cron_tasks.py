@@ -198,6 +198,12 @@ def run_daily(app, db):
     except Exception:
         app.logger.exception("[CRON] Auto review requests failed")
 
+    # Social listening: crawl → score → draft → email for each enabled user
+    try:
+        _run_daily_social_listen(app)
+    except Exception:
+        app.logger.exception("[CRON] Social listen run failed")
+
 
 # =========================
 # WordPress job runner
@@ -1427,3 +1433,99 @@ def _run_daily_knowledge_refresh(app):
             )
         except Exception:
             app.logger.exception("[CRON] _run_daily_knowledge_refresh outer failure")
+
+
+# =========================
+# Social Listening
+# =========================
+
+def _run_daily_social_listen(app):
+    """
+    For each user with social_listen_config.enabled=1 and schedule='daily':
+      crawl → score → draft → store → send email digest.
+    """
+    import json as _json
+    from sqlalchemy import text as _text
+
+    with app.app_context():
+        from app import db
+
+        try:
+            rows = db.session.execute(_text("""
+                SELECT slc.user_id, slc.topics, slc.sources, slc.email_recipient
+                FROM social_listen_config slc
+                WHERE slc.enabled = 1 AND slc.schedule = 'daily'
+            """)).mappings().all()
+        except Exception:
+            app.logger.exception("[CRON] social_listen: could not query config table")
+            return
+
+        for row in rows:
+            user_id = row["user_id"]
+            try:
+                topics = _json.loads(row["topics"] or "[]")
+                sources = _json.loads(row["sources"] or "[]")
+                email_recipient = (row["email_recipient"] or "").strip()
+
+                if not topics:
+                    topics = ["demand generation", "B2B marketing"]
+                if not sources:
+                    sources = ["google_news", "google_search", "reddit"]
+
+                from app.social_listen.crawler import crawl_opportunities
+                from app.social_listen.scorer import score_and_filter
+                from app.social_listen.drafter import draft_content
+                from app.social_listen.emailer import generate_tokens, send_opportunity_digest
+
+                raw = crawl_opportunities(topics, sources)
+                scored = score_and_filter(raw)
+                drafted = [draft_content(item) for item in scored]
+                drafted = generate_tokens(drafted)
+
+                stored = []
+                for item in drafted:
+                    db.session.execute(_text("""
+                        INSERT INTO social_opportunities
+                            (user_id, source, source_url, author, original_content, topic,
+                             ai_score, ai_reason, draft_comment, draft_post,
+                             status, email_token, created_at)
+                        VALUES
+                            (:uid, :source, :source_url, :author, :content, :topic,
+                             :score, :reason, :comment, :post,
+                             'new', :token, NOW())
+                        ON DUPLICATE KEY UPDATE status = 'new'
+                    """), {
+                        "uid": user_id,
+                        "source": item.get("source", ""),
+                        "source_url": (item.get("source_url") or "")[:1000],
+                        "author": (item.get("author") or "")[:200],
+                        "content": item.get("original_content") or "",
+                        "topic": (item.get("topic") or "")[:200],
+                        "score": item.get("ai_score", 5.0),
+                        "reason": item.get("ai_reason") or "",
+                        "comment": item.get("draft_comment") or "",
+                        "post": item.get("draft_post") or "",
+                        "token": item["email_token"],
+                    })
+                    stored.append(item)
+                db.session.commit()
+
+                if email_recipient and stored:
+                    for item in stored:
+                        db.session.execute(_text(
+                            "UPDATE social_opportunities SET status='emailed' WHERE email_token=:tok"
+                        ), {"tok": item["email_token"]})
+                    db.session.commit()
+                    base_url = app.config.get("BASE_URL", "").rstrip("/")
+                    send_opportunity_digest(email_recipient, stored, base_url)
+                    app.logger.info(
+                        "[CRON] social_listen: sent %d opps to %s (user %s)",
+                        len(stored), email_recipient, user_id,
+                    )
+                else:
+                    app.logger.info(
+                        "[CRON] social_listen: stored %d opps for user %s (no email)",
+                        len(stored), user_id,
+                    )
+            except Exception:
+                app.logger.exception("[CRON] social_listen failed for user %s", user_id)

@@ -1161,6 +1161,14 @@ def create_app():
     except Exception:
         app.logger.exception("Failed to register market_intel_bp")
 
+    # --- Campaign Health Triage -----------------------------------------------
+    try:
+        from app.campaign_health import campaign_health_bp
+        app.register_blueprint(campaign_health_bp)
+        app.logger.info("campaign_health_bp registered at /account/campaign-health")
+    except Exception:
+        app.logger.exception("Failed to register campaign_health_bp")
+
     # ---- Apply CSRF exemptions AFTER blueprints are registered -------------
     try:
         for ep in (

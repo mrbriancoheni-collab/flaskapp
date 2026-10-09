@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}Campaign Health | FieldSprout{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-8">
+
+  <!-- Header -->
+  <div class="flex items-start justify-between mb-8 gap-4 flex-wrap">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Campaign Health</h1>
+      <p class="text-gray-500 mt-1 text-sm">Daily triage — which campaigns need action today.</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <select id="days-select" onchange="refreshData()" class="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:ring-2 focus:ring-green-500">
+        <option value="7" {% if not request %}selected{% endif %}>Last 7 days</option>
+        <option value="14">Last 14 days</option>
+        <option value="30">Last 30 days</option>
+      </select>
+      <button onclick="refreshData()" id="refresh-btn"
+        class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition">
+        <i class="fa-solid fa-rotate-right text-xs"></i> Refresh
+      </button>
+    </div>
+  </div>
+
+  {% if error %}
+  <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-5 text-yellow-800 text-sm">
+    <i class="fa-solid fa-triangle-exclamation mr-2"></i> {{ error }}
+  </div>
+  {% elif triage is none %}
+  <div class="bg-red-50 border border-red-200 rounded-xl p-5 text-red-700 text-sm">
+    <i class="fa-solid fa-circle-exclamation mr-2"></i> Triage failed. Check server logs.
+  </div>
+  {% else %}
+
+  <!-- Summary row -->
+  <div id="summary-row" class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+    {% set s = triage.summary %}
+    {% set by = s.by_status %}
+    <div class="bg-white border rounded-xl p-4">
+      <div class="text-2xl font-bold text-gray-900">{{ s.total }}</div>
+      <div class="text-xs text-gray-500 mt-0.5">Total campaigns</div>
+    </div>
+    <div class="bg-white border rounded-xl p-4">
+      <div class="text-2xl font-bold {% if s.needs_action > 0 %}text-orange-600{% else %}text-green-600{% endif %}">
+        {{ s.needs_action }}
+      </div>
+      <div class="text-xs text-gray-500 mt-0.5">Need action</div>
+    </div>
+    <div class="bg-white border rounded-xl p-4">
+      <div class="text-2xl font-bold text-green-600">{{ by.get('ON_TRACK', 0) }}</div>
+      <div class="text-xs text-gray-500 mt-0.5">🟢 On track</div>
+    </div>
+    <div class="bg-white border rounded-xl p-4">
+      <div class="text-2xl font-bold text-gray-400">{{ (by.get('PAUSED', 0) or 0) + (by.get('NO_DATA', 0) or 0) }}</div>
+      <div class="text-xs text-gray-500 mt-0.5">Paused / no data</div>
+    </div>
+  </div>
+
+  <!-- Actions needed banner -->
+  {% if triage.actions_needed %}
+  <div class="bg-orange-50 border border-orange-100 rounded-xl p-4 mb-6 flex items-start gap-3">
+    <i class="fa-solid fa-bell text-orange-400 mt-0.5 shrink-0"></i>
+    <div class="text-sm text-orange-800">
+      <strong>{{ triage.actions_needed | length }} campaign{% if triage.actions_needed | length != 1 %}s{% endif %} need your attention today.</strong>
+      Review the items below and make the recommended adjustments in Google Ads.
+    </div>
+  </div>
+  {% else %}
+  <div class="bg-green-50 border border-green-100 rounded-xl p-4 mb-6 flex items-start gap-3">
+    <i class="fa-solid fa-circle-check text-green-500 mt-0.5 shrink-0"></i>
+    <div class="text-sm text-green-800"><strong>All campaigns are on track.</strong> Check back tomorrow.</div>
+  </div>
+  {% endif %}
+
+  <!-- Campaign cards -->
+  <div id="campaign-list" class="space-y-3">
+    {% for c in triage.campaigns %}
+    {% set color_map = {
+      'green': 'bg-green-50 border-green-200',
+      'red': 'bg-red-50 border-red-200',
+      'yellow': 'bg-yellow-50 border-yellow-200',
+      'orange': 'bg-orange-50 border-orange-100',
+      'blue': 'bg-blue-50 border-blue-100',
+      'gray': 'bg-gray-50 border-gray-200',
+    } %}
+    {% set badge_map = {
+      'green': 'bg-green-100 text-green-800',
+      'red': 'bg-red-100 text-red-800',
+      'yellow': 'bg-yellow-100 text-yellow-800',
+      'orange': 'bg-orange-100 text-orange-800',
+      'blue': 'bg-blue-100 text-blue-800',
+      'gray': 'bg-gray-100 text-gray-600',
+    } %}
+    <div class="bg-white border rounded-xl overflow-hidden hover:shadow-sm transition">
+      <div class="flex items-center gap-3 px-5 py-4 border-b border-gray-50">
+        <span class="text-lg leading-none">{{ c.emoji }}</span>
+        <div class="flex-1 min-w-0">
+          <div class="font-semibold text-gray-900 truncate">{{ c.name }}</div>
+          <div class="text-xs text-gray-400">{{ c.bid_strategy or 'Unknown bid strategy' }}{% if c.daily_budget %} · ${{ '%.0f'|format(c.daily_budget) }}/day budget{% endif %}</div>
+        </div>
+        <span class="shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full {{ badge_map.get(c.status_color, 'bg-gray-100 text-gray-600') }}">
+          {{ c.status_label }}
+        </span>
+      </div>
+
+      <div class="px-5 py-4">
+        <!-- Metrics row -->
+        <div class="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-4 text-center">
+          {% macro metric(label, value, sub='') %}
+          <div>
+            <div class="text-sm font-semibold text-gray-900">{{ value if value is not none else '—' }}</div>
+            <div class="text-xs text-gray-400">{{ label }}</div>
+            {% if sub %}<div class="text-xs text-gray-400 italic">{{ sub }}</div>{% endif %}
+          </div>
+          {% endmacro %}
+
+          {{ metric('Spend', '$' ~ '%.0f'|format(c.spend)) }}
+          {{ metric('Leads', '%.1f'|format(c.conversions)) }}
+          {{ metric('CPL', ('$' ~ '%.0f'|format(c.cpl)) if c.cpl else '—',
+              (('▲' if c.cpl_trend_pct > 0 else '▼') ~ ' ' ~ '%.0f'|format(c.cpl_trend_pct|abs) ~ '% vs prior') if c.cpl_trend_pct is not none else '') }}
+          {{ metric('CTR', ('%.1f'|format(c.avg_ctr_pct) ~ '%') if c.avg_ctr_pct is not none else '—') }}
+          {{ metric('Conv rate', ('%.1f'|format(c.conv_rate_pct) ~ '%') if c.conv_rate_pct is not none else '—') }}
+          {{ metric('Budget util',
+              ('%.0f'|format(c.budget_util_pct) ~ '%') if c.budget_util_pct is not none else '—') }}
+        </div>
+
+        <!-- Recommended action (shown only when action is needed) -->
+        {% if c.triage_status not in ('ON_TRACK', 'PAUSED') %}
+        <div class="text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">
+          <i class="fa-solid fa-arrow-right text-gray-400 mr-1.5"></i>{{ c.recommended_action }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <p class="text-xs text-gray-400 mt-6 text-center">
+    As of {{ triage.as_of }} · {{ triage.period_days }}-day window · Data from daily sync
+  </p>
+
+  {% endif %}
+</div>
+
+<script>
+async function refreshData() {
+  const btn = document.getElementById('refresh-btn');
+  const days = document.getElementById('days-select').value;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i> Loading…';
+  try {
+    const res = await fetch(`/account/campaign-health/data?days=${days}`);
+    if (res.ok) {
+      // Full page reload preserves server-side rendering
+      window.location.href = `/account/campaign-health/?days=${days}`;
+    } else {
+      alert('Refresh failed. Please try again.');
+    }
+  } catch {
+    alert('Network error. Please try again.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-rotate-right text-xs"></i> Refresh';
+  }
+}
+</script>
+{% endblock %}

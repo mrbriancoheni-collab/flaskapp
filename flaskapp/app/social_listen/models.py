@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS social_opportunities (
     email_token      VARCHAR(64)   NULL,
     posted_at        DATETIME      NULL,
     created_at       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uq_opp_token (email_token),
     KEY ix_opp_user_status (user_id, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4

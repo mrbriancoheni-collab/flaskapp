@@ -40,7 +40,7 @@ _MAP_EMBED = re.compile(r"google\.com/maps|maps\.google\.|goo\.gl/maps", re.IGNO
 
 def _get_page(url: str) -> Optional[str]:
     try:
-        r = requests.get(url, timeout=_TIMEOUT, headers={"User-Agent": "ForgeIQ-LocalSEO/1.0"})
+        r = requests.get(url, timeout=_TIMEOUT, headers={"User-Agent": "RevForge-LocalSEO/1.0"})
         r.raise_for_status()
         return r.text
     except Exception:

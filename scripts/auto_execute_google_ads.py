@@ -184,7 +184,7 @@ def main():
         )
 
         print_header("Execution Complete")
-        print(f"View action log: https://getforgeiq.com/account/google/ads")
+        print(f"View action log: https://getrevforge.io/account/google/ads")
         print(f"All actions can be undone from the UI.")
 
 

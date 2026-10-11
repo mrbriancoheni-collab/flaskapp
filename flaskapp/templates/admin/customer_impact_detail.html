@@ -25,7 +25,7 @@
           <i class="fa-solid fa-piggy-bank text-3xl text-green-600"></i>
         </div>
         <p class="text-4xl font-bold text-green-900 mb-2">${{ "{:,.2f}".format(impact.total_savings) }}</p>
-        <p class="text-sm text-green-700">Cumulative savings since using ForgeIQ</p>
+        <p class="text-sm text-green-700">Cumulative savings since using RevForge</p>
         <div class="mt-3 pt-3 border-t border-green-200">
           <p class="text-xs text-green-700">Current monthly: <span class="font-bold">${{ "{:,.2f}".format(impact.monthly_savings or 0) }}</span></p>
         </div>
@@ -49,7 +49,7 @@
     <div class="bg-white shadow-sm rounded-lg border mb-8">
       <div class="px-6 py-4 border-b">
         <h2 class="text-xl font-bold text-gray-900">Performance Comparison</h2>
-        <p class="text-sm text-gray-600">Pre-ForgeIQ vs Current Performance</p>
+        <p class="text-sm text-gray-600">Pre-RevForge vs Current Performance</p>
       </div>
       <div class="p-6">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -179,7 +179,7 @@
       <i class="fa-solid fa-info-circle text-4xl text-yellow-600 mb-4"></i>
       <h3 class="text-xl font-semibold text-yellow-900 mb-3">No Impact Data Yet</h3>
       <p class="text-sm text-yellow-700 mb-6">
-        To start tracking impact metrics for this customer, you need to set their baseline (pre-ForgeIQ) performance.
+        To start tracking impact metrics for this customer, you need to set their baseline (pre-RevForge) performance.
         <br>This will enable automatic calculation of savings and additional leads generated.
       </p>
       <button onclick="document.getElementById('baseline-modal').classList.remove('hidden')" class="btn-primary">
@@ -202,8 +202,8 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="px-6 py-4 space-y-4">
         <p class="text-sm text-gray-600">
-          Select the date range for the customer's baseline (pre-ForgeIQ) performance.
-          This should be a period before they started using ForgeIQ, ideally 30-90 days.
+          Select the date range for the customer's baseline (pre-RevForge) performance.
+          This should be a period before they started using RevForge, ideally 30-90 days.
         </p>
 
         <div>

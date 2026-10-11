@@ -1,14 +1,14 @@
-// ForgeIQ Service Worker
+// RevForge Service Worker
 // Version 1.0
 
-const CACHE_NAME = 'forgeiq-v1';
+const CACHE_NAME = 'revforge-v1';
 const urlsToCache = [
   '/',
   '/static/css/style.css',
   '/static/js/app_shell.js',
-  '/static/brand/logos/forgeiq-wordmark.svg',
-  '/static/brand/icons/forgeiq-icon-32.png',
-  '/static/brand/icons/forgeiq-icon-16.png',
+  '/static/brand/logos/revforge-wordmark.svg',
+  '/static/brand/icons/revforge-icon-32.png',
+  '/static/brand/icons/revforge-icon-16.png',
 ];
 
 // Install event - cache static assets

@@ -3,7 +3,7 @@
 SQLAlchemy models for the multi-location feature.
 
 Tables:
-  location_groups        — a named group of ForgeIQ accounts
+  location_groups        — a named group of RevForge accounts
   location_group_members — junction between a group and each member account
   keyword_overlaps       — detected keyword overlap between two accounts in a group
 """

@@ -3,25 +3,25 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>{% block title %}ForgeIQ — The Revenue Platform Built for the Trades{% endblock %}</title>
-  <meta name="description" content="{% block meta_description %}ForgeIQ is the revenue platform built for trade businesses. AI-powered ads, local SEO, reputation, and lead follow-up — all in one place. HVAC, plumbing, electrical, roofing, and more.{% endblock %}">
+  <title>{% block title %}RevForge — The Revenue Platform Built for the Trades{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}RevForge is the revenue platform built for trade businesses. AI-powered ads, local SEO, reputation, and lead follow-up — all in one place. HVAC, plumbing, electrical, roofing, and more.{% endblock %}">
   <meta name="robots" content="{% block meta_robots %}index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1{% endblock %}">
-  <link rel="canonical" href="{% block canonical %}https://getforgeiq.com{{ request.path }}{% endblock %}">
+  <link rel="canonical" href="{% block canonical %}https://getrevforge.io{{ request.path }}{% endblock %}">
 
   <!-- Open Graph -->
   <meta property="og:type" content="{% block og_type %}website{% endblock %}">
-  <meta property="og:site_name" content="ForgeIQ">
-  <meta property="og:title" content="{% block og_title %}ForgeIQ — The Revenue Platform Built for the Trades{% endblock %}">
-  <meta property="og:description" content="{% block og_description %}ForgeIQ gives trade contractors a complete revenue engine — Google Ads, Meta Ads, local SEO, reputation management, and lead follow-up. Book more jobs. Cut cost per lead.{% endblock %}">
-  <meta property="og:image" content="{% block og_image %}https://getforgeiq.com/static/img/og-default.png{% endblock %}">
-  <meta property="og:url" content="https://getforgeiq.com{{ request.path }}">
+  <meta property="og:site_name" content="RevForge">
+  <meta property="og:title" content="{% block og_title %}RevForge — The Revenue Platform Built for the Trades{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}RevForge gives trade contractors a complete revenue engine — Google Ads, Meta Ads, local SEO, reputation management, and lead follow-up. Book more jobs. Cut cost per lead.{% endblock %}">
+  <meta property="og:image" content="{% block og_image %}https://getrevforge.io/static/img/og-default.png{% endblock %}">
+  <meta property="og:url" content="https://getrevforge.io{{ request.path }}">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:site" content="@forgeiq">
-  <meta name="twitter:title" content="{% block twitter_title %}ForgeIQ — The Revenue Platform Built for the Trades{% endblock %}">
+  <meta name="twitter:site" content="@revforge">
+  <meta name="twitter:title" content="{% block twitter_title %}RevForge — The Revenue Platform Built for the Trades{% endblock %}">
   <meta name="twitter:description" content="{% block twitter_description %}The revenue platform built for trade businesses. AI agents run your Google Ads, Meta Ads, and reputation 24/7 — so your phone keeps ringing.{% endblock %}">
-  <meta name="twitter:image" content="{% block twitter_image %}https://getforgeiq.com/static/img/og-default.png{% endblock %}">
+  <meta name="twitter:image" content="{% block twitter_image %}https://getrevforge.io/static/img/og-default.png{% endblock %}">
 
   <link rel="icon" href="{{ url_for('static', filename='brand/favicon.ico') }}">
   <meta name="facebook-domain-verification" content="pu3qyk43a95ad4bgi13g8wd0xn81ot" />
@@ -32,25 +32,25 @@
   {
     "@context": "https://schema.org",
     "@type": "Organization",
-    "name": "ForgeIQ",
-    "url": "https://getforgeiq.com",
+    "name": "RevForge",
+    "url": "https://getrevforge.io",
     "logo": {
       "@type": "ImageObject",
-      "url": "https://getforgeiq.com/static/brand/logos/forgeiq-wordmark.svg",
+      "url": "https://getrevforge.io/static/brand/logos/revforge-wordmark.svg",
       "width": 200,
       "height": 40
     },
     "description": "The revenue platform built for trade businesses. AI-powered ads, local SEO, reputation management, and lead follow-up for HVAC, plumbing, electrical, roofing, and other trade contractors.",
     "foundingDate": "2023",
     "sameAs": [
-      "https://twitter.com/forgeiq",
-      "https://www.facebook.com/forgeiq",
-      "https://www.linkedin.com/company/forgeiq"
+      "https://twitter.com/revforge",
+      "https://www.facebook.com/revforge",
+      "https://www.linkedin.com/company/revforge"
     ],
     "contactPoint": {
       "@type": "ContactPoint",
       "contactType": "customer support",
-      "url": "https://getforgeiq.com/contact",
+      "url": "https://getrevforge.io/contact",
       "availableLanguage": "English"
     },
     "areaServed": {
@@ -83,14 +83,14 @@
   {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    "name": "ForgeIQ",
-    "url": "https://getforgeiq.com",
+    "name": "RevForge",
+    "url": "https://getrevforge.io",
     "description": "The revenue platform built for the trades",
     "potentialAction": {
       "@type": "SearchAction",
       "target": {
         "@type": "EntryPoint",
-        "urlTemplate": "https://getforgeiq.com/blog/?q={search_term_string}"
+        "urlTemplate": "https://getrevforge.io/blog/?q={search_term_string}"
       },
       "query-input": "required name=search_term_string"
     }
@@ -444,10 +444,10 @@
   <header class="fixed top-0 left-0 right-0 z-50 glass border-b border-gray-100/50">
     <nav class="container-lg flex items-center justify-between h-16 lg:h-20">
       <!-- Logo -->
-      <a href="{{ url_for(ep('home')) }}" class="flex items-center gap-2 font-bold text-xl" aria-label="ForgeIQ home">
+      <a href="{{ url_for(ep('home')) }}" class="flex items-center gap-2 font-bold text-xl" aria-label="RevForge home">
         <img
-          src="{{ url_for('static', filename='brand/logos/forgeiq-wordmark.svg') }}"
-          alt="ForgeIQ"
+          src="{{ url_for('static', filename='brand/logos/revforge-wordmark.svg') }}"
+          alt="RevForge"
           class="h-7 lg:h-8">
       </a>
 
@@ -757,8 +757,8 @@
         <div>
           <a href="{{ url_for(ep('home')) }}" class="inline-block">
             <img
-              src="{{ url_for('static', filename='brand/logos/ForgeIQ-White-logo.svg') }}"
-              alt="ForgeIQ"
+              src="{{ url_for('static', filename='brand/logos/RevForge-White-logo.svg') }}"
+              alt="RevForge"
               class="h-8">
           </a>
           <p class="mt-6 text-lg text-white/70 max-w-md leading-relaxed">
@@ -774,7 +774,7 @@
             {% else %}
               <a href="/signup" class="btn btn-primary">Get Started</a>
             {% endif %}
-            <a href="https://getforgeiq.com/contact" class="btn btn-ghost">Contact Sales</a>
+            <a href="https://getrevforge.io/contact" class="btn btn-ghost">Contact Sales</a>
           </div>
         </div>
 
@@ -804,7 +804,7 @@
               <li><a href="/industries/electricians" class="hover:text-white transition">Electricians</a></li>
               <li><a href="/industries/roofing" class="hover:text-white transition">Roofing</a></li>
               <li><a href="/free-tools" class="hover:text-white transition">Free Tools</a></li>
-              <li><a href="/vs-agency" class="hover:text-white transition">ForgeIQ vs Agency</a></li>
+              <li><a href="/vs-agency" class="hover:text-white transition">RevForge vs Agency</a></li>
             </ul>
           </div>
 
@@ -830,17 +830,17 @@
 
       <!-- Bottom section -->
       <div class="pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <p class="text-sm text-white/50">&copy; {{ current_year }} ForgeIQ. All rights reserved.</p>
+        <p class="text-sm text-white/50">&copy; {{ current_year }} RevForge. All rights reserved.</p>
 
         <!-- Social links -->
         <div class="flex items-center gap-4">
-          <a href="https://www.linkedin.com/company/forgeiq" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:bg-white/20 hover:text-white transition" aria-label="LinkedIn">
+          <a href="https://www.linkedin.com/company/revforge" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:bg-white/20 hover:text-white transition" aria-label="LinkedIn">
             <i class="fa-brands fa-linkedin-in"></i>
           </a>
-          <a href="https://twitter.com/forgeiq" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:bg-white/20 hover:text-white transition" aria-label="Twitter">
+          <a href="https://twitter.com/revforge" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:bg-white/20 hover:text-white transition" aria-label="Twitter">
             <i class="fa-brands fa-x-twitter"></i>
           </a>
-          <a href="https://www.facebook.com/forgeiq" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:bg-white/20 hover:text-white transition" aria-label="Facebook">
+          <a href="https://www.facebook.com/revforge" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:bg-white/20 hover:text-white transition" aria-label="Facebook">
             <i class="fa-brands fa-facebook-f"></i>
           </a>
         </div>
@@ -854,7 +854,7 @@
       <svg class="h-8 w-8" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
         <path d="M16 28c7-5.4 10.5-9.4 10.5-14.1C26.5 9 24 6.5 20.9 6.5c-2.1 0-3.8 1.1-4.9 2.8-1.1-1.7-2.8-2.8-4.9-2.8C8 6.5 5.5 9 5.5 13.9 5.5 18.6 9 22.6 16 28Z" fill="currentColor"/>
       </svg>
-      ForgeIQ
+      RevForge
     </span>
   </script>
   <script type="text/template" id="fs-logo-fallback-white">
@@ -862,7 +862,7 @@
       <svg class="h-8 w-8" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
         <path d="M16 28c7-5.4 10.5-9.4 10.5-14.1C26.5 9 24 6.5 20.9 6.5c-2.1 0-3.8 1.1-4.9 2.8-1.1-1.7-2.8-2.8-4.9-2.8C8 6.5 5.5 9 5.5 13.9 5.5 18.6 9 22.6 16 28Z" fill="currentColor"/>
       </svg>
-      ForgeIQ
+      RevForge
     </span>
   </script>
 

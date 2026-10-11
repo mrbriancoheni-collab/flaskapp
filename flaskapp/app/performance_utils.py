@@ -1,6 +1,6 @@
 # app/performance_utils.py
 """
-Performance optimization utilities for ForgeIQ.
+Performance optimization utilities for RevForge.
 
 Provides caching, query optimization, and lazy loading helpers.
 """

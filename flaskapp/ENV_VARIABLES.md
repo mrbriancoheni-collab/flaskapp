@@ -1,6 +1,6 @@
 # Environment Variables Documentation
 
-Complete reference for all environment variables used in the ForgeIQ application.
+Complete reference for all environment variables used in the RevForge application.
 
 ## Table of Contents
 - [Core Application](#core-application)
@@ -29,7 +29,7 @@ python -c "import secrets; print(secrets.token_hex(32))"
 
 ### `BASE_URL` (Optional)
 **Description:** Base URL of your application (for email links, webhooks, etc.)
-**Example:** `https://app.getforgeiq.com`
+**Example:** `https://app.getrevforge.io`
 **Default:** Empty string
 **Notes:** Required for proper email links and OAuth callbacks
 
@@ -40,7 +40,7 @@ python -c "import secrets; print(secrets.token_hex(32))"
 ### `SQLALCHEMY_DATABASE_URI` (Required)
 **Description:** Database connection string
 **Format:** `mysql://username:password@host:port/database`
-**Example:** `mysql://root:password@localhost:3306/forgeiq`
+**Example:** `mysql://root:password@localhost:3306/revforge`
 **Notes:**
 - Supports MySQL/MariaDB
 - URL-encode special characters in password
@@ -48,7 +48,7 @@ python -c "import secrets; print(secrets.token_hex(32))"
 
 **Production Example:**
 ```
-mysql://fs_user:SecurePass123!@db.example.com:3306/forgeiq_prod?charset=utf8mb4
+mysql://fs_user:SecurePass123!@db.example.com:3306/revforge_prod?charset=utf8mb4
 ```
 
 ---
@@ -102,13 +102,13 @@ python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().d
 
 #### `EMAIL_FROM`
 **Description:** Sender email address
-**Example:** `noreply@getforgeiq.com`
-**Default:** `noreply@getforgeiq.com`
+**Example:** `noreply@getrevforge.io`
+**Default:** `noreply@getrevforge.io`
 
 #### `EMAIL_FROM_NAME`
 **Description:** Sender display name
-**Example:** `ForgeIQ`
-**Default:** `ForgeIQ`
+**Example:** `RevForge`
+**Default:** `RevForge`
 
 ### SMTP Configuration (if EMAIL_PROVIDER=smtp)
 
@@ -231,7 +231,7 @@ export EMAIL_PROVIDER="sendgrid"
 
 #### `GOOGLE_ADS_REDIRECT_URI`
 **Description:** OAuth callback URL
-**Example:** `https://app.getforgeiq.com/oauth/google-ads/callback`
+**Example:** `https://app.getrevforge.io/oauth/google-ads/callback`
 **Default:** `http://localhost:8000/oauth/google-ads/callback`
 **Notes:** Must match authorized redirect URI in Google Cloud Console
 
@@ -325,7 +325,7 @@ export SENTRY_DSN="your-dsn-here"
 
 ### `SENTRY_RELEASE`
 **Description:** Release version or git commit hash for tracking deployments
-**Example:** `forgeiq@1.0.0` or `abc123def` (git commit SHA)
+**Example:** `revforge@1.0.0` or `abc123def` (git commit SHA)
 **Default:** Auto-detected from `GIT_COMMIT` environment variable
 **Benefits:**
 - Track which release introduced a bug
@@ -407,10 +407,10 @@ SENTRY_TRACES_SAMPLE_RATE=1.0
 ```bash
 # Core
 SECRET_KEY=generated-secret-key-64-characters-long-change-this
-BASE_URL=https://app.getforgeiq.com
+BASE_URL=https://app.getrevforge.io
 
 # Database
-SQLALCHEMY_DATABASE_URI=mysql://fs_user:SecurePassword123!@db-prod.internal:3306/forgeiq?charset=utf8mb4&pool_size=10
+SQLALCHEMY_DATABASE_URI=mysql://fs_user:SecurePassword123!@db-prod.internal:3306/revforge?charset=utf8mb4&pool_size=10
 
 # Encryption
 APP_FERNET_KEY=vL8Km9x_2nJ4pQrT5wY8zA1bC3dE6fG7hI9jK0lM2nO=
@@ -418,8 +418,8 @@ APP_FERNET_KEY=vL8Km9x_2nJ4pQrT5wY8zA1bC3dE6fG7hI9jK0lM2nO=
 # Email (SendGrid)
 EMAIL_PROVIDER=sendgrid
 SENDGRID_API_KEY=SG.abc123def456ghi789jkl012mno345pqr.678stu901vwx234yz
-EMAIL_FROM=noreply@getforgeiq.com
-EMAIL_FROM_NAME=ForgeIQ
+EMAIL_FROM=noreply@getrevforge.io
+EMAIL_FROM_NAME=RevForge
 
 # Stripe
 STRIPE_SECRET_KEY=sk_live_51ABC...
@@ -434,7 +434,7 @@ STRIPE_CANCEL_URL=/billing/choose-plan
 GOOGLE_ADS_DEVELOPER_TOKEN=your-developer-token
 GOOGLE_ADS_CLIENT_ID=123456-abc.apps.googleusercontent.com
 GOOGLE_ADS_CLIENT_SECRET=GOCSPX-secret
-GOOGLE_ADS_REDIRECT_URI=https://app.getforgeiq.com/oauth/google-ads/callback
+GOOGLE_ADS_REDIRECT_URI=https://app.getrevforge.io/oauth/google-ads/callback
 
 # Background Jobs
 SCHEDULER_MAX_WORKERS=5
@@ -460,7 +460,7 @@ SECRET_KEY=dev-secret-key-change-for-production
 BASE_URL=http://localhost:5000
 
 # Database
-SQLALCHEMY_DATABASE_URI=mysql://root:password@localhost:3306/forgeiq_dev
+SQLALCHEMY_DATABASE_URI=mysql://root:password@localhost:3306/revforge_dev
 
 # Encryption (Generate your own!)
 APP_FERNET_KEY=generate-using-fernet-generate-key-command
@@ -473,7 +473,7 @@ SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your-app-specific-password
 SMTP_USE_TLS=true
 EMAIL_FROM=your-email@gmail.com
-EMAIL_FROM_NAME=ForgeIQ Dev
+EMAIL_FROM_NAME=RevForge Dev
 
 # Stripe (Test mode)
 STRIPE_SECRET_KEY=sk_test_51ABC...
@@ -548,6 +548,6 @@ SCHEDULER_MAX_WORKERS=1
 ## Support
 
 For questions or issues:
-- Documentation: https://docs.getforgeiq.com
-- Support: support@getforgeiq.com
-- GitHub Issues: https://github.com/your-org/forgeiq/issues
+- Documentation: https://docs.getrevforge.io
+- Support: support@getrevforge.io
+- GitHub Issues: https://github.com/your-org/revforge/issues

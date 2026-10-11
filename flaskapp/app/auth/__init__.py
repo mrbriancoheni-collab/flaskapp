@@ -187,7 +187,7 @@ def _send_welcome_email(name: str, email: str) -> None:
     """Send a welcome email to a newly registered user. Failures are logged, not raised."""
     try:
         from flask import render_template as _rt
-        base_url = current_app.config.get('BASE_URL', 'https://getforgeiq.com').rstrip('/')
+        base_url = current_app.config.get('BASE_URL', 'https://getrevforge.io').rstrip('/')
         html = _rt(
             'emails/welcome.html',
             name=name.split()[0] if name else 'there',
@@ -196,7 +196,7 @@ def _send_welcome_email(name: str, email: str) -> None:
         )
         send_email(
             to=email,
-            subject="Welcome to ForgeIQ — here's how to get started",
+            subject="Welcome to RevForge — here's how to get started",
             html_body=html,
         )
     except Exception:
@@ -490,7 +490,7 @@ def register():
 
         _set_login_session(user_id, email)
         _send_welcome_email(name, email)
-        flash("Welcome to ForgeIQ! Your account has been created.", "success")
+        flash("Welcome to RevForge! Your account has been created.", "success")
         return redirect(_post_auth_target())
 
     # GET
@@ -813,7 +813,7 @@ def google_callback():
         _set_login_session(user_id, email)
 
         _send_welcome_email(name, email)
-        flash(f"Welcome to ForgeIQ, {name}! Your account has been created.", "success")
+        flash(f"Welcome to RevForge, {name}! Your account has been created.", "success")
 
         next_url = session.pop('google_auth_next', '')
         if next_url and _is_safe_redirect(next_url):
@@ -988,7 +988,7 @@ def google_callback():
 #
 #         _set_login_session(user_id, email)
 #
-#         flash(f"Welcome to {current_app.config.get('APP_NAME', 'ForgeIQ')}, {name}! Your account has been created.", "success")
+#         flash(f"Welcome to {current_app.config.get('APP_NAME', 'RevForge')}, {name}! Your account has been created.", "success")
 #
 #         next_url = session.pop('facebook_auth_next', '')
 #         if next_url and _is_safe_redirect(next_url):

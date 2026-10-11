@@ -14,9 +14,9 @@ def connect_db():
     """Connect to database"""
     return pymysql.connect(
         host='localhost',
-        user='forgeiq_team',
+        user='revforge_team',
         password='Jcl3QewSX8mQUj35w8QE',
-        database='forgeiq_xyz',
+        database='revforge_xyz',
         autocommit=False,
     )
 

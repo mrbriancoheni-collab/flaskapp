@@ -1,29 +1,29 @@
 {
-  "name": "ForgeIQ",
-  "short_name": "ForgeIQ",
+  "name": "RevForge",
+  "short_name": "RevForge",
   "icons": [
     {
-      "src": "icons/forgeiq-icon-512.png",
+      "src": "icons/revforge-icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     },
     {
-      "src": "icons/forgeiq-icon-180.png",
+      "src": "icons/revforge-icon-180.png",
       "sizes": "180x180",
       "type": "image/png"
     },
     {
-      "src": "icons/forgeiq-icon-64.png",
+      "src": "icons/revforge-icon-64.png",
       "sizes": "64x64",
       "type": "image/png"
     },
     {
-      "src": "icons/forgeiq-icon-32.png",
+      "src": "icons/revforge-icon-32.png",
       "sizes": "32x32",
       "type": "image/png"
     },
     {
-      "src": "icons/forgeiq-icon-16.png",
+      "src": "icons/revforge-icon-16.png",
       "sizes": "16x16",
       "type": "image/png"
     },

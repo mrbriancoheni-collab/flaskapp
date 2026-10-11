@@ -1,7 +1,7 @@
 # app/services/baseline_import.py
 """
 Service for importing baseline (historical) performance data.
-This allows capturing performance BEFORE using ForgeIQ for YoY comparison.
+This allows capturing performance BEFORE using RevForge for YoY comparison.
 """
 
 from __future__ import annotations
@@ -356,7 +356,7 @@ def get_baseline_import_instructions() -> Dict[str, Any]:
         Dictionary with step-by-step instructions
     """
     return {
-        'overview': 'Import historical performance data from before using ForgeIQ to enable YoY comparison',
+        'overview': 'Import historical performance data from before using RevForge to enable YoY comparison',
         'methods': [
             {
                 'name': 'CSV Import',

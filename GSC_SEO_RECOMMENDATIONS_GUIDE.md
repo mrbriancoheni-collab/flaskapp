@@ -2,7 +2,7 @@
 
 ## System Overview
 
-Your ForgeIQ application has an AI-powered SEO recommendations system that analyzes Google Search Console data and provides actionable optimization suggestions.
+Your RevForge application has an AI-powered SEO recommendations system that analyzes Google Search Console data and provides actionable optimization suggestions.
 
 ## How It Works
 

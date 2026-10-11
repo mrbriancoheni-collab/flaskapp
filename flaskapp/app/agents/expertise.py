@@ -1,6 +1,6 @@
 # app/agents/expertise.py
 """
-Google Ads expertise layer for ForgeIQ agents.
+Google Ads expertise layer for RevForge agents.
 
 The operational agents are deterministic rules engines. This module gives them
 the *judgment layer* a top-tier Google Ads manager would apply on top of the

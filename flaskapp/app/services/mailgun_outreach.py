@@ -26,7 +26,7 @@ class MailgunOutreachService:
         self.api_key = os.getenv('MAILGUN_API_KEY')
         self.domain = os.getenv('MAILGUN_DOMAIN')
         self.from_email = os.getenv('MAILGUN_FROM_EMAIL', f'noreply@{self.domain}')
-        self.from_name = os.getenv('MAILGUN_FROM_NAME', 'ForgeIQ')
+        self.from_name = os.getenv('MAILGUN_FROM_NAME', 'RevForge')
 
         if not self.api_key or not self.domain:
             raise ValueError("MAILGUN_API_KEY and MAILGUN_DOMAIN must be set")
@@ -163,7 +163,7 @@ class MailgunOutreachService:
             <p>You received this email because we found your business online and thought our services might be helpful.</p>
             <p><a href="{unsubscribe_url}" style="color: #666;">Unsubscribe from future emails</a></p>
             <p style="margin-top: 10px; font-size: 11px;">
-                ForgeIQ Inc.<br>
+                RevForge Inc.<br>
                 This is a commercial email. CAN-SPAM Act compliant.
             </p>
         </div>

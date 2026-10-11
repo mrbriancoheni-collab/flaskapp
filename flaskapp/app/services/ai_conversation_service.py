@@ -409,7 +409,7 @@ Their intent: {analysis.get('intent')}
 Service they're interested in: {lead.company_name if lead else 'home services'}
 """
 
-        system_prompt = f"""You are a helpful sales assistant for ForgeIQ, a home services marketing platform.
+        system_prompt = f"""You are a helpful sales assistant for RevForge, a home services marketing platform.
 You are responding to prospect email replies professionally and helpfully.
 
 Guidelines:
@@ -420,7 +420,7 @@ Guidelines:
 - If they're not interested, thank them politely
 - Never be pushy or aggressive
 - Use their name when appropriate
-- Sign as "The ForgeIQ Team"
+- Sign as "The RevForge Team"
 
 Context:
 {context}
@@ -489,7 +489,7 @@ Context:
                 outbound_message = EmailConversationMessage(
                     conversation_id=conversation.id,
                     direction='outbound',
-                    from_email=os.getenv('BREVO_FROM_EMAIL', 'hi@getforgeiq.com'),
+                    from_email=os.getenv('BREVO_FROM_EMAIL', 'hi@getrevforge.io'),
                     to_email=contact.email,
                     subject=f"Re: {conversation.subject}",
                     body_text=response_text,

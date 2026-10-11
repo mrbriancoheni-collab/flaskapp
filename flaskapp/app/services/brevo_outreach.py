@@ -27,12 +27,12 @@ class BrevoOutreachService:
     def __init__(self):
         _raw_key = os.getenv('BREVO_API_KEY') or os.getenv('SENDINBLUE_API_KEY')
         self.api_key = _raw_key.strip() if _raw_key else None
-        self.from_email = os.getenv('BREVO_FROM_EMAIL', 'noreply@getforgeiq.com')
-        self.from_name = os.getenv('BREVO_FROM_NAME', 'ForgeIQ')
+        self.from_email = os.getenv('BREVO_FROM_EMAIL', 'noreply@getrevforge.io')
+        self.from_name = os.getenv('BREVO_FROM_NAME', 'RevForge')
         self.base_url_app = os.getenv('BASE_URL', '').rstrip('/')
         self.company_address = os.getenv(
             'BREVO_COMPANY_ADDRESS',
-            'ForgeIQ Inc., 1234 Main St, Suite 100, Austin, TX 78701'
+            'RevForge Inc., 1234 Main St, Suite 100, Austin, TX 78701'
         )
 
         if not self.api_key:

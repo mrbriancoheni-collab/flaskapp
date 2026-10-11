@@ -204,7 +204,7 @@ def refresh_knowledge_source(source) -> bool:
         from app.models_knowledge import AgentKnowledgeCache
         from app import db
 
-        headers = {"User-Agent": "ForgeIQ-AgentKnowledge/1.0 (site:getforgeiq.com)"}
+        headers = {"User-Agent": "RevForge-AgentKnowledge/1.0 (site:getrevforge.io)"}
         resp = _req.get(source.url, headers=headers, timeout=20, allow_redirects=True)
         resp.raise_for_status()
 

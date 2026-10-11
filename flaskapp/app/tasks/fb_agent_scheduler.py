@@ -148,7 +148,7 @@ def run_fb_agents_for_account(
     """Run Facebook AI agents for a single account.
 
     Args:
-        account_id: ForgeIQ account ID.
+        account_id: RevForge account ID.
         layer: 'operational' or 'tactical'.
         directive: Parsed strategy_directive_facebook dict (optional).
         access_token: FB access token (optional, used for future live-API calls).

@@ -182,7 +182,7 @@ def send_approval_request(action: AIAction, to_email: str, to_phone: Optional[st
     action.approval_sent_at = datetime.utcnow()
     db.session.commit()
 
-    base_url = os.getenv("BASE_PUBLIC_URL", "https://app.getforgeiq.com").rstrip("/")
+    base_url = os.getenv("BASE_PUBLIC_URL", "https://app.getrevforge.io").rstrip("/")
     approve_url = f"{base_url}/agent/approve/{action.approval_token}"
     reject_url = f"{base_url}/agent/reject/{action.approval_token}"
 
@@ -215,7 +215,7 @@ def _send_approval_email(to_email: str, action: AIAction, approve_url: str, reje
     <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto">
       <div style="background:linear-gradient(135deg,#7c3aed,#4f46e5);padding:28px 32px;border-radius:12px 12px 0 0">
         <h1 style="color:#fff;margin:0;font-size:20px">AI Agent Action — Your Approval Needed</h1>
-        <p style="color:rgba(255,255,255,.8);margin:8px 0 0;font-size:14px">ForgeIQ · {datetime.utcnow().strftime('%b %-d, %Y')}</p>
+        <p style="color:rgba(255,255,255,.8);margin:8px 0 0;font-size:14px">RevForge · {datetime.utcnow().strftime('%b %-d, %Y')}</p>
       </div>
       <div style="background:#fff;border:1px solid #e5e7eb;border-top:none;padding:28px 32px;border-radius:0 0 12px 12px">
         <h2 style="font-size:16px;color:#111827;margin:0 0 4px">{action.title}</h2>
@@ -256,7 +256,7 @@ def _send_approval_sms(to_phone: str, action: AIAction, approve_url: str, reject
     tok = os.getenv("TWILIO_AUTH_TOKEN")
     frm = os.getenv("TWILIO_FROM_NUMBER")
     body = (
-        f"ForgeIQ Agent: {action.title}. "
+        f"RevForge Agent: {action.title}. "
         f"Approve: {approve_url}  |  Reject: {reject_url}"
     )
     if not (sid and tok and frm):

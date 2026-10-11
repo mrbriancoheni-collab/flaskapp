@@ -287,7 +287,7 @@ def send_missed_call_notification(
 
     html_body += """
                 <div style="text-align: center; margin-top: 30px;">
-                    <a href="https://getforgeiq.com/account/google/ads/ai-change-log" class="cta-button">
+                    <a href="https://getrevforge.io/account/google/ads/ai-change-log" class="cta-button">
                         View All Call Details →
                     </a>
                 </div>
@@ -304,7 +304,7 @@ def send_missed_call_notification(
             </div>
 
             <div class="footer">
-                <p>This is an automated alert from ForgeIQ's AI monitoring system.</p>
+                <p>This is an automated alert from RevForge's AI monitoring system.</p>
                 <p style="margin-top: 10px; font-size: 12px;">
                     To stop receiving these alerts, update your notification settings in your dashboard.
                 </p>
@@ -334,7 +334,7 @@ def send_missed_call_notification(
 
             """
 
-    text_body += "\nView all details at: https://getforgeiq.com/account/google/ads/ai-change-log"
+    text_body += "\nView all details at: https://getrevforge.io/account/google/ads/ai-change-log"
 
     # Send email
     try:

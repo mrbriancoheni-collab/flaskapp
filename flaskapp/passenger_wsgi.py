@@ -4,7 +4,7 @@ from logging.handlers import RotatingFileHandler
 from datetime import datetime
 
 from dotenv import load_dotenv
-load_dotenv('/home/forgeiq/.env', override=False)
+load_dotenv('/home/revforge/.env', override=False)
 
 # Ensure we import from this app root
 APP_ROOT = os.path.dirname(__file__)

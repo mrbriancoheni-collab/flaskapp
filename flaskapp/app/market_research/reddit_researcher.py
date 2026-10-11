@@ -1,6 +1,6 @@
 # app/market_research/reddit_researcher.py
 """
-Reddit Market Research Module for ForgeIQ
+Reddit Market Research Module for RevForge
 
 Pulls high-signal Reddit threads where homeowners complain about trade
 contractors and extracts raw, unfiltered pain language for ad copy.
@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 CACHE_DIR = Path("/tmp/fs_research")
 CACHE_TTL_SECONDS = 3 * 24 * 3600  # 3 days
 
-REDDIT_HEADERS = {"User-Agent": "ForgeIQ/1.0 (market research)"}
+REDDIT_HEADERS = {"User-Agent": "RevForge/1.0 (market research)"}
 
 TRADE_SUBREDDITS: Dict[str, List[str]] = {
     "hvac":         ["HVAC", "homeowners", "HomeImprovement", "hvacadvice"],
@@ -596,7 +596,7 @@ def research_trade(trade: str, city: Optional[str] = None, force_refresh: bool =
         force_refresh: If True, bypass the cache.
 
     Returns:
-        A dict matching the ForgeIQ market research schema.
+        A dict matching the RevForge market research schema.
     """
     trade = trade.lower().strip()
 

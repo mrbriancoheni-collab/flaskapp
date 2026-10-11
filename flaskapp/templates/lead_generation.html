@@ -1,9 +1,9 @@
 {% extends "base_public.html" %}
 {% set SECTION = 'solutions' %}
-{% block title %}Lead Generation for Trade Businesses — ForgeIQ{% endblock %}
-{% block meta_description %}ForgeIQ turns ad spend into booked jobs — tracking the full pipeline from click to booked job, reducing cost per lead, and helping trade businesses grow predictably.{% endblock %}
-{% block og_title %}Lead Generation for Home Services — From Click to Booked Job | ForgeIQ{% endblock %}
-{% block og_description %}Stop measuring clicks and impressions. ForgeIQ tracks the full lead pipeline — click, call, estimate, booked job — so you know exactly which channels are making you money.{% endblock %}
+{% block title %}Lead Generation for Trade Businesses — RevForge{% endblock %}
+{% block meta_description %}RevForge turns ad spend into booked jobs — tracking the full pipeline from click to booked job, reducing cost per lead, and helping trade businesses grow predictably.{% endblock %}
+{% block og_title %}Lead Generation for Home Services — From Click to Booked Job | RevForge{% endblock %}
+{% block og_description %}Stop measuring clicks and impressions. RevForge tracks the full lead pipeline — click, call, estimate, booked job — so you know exactly which channels are making you money.{% endblock %}
 
 {% block head_extra %}
 <script type="application/ld+json">
@@ -12,7 +12,7 @@
   "@type": "WebPage",
   "name": "Lead Generation for Trade Businesses",
   "description": "Full-funnel lead generation solution for HVAC, plumbing, electrical, and roofing companies — from click to booked job.",
-  "url": "https://getforgeiq.com/solutions/lead-generation"
+  "url": "https://getrevforge.io/solutions/lead-generation"
 }
 </script>
 {% endblock %}
@@ -29,7 +29,7 @@
       More Leads. Lower Cost.<br>A Full Calendar of Booked Jobs.
     </h1>
     <p class="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
-      ForgeIQ manages every channel that generates leads for your trade business —
+      RevForge manages every channel that generates leads for your trade business —
       Google Ads, GLSA, Facebook, and organic — optimizing each one to deliver the highest
       volume of qualified leads at the lowest possible cost per booked job.
     </p>
@@ -55,7 +55,7 @@
 <section class="py-16 bg-white">
   <div class="container-lg">
     <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">Every stage of your lead pipeline — visible and optimized</h2>
-    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Most trade contractors track clicks and calls. ForgeIQ tracks all the way to booked job and revenue — so you know what's actually working.</p>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Most trade contractors track clicks and calls. RevForge tracks all the way to booked job and revenue — so you know what's actually working.</p>
     <div class="flex flex-col md:flex-row items-stretch gap-0 mb-16">
       {% for stage, icon, color, desc in [
         ('Ad Click', 'fa-arrow-pointer', 'indigo', 'Paid search, GLSA, or Facebook ad brings visitor to your site or landing page.'),
@@ -81,7 +81,7 @@
       {% endfor %}
     </div>
 
-    <h2 class="text-2xl font-bold text-gray-900 text-center mb-10">All the channels ForgeIQ manages for you</h2>
+    <h2 class="text-2xl font-bold text-gray-900 text-center mb-10">All the channels RevForge manages for you</h2>
     <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
       {% for icon, color, title, desc in [
         ('fa-magnifying-glass', 'indigo', 'Google Search Ads', '24/7 AI optimization — negative keywords, bid adjustments, Quality Score improvements, and budget pacing toward highest-converting campaigns.'),
@@ -114,7 +114,7 @@
           <tr class="bg-gray-50">
             <th class="py-3 px-5 text-sm font-semibold text-gray-600 border-b border-gray-200">Trade</th>
             <th class="py-3 px-5 text-sm font-semibold text-gray-600 border-b border-gray-200 text-center">Avg CPL (industry)</th>
-            <th class="py-3 px-5 text-sm font-semibold text-gray-600 border-b border-gray-200 text-center">ForgeIQ avg CPL</th>
+            <th class="py-3 px-5 text-sm font-semibold text-gray-600 border-b border-gray-200 text-center">RevForge avg CPL</th>
             <th class="py-3 px-5 text-sm font-semibold text-gray-600 border-b border-gray-200 text-center">Avg savings</th>
           </tr>
         </thead>
@@ -137,7 +137,7 @@
         </tbody>
       </table>
     </div>
-    <p class="text-xs text-gray-400 text-center mt-4">Based on accounts managed on ForgeIQ. Individual results vary by market, budget, and competition.</p>
+    <p class="text-xs text-gray-400 text-center mt-4">Based on accounts managed on RevForge. Individual results vary by market, budget, and competition.</p>
   </div>
 </section>
 
@@ -146,9 +146,9 @@
   <div class="container-md">
     <div class="grid md:grid-cols-3 gap-6">
       {% for quote, name, co, result in [
-        ('"ForgeIQ showed us that 60% of our leads were coming from one campaign — and two other campaigns were just burning money. We reallocated and CPL dropped 38% in a month."', 'Nathan B.', 'Peak HVAC', '38% lower CPL in 30 days'),
+        ('"RevForge showed us that 60% of our leads were coming from one campaign — and two other campaigns were just burning money. We reallocated and CPL dropped 38% in a month."', 'Nathan B.', 'Peak HVAC', '38% lower CPL in 30 days'),
         ('"We went from tracking \'form fills\' to tracking actual booked jobs. The attribution dashboard showed us that Facebook was driving 30% of our revenue but we had it at 10% of our budget."', 'Chris A.', 'A1 Plumbing', '3x Facebook budget ROI revealed'),
-        ('"Adding GLSA to our Google Ads changed everything. ForgeIQ manages both together and disputes the junk — our cost per booked job dropped from $340 to $198."', 'Maria T.', 'TrueShield Roofing', 'CPBJ: $340 → $198'),
+        ('"Adding GLSA to our Google Ads changed everything. RevForge manages both together and disputes the junk — our cost per booked job dropped from $340 to $198."', 'Maria T.', 'TrueShield Roofing', 'CPBJ: $340 → $198'),
       ] %}
       <div class="bg-gray-50 rounded-2xl p-6 border">
         <div class="text-green-600 font-bold text-sm mb-3">{{ result }}</div>

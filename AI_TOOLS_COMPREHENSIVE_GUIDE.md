@@ -2,7 +2,7 @@
 
 ## Overview
 
-ForgeIQ's AI-powered optimization system has been upgraded to enterprise-grade strategic analysis across all marketing channels. This guide documents the comprehensive improvements to all AI prompt tools.
+RevForge's AI-powered optimization system has been upgraded to enterprise-grade strategic analysis across all marketing channels. This guide documents the comprehensive improvements to all AI prompt tools.
 
 ## System Architecture
 
@@ -253,7 +253,7 @@ WHERE is_active = TRUE;
 ### 1. Initialize/Update Prompts
 
 ```bash
-cd /home/forgeiq
+cd /home/revforge
 FLASK_APP=app virtualenv/bin/python -c "
 from app.services.ai_prompts_init import initialize_ai_prompts
 # Force update all prompts with new versions

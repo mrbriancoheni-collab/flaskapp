@@ -18,7 +18,7 @@ from app.auth.utils import login_required
 # We keep explicit endpoint names so URLs stay 'home', 'chatgpt', etc.
 main_bp = Blueprint("main_bp", __name__, template_folder="../templates")
 
-APP_NAME = "ForgeIQ"
+APP_NAME = "RevForge"
 
 # ---------------------------------------------------------------------
 # Pass through the app-wide helpers so we DON'T shadow them here.
@@ -54,8 +54,8 @@ def home():
         return render_template("home.html")
     except Exception:
         return (
-            "<!doctype html><html><head><title>ForgeIQ</title></head>"
-            "<body><h1>ForgeIQ</h1><p>Server is running.</p>"
+            "<!doctype html><html><head><title>RevForge</title></head>"
+            "<body><h1>RevForge</h1><p>Server is running.</p>"
             "<p><a href='/_deploy_check'>/_deploy_check</a></p></body></html>"
         ), 200
 
@@ -149,7 +149,7 @@ Allow: /
 User-agent: Googlebot
 Allow: /
 
-Sitemap: https://getforgeiq.com/sitemap.xml
+Sitemap: https://getrevforge.io/sitemap.xml
 """
     from flask import Response
     return Response(content, mimetype="text/plain")
@@ -183,51 +183,51 @@ def sitemap_xml():
     ]
 
     pages = [
-        ("https://getforgeiq.com/", "1.0", "weekly"),
-        ("https://getforgeiq.com/pricing", "0.9", "monthly"),
-        ("https://getforgeiq.com/about", "0.7", "monthly"),
-        ("https://getforgeiq.com/contact", "0.7", "monthly"),
-        ("https://getforgeiq.com/free-tools", "0.9", "weekly"),
-        ("https://getforgeiq.com/vs-agency", "0.8", "monthly"),
-        ("https://getforgeiq.com/roadmap", "0.5", "monthly"),
-        ("https://getforgeiq.com/products/ads-demo", "0.8", "monthly"),
+        ("https://getrevforge.io/", "1.0", "weekly"),
+        ("https://getrevforge.io/pricing", "0.9", "monthly"),
+        ("https://getrevforge.io/about", "0.7", "monthly"),
+        ("https://getrevforge.io/contact", "0.7", "monthly"),
+        ("https://getrevforge.io/free-tools", "0.9", "weekly"),
+        ("https://getrevforge.io/vs-agency", "0.8", "monthly"),
+        ("https://getrevforge.io/roadmap", "0.5", "monthly"),
+        ("https://getrevforge.io/products/ads-demo", "0.8", "monthly"),
         # Main industry pages (existing)
-        ("https://getforgeiq.com/industries/hvac", "0.9", "monthly"),
-        ("https://getforgeiq.com/industries/plumbing", "0.9", "monthly"),
-        ("https://getforgeiq.com/industries/electricians", "0.9", "monthly"),
-        ("https://getforgeiq.com/industries/roofing", "0.9", "monthly"),
-        ("https://getforgeiq.com/industries/pest-control", "0.9", "monthly"),
-        ("https://getforgeiq.com/industries/landscaping", "0.9", "monthly"),
-        ("https://getforgeiq.com/industries/garage-door", "0.8", "monthly"),
-        ("https://getforgeiq.com/industries/pool-service", "0.8", "monthly"),
-        ("https://getforgeiq.com/industries/solar", "0.8", "monthly"),
+        ("https://getrevforge.io/industries/hvac", "0.9", "monthly"),
+        ("https://getrevforge.io/industries/plumbing", "0.9", "monthly"),
+        ("https://getrevforge.io/industries/electricians", "0.9", "monthly"),
+        ("https://getrevforge.io/industries/roofing", "0.9", "monthly"),
+        ("https://getrevforge.io/industries/pest-control", "0.9", "monthly"),
+        ("https://getrevforge.io/industries/landscaping", "0.9", "monthly"),
+        ("https://getrevforge.io/industries/garage-door", "0.8", "monthly"),
+        ("https://getrevforge.io/industries/pool-service", "0.8", "monthly"),
+        ("https://getrevforge.io/industries/solar", "0.8", "monthly"),
         # Product pages
-        ("https://getforgeiq.com/products/ads", "0.8", "monthly"),
-        ("https://getforgeiq.com/products/glsa", "0.8", "monthly"),
-        ("https://getforgeiq.com/products/gbp", "0.8", "monthly"),
-        ("https://getforgeiq.com/products/facebook-ads", "0.8", "monthly"),
-        ("https://getforgeiq.com/products/reviews", "0.8", "monthly"),
-        ("https://getforgeiq.com/products/listings", "0.8", "monthly"),
-        ("https://getforgeiq.com/products/forms-chat", "0.7", "monthly"),
+        ("https://getrevforge.io/products/ads", "0.8", "monthly"),
+        ("https://getrevforge.io/products/glsa", "0.8", "monthly"),
+        ("https://getrevforge.io/products/gbp", "0.8", "monthly"),
+        ("https://getrevforge.io/products/facebook-ads", "0.8", "monthly"),
+        ("https://getrevforge.io/products/reviews", "0.8", "monthly"),
+        ("https://getrevforge.io/products/listings", "0.8", "monthly"),
+        ("https://getrevforge.io/products/forms-chat", "0.7", "monthly"),
         # Solution pages
-        ("https://getforgeiq.com/solutions/lead-generation", "0.8", "monthly"),
-        ("https://getforgeiq.com/solutions/multi-location", "0.8", "monthly"),
-        ("https://getforgeiq.com/solutions/lower-ad-cost", "0.8", "monthly"),
-        ("https://getforgeiq.com/solutions/get-more-reviews", "0.7", "monthly"),
-        ("https://getforgeiq.com/solutions/spend-when-open", "0.7", "monthly"),
-        ("https://getforgeiq.com/solutions/see-what-works", "0.7", "monthly"),
+        ("https://getrevforge.io/solutions/lead-generation", "0.8", "monthly"),
+        ("https://getrevforge.io/solutions/multi-location", "0.8", "monthly"),
+        ("https://getrevforge.io/solutions/lower-ad-cost", "0.8", "monthly"),
+        ("https://getrevforge.io/solutions/get-more-reviews", "0.7", "monthly"),
+        ("https://getrevforge.io/solutions/spend-when-open", "0.7", "monthly"),
+        ("https://getrevforge.io/solutions/see-what-works", "0.7", "monthly"),
         # Tools & graders
-        ("https://getforgeiq.com/ads-grader", "0.9", "weekly"),
-        ("https://getforgeiq.com/ga4-audit", "0.9", "weekly"),
-        ("https://getforgeiq.com/blog/", "0.8", "weekly"),
-        ("https://getforgeiq.com/maps-audit", "0.9", "weekly"),
-        ("https://getforgeiq.com/lsa-estimator", "0.9", "weekly"),
+        ("https://getrevforge.io/ads-grader", "0.9", "weekly"),
+        ("https://getrevforge.io/ga4-audit", "0.9", "weekly"),
+        ("https://getrevforge.io/blog/", "0.8", "weekly"),
+        ("https://getrevforge.io/maps-audit", "0.9", "weekly"),
+        ("https://getrevforge.io/lsa-estimator", "0.9", "weekly"),
         # Legal
-        ("https://getforgeiq.com/privacy-policy", "0.3", "yearly"),
-        ("https://getforgeiq.com/terms-of-service", "0.3", "yearly"),
-        ("https://getforgeiq.com/security", "0.4", "yearly"),
+        ("https://getrevforge.io/privacy-policy", "0.3", "yearly"),
+        ("https://getrevforge.io/terms-of-service", "0.3", "yearly"),
+        ("https://getrevforge.io/security", "0.4", "yearly"),
         # llms.txt
-        ("https://getforgeiq.com/llms.txt", "0.3", "monthly"),
+        ("https://getrevforge.io/llms.txt", "0.3", "monthly"),
     ]
     # Industry sub-pages (trade/channel combinations — two-segment URL style)
     _industry_subs = [
@@ -249,7 +249,7 @@ def sitemap_xml():
     for trade, channels in _industry_subs:
         for channel in channels:
             pages.append((
-                f"https://getforgeiq.com/industries/{trade}/{channel}",
+                f"https://getrevforge.io/industries/{trade}/{channel}",
                 "0.7",
                 "monthly",
             ))
@@ -257,17 +257,17 @@ def sitemap_xml():
     # Add sub-routes for main 9 industries (single-segment slug style)
     for industry in main_industries:
         for sub in industry_sub_routes:
-            pages.append((f"https://getforgeiq.com/industries/{industry}{sub}", "0.7", "monthly"))
+            pages.append((f"https://getrevforge.io/industries/{industry}{sub}", "0.7", "monthly"))
 
     # Add sub-routes only for additional industries (no main-page template yet)
     for industry in additional_industries:
         for sub in industry_sub_routes:
-            pages.append((f"https://getforgeiq.com/industries/{industry}{sub}", "0.7", "monthly"))
+            pages.append((f"https://getrevforge.io/industries/{industry}{sub}", "0.7", "monthly"))
 
     # Dynamically include all blog posts
     for post in POSTS:
         pages.append((
-            f"https://getforgeiq.com/blog/{post['slug']}",
+            f"https://getrevforge.io/blog/{post['slug']}",
             "0.8",
             "monthly",
         ))
@@ -298,12 +298,12 @@ def llms_txt():
     from flask import Response
     from app.blog_data import POSTS
     blog_lines = "\n".join(
-        f"- [{p['title']}](https://getforgeiq.com/blog/{p['slug']}): {p['excerpt']}"
+        f"- [{p['title']}](https://getrevforge.io/blog/{p['slug']}): {p['excerpt']}"
         for p in POSTS
     )
-    body = f"""# ForgeIQ
+    body = f"""# RevForge
 
-> ForgeIQ is a full-service AI marketing platform built specifically for trade and field service businesses (HVAC, plumbing, electrical, roofing, landscaping, pest control, and more). Autonomous AI agents manage Google Ads, Meta Ads, Local Services Ads, SEO, Google Business Profile, reputation management, and lead follow-up 24/7 — no marketing expertise or dedicated marketing team required. Works for both residential (B2C) and commercial (B2B) trade businesses across the United States.
+> RevForge is a full-service AI marketing platform built specifically for trade and field service businesses (HVAC, plumbing, electrical, roofing, landscaping, pest control, and more). Autonomous AI agents manage Google Ads, Meta Ads, Local Services Ads, SEO, Google Business Profile, reputation management, and lead follow-up 24/7 — no marketing expertise or dedicated marketing team required. Works for both residential (B2C) and commercial (B2B) trade businesses across the United States.
 
 ## Key Facts
 
@@ -316,47 +316,47 @@ def llms_txt():
 
 ## Product
 
-- [Home](https://getforgeiq.com/): Overview and platform capabilities
-- [Pricing](https://getforgeiq.com/pricing): Plans starting at $250/month; annual plan at $200/month
-- [About](https://getforgeiq.com/about): Company mission — marketing firepower for trade business owners without needing a marketing team
-- [Contact](https://getforgeiq.com/contact): Support and sales contact
-- [Free Tools](https://getforgeiq.com/free-tools): Free Google Ads Grader and GA4 Audit tool
+- [Home](https://getrevforge.io/): Overview and platform capabilities
+- [Pricing](https://getrevforge.io/pricing): Plans starting at $250/month; annual plan at $200/month
+- [About](https://getrevforge.io/about): Company mission — marketing firepower for trade business owners without needing a marketing team
+- [Contact](https://getrevforge.io/contact): Support and sales contact
+- [Free Tools](https://getrevforge.io/free-tools): Free Google Ads Grader and GA4 Audit tool
 
 ## Core Features
 
-- [Google Ads Management](https://getforgeiq.com/products/ads): AI optimizes keywords, bids, and ad copy 24/7
-- [Google Local Services Ads](https://getforgeiq.com/products/glsa): Google Guaranteed badge management
-- [Google Business Profile](https://getforgeiq.com/products/gbp): Automated posts, Q&A, and profile optimization
-- [Meta (Facebook/Instagram) Ads](https://getforgeiq.com/products/facebook-ads): AI-managed social advertising
-- [Reputation & Reviews](https://getforgeiq.com/products/reviews): Automated review request system after every job
-- [Listings Management](https://getforgeiq.com/products/listings): Citation consistency across 50+ directories
-- [Forms & Chat](https://getforgeiq.com/products/forms-chat): Lead capture and automated follow-up
+- [Google Ads Management](https://getrevforge.io/products/ads): AI optimizes keywords, bids, and ad copy 24/7
+- [Google Local Services Ads](https://getrevforge.io/products/glsa): Google Guaranteed badge management
+- [Google Business Profile](https://getrevforge.io/products/gbp): Automated posts, Q&A, and profile optimization
+- [Meta (Facebook/Instagram) Ads](https://getrevforge.io/products/facebook-ads): AI-managed social advertising
+- [Reputation & Reviews](https://getrevforge.io/products/reviews): Automated review request system after every job
+- [Listings Management](https://getrevforge.io/products/listings): Citation consistency across 50+ directories
+- [Forms & Chat](https://getrevforge.io/products/forms-chat): Lead capture and automated follow-up
 
 ## Solutions
 
-- [Lower Ad Cost](https://getforgeiq.com/solutions/lower-ad-cost): Reduce cost per lead through AI optimization
-- [Get More Reviews](https://getforgeiq.com/solutions/get-more-reviews): Systematic review generation for trade businesses
-- [Spend When Open](https://getforgeiq.com/solutions/spend-when-open): Smart ad scheduling to match business hours
-- [See What Works](https://getforgeiq.com/solutions/see-what-works): Unified analytics and attribution reporting
-- [Lead Generation](https://getforgeiq.com/solutions/lead-generation): End-to-end lead generation for trade contractors
-- [Multi-Location](https://getforgeiq.com/solutions/multi-location): Marketing management across multiple business locations
+- [Lower Ad Cost](https://getrevforge.io/solutions/lower-ad-cost): Reduce cost per lead through AI optimization
+- [Get More Reviews](https://getrevforge.io/solutions/get-more-reviews): Systematic review generation for trade businesses
+- [Spend When Open](https://getrevforge.io/solutions/spend-when-open): Smart ad scheduling to match business hours
+- [See What Works](https://getrevforge.io/solutions/see-what-works): Unified analytics and attribution reporting
+- [Lead Generation](https://getrevforge.io/solutions/lead-generation): End-to-end lead generation for trade contractors
+- [Multi-Location](https://getrevforge.io/solutions/multi-location): Marketing management across multiple business locations
 
 ## Industries
 
-- [HVAC](https://getforgeiq.com/industries/hvac): Google Ads and marketing automation for HVAC companies — tune-ups, repairs, installations
-- [Plumbing](https://getforgeiq.com/industries/plumbing): Emergency and residential plumbing marketing, review automation
-- [Electrical](https://getforgeiq.com/industries/electricians): Marketing for electricians — residential, commercial, EV chargers
-- [Roofing](https://getforgeiq.com/industries/roofing): Storm damage leads, replacement campaigns, reputation management
-- [Pest Control](https://getforgeiq.com/industries/pest-control): Seasonal and recurring pest control marketing
-- [Landscaping](https://getforgeiq.com/industries/landscaping): Lawn care, landscape design, and recurring contract marketing
-- [Garage Door](https://getforgeiq.com/industries/garage-door): Repair and installation marketing for garage door companies
-- [Solar](https://getforgeiq.com/industries/solar): Lead generation for residential solar installers
-- [Pool Service](https://getforgeiq.com/industries/pool-service): Maintenance and renovation marketing for pool companies
+- [HVAC](https://getrevforge.io/industries/hvac): Google Ads and marketing automation for HVAC companies — tune-ups, repairs, installations
+- [Plumbing](https://getrevforge.io/industries/plumbing): Emergency and residential plumbing marketing, review automation
+- [Electrical](https://getrevforge.io/industries/electricians): Marketing for electricians — residential, commercial, EV chargers
+- [Roofing](https://getrevforge.io/industries/roofing): Storm damage leads, replacement campaigns, reputation management
+- [Pest Control](https://getrevforge.io/industries/pest-control): Seasonal and recurring pest control marketing
+- [Landscaping](https://getrevforge.io/industries/landscaping): Lawn care, landscape design, and recurring contract marketing
+- [Garage Door](https://getrevforge.io/industries/garage-door): Repair and installation marketing for garage door companies
+- [Solar](https://getrevforge.io/industries/solar): Lead generation for residential solar installers
+- [Pool Service](https://getrevforge.io/industries/pool-service): Maintenance and renovation marketing for pool companies
 
 ## Free Tools
 
-- [Google Ads Grader](https://getforgeiq.com/ads-grader): Free audit — grade your Google Ads account in 60 seconds, see wasted spend and top 3 fixes
-- [GA4 Tracking Audit](https://getforgeiq.com/ga4-audit): Free GA4 health check — scores your tracking setup and identifies gaps in conversion data
+- [Google Ads Grader](https://getrevforge.io/ads-grader): Free audit — grade your Google Ads account in 60 seconds, see wasted spend and top 3 fixes
+- [GA4 Tracking Audit](https://getrevforge.io/ga4-audit): Free GA4 health check — scores your tracking setup and identifies gaps in conversion data
 
 ## Blog
 
@@ -364,10 +364,10 @@ def llms_txt():
 
 ## Optional
 
-- [Privacy Policy](https://getforgeiq.com/privacy-policy)
-- [Terms of Service](https://getforgeiq.com/terms-of-service)
-- [Security](https://getforgeiq.com/security)
-- [Sitemap](https://getforgeiq.com/sitemap.xml)
+- [Privacy Policy](https://getrevforge.io/privacy-policy)
+- [Terms of Service](https://getrevforge.io/terms-of-service)
+- [Security](https://getrevforge.io/security)
+- [Sitemap](https://getrevforge.io/sitemap.xml)
 """
     return Response(body, mimetype="text/plain")
 

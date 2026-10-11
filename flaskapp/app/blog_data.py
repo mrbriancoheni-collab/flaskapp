@@ -13,7 +13,7 @@ POSTS = [
         "category": "Google Ads",
         "reading_time": 7,
         "excerpt": "Your competitors are spending money to get customers — and some of those customers are unhappy. Here's how to intercept them before they renew or recommend someone else.",
-        "og_image": "https://getforgeiq.com/static/img/og-default.png",
+        "og_image": "https://getrevforge.io/static/img/og-default.png",
     },
     {
         "slug": "how-long-google-ads-take-to-work",
@@ -23,7 +23,7 @@ POSTS = [
         "category": "Google Ads",
         "reading_time": 6,
         "excerpt": "The #1 reason trade contractors quit Google Ads too early: they expect leads in week one. Here's what actually happens in weeks 1–12 and why patience (with the right setup) pays off.",
-        "og_image": "https://getforgeiq.com/static/img/og-default.png",
+        "og_image": "https://getrevforge.io/static/img/og-default.png",
     },
     {
         "slug": "google-ads-vs-facebook-ads",
@@ -33,7 +33,7 @@ POSTS = [
         "category": "Google Ads",
         "reading_time": 8,
         "excerpt": "Google gets you customers who are already looking for you. Facebook gets you in front of people who might need you later. For most trade contractors, the answer isn't either/or — but one should come first.",
-        "og_image": "https://getforgeiq.com/static/img/og-default.png",
+        "og_image": "https://getrevforge.io/static/img/og-default.png",
     },
     {
         "slug": "why-phone-not-ringing",
@@ -43,7 +43,7 @@ POSTS = [
         "category": "Marketing Strategy",
         "reading_time": 7,
         "excerpt": "If the phone has gone quiet, one of these five gaps is almost certainly the reason — and most owners don't realize marketing is the problem until they're months behind.",
-        "og_image": "https://getforgeiq.com/static/img/og-default.png",
+        "og_image": "https://getrevforge.io/static/img/og-default.png",
     },
     {
         "slug": "google-ads-budget-guide",
@@ -53,7 +53,7 @@ POSTS = [
         "category": "Google Ads",
         "reading_time": 8,
         "excerpt": "Most trade contractors either spend too little to see results or too much without the right setup to capture them. Here's the formula to find your right number.",
-        "og_image": "https://getforgeiq.com/static/img/og-default.png",
+        "og_image": "https://getrevforge.io/static/img/og-default.png",
     },
     {
         "slug": "get-more-google-reviews",
@@ -63,7 +63,7 @@ POSTS = [
         "category": "Reputation & Reviews",
         "reading_time": 6,
         "excerpt": "A trade business with 50 reviews at 4.8 stars will beat a competitor with zero reviews every time — even if the competitor spends more on ads. Here's how to build that advantage.",
-        "og_image": "https://getforgeiq.com/static/img/og-default.png",
+        "og_image": "https://getrevforge.io/static/img/og-default.png",
     },
 ]
 

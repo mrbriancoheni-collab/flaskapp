@@ -5,8 +5,8 @@
 {% set plan_tag = "Single Location" if is_499 else "Multi-Location / Agency" %}
 {% set plan_scope = "one business location" if is_499 else "unlimited locations" %}
 
-{% block title %}{{ plan_price }} Lifetime Access — ForgeIQ AI Google Ads Management{% endblock %}
-{% block meta_description %}Own ForgeIQ's full AI-powered Google Ads platform forever. One-time payment of {{ plan_price }} for {{ plan_scope }}. No monthly fees — lifetime access for trade businesses.{% endblock %}
+{% block title %}{{ plan_price }} Lifetime Access — RevForge AI Google Ads Management{% endblock %}
+{% block meta_description %}Own RevForge's full AI-powered Google Ads platform forever. One-time payment of {{ plan_price }} for {{ plan_scope }}. No monthly fees — lifetime access for trade businesses.{% endblock %}
 {% block meta_robots %}index, follow{% endblock %}
 
 {% block content %}
@@ -40,9 +40,9 @@
 
       <p class="text-lg md:text-xl mb-3 max-w-2xl mx-auto" style="color:rgba(255,255,255,0.85)">
         {% if is_499 %}
-        Get ForgeIQ's complete platform — AI agents, campaign management, keyword optimization, reporting, and more — for one business location. One payment. No expiration.
+        Get RevForge's complete platform — AI agents, campaign management, keyword optimization, reporting, and more — for one business location. One payment. No expiration.
         {% else %}
-        Get ForgeIQ's complete platform across all your locations — AI agents, campaign management, keyword optimization, multi-location reporting, and priority support. One payment. No expiration.
+        Get RevForge's complete platform across all your locations — AI agents, campaign management, keyword optimization, multi-location reporting, and priority support. One payment. No expiration.
         {% endif %}
       </p>
 
@@ -189,7 +189,7 @@
             Most trade businesses pay a marketing agency
             {% if is_499 %}$1,000–$2,500/mo{% else %}$2,000–$5,000/mo{% endif %}
             for Google Ads management — with no AI, no 24/7 monitoring, and a contract you can't own.
-            At $1,000/mo, ForgeIQ pays for itself in the first month.
+            At $1,000/mo, RevForge pays for itself in the first month.
             Every month after that is money back in your pocket — with smarter campaigns and more leads to show for it.
           </div>
         </div>
@@ -201,7 +201,7 @@
   <section class="py-20 px-4 bg-white">
     <div class="max-w-3xl mx-auto text-center">
       <h2 class="text-3xl font-extrabold text-gray-900 mb-3">Built for Trade Businesses</h2>
-      <p class="text-gray-500 mb-10">ForgeIQ was built specifically for the trades — not generic businesses, not e-commerce. If you run Google Ads for a local service business, this was made for you.</p>
+      <p class="text-gray-500 mb-10">RevForge was built specifically for the trades — not generic businesses, not e-commerce. If you run Google Ads for a local service business, this was made for you.</p>
 
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         {% for icon, label in [("fa-wind","HVAC"),("fa-wrench","Plumbing"),("fa-bolt","Electrical"),("fa-house","Roofing"),("fa-seedling","Landscaping"),("fa-bug","Pest Control"),("fa-car-burst","Garage Door"),("fa-solar-panel","Solar")] %}
@@ -236,7 +236,7 @@
 
         <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <div class="flex mb-3">{% for _ in range(5) %}<i class="fa-solid fa-star text-yellow-400 text-sm"></i>{% endfor %}</div>
-          <p class="text-gray-600 text-sm mb-4">"ForgeIQ's AI agents do more in a day than our old agency did in a month. And I actually understand what's happening in my account now."</p>
+          <p class="text-gray-600 text-sm mb-4">"RevForge's AI agents do more in a day than our old agency did in a month. And I actually understand what's happening in my account now."</p>
           <div class="font-bold text-gray-900 text-sm">Dave T.</div>
           <div class="text-gray-400 text-xs">Roofing Contractor, Ohio</div>
         </div>
@@ -252,11 +252,11 @@
       <div class="space-y-3">
 
         {% set faqs = [
-          ("What do I actually get with this?", "Full access to the ForgeIQ platform for {{ plan_scope }} — 8 AI agents managing your Google Ads 24/7, campaign optimization, keyword management, a performance dashboard, and the Google Ads Health Grader. Everything in one platform, yours permanently."),
-          ("Is this really a one-time payment?", "Yes. You pay {{ plan_price }} once and that's it — no monthly fees, no annual renewals. As long as ForgeIQ exists, you have full access."),
+          ("What do I actually get with this?", "Full access to the RevForge platform for {{ plan_scope }} — 8 AI agents managing your Google Ads 24/7, campaign optimization, keyword management, a performance dashboard, and the Google Ads Health Grader. Everything in one platform, yours permanently."),
+          ("Is this really a one-time payment?", "Yes. You pay {{ plan_price }} once and that's it — no monthly fees, no annual renewals. As long as RevForge exists, you have full access."),
           ("Will I get new features as you build them?", "Yes — all features and tools launched through December 31, 2026 are included automatically at no extra cost. After that date, any new additions are optional upgrades. You're never required to upgrade, and your existing access remains fully functional regardless of what we build next."),
           ("How do the AI agents work?", "Once you connect your Google Ads account (takes about 3 minutes), 8 AI agents start analyzing your campaigns. Low-risk improvements are applied automatically. Larger changes appear in your 1-click approval queue so you stay in control."),
-          ("What if I'm not satisfied?", "We offer a 30-day money-back guarantee, no questions asked. If ForgeIQ isn't delivering value for your account, we'll refund you in full."),
+          ("What if I'm not satisfied?", "We offer a 30-day money-back guarantee, no questions asked. If RevForge isn't delivering value for your account, we'll refund you in full."),
           ("How many Google Ads accounts can I connect?", "The {{ plan_price }} lifetime tier supports {{ plan_scope }}. {% if not is_499 %}This is ideal for agencies or businesses running ads across multiple service areas or franchises.{% endif %}"),
           ("Do I need technical experience?", "Not at all. Setup takes about 3 minutes — connect your Google Ads account, and the agents start working immediately. No coding, no spreadsheets."),
           ("What happens after 2026?", "Your access doesn't change. All the features you have on December 31, 2026 remain yours indefinitely. If we launch major new product lines after that date, they'll be available as optional upgrades — but you'll never be required to buy them or lose access to what you already have."),

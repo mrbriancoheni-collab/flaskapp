@@ -19,7 +19,7 @@ import requests
 
 MAX_URLS = 60
 TIMEOUT  = 8
-UA       = "ForgeIQ-RedirectChecker/1.0"
+UA       = "RevForge-RedirectChecker/1.0"
 
 _CANONICAL_RE = re.compile(
     r'<link[^>]+rel=["\']canonical["\'][^>]+href=["\']([^"\']+)["\']',

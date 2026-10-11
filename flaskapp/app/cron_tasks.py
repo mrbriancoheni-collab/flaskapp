@@ -569,7 +569,7 @@ def _generate_google_ads_optimizations_for_account(app, aid: int) -> bool:
     total_monthly_value = total_savings + total_lead_value
 
     # 5) Generate opportunities URL
-    base_url = app.config.get("BASE_URL", "https://fieldsprout.io")
+    base_url = app.config.get("BASE_URL", "https://getforgeiq.com")
     opportunities_url = f"{base_url}/account/google/ads/opportunities"
 
     # 6) Send email notification
@@ -727,7 +727,7 @@ def _run_monthly_google_ads_performance_emails(app) -> None:
                 to=user_email,
                 subject=f"📊 Google Ads Monthly Performance Report - {analysis.get('grade', 'N/A')} Grade",
                 html_body=email_html,
-                from_name="FieldSprout Google Ads AI"
+                from_name="ForgeIQ Google Ads AI"
             )
 
             if success:
@@ -1025,15 +1025,15 @@ def _run_weekly_ai_actions_digest(app):
                     if not user or not user.email:
                         continue
 
-                    subject = f"FieldSprout AI: {row.total} actions this week"
+                    subject = f"ForgeIQ AI: {row.total} actions this week"
                     body = (
                         f"Hi {user.first_name or 'there'},\n\n"
-                        f"Your FieldSprout AI made {row.total} change(s) to your Google Ads this week:\n"
+                        f"Your ForgeIQ AI made {row.total} change(s) to your Google Ads this week:\n"
                         f"  • {row.executed or 0} executed\n"
                         f"  • {row.pending or 0} pending review\n\n"
                         f"Log in to review, approve, or undo any changes:\n"
-                        f"https://fieldsprout.io/account/google/ads/ai-actions\n\n"
-                        f"— The FieldSprout Team"
+                        f"https://getforgeiq.com/account/google/ads/ai-actions\n\n"
+                        f"— The ForgeIQ Team"
                     )
                     send_email(to=user.email, subject=subject, body=body)
                     sent += 1

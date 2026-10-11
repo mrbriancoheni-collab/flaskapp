@@ -1,7 +1,7 @@
 # app/market_research/review_miner.py
 """
 Review Miner — pulls and classifies Google reviews for competitors in a
-given trade + city to extract ad copy language for FieldSprout.
+given trade + city to extract ad copy language for ForgeIQ.
 
 Public entry point
 ------------------

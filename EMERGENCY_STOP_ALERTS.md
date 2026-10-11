@@ -9,7 +9,7 @@ Getting "Site Alert" emails every 5 minutes even though site is working fine.
 
 ### Option 1: Run the Diagnostic Script (30 seconds)
 ```bash
-cd /home/fieldsprout/flaskapp
+cd /home/forgeiq/flaskapp
 ./find_alert_source.sh
 ```
 
@@ -77,17 +77,17 @@ Then comment out (add `#` at start) or delete the monitoring line.
 
 ### UptimeRobot
 1. Go to: https://uptimerobot.com/dashboard
-2. Find monitor for "fieldsprout.io"
+2. Find monitor for "getforgeiq.com"
 3. Click **"..."** > **"Delete"** or **"Pause"**
 
 ### Pingdom
 1. Go to: https://my.pingdom.com
-2. Find check for "fieldsprout.io"
+2. Find check for "getforgeiq.com"
 3. Click **"Pause"** or **"Delete"**
 
 ### StatusCake
 1. Go to: https://app.statuscake.com
-2. Find test for "fieldsprout.io"
+2. Find test for "getforgeiq.com"
 3. Pause or delete it
 
 ---
@@ -114,11 +114,11 @@ Then comment out (add `#` at start) or delete the monitoring line.
 ### Contact Your Hosting Provider
 Send them this exact message:
 
-> **Subject:** URGENT: Disable all monitoring alerts for fieldsprout.io
+> **Subject:** URGENT: Disable all monitoring alerts for getforgeiq.com
 >
 > Hello,
 >
-> My domain fieldsprout.io is sending "Site Alert" emails every 5 minutes even though the site is working fine.
+> My domain getforgeiq.com is sending "Site Alert" emails every 5 minutes even though the site is working fine.
 >
 > Please immediately disable:
 > - cPanel HTTP monitoring
@@ -127,7 +127,7 @@ Send them this exact message:
 > - Any automated monitoring alerts
 >
 > for account: [YOUR_CPANEL_USERNAME]
-> domain: fieldsprout.io
+> domain: getforgeiq.com
 >
 > This is urgent as I'm receiving alerts every 5 minutes.
 >
@@ -147,7 +147,7 @@ sudo tail -100 /var/log/maillog | grep "Site Alert"
 sudo tail -100 /var/log/mail.log | grep "Site Alert"
 
 # Check all cron jobs (system-wide)
-sudo grep -r "fieldsprout" /etc/cron.* /var/spool/cron/
+sudo grep -r "forgeiq" /etc/cron.* /var/spool/cron/
 ```
 
 ### Check Your Email Queue
@@ -183,7 +183,7 @@ If you've tried everything and it's still sending:
 
 1. **Run the diagnostic:**
    ```bash
-   cd /home/fieldsprout/flaskapp
+   cd /home/forgeiq/flaskapp
    ./find_alert_source.sh > alert_debug.txt
    cat alert_debug.txt
    ```

@@ -1,5 +1,5 @@
 """
-wsgi_entry.py — actual WSGI entry point for FieldSprout on CloudLinux.
+wsgi_entry.py — actual WSGI entry point for ForgeIQ on CloudLinux.
 
 CloudLinux Python Selector resets passenger_wsgi.py to a 9-line stub on
 every restart.  That stub does:

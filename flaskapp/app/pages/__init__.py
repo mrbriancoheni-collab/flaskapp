@@ -35,7 +35,7 @@ def contact():
         # Send notification email to admin
         try:
             send_email(
-                to="support@fieldsprout.io",  # Update to your support email
+                to="support@getforgeiq.com",  # Update to your support email
                 subject=f"Contact Form: {email}",
                 html_content=f"""
                 <p><strong>From:</strong> {email}</p>
@@ -48,7 +48,7 @@ def contact():
             logger.info(f"Contact form submitted by {email}")
         except Exception as e:
             logger.exception(f"Failed to send contact email from {email}")
-            flash("Sorry, there was an error. Please email support@fieldsprout.io directly.", "danger")
+            flash("Sorry, there was an error. Please email support@getforgeiq.com directly.", "danger")
 
         return redirect(url_for("pages.contact"))
 

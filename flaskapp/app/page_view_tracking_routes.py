@@ -23,7 +23,7 @@ def track_pageview():
     {
         "session_id": "abc123...",
         "path": "/pricing",
-        "page_title": "Pricing - FieldSprout",
+        "page_title": "Pricing - ForgeIQ",
         "referrer": "https://google.com/...",
         "query_string": "?utm_source=google&utm_medium=cpc"
     }

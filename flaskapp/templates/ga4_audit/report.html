@@ -1,5 +1,5 @@
 {% extends "base_app.html" %}
-{% block title %}GA4 Audit — {{ result.property_name }} | FieldSprout{% endblock %}
+{% block title %}GA4 Audit — {{ result.property_name }} | ForgeIQ{% endblock %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto px-6 py-10">
@@ -177,9 +177,9 @@
 
   <!-- CTA -->
   <div class="mt-16 rounded-2xl bg-gradient-to-br from-primary-600 to-purple-700 p-8 text-white text-center">
-    <p class="text-sm font-semibold uppercase tracking-wide text-primary-200 mb-2">FieldSprout</p>
+    <p class="text-sm font-semibold uppercase tracking-wide text-primary-200 mb-2">ForgeIQ</p>
     <h2 class="text-2xl font-extrabold mb-3">Want Someone to Fix All of This for You?</h2>
-    <p class="text-white/80 mb-6 max-w-xl mx-auto">FieldSprout's AI agents manage your ads, SEO, reviews, and analytics tracking 24/7 — so your data is always accurate and your marketing is always optimized.</p>
+    <p class="text-white/80 mb-6 max-w-xl mx-auto">ForgeIQ's AI agents manage your ads, SEO, reviews, and analytics tracking 24/7 — so your data is always accurate and your marketing is always optimized.</p>
     {% if has_endpoint('signup') %}
     <a href="{{ url_for(ep('signup')) }}" class="inline-block bg-white text-primary-700 font-bold px-8 py-3 rounded-lg hover:bg-gray-50 transition-colors shadow-lg">
       Start Free Trial →

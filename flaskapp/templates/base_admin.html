@@ -50,7 +50,7 @@
     <!-- PRIMARY SIDEBAR (icons only) -->
     <aside class="w-16 bg-gray-900 text-white flex flex-col items-center py-4 space-y-3">
       <a href="{{ url_for('admin_bp.dashboard') }}" class="mb-4" title="{{ app_name }} Admin">
-        <img src="{{ url_for('static', filename='brand/icons/fieldsprout-icon-32.png') }}" alt="FS" class="w-8 h-8">
+        <img src="{{ url_for('static', filename='brand/icons/forgeiq-icon-32.png') }}" alt="FS" class="w-8 h-8">
       </a>
 
       <a href="{{ url_for('admin_bp.dashboard') }}" class="primary-btn {% if request.endpoint=='admin_bp.dashboard' %}active{% endif %}" title="Dashboard">
@@ -96,7 +96,7 @@
     <!-- SECONDARY SIDEBAR (admin navigation) -->
     <aside class="w-64 bg-white border-r px-3 py-4 overflow-y-auto flex flex-col">
       <a href="{{ url_for('admin_bp.dashboard') }}" class="hidden lg:flex items-center gap-2 px-2 py-2 mb-2 hover:text-indigo-600">
-        <img src="{{ url_for('static', filename='brand/logos/fieldsprout-wordmark.svg') }}" alt="FieldSprout" style="height:32px;width:auto;">
+        <img src="{{ url_for('static', filename='brand/logos/forgeiq-wordmark.svg') }}" alt="ForgeIQ" style="height:32px;width:auto;">
         <span class="text-sm uppercase text-gray-500">Admin</span>
       </a>
 
@@ -201,7 +201,7 @@
       <!-- Sticky support block -->
       <div class="mt-auto sticky bottom-0 bg-white pt-3">
         <div class="border-t pt-3 text-sm text-gray-700">
-          Need support<br/>cs@fieldsprout.io
+          Need support<br/>cs@getforgeiq.com
         </div>
       </div>
     </aside>

@@ -18,7 +18,7 @@ Configuration via environment variables:
   - SENDGRID_API_KEY
 - For Mailgun (legacy):
   - MAILGUN_API_KEY (required)
-  - MAILGUN_DOMAIN (default: fieldsprout.io)
+  - MAILGUN_DOMAIN (default: getforgeiq.com)
 - For SMTP (legacy):
   - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_USE_TLS
 """
@@ -46,12 +46,12 @@ def get_email_config() -> Dict[str, Any]:
     # Use David email as from address if available
     from_email = (current_app.config.get('MAIL_USERNAME_DAVID') or os.getenv('MAIL_USERNAME_DAVID') or
                  current_app.config.get('EMAIL_FROM') or os.getenv('EMAIL_FROM') or
-                 'noreply@fieldsprout.com')
+                 'noreply@getforgeiq.com')
 
     return {
         'provider': current_app.config.get('EMAIL_PROVIDER', os.getenv('EMAIL_PROVIDER', 'brevo')),
         'from_email': from_email,
-        'from_name': current_app.config.get('EMAIL_FROM_NAME', os.getenv('EMAIL_FROM_NAME', 'FieldSprout')),
+        'from_name': current_app.config.get('EMAIL_FROM_NAME', os.getenv('EMAIL_FROM_NAME', 'ForgeIQ')),
 
         # SMTP settings - prefer MAIL_* env vars (used by test_email.py)
         'smtp_host': (current_app.config.get('MAIL_SERVER') or os.getenv('MAIL_SERVER') or
@@ -70,7 +70,7 @@ def get_email_config() -> Dict[str, Any]:
 
         # Mailgun settings
         'mailgun_api_key': current_app.config.get('MAILGUN_API_KEY', os.getenv('MAILGUN_API_KEY', '')),
-        'mailgun_domain': current_app.config.get('MAILGUN_DOMAIN', os.getenv('MAILGUN_DOMAIN', 'fieldsprout.io')),
+        'mailgun_domain': current_app.config.get('MAILGUN_DOMAIN', os.getenv('MAILGUN_DOMAIN', 'getforgeiq.com')),
     }
 
 
@@ -368,7 +368,7 @@ def send_team_invite_email(invite, inviter) -> bool:
     account = Account.query.get(invite.account_id)
     account_name = account.name if account else "a team"
 
-    base_url = current_app.config.get("BASE_URL", "https://fieldsprout.io")
+    base_url = current_app.config.get("BASE_URL", "https://getforgeiq.com")
     invite_url = f"{base_url}/team/invite/{invite.token}"
 
     html_body = render_template_string("""
@@ -432,7 +432,7 @@ def send_team_invite_email(invite, inviter) -> bool:
                     <tr>
                         <td style="padding: 20px 40px; text-align: center; background-color: #f9fafb; border-radius: 0 0 8px 8px;">
                             <p style="margin: 0; font-size: 12px; color: #9ca3af;">
-                                © {{ year }} FieldSprout. All rights reserved.
+                                © {{ year }} ForgeIQ. All rights reserved.
                             </p>
                         </td>
                     </tr>
@@ -458,7 +458,7 @@ If you don't have an account yet, you'll be able to create one when you click th
 
 If you didn't expect this invitation, you can safely ignore this email.
 
-© 2025 FieldSprout. All rights reserved.
+© 2025 ForgeIQ. All rights reserved.
     """
 
     return send_email(
@@ -485,7 +485,7 @@ def send_welcome_email(user) -> bool:
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to FieldSprout</title>
+    <title>Welcome to ForgeIQ</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f9fafb;">
     <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; padding: 40px 20px;">
@@ -495,7 +495,7 @@ def send_welcome_email(user) -> bool:
                     <!-- Header -->
                     <tr>
                         <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); border-radius: 8px 8px 0 0;">
-                            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">Welcome to FieldSprout!</h1>
+                            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">Welcome to ForgeIQ!</h1>
                         </td>
                     </tr>
 
@@ -540,7 +540,7 @@ def send_welcome_email(user) -> bool:
                     <tr>
                         <td style="padding: 20px 40px; text-align: center; background-color: #f9fafb; border-radius: 0 0 8px 8px;">
                             <p style="margin: 0; font-size: 12px; color: #9ca3af;">
-                                © {{ year }} FieldSprout. All rights reserved.
+                                © {{ year }} ForgeIQ. All rights reserved.
                             </p>
                         </td>
                     </tr>
@@ -550,10 +550,10 @@ def send_welcome_email(user) -> bool:
     </table>
 </body>
 </html>
-    """, user=user, dashboard_url=f"{current_app.config.get('BASE_URL', 'https://fieldsprout.io')}/account/dashboard", year=2025)
+    """, user=user, dashboard_url=f"{current_app.config.get('BASE_URL', 'https://getforgeiq.com')}/account/dashboard", year=2025)
 
     text_body = f"""
-Welcome to FieldSprout!
+Welcome to ForgeIQ!
 
 Hi {user.name},
 
@@ -564,16 +564,16 @@ Get Started in 3 Steps:
 2. Review your first automated insights report
 3. Invite your team to collaborate
 
-Go to your dashboard: {current_app.config.get('BASE_URL', 'https://fieldsprout.io')}/account/dashboard
+Go to your dashboard: {current_app.config.get('BASE_URL', 'https://getforgeiq.com')}/account/dashboard
 
 Need help? Check out our documentation or contact support.
 
-© 2025 FieldSprout. All rights reserved.
+© 2025 ForgeIQ. All rights reserved.
     """
 
     return send_email(
         to=user.email,
-        subject="Welcome to FieldSprout - Let's Get Started!",
+        subject="Welcome to ForgeIQ - Let's Get Started!",
         html_body=html_body,
         text_body=text_body
     )
@@ -611,13 +611,13 @@ def send_subscription_confirmation_email(user, subscription) -> bool:
         </p>
 
         <p style="margin-top: 30px; font-size: 14px; color: #6b7280;">
-            Questions? Contact us at support@fieldsprout.com
+            Questions? Contact us at support@getforgeiq.com
         </p>
     </div>
 </body>
 </html>
     """, user=user, plan_name=plan_name, subscription=subscription,
-    billing_url=f"{current_app.config.get('BASE_URL', 'https://fieldsprout.io')}/billing/portal")
+    billing_url=f"{current_app.config.get('BASE_URL', 'https://getforgeiq.com')}/billing/portal")
 
     return send_email(
         to=user.email,
@@ -720,7 +720,7 @@ def send_google_ads_optimizations_email(user, account, optimization_count, total
                                 This analysis was automatically generated for <strong>{{ account.name }}</strong>
                             </p>
                             <p style="margin: 0; font-size: 12px; color: #9ca3af;">
-                                © {{ year }} FieldSprout. All rights reserved.
+                                © {{ year }} ForgeIQ. All rights reserved.
                             </p>
                         </td>
                     </tr>
@@ -756,7 +756,7 @@ Pro Tip: Start with high-priority items for the biggest impact.
 
 This analysis was automatically generated for {account.name}
 
-© 2025 FieldSprout. All rights reserved.
+© 2025 ForgeIQ. All rights reserved.
     """
 
     return send_email(
@@ -794,12 +794,12 @@ def send_payment_failed_email(user, subscription) -> bool:
         </p>
 
         <p style="margin-top: 30px; font-size: 14px; color: #6b7280;">
-            Need help? Contact us at support@fieldsprout.com
+            Need help? Contact us at support@getforgeiq.com
         </p>
     </div>
 </body>
 </html>
-    """, user=user, billing_url=f"{current_app.config.get('BASE_URL', 'https://fieldsprout.io')}/billing/portal")
+    """, user=user, billing_url=f"{current_app.config.get('BASE_URL', 'https://getforgeiq.com')}/billing/portal")
 
     return send_email(
         to=user.email,
@@ -877,7 +877,7 @@ def send_tracked_email_to_crm_contact(
         # Extract name from email if it's support@, hello@, etc.
         if '@' in from_email:
             local_part = from_email.split('@')[0]
-            sender_name = local_part.capitalize() if local_part != 'noreply' else 'FieldSprout'
+            sender_name = local_part.capitalize() if local_part != 'noreply' else 'ForgeIQ'
         current_app.logger.info(f"Using custom from address: {sender_email}")
     # Priority 2: Bulk campaign - use David credentials
     elif campaign_name:
@@ -900,7 +900,7 @@ def send_tracked_email_to_crm_contact(
     tracking_token = generate_tracking_token()
 
     # Get base URL for tracking links
-    base_url = current_app.config.get("BASE_URL", "https://fieldsprout.io")
+    base_url = current_app.config.get("BASE_URL", "https://getforgeiq.com")
 
     # Prepare HTML with tracking pixel and link tracking
     tracked_html = prepare_tracked_email(

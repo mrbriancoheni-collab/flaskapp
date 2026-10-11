@@ -1009,10 +1009,10 @@ def send_insights_email(account_id: int, user_email: str, insights: Dict) -> boo
             "high_impact_recommendations": categorized.get("high_impact", []),
             "quick_wins_recommendations": categorized.get("quick_wins", []),
             "performance": performance,
-            "dashboard_url": f"{current_app.config.get('BASE_URL', 'https://app.fieldsprout.com')}/account/google/ads",
-            "help_url": f"{current_app.config.get('BASE_URL', 'https://app.fieldsprout.com')}/help",
-            "unsubscribe_url": f"{current_app.config.get('BASE_URL', 'https://app.fieldsprout.com')}/account/settings/email",
-            "preferences_url": f"{current_app.config.get('BASE_URL', 'https://app.fieldsprout.com')}/account/settings/email",
+            "dashboard_url": f"{current_app.config.get('BASE_URL', 'https://app.getforgeiq.com')}/account/google/ads",
+            "help_url": f"{current_app.config.get('BASE_URL', 'https://app.getforgeiq.com')}/help",
+            "unsubscribe_url": f"{current_app.config.get('BASE_URL', 'https://app.getforgeiq.com')}/account/settings/email",
+            "preferences_url": f"{current_app.config.get('BASE_URL', 'https://app.getforgeiq.com')}/account/settings/email",
             "current_year": datetime.utcnow().year
         }
 

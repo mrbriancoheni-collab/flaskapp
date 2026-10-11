@@ -15,7 +15,7 @@ from urllib.parse import urljoin, urlparse
 import requests
 
 _TIMEOUT = 10
-_UA = "FieldSprout-EEATChecker/1.0"
+_UA = "ForgeIQ-EEATChecker/1.0"
 
 _REVIEW_TERMS = re.compile(
     r"\b(review|testimonial|rating|star|rated|trust|satisfied|happy|recommend)\b",

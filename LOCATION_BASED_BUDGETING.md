@@ -427,7 +427,7 @@ ALTER TABLE campaign_budget_groups ADD COLUMN location_criteria_ids TEXT;
 Run the migration:
 
 ```bash
-mysql -u admin -p fieldsprout < flaskapp/migrations/add_location_based_budgeting.sql
+mysql -u admin -p forgeiq < flaskapp/migrations/add_location_based_budgeting.sql
 ```
 
 ## UI Usage

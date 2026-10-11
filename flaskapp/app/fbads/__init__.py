@@ -1627,7 +1627,7 @@ def update_ad():
                         "page_id": selected.get('page_id', ''),
                         "link_data": {
                             "image_hash": image_hash,
-                            "link": "https://fieldsprout.io",  # Replace with actual link
+                            "link": "https://getforgeiq.com",  # Replace with actual link
                             "message": body,
                             "name": headline,
                             "call_to_action": {

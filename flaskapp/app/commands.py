@@ -245,8 +245,8 @@ def check_email_status_command(days):
 
     if email_provider == 'brevo':
         brevo_key = os.getenv('BREVO_API_KEY')
-        brevo_email = os.getenv('BREVO_FROM_EMAIL', 'noreply@fieldsprout.io')
-        brevo_name = os.getenv('BREVO_FROM_NAME', 'FieldSprout')
+        brevo_email = os.getenv('BREVO_FROM_EMAIL', 'noreply@getforgeiq.com')
+        brevo_name = os.getenv('BREVO_FROM_NAME', 'ForgeIQ')
         click.echo(f"   API Key: {'✓ Set' if brevo_key else '✗ MISSING'}")
         click.echo(f"   From Email: {brevo_email}")
         click.echo(f"   From Name: {brevo_name}")
@@ -378,8 +378,8 @@ def test_email_provider_command(to_email, provider):
 
             # Check env vars
             api_key = os.getenv('BREVO_API_KEY')
-            from_email = os.getenv('BREVO_FROM_EMAIL', 'noreply@fieldsprout.io')
-            from_name = os.getenv('BREVO_FROM_NAME', 'FieldSprout')
+            from_email = os.getenv('BREVO_FROM_EMAIL', 'noreply@getforgeiq.com')
+            from_name = os.getenv('BREVO_FROM_NAME', 'ForgeIQ')
 
             click.echo("📋 Configuration:")
             click.echo(f"   API Key: {'✓ Set (' + api_key[:20] + '...)' if api_key else '✗ MISSING'}")
@@ -424,7 +424,7 @@ def test_email_provider_command(to_email, provider):
         click.echo("📤 Sending test email...")
 
         subject = f"Test Email from {email_provider.title()} - {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"
-        body_text = f"""This is a test email from your FieldSprout lead generation system.
+        body_text = f"""This is a test email from your ForgeIQ lead generation system.
 
 Provider: {email_provider.upper()}
 Sent at: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}

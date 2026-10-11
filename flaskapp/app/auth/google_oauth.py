@@ -52,7 +52,7 @@ class GoogleAuthHelper:
         if not redirect_uri:
             redirect_uri = current_app.config.get('GOOGLE_AUTH_REDIRECT_URI') or \
                           os.getenv('GOOGLE_AUTH_REDIRECT_URI') or \
-                          'https://fieldsprout.io/auth/google/callback'
+                          'https://getforgeiq.com/auth/google/callback'
 
         if not client_id:
             raise ValueError("GOOGLE_CLIENT_ID not configured")
@@ -106,7 +106,7 @@ class GoogleAuthHelper:
         if not redirect_uri:
             redirect_uri = current_app.config.get('GOOGLE_AUTH_REDIRECT_URI') or \
                           os.getenv('GOOGLE_AUTH_REDIRECT_URI') or \
-                          'https://fieldsprout.io/auth/google/callback'
+                          'https://getforgeiq.com/auth/google/callback'
 
         if not client_id or not client_secret:
             logger.error("GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET not configured")

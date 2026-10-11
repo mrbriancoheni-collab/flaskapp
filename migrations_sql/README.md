@@ -1,6 +1,6 @@
 # Database Migrations
 
-This directory contains SQL migrations for the FieldSprout application.
+This directory contains SQL migrations for the ForgeIQ application.
 
 ## Running Migrations
 

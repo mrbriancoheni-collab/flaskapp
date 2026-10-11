@@ -25,12 +25,12 @@ def _get_config(key: str) -> Optional[str]:
 
     Special handling for redirect URI:
     - Checks GOOGLE_ADS_REDIRECT_URI first (ads-grader specific)
-    - Falls back to default: https://fieldsprout.io/ads-grader/connect/callback
+    - Falls back to default: https://getforgeiq.com/ads-grader/connect/callback
     """
     if key == "GOOGLE_ADS_REDIRECT_URI":
         return (os.getenv("GOOGLE_ADS_REDIRECT_URI") or
                 current_app.config.get(key) or
-                "https://fieldsprout.io/ads-grader/connect/callback")
+                "https://getforgeiq.com/ads-grader/connect/callback")
     return os.getenv(key) or current_app.config.get(key)
 
 
@@ -58,7 +58,7 @@ class GoogleAdsOAuthHelper:
                 "client_secret": _get_config("GOOGLE_ADS_CLIENT_SECRET"),
                 "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                 "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": [_get_config("GOOGLE_ADS_REDIRECT_URI") or "https://fieldsprout.io/ads-grader/connect/callback"],
+                "redirect_uris": [_get_config("GOOGLE_ADS_REDIRECT_URI") or "https://getforgeiq.com/ads-grader/connect/callback"],
             }
         }
 
@@ -70,7 +70,7 @@ class GoogleAdsOAuthHelper:
         )
 
         # Set redirect URI
-        flow.redirect_uri = _get_config("GOOGLE_ADS_REDIRECT_URI") or "https://fieldsprout.io/ads-grader/connect/callback"
+        flow.redirect_uri = _get_config("GOOGLE_ADS_REDIRECT_URI") or "https://getforgeiq.com/ads-grader/connect/callback"
 
         # Generate authorization URL
         authorization_url, state = flow.authorization_url(
@@ -110,7 +110,7 @@ class GoogleAdsOAuthHelper:
                     "client_secret": _get_config("GOOGLE_ADS_CLIENT_SECRET"),
                     "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                     "token_uri": "https://oauth2.googleapis.com/token",
-                    "redirect_uris": [_get_config("GOOGLE_ADS_REDIRECT_URI") or "https://fieldsprout.io/ads-grader/connect/callback"],
+                    "redirect_uris": [_get_config("GOOGLE_ADS_REDIRECT_URI") or "https://getforgeiq.com/ads-grader/connect/callback"],
                 }
             }
 
@@ -122,7 +122,7 @@ class GoogleAdsOAuthHelper:
             )
 
             # Set redirect URI (must match the one used in authorization)
-            flow.redirect_uri = _get_config("GOOGLE_ADS_REDIRECT_URI") or "https://fieldsprout.io/ads-grader/connect/callback"
+            flow.redirect_uri = _get_config("GOOGLE_ADS_REDIRECT_URI") or "https://getforgeiq.com/ads-grader/connect/callback"
 
             # Exchange authorization code for tokens
             flow.fetch_token(authorization_response=authorization_response)

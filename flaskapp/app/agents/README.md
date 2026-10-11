@@ -439,4 +439,4 @@ result = campaign_manager.run_cycle(context, google_ads_client)
 
 ## License
 
-Proprietary - FieldSprout AI Agents
+Proprietary - ForgeIQ AI Agents

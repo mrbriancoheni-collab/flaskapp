@@ -15,9 +15,9 @@ def check_config():
         ("MAIL_PORT", "587", True),
         ("MAIL_USE_TLS", "true", True),
         ("MAIL_USE_SSL", "false", True),
-        ("MAIL_USERNAME_DAVID", "postmaster@mg.fieldsprout.io", False),
+        ("MAIL_USERNAME_DAVID", "postmaster@mg.getforgeiq.com", False),
         ("MAIL_PASSWORD_DAVID", None, False),
-        ("MAIL_DEFAULT_SENDER", "noreply@mg.fieldsprout.io", False),
+        ("MAIL_DEFAULT_SENDER", "noreply@mg.getforgeiq.com", False),
     ]
 
     all_good = True
@@ -92,7 +92,7 @@ def check_config():
     else:
         print("⚠️  Issues found - see above")
         print("\n📋 To fix:")
-        print("   1. Get SMTP password: https://app.mailgun.com/app/sending/domains/mg.fieldsprout.io")
+        print("   1. Get SMTP password: https://app.mailgun.com/app/sending/domains/mg.getforgeiq.com")
         print("   2. Set variables: source setup_mailgun_env.sh (after editing)")
         print("   3. Or set manually: export MAIL_PASSWORD_DAVID='your-smtp-password'")
 

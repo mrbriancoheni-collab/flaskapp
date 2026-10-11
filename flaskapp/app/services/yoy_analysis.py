@@ -214,7 +214,7 @@ def get_baseline_vs_current(
     source_id: Optional[str] = None
 ) -> Dict[str, Any]:
     """
-    Compare current performance to a baseline period (e.g., before using FieldSprout).
+    Compare current performance to a baseline period (e.g., before using ForgeIQ).
 
     Args:
         account_id: Account ID
@@ -241,13 +241,13 @@ def get_baseline_vs_current(
             'start_date': baseline_start.isoformat(),
             'end_date': baseline_end.isoformat(),
             'metrics': baseline_metrics,
-            'label': 'Before FieldSprout'
+            'label': 'Before ForgeIQ'
         },
         'current_period': {
             'start_date': current_start.isoformat(),
             'end_date': current_end.isoformat(),
             'metrics': current_metrics,
-            'label': 'After FieldSprout'
+            'label': 'After ForgeIQ'
         },
         'improvement': _calculate_changes(current_metrics, baseline_metrics),
         'improvement_percent': _calculate_percent_changes(current_metrics, baseline_metrics)

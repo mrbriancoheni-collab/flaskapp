@@ -997,7 +997,7 @@ def _ads_custom_prompt_key(aid: int) -> str:
 
 def _get_ads_custom_prompt(aid: int) -> str:
     return session.get(_ads_custom_prompt_key(aid)) or (
-        "You are FieldSprout AI. Analyze the Google Ads performance data provided as JSON. "
+        "You are ForgeIQ AI. Analyze the Google Ads performance data provided as JSON. "
         "Write a crisp executive SUMMARY (3–5 sentences), then INSIGHTS as bullet points "
         "(focus on spend, CPA, ROAS, query intent, device/daypart), and an OPTIMIZATION CHECKLIST "
         "(prioritized, action verbs, no more than 8 items). Be concrete and data-driven."
@@ -3120,7 +3120,7 @@ def _compute_realistic_savings(account_id, monthly_spend, avg_cpc, total_clicks,
 
 def _calculate_historical_improvement(account_id, connected, monthly_spend=0, avg_cpc=0, total_clicks=0):
     """
-    Calculate improvement metrics comparing performance before FieldSprout vs now.
+    Calculate improvement metrics comparing performance before ForgeIQ vs now.
 
     Returns:
         dict with improvement metrics or None if insufficient data
@@ -3135,24 +3135,24 @@ def _calculate_historical_improvement(account_id, connected, monthly_spend=0, av
         if not account:
             return _get_demo_improvement_data()
 
-        # Determine "before FieldSprout" baseline period
+        # Determine "before ForgeIQ" baseline period
         # Option 1: Use account creation date (when they signed up)
-        # Option 2: Use first AI action date (when FieldSprout started helping)
+        # Option 2: Use first AI action date (when ForgeIQ started helping)
         first_action = AIAction.query.filter_by(
             account_id=account_id,
             status='executed'
         ).order_by(AIAction.executed_at.asc()).first()
 
         if first_action and first_action.executed_at:
-            fieldsprout_start_date = first_action.executed_at
+            forgeiq_start_date = first_action.executed_at
         elif account.created_at:
-            fieldsprout_start_date = account.created_at
+            forgeiq_start_date = account.created_at
         else:
             # No data available, use demo values
             return _get_demo_improvement_data()
 
-        # Calculate time since FieldSprout started helping
-        days_active = (datetime.utcnow() - fieldsprout_start_date).days
+        # Calculate time since ForgeIQ started helping
+        days_active = (datetime.utcnow() - forgeiq_start_date).days
 
         if days_active < 7:
             # Too early to show improvement - use demo data
@@ -3205,7 +3205,7 @@ def _calculate_historical_improvement(account_id, connected, monthly_spend=0, av
 
         # Determine comparison period label
         if days_active >= 365:
-            comparison_period = "12-month average before FieldSprout"
+            comparison_period = "12-month average before ForgeIQ"
             estimated_baseline_spend = (current_month_savings / 0.3) if current_month_savings > 0 else 5000
         else:
             comparison_period = "Last month"
@@ -10577,7 +10577,7 @@ def ga_ui():
     ga_initial = None if connected else ga_sample
 
     ga_ai = {
-        "source": "FieldSprout AI" if ai_ok else "sample",
+        "source": "ForgeIQ AI" if ai_ok else "sample",
         "summary": "Click Generate Insights to analyze the selected timeframe."
         if ai_ok else "Traffic is stable (+6% WoW).",
         "insights": [] if ai_ok else [
@@ -11147,7 +11147,7 @@ def ads_email_performance():
             to=user_email,
             subject=f"Google Ads Monthly Performance Report - {analysis.get('grade', 'N/A')} Grade",
             html_body=email_html,
-            from_name="FieldSprout Google Ads AI"
+            from_name="ForgeIQ Google Ads AI"
         )
 
         if success:
@@ -11580,7 +11580,7 @@ def oauth_callback():
 
     # ── Public grader flow — no login required ────────────────────────────────
     # Anonymous users can connect Google Ads to run the free Health Grader
-    # without creating a FieldSprout account. Tokens are stored in session only.
+    # without creating a ForgeIQ account. Tokens are stored in session only.
     if state_raw == "ads_grader_public":
         if err:
             flash(f"Google authorization failed: {err}", "error")
@@ -11622,7 +11622,7 @@ def oauth_callback():
         return redirect(url_for("ads_grader_bp.public_analyze"))
     # ── End public grader flow ────────────────────────────────────────────────
 
-    # All other flows require a logged-in FieldSprout account
+    # All other flows require a logged-in ForgeIQ account
     if not current_user.is_authenticated:
         return redirect(url_for("auth_bp.login", next=request.url))
 

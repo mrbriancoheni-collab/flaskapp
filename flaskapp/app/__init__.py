@@ -6,7 +6,7 @@ import logging
 import os as _os
 
 from dotenv import load_dotenv
-load_dotenv('/home/fieldsprout/.env', override=False)
+load_dotenv('/home/forgeiq/.env', override=False)
 
 from datetime import datetime, timedelta
 from logging.handlers import RotatingFileHandler
@@ -62,7 +62,7 @@ def create_app():
     # ---- Base config --------------------------------------------------------
     app.config.update(
         SECRET_KEY=_os.getenv("SECRET_KEY", "dev-secret-key"),
-        APP_NAME=_os.getenv("APP_NAME", "FieldSprout"),
+        APP_NAME=_os.getenv("APP_NAME", "ForgeIQ"),
 
         # Email / token salt (for email verify & password reset)
         SECURITY_PASSWORD_SALT=_os.getenv("SECURITY_PASSWORD_SALT", "change-me"),
@@ -214,7 +214,7 @@ def create_app():
         app.config["GOOGLE_ADS_REDIRECT_URI"] = redirect_uri.strip()
     else:
         # Default redirect URI for ads-grader
-        app.config["GOOGLE_ADS_REDIRECT_URI"] = "https://fieldsprout.io/ads-grader/connect/callback"
+        app.config["GOOGLE_ADS_REDIRECT_URI"] = "https://getforgeiq.com/ads-grader/connect/callback"
 
     def _protect(key):
         if not app.config.get(key):
@@ -563,7 +563,7 @@ def create_app():
                 return render_template("home.html")
             except Exception as _e:
                 app.logger.exception("home.html render failed: %s", _e)
-                return "FieldSprout — coming soon", 200
+                return "ForgeIQ — coming soon", 200
 
     try:
         from app.account import account_bp, stripe_webhook
@@ -1579,39 +1579,39 @@ def create_app():
     </div>
 </body>
 </html>
-        """, app_name=app.config.get('APP_NAME', 'FieldSprout')), 400
+        """, app_name=app.config.get('APP_NAME', 'ForgeIQ')), 400
 
     _SHTML_500 = """<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>500 — Something went wrong · FieldSprout</title>
+<title>500 — Something went wrong · ForgeIQ</title>
 <style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}.card{background:#fff;border-radius:16px;box-shadow:0 25px 50px -12px rgba(0,0,0,.35);padding:3rem 2.5rem;max-width:540px;width:100%;text-align:center}.wordmark{font-size:1.5rem;font-weight:800;background:linear-gradient(135deg,#4f46e5,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:2rem}.code{font-size:5rem;font-weight:800;line-height:1;color:#ef4444;margin-bottom:.5rem}h1{font-size:1.5rem;font-weight:700;color:#111827;margin-bottom:.75rem}.sub{color:#6b7280;font-size:1rem;line-height:1.6;margin-bottom:2rem}.actions{display:flex;flex-wrap:wrap;gap:.75rem;justify-content:center;margin-bottom:2rem}.btn{display:inline-flex;align-items:center;padding:.75rem 1.5rem;border-radius:8px;font-weight:600;font-size:.95rem;text-decoration:none}.btn-primary{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff}.btn-ghost{background:#fff;color:#4f46e5;border:2px solid #e0e7ff}.footer-note{font-size:.8rem;color:#9ca3af;padding-top:1.5rem;border-top:1px solid #f3f4f6}.footer-note a{color:#4f46e5;text-decoration:none;font-weight:600}</style>
-</head><body><div class="card"><div class="wordmark">FieldSprout</div><div class="code">500</div>
+</head><body><div class="card"><div class="wordmark">ForgeIQ</div><div class="code">500</div>
 <h1>Something went wrong on our end</h1>
 <p class="sub">We hit an unexpected error. Our team has been notified automatically.<br>Your data is safe — this is a temporary hiccup.</p>
 <div class="actions"><a href="/account/dashboard" class="btn btn-primary">Go to Dashboard</a><a href="javascript:history.back()" class="btn btn-ghost">Go Back</a><a href="javascript:location.reload()" class="btn btn-ghost">Try Again</a></div>
-<div class="footer-note">If this keeps happening, <a href="mailto:support@fieldsprout.io">contact support</a>.</div>
+<div class="footer-note">If this keeps happening, <a href="mailto:support@getforgeiq.com">contact support</a>.</div>
 </div></body></html>"""
 
     _SHTML_400 = """<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>400 — Request Error · FieldSprout</title>
+<title>400 — Request Error · ForgeIQ</title>
 <style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#d97706 0%,#b45309 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}.card{background:#fff;border-radius:16px;box-shadow:0 25px 50px -12px rgba(0,0,0,.35);padding:3rem 2.5rem;max-width:540px;width:100%;text-align:center}.wordmark{font-size:1.5rem;font-weight:800;background:linear-gradient(135deg,#d97706,#b45309);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:2rem}.code{font-size:5rem;font-weight:800;line-height:1;color:#d97706;margin-bottom:.5rem}h1{font-size:1.5rem;font-weight:700;color:#111827;margin-bottom:.75rem}.sub{color:#6b7280;font-size:1rem;line-height:1.6;margin-bottom:2rem}.actions{display:flex;flex-wrap:wrap;gap:.75rem;justify-content:center;margin-bottom:2rem}.btn{display:inline-flex;align-items:center;padding:.75rem 1.5rem;border-radius:8px;font-weight:600;font-size:.95rem;text-decoration:none}.btn-primary{background:linear-gradient(135deg,#d97706,#b45309);color:#fff}.btn-ghost{background:#fff;color:#d97706;border:2px solid #fde68a}.footer-note{font-size:.8rem;color:#9ca3af;padding-top:1.5rem;border-top:1px solid #f3f4f6}.footer-note a{color:#d97706;text-decoration:none;font-weight:600}</style>
-</head><body><div class="card"><div class="wordmark">FieldSprout</div><div class="code">400</div>
+</head><body><div class="card"><div class="wordmark">ForgeIQ</div><div class="code">400</div>
 <h1>Request timed out or was invalid</h1>
 <p class="sub">The request couldn't be completed — it may have timed out or contained invalid data. Try again or head back to the dashboard.</p>
 <div class="actions"><a href="/account/dashboard" class="btn btn-primary">Go to Dashboard</a><a href="javascript:history.back()" class="btn btn-ghost">Go Back</a></div>
-<div class="footer-note">If this keeps happening, <a href="mailto:support@fieldsprout.io">contact support</a>.</div>
+<div class="footer-note">If this keeps happening, <a href="mailto:support@getforgeiq.com">contact support</a>.</div>
 </div></body></html>"""
 
     _SHTML_404 = """<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>404 — Page Not Found · FieldSprout</title>
+<title>404 — Page Not Found · ForgeIQ</title>
 <style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}.card{background:#fff;border-radius:16px;box-shadow:0 25px 50px -12px rgba(0,0,0,.35);padding:3rem 2.5rem;max-width:540px;width:100%;text-align:center}.wordmark{font-size:1.5rem;font-weight:800;background:linear-gradient(135deg,#4f46e5,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:2rem}.code{font-size:5rem;font-weight:800;line-height:1;color:#6b7280;margin-bottom:.5rem}h1{font-size:1.5rem;font-weight:700;color:#111827;margin-bottom:.75rem}.sub{color:#6b7280;font-size:1rem;line-height:1.6;margin-bottom:2rem}.actions{display:flex;flex-wrap:wrap;gap:.75rem;justify-content:center;margin-bottom:2rem}.btn{display:inline-flex;align-items:center;padding:.75rem 1.5rem;border-radius:8px;font-weight:600;font-size:.95rem;text-decoration:none}.btn-primary{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff}.btn-ghost{background:#fff;color:#4f46e5;border:2px solid #e0e7ff}.footer-note{font-size:.8rem;color:#9ca3af;padding-top:1.5rem;border-top:1px solid #f3f4f6}.footer-note a{color:#4f46e5;text-decoration:none;font-weight:600}</style>
-</head><body><div class="card"><div class="wordmark">FieldSprout</div><div class="code">404</div>
+</head><body><div class="card"><div class="wordmark">ForgeIQ</div><div class="code">404</div>
 <h1>Page not found</h1>
 <p class="sub">The page you're looking for doesn't exist or may have been moved. Head back to the dashboard to pick up where you left off.</p>
 <div class="actions"><a href="/account/dashboard" class="btn btn-primary">Go to Dashboard</a><a href="javascript:history.back()" class="btn btn-ghost">Go Back</a></div>
-<div class="footer-note">If you followed a link that should work, <a href="mailto:support@fieldsprout.io">let us know</a>.</div>
+<div class="footer-note">If you followed a link that should work, <a href="mailto:support@getforgeiq.com">let us know</a>.</div>
 </div></body></html>"""
 
     @app.errorhandler(404)

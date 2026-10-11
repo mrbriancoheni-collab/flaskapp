@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Set up FieldSprout lead generation cron jobs.
+Set up ForgeIQ lead generation cron jobs.
 
 Run this on the production server as root:
-    cd /home/fieldsprout/flaskapp && python3 scripts/setup_cron_jobs.py
+    cd /home/forgeiq/flaskapp && python3 scripts/setup_cron_jobs.py
 
 What it installs:
     2:00 AM — scrape new leads
@@ -20,7 +20,7 @@ SCRIPT_DIR  = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 
 # Prefer the cPanel virtualenv; fall back to whatever Python is running this
-VENV_PYTHON = "/home/fieldsprout/virtualenv/flaskapp/3.9/bin/python3"
+VENV_PYTHON = "/home/forgeiq/virtualenv/flaskapp/3.9/bin/python3"
 PYTHON = VENV_PYTHON if os.path.exists(VENV_PYTHON) else sys.executable
 
 LOG_DIR = os.path.join(PROJECT_ROOT, "logs")
@@ -48,7 +48,7 @@ JOBS = [
     },
 ]
 
-MARKER = "# ── FieldSprout Lead Generation ──"
+MARKER = "# ── ForgeIQ Lead Generation ──"
 
 
 def get_crontab() -> str:
@@ -87,7 +87,7 @@ def main():
         print("Update VENV_PYTHON in this script to the correct path.")
         sys.exit(1)
 
-    # Strip any existing FieldSprout block, then append fresh one
+    # Strip any existing ForgeIQ block, then append fresh one
     current = get_crontab()
     lines = current.splitlines()
 

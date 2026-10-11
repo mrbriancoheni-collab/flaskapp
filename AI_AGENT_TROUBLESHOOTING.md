@@ -3,8 +3,8 @@
 ## The Problem
 
 You see **$0 saved**, **0 actions**, and **no recent changes** on:
-- https://fieldsprout.io/account/google/ads/ai-change-log
-- https://fieldsprout.io/account/google/ads/decision-screen
+- https://getforgeiq.com/account/google/ads/ai-change-log
+- https://getforgeiq.com/account/google/ads/decision-screen
 
 ## Root Cause
 
@@ -40,7 +40,7 @@ Even if Flask ran, it needs environment variables:
 On your production server:
 
 ```bash
-cd /home/fieldsprout  # Or wherever your flaskapp is
+cd /home/forgeiq  # Or wherever your flaskapp is
 bash fix_agent_cron.sh
 ```
 
@@ -56,13 +56,13 @@ The script will show you the correct cron jobs. They should look like:
 
 ```bash
 # Tactical agents (hourly) - Fast optimizations
-0 * * * * cd /home/fieldsprout && FLASK_APP=app /home/fieldsprout/virtualenv/bin/python -m flask run-agents --layer tactical >> /home/fieldsprout/logs/agents-tactical.log 2>&1
+0 * * * * cd /home/forgeiq && FLASK_APP=app /home/forgeiq/virtualenv/bin/python -m flask run-agents --layer tactical >> /home/forgeiq/logs/agents-tactical.log 2>&1
 
 # Operational agents (every 4 hours) - Budget/bid adjustments
-0 */4 * * * cd /home/fieldsprout && FLASK_APP=app /home/fieldsprout/virtualenv/bin/python -m flask run-agents --layer operational >> /home/fieldsprout/logs/agents-operational.log 2>&1
+0 */4 * * * cd /home/forgeiq && FLASK_APP=app /home/forgeiq/virtualenv/bin/python -m flask run-agents --layer operational >> /home/forgeiq/logs/agents-operational.log 2>&1
 
 # Strategic agents (daily at 6 AM) - Campaign structure changes
-0 6 * * * cd /home/fieldsprout && FLASK_APP=app /home/fieldsprout/virtualenv/bin/python -m flask run-agents --layer strategic >> /home/fieldsprout/logs/agents-strategic.log 2>&1
+0 6 * * * cd /home/forgeiq && FLASK_APP=app /home/forgeiq/virtualenv/bin/python -m flask run-agents --layer strategic >> /home/forgeiq/logs/agents-strategic.log 2>&1
 ```
 
 **Key differences from broken version:**
@@ -76,7 +76,7 @@ The script will show you the correct cron jobs. They should look like:
 Before waiting for cron to run, test it yourself:
 
 ```bash
-cd /home/fieldsprout
+cd /home/forgeiq
 FLASK_APP=app virtualenv/bin/python -m flask run-agents --layer tactical
 ```
 
@@ -106,7 +106,7 @@ After running (either manually or waiting for cron):
 
 1. **Check logs:**
    ```bash
-   tail -f /home/fieldsprout/logs/agents-tactical.log
+   tail -f /home/forgeiq/logs/agents-tactical.log
    ```
 
 2. **Check database:**
@@ -123,8 +123,8 @@ After running (either manually or waiting for cron):
    ```
 
 3. **Check web pages:**
-   - https://fieldsprout.io/account/google/ads/ai-change-log
-   - https://fieldsprout.io/account/google/ads/decision-screen
+   - https://getforgeiq.com/account/google/ads/ai-change-log
+   - https://getforgeiq.com/account/google/ads/decision-screen
 
    You should now see real data!
 
@@ -193,7 +193,7 @@ FLASK_ENV=production
 **Fix:**
 1. Check your `.env` has Google Ads credentials
 2. Verify tokens haven't expired
-3. Re-authenticate at https://fieldsprout.io/account/google
+3. Re-authenticate at https://getforgeiq.com/account/google
 
 ### Agents run but no AI actions created
 **Possible reasons:**
@@ -204,7 +204,7 @@ FLASK_ENV=production
 
 **Solution:** Check logs for what the agent analyzed:
 ```bash
-grep -i "analyzed\|found\|created" /home/fieldsprout/logs/agents-tactical.log
+grep -i "analyzed\|found\|created" /home/forgeiq/logs/agents-tactical.log
 ```
 
 ---
@@ -216,14 +216,14 @@ Run through this to identify the problem:
 ```bash
 # 1. Can Python/Flask be found?
 which python3
-/home/fieldsprout/virtualenv/bin/python --version
+/home/forgeiq/virtualenv/bin/python --version
 
 # 2. Can Flask app load?
-cd /home/fieldsprout
-FLASK_APP=app /home/fieldsprout/virtualenv/bin/python -m flask --help
+cd /home/forgeiq
+FLASK_APP=app /home/forgeiq/virtualenv/bin/python -m flask --help
 
 # 3. Is database accessible?
-FLASK_APP=app /home/fieldsprout/virtualenv/bin/python -m flask shell
+FLASK_APP=app /home/forgeiq/virtualenv/bin/python -m flask shell
 >>> from app import db
 >>> db.session.execute('SELECT 1').scalar()
 # Should return: 1
@@ -232,14 +232,14 @@ FLASK_APP=app /home/fieldsprout/virtualenv/bin/python -m flask shell
 SELECT * FROM google_oauth_tokens WHERE product = 'ads' LIMIT 1;
 
 # 5. Can agents run?
-FLASK_APP=app /home/fieldsprout/virtualenv/bin/python -m flask run-agents --layer tactical
+FLASK_APP=app /home/forgeiq/virtualenv/bin/python -m flask run-agents --layer tactical
 
 # 6. Are AI actions being created?
 SELECT COUNT(*) FROM ai_actions WHERE status = 'executed';
 
 # 7. Are cron jobs running?
 grep CRON /var/log/syslog | grep "flask"
-# Or check: tail -f /home/fieldsprout/logs/agents-*.log
+# Or check: tail -f /home/forgeiq/logs/agents-*.log
 ```
 
 ---
@@ -250,7 +250,7 @@ Don't want to wait an hour? Run agents immediately:
 
 ```bash
 # Run all agents now
-cd /home/fieldsprout
+cd /home/forgeiq
 FLASK_APP=app virtualenv/bin/python -m flask run-agents --all
 
 # Or run specific layer
@@ -314,7 +314,7 @@ Once cron jobs are fixed and running:
 If you've fixed the cron jobs but still not seeing data:
 
 1. Share the output of: `bash fix_agent_cron.sh`
-2. Share last 50 lines of: `tail -50 /home/fieldsprout/logs/agents-tactical.log`
+2. Share last 50 lines of: `tail -50 /home/forgeiq/logs/agents-tactical.log`
 3. Share SQL result: `SELECT COUNT(*) FROM ai_actions;`
 4. Share specific keywords you think are wasteful
 

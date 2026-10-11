@@ -5,8 +5,8 @@
 # SETUP STEPS:
 #   1. Make sure deploy.sh has been run at least once so flaskapp-repo/ exists
 #   2. Test manually first:
-#      cd /home/fieldsprout/flaskapp-repo
-#      /home/fieldsprout/virtualenv/flaskapp/3.9/bin/python3 run_agents.py --layer tactical
+#      cd /home/forgeiq/flaskapp-repo
+#      /home/forgeiq/virtualenv/flaskapp/3.9/bin/python3 run_agents.py --layer tactical
 #   3. Add to crontab: crontab -e, then paste the lines below
 #
 # Schedule:
@@ -15,9 +15,9 @@
 #   - Strategic agent: Daily at 6am (budget reallocation, scaling decisions)
 # ============================================================================
 
-PYTHON=/home/fieldsprout/virtualenv/flaskapp/3.9/bin/python3
-AGENTS=/home/fieldsprout/run_agents.py
-LOGS=/home/fieldsprout/logs/agents
+PYTHON=/home/forgeiq/virtualenv/flaskapp/3.9/bin/python3
+AGENTS=/home/forgeiq/run_agents.py
+LOGS=/home/forgeiq/logs/agents
 
 # ============================================================================
 # TACTICAL AGENTS - Run Every Hour

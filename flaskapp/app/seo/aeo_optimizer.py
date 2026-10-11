@@ -15,7 +15,7 @@ from urllib.parse import urlparse
 import requests
 
 TIMEOUT = 10
-UA = "FieldSprout-AEO/1.0"
+UA = "ForgeIQ-AEO/1.0"
 
 
 def _fetch(url: str) -> Optional[str]:

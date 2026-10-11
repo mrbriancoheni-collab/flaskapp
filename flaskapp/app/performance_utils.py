@@ -1,6 +1,6 @@
 # app/performance_utils.py
 """
-Performance optimization utilities for FieldSprout.
+Performance optimization utilities for ForgeIQ.
 
 Provides caching, query optimization, and lazy loading helpers.
 """

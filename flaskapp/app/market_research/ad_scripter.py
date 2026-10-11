@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 HOOK_TYPES: dict[str, dict] = {
     "price_anchor": {
         "pattern": "[Competitor/industry price] vs [your price/value]",
-        "example": "Agencies charge $3,000/mo to manage your ads. FieldSprout charges $99.",
+        "example": "Agencies charge $3,000/mo to manage your ads. ForgeIQ charges $99.",
         "hit_rate": 10.89,
     },
     "urgency": {
@@ -131,7 +131,7 @@ def _build_hook_headline(hook_type: str, trade: str, city: str, pain_phrase: str
     pain = pain_phrase or (angles["pain_points"][0] if angles["pain_points"] else "slow service")
 
     templates = {
-        "price_anchor": f"Agencies Charge $3,000/mo. FieldSprout: $99.",
+        "price_anchor": f"Agencies Charge $3,000/mo. ForgeIQ: $99.",
         "urgency": f"Peak {trade.upper()} Season Is Coming. Is Your Ad Budget Ready?",
         "offer_only": f"Free Google Ads Grade for {trade.upper()} Companies in {city}",
         "confession": f"Most {trade.upper()} Businesses Waste 40% of Their Ad Budget",
@@ -156,13 +156,13 @@ def _build_primary_text(
     templates = {
         "price_anchor": (
             f"Marketing agencies charge $2,000–$5,000/month to manage your {trade} Google Ads. "
-            f"FieldSprout's AI does the same job — optimizing every day — for $99/month.\n\n"
+            f"ForgeIQ's AI does the same job — optimizing every day — for $99/month.\n\n"
             f"No contracts. No account managers who check in monthly. Just AI that actually works."
         ),
         "urgency": (
             f"Peak {trade} season is 6 weeks out. If your Google Ads aren't dialed in now, "
             f"you'll spend the whole season paying too much per lead.\n\n"
-            f"FieldSprout's AI optimizes your campaigns daily so you're ready when demand spikes."
+            f"ForgeIQ's AI optimizes your campaigns daily so you're ready when demand spikes."
         ),
         "offer_only": (
             f"Free Google Ads Grade for {trade} companies in {city}.\n\n"
@@ -173,16 +173,16 @@ def _build_primary_text(
             f"We analyzed 500+ {trade} Google Ads accounts. The average business wastes 38% of "
             f"their monthly budget on clicks that will never become a booked job.\n\n"
             f"The culprits: wrong keywords, off-hours ads, and low Quality Scores that inflate every click. "
-            f"FieldSprout fixes all three — automatically."
+            f"ForgeIQ fixes all three — automatically."
         ),
         "curiosity": (
             f"Cost per lead in {city} for {trade} companies went up 22% last year. "
             f"But some businesses are paying less than ever.\n\n"
-            f"The difference? Daily ad optimization. FieldSprout's AI adjusts bids, kills wasted spend, "
+            f"The difference? Daily ad optimization. ForgeIQ's AI adjusts bids, kills wasted spend, "
             f"and improves Quality Scores every 24 hours."
         ),
         "bold_claim": (
-            f"FieldSprout-managed {trade} accounts average 40% lower cost per lead after 30 days.\n\n"
+            f"ForgeIQ-managed {trade} accounts average 40% lower cost per lead after 30 days.\n\n"
             f"Our AI optimizes your Google Ads every day — not once a month like an agency. "
             f"Connect in 60 seconds and see your first grade free."
         ),

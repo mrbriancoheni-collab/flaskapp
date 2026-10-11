@@ -65,7 +65,7 @@ class Config:
     # Default redirect URI for Ads Grader (separate from main Google OAuth)
     # Main Google OAuth uses GOOGLE_REDIRECT_URI for /account/google/callback
     # Ads Grader uses GOOGLE_ADS_REDIRECT_URI for /ads-grader/connect/callback
-    GOOGLE_ADS_REDIRECT_URI = os.getenv("GOOGLE_ADS_REDIRECT_URI") or "https://fieldsprout.io/ads-grader/connect/callback"
+    GOOGLE_ADS_REDIRECT_URI = os.getenv("GOOGLE_ADS_REDIRECT_URI") or "https://getforgeiq.com/ads-grader/connect/callback"
     APP_FERNET_KEY = os.getenv("APP_FERNET_KEY","")  # set in prod
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY","")
     
@@ -90,10 +90,10 @@ class Config:
     # Email provider configuration
     EMAIL_PROVIDER = os.environ.get("EMAIL_PROVIDER", "brevo")  # Use Brevo as default provider
     BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
-    BREVO_FROM_EMAIL = os.environ.get("BREVO_FROM_EMAIL", "noreply@fieldsprout.io")
-    BREVO_FROM_NAME = os.environ.get("BREVO_FROM_NAME", "FieldSprout")
+    BREVO_FROM_EMAIL = os.environ.get("BREVO_FROM_EMAIL", "noreply@getforgeiq.com")
+    BREVO_FROM_NAME = os.environ.get("BREVO_FROM_NAME", "ForgeIQ")
     # Physical mailing address shown in CAN-SPAM footer — required by law and Brevo
-    BREVO_COMPANY_ADDRESS = os.environ.get("BREVO_COMPANY_ADDRESS", "FieldSprout Inc., 1234 Main St, Suite 100, Austin, TX 78701")
+    BREVO_COMPANY_ADDRESS = os.environ.get("BREVO_COMPANY_ADDRESS", "ForgeIQ Inc., 1234 Main St, Suite 100, Austin, TX 78701")
 
     # Lead automation enabled by default
     LEAD_AUTOMATION_ENABLED = os.environ.get("LEAD_AUTOMATION_ENABLED", "True").lower() == "true"

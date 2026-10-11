@@ -1,6 +1,6 @@
 {# templates/public/sitemap.html #}
 {% extends "base_public.html" %}
-{% block title %}Sitemap — FieldSprout{% endblock %}
+{% block title %}Sitemap — ForgeIQ{% endblock %}
 
 {% block content %}
 <div class="container-lg py-16 md:py-24">
@@ -8,7 +8,7 @@
 
     <div class="mb-12">
       <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-3">Sitemap</h1>
-      <p class="text-lg text-gray-500">Every page on FieldSprout, organized for easy navigation.</p>
+      <p class="text-lg text-gray-500">Every page on ForgeIQ, organized for easy navigation.</p>
     </div>
 
     <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -33,7 +33,7 @@
           <li><a href="{{ url_for('public_bp.podcast') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">Podcast</a></li>
           {% endif %}
           {% if has_endpoint('public_bp.vs_agency') %}
-          <li><a href="{{ url_for('public_bp.vs_agency') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">FieldSprout vs. Agency</a></li>
+          <li><a href="{{ url_for('public_bp.vs_agency') }}" class="text-gray-700 hover:text-purple-600 transition text-sm">ForgeIQ vs. Agency</a></li>
           {% endif %}
         </ul>
       </div>

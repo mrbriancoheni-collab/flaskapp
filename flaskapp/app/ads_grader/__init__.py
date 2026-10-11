@@ -430,7 +430,7 @@ def public_connect():
 def public_analyze():
     """
     Run a real Google Ads analysis using the token stored in session from
-    the anonymous OAuth flow.  No FieldSprout account required.
+    the anonymous OAuth flow.  No ForgeIQ account required.
     Reports are saved with account_id=None and are accessible via session key.
     """
     from urllib.parse import urlencode as _ue

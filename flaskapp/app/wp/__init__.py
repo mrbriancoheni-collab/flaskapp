@@ -3712,7 +3712,7 @@ def seo_foundation():
             from app.wp.wp_client import WPClient
             c = WPClient(site.base_url, site.username, site.app_password)
             r = _req.get(f"{base}/robots.txt", timeout=8,
-                         headers={"User-Agent": "FieldSprout/1.0"})
+                         headers={"User-Agent": "ForgeIQ/1.0"})
             robots = r.text if r.status_code == 200 else ""
             blocks_all = bool(re.search(r"Disallow:\s*/\s*$", robots, re.MULTILINE))
             blocks_wp  = bool(re.search(r"Disallow:\s*/wp-admin", robots, re.MULTILINE))
@@ -3731,7 +3731,7 @@ def seo_foundation():
         for path in ("/sitemap.xml", "/sitemap_index.xml", "/wp-sitemap.xml"):
             try:
                 r = _req.get(f"{base}{path}", timeout=8,
-                             headers={"User-Agent": "FieldSprout/1.0"})
+                             headers={"User-Agent": "ForgeIQ/1.0"})
                 if r.status_code == 200 and "<urlset" in r.text or "<sitemapindex" in r.text:
                     sitemap_found = True
                     break
@@ -3768,7 +3768,7 @@ def seo_foundation():
         try:
             if c:
                 # Check for Yoast meta tags on homepage
-                r3 = _req.get(base, timeout=8, headers={"User-Agent": "FieldSprout/1.0"})
+                r3 = _req.get(base, timeout=8, headers={"User-Agent": "ForgeIQ/1.0"})
                 if "yoast" in r3.text.lower() or "wpseo" in r3.text.lower():
                     seo_plugin = "Yoast SEO"
                 elif "rank-math" in r3.text.lower() or "rankmath" in r3.text.lower():
@@ -3788,7 +3788,7 @@ def seo_foundation():
 
         # 6. Canonical tags on homepage
         try:
-            r4 = _req.get(base, timeout=8, headers={"User-Agent": "FieldSprout/1.0"})
+            r4 = _req.get(base, timeout=8, headers={"User-Agent": "ForgeIQ/1.0"})
             has_canonical = bool(re.search(r'<link[^>]+rel=["\']canonical["\']', r4.text, re.IGNORECASE))
             checks.append(_chk(
                 "Canonical Tags",

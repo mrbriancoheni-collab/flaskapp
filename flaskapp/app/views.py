@@ -338,7 +338,7 @@ def llms_txt():
 - [Get More Reviews](https://getforgeiq.com/solutions/get-more-reviews): Systematic review generation for trade businesses
 - [Spend When Open](https://getforgeiq.com/solutions/spend-when-open): Smart ad scheduling to match business hours
 - [See What Works](https://getforgeiq.com/solutions/see-what-works): Unified analytics and attribution reporting
-- [Lead Generation](https://getforgeiq.com/solutions/lead-generation): End-to-end lead generation for home service companies
+- [Lead Generation](https://getforgeiq.com/solutions/lead-generation): End-to-end lead generation for trade contractors
 - [Multi-Location](https://getforgeiq.com/solutions/multi-location): Marketing management across multiple business locations
 
 ## Industries

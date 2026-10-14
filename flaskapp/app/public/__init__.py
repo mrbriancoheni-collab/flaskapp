@@ -70,6 +70,11 @@ def free_tools():
     return render_template("free_tools.html")
 
 
+@public_bp.route("/free-tools/meta-creative-audit", endpoint="meta_creative_audit")
+def meta_creative_audit():
+    return render_template("meta_creative_audit.html")
+
+
 @public_bp.route("/roadmap", endpoint="roadmap")
 def roadmap():
     return render_template("roadmap.html")

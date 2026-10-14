@@ -21,7 +21,7 @@
   "@type": "ItemList",
   "name": "Free Marketing Tools for Trade Businesses",
   "description": "Free Google Ads grader, GA4 audit, and marketing tools built for trade contractors",
-  "numberOfItems": 2,
+  "numberOfItems": 3,
   "itemListElement": [
     {
       "@type": "ListItem",
@@ -46,6 +46,19 @@
         "operatingSystem": "Web",
         "description": "Free GA4 audit that checks your tracking setup, key events, Google Ads linking, data retention settings, and more — with a scored health report and prioritized fixes.",
         "url": "https://getrevforge.io/ga4-audit",
+        "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "item": {
+        "@type": "SoftwareApplication",
+        "name": "Meta Creative Intelligence Audit",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web",
+        "description": "Upload your Meta Ads daily CSV export and instantly see creative churn by cohort, production vs hit rate, and spend by ad age. Diagnose creative fatigue before performance drops. No login required.",
+        "url": "https://getrevforge.io/free-tools/meta-creative-audit",
         "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}
       }
     }
@@ -250,6 +263,46 @@
             See a sample report
           </a>
           {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Meta Creative Audit -->
+    <div class="mb-14 rounded-2xl border-2 border-orange-200 hover:border-orange-300 p-8 shadow-sm hover:shadow-lg transition-all bg-orange-50/30">
+      <div class="flex flex-col md:flex-row md:items-start gap-8">
+        <div class="flex-shrink-0">
+          <div class="w-14 h-14 rounded-2xl bg-orange-100 flex items-center justify-center">
+            <i class="fa-brands fa-meta text-2xl text-orange-600"></i>
+          </div>
+        </div>
+        <div class="flex-1">
+          <div class="flex items-center gap-3 mb-2">
+            <div class="text-xs font-bold text-orange-500 uppercase tracking-wide">Meta Ads</div>
+            <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full">Free · No login</span>
+          </div>
+          <h2 class="text-xl font-bold text-gray-900 mb-2">Meta Creative Intelligence Audit</h2>
+          <p class="text-gray-600 mb-4">
+            Upload your Meta Ads CSV export and instantly see why your creative is churning — before performance tanks.
+            Three charts reveal cohort decay, hit rate trends, and your reliance on old creative.
+            Data stays in your browser. No login required.
+          </p>
+          <ul class="grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-gray-600 mb-6">
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Creative churn by launch cohort</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Weekly production vs hit rate</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Spend by ad age (0–180d+)</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Auto-generated insights &amp; actions</li>
+          </ul>
+        </div>
+        <div class="flex flex-col gap-3 md:w-52 flex-shrink-0">
+          <a href="{{ url_for('public_bp.meta_creative_audit') }}"
+             class="block w-full text-center px-5 py-3 bg-orange-500 text-white font-semibold rounded-xl hover:bg-orange-600 transition">
+            Audit My Meta Creative →
+          </a>
+          <a href="{{ url_for('public_bp.meta_creative_audit') }}#loadSampleBtn"
+             onclick="event.preventDefault(); window.location='{{ url_for('public_bp.meta_creative_audit') }}'; setTimeout(()=>document.getElementById('loadSampleBtn')?.click(),800);"
+             class="block w-full text-center px-5 py-2.5 border border-orange-200 text-orange-600 rounded-xl hover:bg-orange-50 text-sm transition">
+            See sample results
+          </a>
         </div>
       </div>
     </div>

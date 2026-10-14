@@ -191,6 +191,7 @@ def sitemap_xml():
         ("https://getrevforge.io/about", "0.7", "monthly"),
         ("https://getrevforge.io/contact", "0.7", "monthly"),
         ("https://getrevforge.io/free-tools", "0.9", "weekly"),
+        ("https://getrevforge.io/free-tools/meta-creative-audit", "0.8", "weekly"),
         ("https://getrevforge.io/vs-agency", "0.8", "monthly"),
         ("https://getrevforge.io/roadmap", "0.5", "monthly"),
         ("https://getrevforge.io/products/ads-demo", "0.8", "monthly"),

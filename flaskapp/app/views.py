@@ -168,6 +168,9 @@ def sitemap_xml():
         "-local-service-ads",
         "-meta-ads",
         "-website-cro",
+        "-lead-generation",
+        "-local-seo",
+        "-gbp",
     ]
 
     # Main 9 industries (already in sitemap) — add sub-routes
@@ -201,6 +204,13 @@ def sitemap_xml():
         ("https://getrevforge.io/industries/garage-door", "0.8", "monthly"),
         ("https://getrevforge.io/industries/pool-service", "0.8", "monthly"),
         ("https://getrevforge.io/industries/solar", "0.8", "monthly"),
+        # Additional industry hub pages (new)
+        ("https://getrevforge.io/industries/concrete", "0.9", "monthly"),
+        ("https://getrevforge.io/industries/fencing", "0.9", "monthly"),
+        ("https://getrevforge.io/industries/irrigation", "0.9", "monthly"),
+        ("https://getrevforge.io/industries/lawn-care", "0.9", "monthly"),
+        ("https://getrevforge.io/industries/restoration", "0.9", "monthly"),
+        ("https://getrevforge.io/industries/windows-doors", "0.9", "monthly"),
         # Product pages
         ("https://getrevforge.io/products/ads", "0.8", "monthly"),
         ("https://getrevforge.io/products/glsa", "0.8", "monthly"),
@@ -230,21 +240,28 @@ def sitemap_xml():
         ("https://getrevforge.io/llms.txt", "0.3", "monthly"),
     ]
     # Industry sub-pages (trade/channel combinations — two-segment URL style)
+    # Use canonical URL-format trade names; _INDUSTRY_TEMPLATE_OVERRIDES in
+    # public/__init__.py maps electricians→electrical and pool-service→pools.
+    _all_channels = [
+        "google-ads", "local-service-ads", "meta-ads", "website-cro",
+        "lead-generation", "local-seo", "gbp",
+    ]
     _industry_subs = [
-        ("hvac", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
-        ("plumbing", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
-        ("electrical", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
-        ("roofing", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
-        ("pest-control", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
-        ("lawn-care", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
-        ("garage-door", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
-        ("solar", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
-        ("pools", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
-        ("concrete", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
-        ("fencing", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
-        ("irrigation", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
-        ("windows-doors", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
-        ("restoration", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("hvac", _all_channels),
+        ("plumbing", _all_channels),
+        ("electricians", _all_channels),
+        ("roofing", _all_channels),
+        ("pest-control", _all_channels),
+        ("landscaping", _all_channels),
+        ("garage-door", _all_channels),
+        ("pool-service", _all_channels),
+        ("solar", _all_channels),
+        ("concrete", _all_channels),
+        ("fencing", _all_channels),
+        ("irrigation", _all_channels),
+        ("lawn-care", _all_channels),
+        ("restoration", _all_channels),
+        ("windows-doors", _all_channels),
     ]
     for trade, channels in _industry_subs:
         for channel in channels:

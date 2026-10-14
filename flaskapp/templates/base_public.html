@@ -11,16 +11,16 @@
   <!-- Open Graph -->
   <meta property="og:type" content="{% block og_type %}website{% endblock %}">
   <meta property="og:site_name" content="RevForge">
-  <meta property="og:title" content="{% block og_title %}RevForge — The Revenue Platform Built for the Trades{% endblock %}">
-  <meta property="og:description" content="{% block og_description %}RevForge gives trade contractors a complete revenue engine — Google Ads, Meta Ads, local SEO, reputation management, and lead follow-up. Book more jobs. Cut cost per lead.{% endblock %}">
+  <meta property="og:title" content="{% block og_title %}{{ self.title() }}{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}{{ self.meta_description() }}{% endblock %}">
   <meta property="og:image" content="{% block og_image %}https://getrevforge.io/static/img/og-default.png{% endblock %}">
   <meta property="og:url" content="https://getrevforge.io{{ request.path }}">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@revforge">
-  <meta name="twitter:title" content="{% block twitter_title %}RevForge — The Revenue Platform Built for the Trades{% endblock %}">
-  <meta name="twitter:description" content="{% block twitter_description %}The revenue platform built for trade businesses. AI agents run your Google Ads, Meta Ads, and reputation 24/7 — so your phone keeps ringing.{% endblock %}">
+  <meta name="twitter:title" content="{% block twitter_title %}{{ self.title() }}{% endblock %}">
+  <meta name="twitter:description" content="{% block twitter_description %}{{ self.meta_description() }}{% endblock %}">
   <meta name="twitter:image" content="{% block twitter_image %}https://getrevforge.io/static/img/og-default.png{% endblock %}">
 
   <link rel="icon" href="{{ url_for('static', filename='brand/favicon.ico') }}">

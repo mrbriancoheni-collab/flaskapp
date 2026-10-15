@@ -121,9 +121,13 @@
 <!-- Results (hidden until data loaded) -->
 <div id="results" class="hidden">
 
-  <!-- Summary stats -->
-  <section class="py-8 bg-white border-b">
+  <!-- Channel tabs + summary stats -->
+  <section class="py-6 bg-white border-b">
     <div class="max-w-5xl mx-auto px-4">
+      <!-- Channel tabs -->
+      <div class="flex flex-wrap gap-2 mb-6" id="channelTabs">
+        <!-- rendered by JS -->
+      </div>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="summaryStats"></div>
     </div>
   </section>
@@ -194,6 +198,8 @@
 <script nonce="{{ g.csp_nonce }}">
 // ─── Config ──────────────────────────────────────────────────────────────────
 let chart1Instance, chart2Instance, chart3Instance;
+let _allAdList = [], _allDates = [], _allMonths = [], _allWeeks = [];
+let _activeChannel = 'All';
 
 const AGE_BUCKETS   = ['0-7d','8-14d','15-30d','31-90d','91-180d','180d+'];
 const AGE_COLORS    = ['#1A5C35','#237A48','#2E9E5F','#7DCFA8','#AEEACC','#D5F5E3'];
@@ -213,10 +219,11 @@ function detectCols(headers) {
   const h = headers.map(s => s.toLowerCase().replace(/[^a-z0-9 ]/g,' ').trim());
   const find = (...terms) => h.findIndex(x => terms.some(t => x.includes(t)));
   return {
-    adId:   find('ad id'),
-    adName: find('ad name'),
-    date:   find(' day ', 'reporting starts', ' date '),
-    spend:  find('amount spent', 'spend'),
+    adId:     find('ad id'),
+    adName:   find('ad name'),
+    date:     find(' day ', 'reporting starts', ' date '),
+    spend:    find('amount spent', 'spend'),
+    platform: find('platform', 'publisher platform', 'placement', 'channel'),
   };
 }
 
@@ -243,19 +250,86 @@ function ageBucket(days) {
   return '180d+';
 }
 
+function normalizePlatform(p) {
+  if (!p) return 'Unknown';
+  const l = p.toLowerCase();
+  if (l.includes('instagram')) return 'Instagram';
+  if (l.includes('facebook'))  return 'Facebook';
+  if (l.includes('audience_network') || l.includes('audience network')) return 'Audience Network';
+  if (l.includes('messenger'))  return 'Messenger';
+  if (l.includes('reels'))      return 'Reels';
+  if (l.includes('stories'))    return 'Stories';
+  if (l.includes('feed'))       return 'Feed';
+  return p.charAt(0).toUpperCase() + p.slice(1);
+}
+
+function filterByChannel(adList, channel) {
+  if (channel === 'All') return adList;
+  return adList
+    .map(ad => {
+      const rows = ad.rows.filter(r => r.platform === channel || (!r.platform && channel === 'Unknown'));
+      if (!rows.length) return null;
+      const spend = rows.reduce((s,r)=>s+r.spend, 0);
+      return { ...ad, rows, totalSpend: spend };
+    })
+    .filter(Boolean);
+}
+
+function buildChannelTabs(adList, hitThreshold) {
+  const counts = { All: adList.length };
+  for (const ad of adList) {
+    for (const p of ad.platforms) counts[p] = (counts[p]||0)+1;
+  }
+  const hasPlatformData = Object.keys(counts).length > 1;
+  const tabsEl = document.getElementById('channelTabs');
+  if (!hasPlatformData) { tabsEl.innerHTML = ''; return; }
+
+  const channels = ['All', ...Object.keys(counts).filter(k=>k!=='All').sort()];
+  tabsEl.innerHTML = channels.map(ch => `
+    <button onclick="switchChannel('${ch}', ${hitThreshold})"
+      id="tab-${ch.replace(/\s/g,'-')}"
+      class="px-4 py-1.5 rounded-full text-sm font-semibold border transition ${ch === _activeChannel
+        ? 'bg-green-700 text-white border-green-700'
+        : 'bg-white text-gray-600 border-gray-300 hover:border-green-500'}">
+      ${ch} <span class="opacity-60 font-normal">(${counts[ch]})</span>
+    </button>`).join('');
+}
+
+function switchChannel(channel, hitThreshold) {
+  _activeChannel = channel;
+  // update tab styles
+  document.querySelectorAll('#channelTabs button').forEach(btn => {
+    const active = btn.id === `tab-${channel.replace(/\s/g,'-')}`;
+    btn.className = `px-4 py-1.5 rounded-full text-sm font-semibold border transition ${
+      active ? 'bg-green-700 text-white border-green-700'
+             : 'bg-white text-gray-600 border-gray-300 hover:border-green-500'}`;
+  });
+  const filtered = filterByChannel(_allAdList, channel);
+  const filteredDates = [...new Set(filtered.flatMap(a=>a.rows.map(r=>fmtDate(r.date))))].sort();
+  const filteredMonths = [...new Set(filtered.map(a=>a.launchMonth))].sort();
+  const filteredWeeks  = [...new Set(filtered.map(a=>a.launchWeek))].sort();
+  buildChart1(filtered, filteredDates, filteredMonths);
+  buildChart2(filtered, filteredWeeks, hitThreshold);
+  buildChart3(filtered, filteredDates);
+  const stats = buildSummary(filtered, hitThreshold);
+  buildInsights(filtered, filteredDates, filteredMonths, stats, hitThreshold);
+}
+
 function processRows(rawRows, cols, hitThreshold) {
   // Phase 1: index by adId
   const ads = {};
   for (const row of rawRows) {
-    const adId   = String(row[cols.adId]  || '').trim();
-    const adName = String(row[cols.adName]|| adId).trim();
-    const date   = parseDate(String(row[cols.date]||'').trim());
-    const spend  = parseFloat(String(row[cols.spend]||'0').replace(/[,$\s]/g,'')) || 0;
+    const adId    = String(row[cols.adId]  || '').trim();
+    const adName  = String(row[cols.adName]|| adId).trim();
+    const date    = parseDate(String(row[cols.date]||'').trim());
+    const spend   = parseFloat(String(row[cols.spend]||'0').replace(/[,$\s]/g,'')) || 0;
+    const platform = cols.platform >= 0 ? String(row[cols.platform]||'').trim() : '';
     if (!adId || !date || spend <= 0) continue;
-    if (!ads[adId]) ads[adId] = { adName, firstDate: date, totalSpend: 0, rows: [] };
+    if (!ads[adId]) ads[adId] = { adName, firstDate: date, totalSpend: 0, rows: [], platforms: new Set() };
     if (date < ads[adId].firstDate) ads[adId].firstDate = date;
     ads[adId].totalSpend += spend;
-    ads[adId].rows.push({ date, spend });
+    if (platform) ads[adId].platforms.add(normalizePlatform(platform));
+    ads[adId].rows.push({ date, spend, platform: normalizePlatform(platform) });
   }
 
   // Phase 2: derived fields
@@ -506,8 +580,14 @@ function runAnalysis(csvText) {
         return;
       }
 
-      statusEl.textContent = `Loaded ${adList.length} ads · ${uniqDates.length} days of data · ${allMonths.length} cohorts`;
+      // Store globally for channel switching
+      _allAdList = adList; _allDates = uniqDates; _allMonths = allMonths; _allWeeks = allWeeks;
+      _activeChannel = 'All';
 
+      const hasPlatform = cols.platform >= 0;
+      statusEl.textContent = `Loaded ${adList.length} ads · ${uniqDates.length} days of data · ${allMonths.length} cohorts${hasPlatform ? ' · channel breakdown available' : ''}`;
+
+      buildChannelTabs(adList, threshold);
       buildChart1(adList, uniqDates, allMonths);
       buildChart2(adList, allWeeks, threshold);
       buildChart3(adList, uniqDates);
@@ -561,21 +641,21 @@ function loadSampleData() {
   statusEl.classList.remove('hidden');
 
   // Generate 6 months of realistic HVAC ad data
-  const lines = ['Ad ID,Ad name,Day,Amount spent (USD)'];
+  const lines = ['Ad ID,Ad name,Day,Amount spent (USD),Platform'];
   const now = new Date();
   const ads = [
-    { id:'1001', name:'Summer AC Promo — Family', launch: new Date(now.getFullYear(), now.getMonth()-5, 3), budget: 45 },
-    { id:'1002', name:'Emergency Repair — Homeowner', launch: new Date(now.getFullYear(), now.getMonth()-5, 10), budget: 30 },
-    { id:'1003', name:'Tune-Up Special — Video', launch: new Date(now.getFullYear(), now.getMonth()-4, 5), budget: 60 },
-    { id:'1004', name:'Free Estimate — Carousel', launch: new Date(now.getFullYear(), now.getMonth()-4, 18), budget: 25 },
-    { id:'1005', name:'AC Install — Static Image', launch: new Date(now.getFullYear(), now.getMonth()-3, 2), budget: 80 },
-    { id:'1006', name:'Maintenance Contract — Video', launch: new Date(now.getFullYear(), now.getMonth()-3, 15), budget: 55 },
-    { id:'1007', name:'Fall Furnace — Static', launch: new Date(now.getFullYear(), now.getMonth()-2, 1), budget: 70 },
-    { id:'1008', name:'Heating Season — Video', launch: new Date(now.getFullYear(), now.getMonth()-2, 20), budget: 90 },
-    { id:'1009', name:'Emergency Heat — Homeowner', launch: new Date(now.getFullYear(), now.getMonth()-1, 5), budget: 40 },
-    { id:'1010', name:'Winter Special — Carousel', launch: new Date(now.getFullYear(), now.getMonth()-1, 22), budget: 65 },
-    { id:'1011', name:'New Year Promo — Video', launch: new Date(now.getFullYear(), now.getMonth(), 1), budget: 85 },
-    { id:'1012', name:'Heat Pump Install — Static', launch: new Date(now.getFullYear(), now.getMonth(), 8), budget: 50 },
+    { id:'1001', name:'Summer AC Promo — Family',      launch: new Date(now.getFullYear(), now.getMonth()-5, 3),  budget: 45, platform:'Facebook' },
+    { id:'1002', name:'Emergency Repair — Homeowner',  launch: new Date(now.getFullYear(), now.getMonth()-5, 10), budget: 30, platform:'Instagram' },
+    { id:'1003', name:'Tune-Up Special — Video',       launch: new Date(now.getFullYear(), now.getMonth()-4, 5),  budget: 60, platform:'Facebook' },
+    { id:'1004', name:'Free Estimate — Carousel',      launch: new Date(now.getFullYear(), now.getMonth()-4, 18), budget: 25, platform:'Instagram' },
+    { id:'1005', name:'AC Install — Static Image',     launch: new Date(now.getFullYear(), now.getMonth()-3, 2),  budget: 80, platform:'Facebook' },
+    { id:'1006', name:'Maintenance Contract — Video',  launch: new Date(now.getFullYear(), now.getMonth()-3, 15), budget: 55, platform:'Instagram' },
+    { id:'1007', name:'Fall Furnace — Static',         launch: new Date(now.getFullYear(), now.getMonth()-2, 1),  budget: 70, platform:'Facebook' },
+    { id:'1008', name:'Heating Season — Video',        launch: new Date(now.getFullYear(), now.getMonth()-2, 20), budget: 90, platform:'Instagram' },
+    { id:'1009', name:'Emergency Heat — Homeowner',    launch: new Date(now.getFullYear(), now.getMonth()-1, 5),  budget: 40, platform:'Facebook' },
+    { id:'1010', name:'Winter Special — Carousel',     launch: new Date(now.getFullYear(), now.getMonth()-1, 22), budget: 65, platform:'Instagram' },
+    { id:'1011', name:'New Year Promo — Video',        launch: new Date(now.getFullYear(), now.getMonth(), 1),    budget: 85, platform:'Facebook' },
+    { id:'1012', name:'Heat Pump Install — Static',    launch: new Date(now.getFullYear(), now.getMonth(), 8),    budget: 50, platform:'Instagram' },
   ];
 
   for (const ad of ads) {
@@ -587,7 +667,7 @@ function loadSampleData() {
       const decay = Math.max(0.1, 1 - d / (lifespan * 1.5));
       const spend = (ad.budget * decay * (0.7 + Math.random()*0.6)).toFixed(2);
       if (spend > 0) {
-        lines.push(`${ad.id},"${ad.name}",${fmtDate(dt)},${spend}`);
+        lines.push(`${ad.id},"${ad.name}",${fmtDate(dt)},${spend},${ad.platform}`);
       }
     }
   }

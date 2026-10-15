@@ -156,6 +156,12 @@ def run_daily(app, db):
     except Exception:
         app.logger.exception("[CRON] AI actions digest failed")
 
+    # Weekly SMS performance digest (runs on Mondays)
+    try:
+        _run_weekly_sms_digest(app)
+    except Exception:
+        app.logger.exception("[CRON] Weekly SMS digest failed")
+
     # Weekly SEO AI agents (content recommendations, freshness plan, roadmap)
     try:
         _run_weekly_seo_ai_agents(app)
@@ -1044,6 +1050,117 @@ def _run_weekly_ai_actions_digest(app):
 
         except Exception as e:
             app.logger.exception(f"[CRON] AI actions digest error: {e}")
+
+
+# =========================
+# Weekly SMS Digest
+# =========================
+
+def _run_weekly_sms_digest(app) -> None:
+    """
+    Send a short weekly SMS to users who have opted in.
+    Runs every Monday. Message: leads, CPL, top campaign.
+    """
+    if datetime.utcnow().weekday() != 0:  # Monday only
+        return
+
+    app.logger.info("[CRON] Starting weekly SMS digest")
+
+    with app.app_context():
+        try:
+            from app.models import User, Account
+            from app.lead_intake import _send_sms
+            from sqlalchemy import text as _text
+
+            # Pull users opted in with a verified phone
+            opted_in = (
+                User.query
+                .filter(
+                    User.sms_opt_in == True,
+                    User.phone_number.isnot(None),
+                )
+                .all()
+            )
+
+            if not opted_in:
+                app.logger.info("[CRON] No SMS opt-in users, skipping digest")
+                return
+
+            cutoff = datetime.utcnow() - timedelta(days=7)
+            sent = 0
+            errors = 0
+
+            for user in opted_in:
+                try:
+                    account = user.account
+                    if not account:
+                        continue
+
+                    # Pull weekly lead count from LeadIngest if available
+                    leads_this_week = 0
+                    cpl_str = "N/A"
+                    top_campaign = None
+                    try:
+                        from app.models import LeadIngest
+                        leads_this_week = LeadIngest.query.filter(
+                            LeadIngest.account_id == account.id,
+                            LeadIngest.created_at >= cutoff,
+                        ).count()
+                    except Exception:
+                        pass
+
+                    # Pull CPL from Google Ads spend / leads if available
+                    try:
+                        from app.models import GoogleAdsMetric
+                        row = db.session.execute(
+                            _text(
+                                "SELECT SUM(cost_micros)/1000000.0 as spend "
+                                "FROM google_ads_metrics "
+                                "WHERE account_id = :aid AND date >= :cutoff"
+                            ),
+                            {"aid": account.id, "cutoff": cutoff.date()},
+                        ).fetchone()
+                        if row and row.spend and leads_this_week:
+                            cpl = row.spend / leads_this_week
+                            cpl_str = f"${cpl:.0f}"
+                    except Exception:
+                        pass
+
+                    # Top campaign by impressions this week
+                    try:
+                        top_row = db.session.execute(
+                            _text(
+                                "SELECT campaign_name FROM google_ads_metrics "
+                                "WHERE account_id = :aid AND date >= :cutoff "
+                                "GROUP BY campaign_name ORDER BY SUM(impressions) DESC LIMIT 1"
+                            ),
+                            {"aid": account.id, "cutoff": cutoff.date()},
+                        ).fetchone()
+                        if top_row:
+                            top_campaign = top_row[0]
+                    except Exception:
+                        pass
+
+                    account_name = (account.name or "Your account").split()[0]
+                    lines = [f"RevForge weekly · {account_name}"]
+                    lines.append(f"Leads: {leads_this_week}  |  CPL: {cpl_str}")
+                    if top_campaign:
+                        lines.append(f"Top: {top_campaign[:40]}")
+                    lines.append("Reply STOP to unsubscribe.")
+                    message = "\n".join(lines)
+
+                    _send_sms(user.phone_number, message)
+                    sent += 1
+                    app.logger.info("[CRON] SMS digest sent to user %s", user.id)
+
+                except Exception as e:
+                    errors += 1
+                    app.logger.exception("[CRON] SMS digest failed for user %s: %s", user.id, e)
+
+            app.logger.info("[CRON] Weekly SMS digest done: %d sent, %d errors", sent, errors)
+
+        except Exception as e:
+            app.logger.exception("[CRON] Weekly SMS digest top-level error: %s", e)
 
 
 # =========================

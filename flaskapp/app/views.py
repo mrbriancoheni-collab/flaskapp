@@ -227,6 +227,7 @@ def sitemap_xml():
         ("https://getrevforge.io/solutions/get-more-reviews", "0.7", "monthly"),
         ("https://getrevforge.io/solutions/spend-when-open", "0.7", "monthly"),
         ("https://getrevforge.io/solutions/see-what-works", "0.7", "monthly"),
+        ("https://getrevforge.io/solutions/crm-sync", "0.8", "monthly"),
         # Tools & graders
         ("https://getrevforge.io/ads-grader", "0.9", "weekly"),
         ("https://getrevforge.io/ga4-audit", "0.9", "weekly"),

@@ -60,6 +60,11 @@ def spend_when_open():
 def see_what_works():
     return render_template("see_what_works.html")
 
+
+@public_bp.route("/solutions/crm-sync", endpoint="crm_sync")
+def crm_sync():
+    return render_template("crm_sync.html")
+
 @public_bp.route("/podcast", endpoint="podcast")
 def podcast():
     return render_template("public/podcast.html")

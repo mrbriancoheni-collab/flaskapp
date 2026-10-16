@@ -17,9 +17,9 @@ def main():
         print("\n1. Connecting to database...")
         conn = mysql.connector.connect(
             host='localhost',
-            user='fieldsprout_team',
+            user='revforge_team',
             password='Jcl3QewSX8mQUj35w8QE',
-            database='fieldsprout_xyz'
+            database='revforge_xyz'
         )
         cursor = conn.cursor()
         print("   ✅ Connected")

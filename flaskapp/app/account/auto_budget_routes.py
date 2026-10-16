@@ -3,7 +3,7 @@
 Auto Budget Routes
 
 Provides UI and API endpoints for the AI-powered automatic budget management
-dashboard (FieldSprout). Uses Google Ads data when available and falls back
+dashboard (RevForge). Uses Google Ads data when available and falls back
 to sensible demo data when the account is not yet connected.
 """
 

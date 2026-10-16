@@ -1,0 +1,679 @@
+{% extends "base_public.html" %}
+{% block title %}Meta Creative Intelligence — Free Audit Tool | RevForge{% endblock %}
+{% block meta_description %}Upload your Meta Ads daily CSV export and instantly see your creative churn rate, production vs hit rate, and reliance on old creative. Free for trade contractors.{% endblock %}
+{% block og_title %}Meta Creative Intelligence — Free Audit | RevForge{% endblock %}
+{% block og_description %}3 charts that show you why your Meta Ads are churning before performance tanks. Upload your CSV export — nothing leaves your browser.{% endblock %}
+
+{% block head_extra %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" crossorigin="anonymous"></script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://getrevforge.io"},
+    {"@type": "ListItem", "position": 2, "name": "Free Tools", "item": "https://getrevforge.io/free-tools"},
+    {"@type": "ListItem", "position": 3, "name": "Meta Creative Audit", "item": "https://getrevforge.io/free-tools/meta-creative-audit"}
+  ]
+}
+</script>
+<style>
+  .drop-zone { transition: border-color 0.2s, background-color 0.2s; }
+  .drop-zone.drag-over { border-color: #1A5C35; background-color: #f0fdf4; }
+  .stat-card { border-left: 3px solid #1A5C35; }
+  .insight-good { border-left: 3px solid #16a34a; background: #f0fdf4; }
+  .insight-warn { border-left: 3px solid #D97706; background: #fffbeb; }
+  .insight-bad  { border-left: 3px solid #dc2626; background: #fef2f2; }
+  .chart-wrap canvas { max-height: 320px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<section class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white py-16">
+  <div class="max-w-5xl mx-auto px-4">
+    <div class="inline-flex items-center gap-2 px-3 py-1 bg-green-900/50 border border-green-700 rounded-full text-sm font-semibold text-green-300 mb-5">
+      <i class="fa-brands fa-meta"></i> Free Meta Ads Tool
+    </div>
+    <h1 class="text-4xl md:text-5xl font-extrabold mb-4 leading-tight">
+      Meta Creative Intelligence
+    </h1>
+    <p class="text-xl text-gray-300 mb-6 max-w-2xl">
+      3 charts that show you why your creative is churning — before performance tanks. Upload your Meta Ads CSV and get answers in seconds.
+    </p>
+    <div class="flex flex-wrap gap-6 text-sm text-gray-400">
+      <span><i class="fa-solid fa-lock mr-1 text-green-400"></i> CSV never leaves your browser</span>
+      <span><i class="fa-solid fa-clock mr-1 text-green-400"></i> Results in under 10 seconds</span>
+      <span><i class="fa-solid fa-credit-card mr-1 text-green-400"></i> No login required</span>
+    </div>
+  </div>
+</section>
+
+<!-- How to export + Upload -->
+<section class="py-10 bg-gray-50 border-b">
+  <div class="max-w-5xl mx-auto px-4">
+    <div class="md:flex gap-10 items-start">
+
+      <!-- Export steps -->
+      <div class="md:w-2/5 mb-8 md:mb-0">
+        <h2 class="text-lg font-bold text-gray-800 mb-4">How to export from Meta Ads</h2>
+        <ol class="space-y-3 text-sm text-gray-700">
+          <li class="flex gap-3">
+            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-green-700 text-white text-xs font-bold flex items-center justify-center">1</span>
+            <span>Go to <strong>Ads Manager → Ads</strong> (ad level, not campaign or ad set)</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-green-700 text-white text-xs font-bold flex items-center justify-center">2</span>
+            <span>Set date range to <strong>Last 6 months</strong> (or longer for better cohort data)</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-green-700 text-white text-xs font-bold flex items-center justify-center">3</span>
+            <span>Click <strong>Breakdown → By Time → Day</strong></span>
+          </li>
+          <li class="flex gap-3">
+            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-green-700 text-white text-xs font-bold flex items-center justify-center">4</span>
+            <span>Click <strong>Export → CSV</strong> and upload the file below</span>
+          </li>
+        </ol>
+        <div class="mt-5 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+          <strong>Tip:</strong> Make sure columns include <em>Ad name</em>, <em>Ad ID</em>, <em>Day</em>, and <em>Amount spent</em>.
+        </div>
+      </div>
+
+      <!-- Upload zone + settings -->
+      <div class="md:w-3/5">
+        <div class="mb-4 flex items-center gap-4 flex-wrap">
+          <label class="text-sm font-semibold text-gray-700">Hit threshold (lifetime spend):</label>
+          <div class="flex items-center gap-1">
+            <span class="text-gray-500 text-sm">$</span>
+            <input type="number" id="hitThreshold" value="1000" min="100" step="100"
+              class="w-24 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-green-600">
+          </div>
+          <span class="text-xs text-gray-500">(ads crossing this earn "hit" status)</span>
+        </div>
+
+        <div id="dropZone" class="drop-zone border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer bg-white hover:border-green-600 hover:bg-green-50"
+          onclick="document.getElementById('csvInput').click()">
+          <i class="fa-solid fa-cloud-arrow-up text-3xl text-gray-400 mb-3"></i>
+          <p class="text-gray-600 font-semibold mb-1">Drop your Meta Ads CSV here</p>
+          <p class="text-sm text-gray-400 mb-4">or click to browse</p>
+          <input type="file" id="csvInput" accept=".csv" class="hidden">
+          <div class="flex justify-center gap-3">
+            <span class="text-xs text-gray-400">CSV from Meta Ads Manager</span>
+            <span class="text-gray-300">|</span>
+            <button type="button" id="loadSampleBtn"
+              class="text-xs text-green-700 font-semibold hover:underline"
+              onclick="event.stopPropagation(); loadSampleData();">
+              Load sample data instead
+            </button>
+          </div>
+        </div>
+
+        <p id="parseStatus" class="mt-3 text-sm text-gray-500 hidden"></p>
+        <p id="parseError" class="mt-3 text-sm text-red-600 hidden"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Results (hidden until data loaded) -->
+<div id="results" class="hidden">
+
+  <!-- Channel tabs + summary stats -->
+  <section class="py-6 bg-white border-b">
+    <div class="max-w-5xl mx-auto px-4">
+      <!-- Channel tabs -->
+      <div class="flex flex-wrap gap-2 mb-6" id="channelTabs">
+        <!-- rendered by JS -->
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="summaryStats"></div>
+    </div>
+  </section>
+
+  <!-- Charts -->
+  <section class="py-10 bg-white">
+    <div class="max-w-5xl mx-auto px-4 space-y-12">
+
+      <!-- Chart 1 -->
+      <div>
+        <div class="mb-4">
+          <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Chart 1</span>
+          <h3 class="text-xl font-bold text-gray-900">Creative Churn</h3>
+          <p class="text-sm text-gray-500">Daily spend by launch month — how fast each cohort burns out. <span class="font-medium text-gray-700">Monthly churn of 20–30% is normal. A cohort still carrying 30%+ of spend two months after launch means you're not launching enough new creative to replace it.</span></p>
+        </div>
+        <div class="chart-wrap bg-gray-50 rounded-xl p-4 border">
+          <canvas id="chart1"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 2 -->
+      <div>
+        <div class="mb-4">
+          <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Chart 2</span>
+          <h3 class="text-xl font-bold text-gray-900">Production vs Hit Rate</h3>
+          <p class="text-sm text-gray-500">Ads produced per week (light bars) vs ads that became hits (dark bars). <span class="font-medium text-gray-700">Target 10–15% hit rate. If hits are flat while production climbs, creative quality is slipping.</span></p>
+        </div>
+        <div class="chart-wrap bg-gray-50 rounded-xl p-4 border">
+          <canvas id="chart2"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 3 -->
+      <div>
+        <div class="mb-4">
+          <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Chart 3</span>
+          <h3 class="text-xl font-bold text-gray-900">Reliance on Old Creative</h3>
+          <p class="text-sm text-gray-500">Daily spend split by ad age. Darker = newer. <span class="font-medium text-gray-700">Aim for 40%+ of spend from ads under 30 days old. If old creative dominates, churn hasn't hit yet — but it will.</span></p>
+        </div>
+        <div class="chart-wrap bg-gray-50 rounded-xl p-4 border">
+          <canvas id="chart3"></canvas>
+        </div>
+      </div>
+
+      <!-- Insights -->
+      <div>
+        <h3 class="text-xl font-bold text-gray-900 mb-4">Key Insights</h3>
+        <div id="insightsList" class="space-y-3"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="py-12 bg-gradient-to-r from-green-800 to-green-700 text-white">
+    <div class="max-w-3xl mx-auto px-4 text-center">
+      <h2 class="text-2xl font-bold mb-3">Get this automatically every week</h2>
+      <p class="text-green-100 mb-6">Connect your Meta account once and RevForge sends you a creative health report every Monday — before you waste another week on churning creative.</p>
+      <a href="/pricing" class="inline-block px-8 py-3 bg-amber-500 hover:bg-amber-400 text-white font-bold rounded-lg transition">
+        See Plans &amp; Pricing
+      </a>
+      <p class="mt-3 text-sm text-green-200">Cancel anytime · 60-second setup</p>
+    </div>
+  </section>
+
+</div><!-- /results -->
+
+<script nonce="{{ g.csp_nonce }}">
+// ─── Config ──────────────────────────────────────────────────────────────────
+let chart1Instance, chart2Instance, chart3Instance;
+let _allAdList = [], _allDates = [], _allMonths = [], _allWeeks = [];
+let _activeChannel = 'All';
+
+const AGE_BUCKETS   = ['0-7d','8-14d','15-30d','31-90d','91-180d','180d+'];
+const AGE_COLORS    = ['#1A5C35','#237A48','#2E9E5F','#7DCFA8','#AEEACC','#D5F5E3'];
+const AGE_LIMITS    = [7,14,30,90,180,Infinity];
+
+// Generate cohort colors: dark green → amber gradient
+function cohortColor(i, total) {
+  const ratio = total <= 1 ? 1 : i / (total - 1);
+  const r = Math.round(26  + ratio * (217 - 26));
+  const g = Math.round(92  + ratio * (119 - 92));
+  const b = Math.round(53  + ratio * (6   - 53));
+  return `rgba(${r},${g},${b},0.85)`;
+}
+
+// ─── CSV Processing ───────────────────────────────────────────────────────────
+function detectCols(headers) {
+  const h = headers.map(s => s.toLowerCase().replace(/[^a-z0-9 ]/g,' ').trim());
+  const find = (...terms) => h.findIndex(x => terms.some(t => x.includes(t)));
+  return {
+    adId:     find('ad id'),
+    adName:   find('ad name'),
+    date:     find(' day ', 'reporting starts', ' date '),
+    spend:    find('amount spent', 'spend'),
+    platform: find('platform', 'publisher platform', 'placement', 'channel'),
+  };
+}
+
+function parseDate(s) {
+  if (!s) return null;
+  // Try YYYY-MM-DD first, then MM/DD/YYYY
+  let d = new Date(s);
+  if (isNaN(d)) {
+    const [m,day,y] = s.split('/');
+    d = new Date(`${y}-${m.padStart(2,'0')}-${day.padStart(2,'0')}`);
+  }
+  return isNaN(d) ? null : d;
+}
+
+function fmtMonth(d)   { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+function fmtWeek(d)    {
+  const jan1 = new Date(d.getFullYear(), 0, 1);
+  const w = Math.ceil((((d - jan1) / 86400000) + jan1.getDay() + 1) / 7);
+  return `${d.getFullYear()}-W${String(w).padStart(2,'0')}`;
+}
+function fmtDate(d)    { return d.toISOString().slice(0,10); }
+function ageBucket(days) {
+  for (let i=0; i<AGE_LIMITS.length; i++) if (days <= AGE_LIMITS[i]) return AGE_BUCKETS[i];
+  return '180d+';
+}
+
+function normalizePlatform(p) {
+  if (!p) return 'Unknown';
+  const l = p.toLowerCase();
+  if (l.includes('instagram')) return 'Instagram';
+  if (l.includes('facebook'))  return 'Facebook';
+  if (l.includes('audience_network') || l.includes('audience network')) return 'Audience Network';
+  if (l.includes('messenger'))  return 'Messenger';
+  if (l.includes('reels'))      return 'Reels';
+  if (l.includes('stories'))    return 'Stories';
+  if (l.includes('feed'))       return 'Feed';
+  return p.charAt(0).toUpperCase() + p.slice(1);
+}
+
+function filterByChannel(adList, channel) {
+  if (channel === 'All') return adList;
+  return adList
+    .map(ad => {
+      const rows = ad.rows.filter(r => r.platform === channel || (!r.platform && channel === 'Unknown'));
+      if (!rows.length) return null;
+      const spend = rows.reduce((s,r)=>s+r.spend, 0);
+      return { ...ad, rows, totalSpend: spend };
+    })
+    .filter(Boolean);
+}
+
+function buildChannelTabs(adList, hitThreshold) {
+  const counts = { All: adList.length };
+  for (const ad of adList) {
+    for (const p of ad.platforms) counts[p] = (counts[p]||0)+1;
+  }
+  const hasPlatformData = Object.keys(counts).length > 1;
+  const tabsEl = document.getElementById('channelTabs');
+  if (!hasPlatformData) { tabsEl.innerHTML = ''; return; }
+
+  const channels = ['All', ...Object.keys(counts).filter(k=>k!=='All').sort()];
+  tabsEl.innerHTML = channels.map(ch => `
+    <button onclick="switchChannel('${ch}', ${hitThreshold})"
+      id="tab-${ch.replace(/\s/g,'-')}"
+      class="px-4 py-1.5 rounded-full text-sm font-semibold border transition ${ch === _activeChannel
+        ? 'bg-green-700 text-white border-green-700'
+        : 'bg-white text-gray-600 border-gray-300 hover:border-green-500'}">
+      ${ch} <span class="opacity-60 font-normal">(${counts[ch]})</span>
+    </button>`).join('');
+}
+
+function switchChannel(channel, hitThreshold) {
+  _activeChannel = channel;
+  // update tab styles
+  document.querySelectorAll('#channelTabs button').forEach(btn => {
+    const active = btn.id === `tab-${channel.replace(/\s/g,'-')}`;
+    btn.className = `px-4 py-1.5 rounded-full text-sm font-semibold border transition ${
+      active ? 'bg-green-700 text-white border-green-700'
+             : 'bg-white text-gray-600 border-gray-300 hover:border-green-500'}`;
+  });
+  const filtered = filterByChannel(_allAdList, channel);
+  const filteredDates = [...new Set(filtered.flatMap(a=>a.rows.map(r=>fmtDate(r.date))))].sort();
+  const filteredMonths = [...new Set(filtered.map(a=>a.launchMonth))].sort();
+  const filteredWeeks  = [...new Set(filtered.map(a=>a.launchWeek))].sort();
+  buildChart1(filtered, filteredDates, filteredMonths);
+  buildChart2(filtered, filteredWeeks, hitThreshold);
+  buildChart3(filtered, filteredDates);
+  const stats = buildSummary(filtered, hitThreshold);
+  buildInsights(filtered, filteredDates, filteredMonths, stats, hitThreshold);
+}
+
+function processRows(rawRows, cols, hitThreshold) {
+  // Phase 1: index by adId
+  const ads = {};
+  for (const row of rawRows) {
+    const adId    = String(row[cols.adId]  || '').trim();
+    const adName  = String(row[cols.adName]|| adId).trim();
+    const date    = parseDate(String(row[cols.date]||'').trim());
+    const spend   = parseFloat(String(row[cols.spend]||'0').replace(/[,$\s]/g,'')) || 0;
+    const platform = cols.platform >= 0 ? String(row[cols.platform]||'').trim() : '';
+    if (!adId || !date || spend <= 0) continue;
+    if (!ads[adId]) ads[adId] = { adName, firstDate: date, totalSpend: 0, rows: [], platforms: new Set() };
+    if (date < ads[adId].firstDate) ads[adId].firstDate = date;
+    ads[adId].totalSpend += spend;
+    if (platform) ads[adId].platforms.add(normalizePlatform(platform));
+    ads[adId].rows.push({ date, spend, platform: normalizePlatform(platform) });
+  }
+
+  // Phase 2: derived fields
+  const adList = Object.values(ads);
+  for (const ad of adList) {
+    ad.launchMonth = fmtMonth(ad.firstDate);
+    ad.launchWeek  = fmtWeek(ad.firstDate);
+    ad.isHit       = ad.totalSpend >= hitThreshold;
+    for (const r of ad.rows) r.ageDays = Math.round((r.date - ad.firstDate) / 86400000);
+  }
+
+  // Phase 3: date range
+  const allDates = adList.flatMap(a => a.rows.map(r => fmtDate(r.date)));
+  const uniqDates = [...new Set(allDates)].sort();
+  const allMonths = [...new Set(adList.map(a => a.launchMonth))].sort();
+  const allWeeks  = [...new Set(adList.map(a => a.launchWeek))].sort();
+
+  return { adList, uniqDates, allMonths, allWeeks };
+}
+
+// ─── Chart builders ───────────────────────────────────────────────────────────
+
+function buildChart1(adList, uniqDates, allMonths) {
+  // For each date × month: sum spend
+  const spendMap = {}; // "YYYY-MM-DD|YYYY-MM" -> spend
+  for (const ad of adList) {
+    for (const r of ad.rows) {
+      const key = `${fmtDate(r.date)}|${ad.launchMonth}`;
+      spendMap[key] = (spendMap[key]||0) + r.spend;
+    }
+  }
+
+  const datasets = allMonths.map((month, i) => ({
+    label: month,
+    data: uniqDates.map(d => spendMap[`${d}|${month}`] || 0),
+    backgroundColor: cohortColor(i, allMonths.length),
+    borderWidth: 0,
+    fill: true,
+  }));
+
+  if (chart1Instance) chart1Instance.destroy();
+  chart1Instance = new Chart(document.getElementById('chart1'), {
+    type: 'bar',
+    data: { labels: uniqDates, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { position:'bottom', labels:{ boxWidth:12, font:{size:11} } },
+                 tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: $${ctx.raw.toFixed(0)}` } } },
+      scales: {
+        x: { stacked:true, ticks:{ maxTicksLimit:10, font:{size:10} } },
+        y: { stacked:true, ticks:{ callback: v => '$'+v.toLocaleString(), font:{size:10} } }
+      }
+    }
+  });
+}
+
+function buildChart2(adList, allWeeks, hitThreshold) {
+  const weekData = {};
+  for (const w of allWeeks) weekData[w] = { produced:0, hits:0 };
+  for (const ad of adList) {
+    if (weekData[ad.launchWeek] === undefined) continue;
+    weekData[ad.launchWeek].produced++;
+    if (ad.isHit) weekData[ad.launchWeek].hits++;
+  }
+
+  const produced = allWeeks.map(w => weekData[w].produced);
+  const hits     = allWeeks.map(w => weekData[w].hits);
+  const cumHits  = hits.reduce((acc,v) => { acc.push((acc[acc.length-1]||0)+v); return acc; }, []);
+
+  if (chart2Instance) chart2Instance.destroy();
+  chart2Instance = new Chart(document.getElementById('chart2'), {
+    type: 'bar',
+    data: {
+      labels: allWeeks,
+      datasets: [
+        { label:'Ads produced', data:produced, backgroundColor:'#A9DFBF', order:2 },
+        { label:`Hits ($${hitThreshold.toLocaleString()}+)`, data:hits, backgroundColor:'#1A5C35', order:2 },
+        { label:'Cumulative hits', data:cumHits, type:'line', borderColor:'#D97706',
+          borderWidth:2, pointRadius:2, backgroundColor:'transparent', order:1, yAxisID:'y2' }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:true,
+      plugins: { legend:{ position:'bottom', labels:{boxWidth:12,font:{size:11}} } },
+      scales: {
+        x: { stacked:true, ticks:{ maxTicksLimit:12, font:{size:10} } },
+        y: { stacked:false, ticks:{ font:{size:10} }, title:{ display:true, text:'Ads / wk', font:{size:10} } },
+        y2: { position:'right', grid:{ drawOnChartArea:false }, ticks:{ font:{size:10} },
+              title:{ display:true, text:'Cumulative hits', font:{size:10} } }
+      }
+    }
+  });
+}
+
+function buildChart3(adList, uniqDates) {
+  const bucketMap = {}; // "YYYY-MM-DD|bucket" -> spend
+  for (const ad of adList) {
+    for (const r of ad.rows) {
+      const key = `${fmtDate(r.date)}|${ageBucket(r.ageDays)}`;
+      bucketMap[key] = (bucketMap[key]||0) + r.spend;
+    }
+  }
+
+  const datasets = AGE_BUCKETS.map((bucket, i) => ({
+    label: bucket,
+    data: uniqDates.map(d => bucketMap[`${d}|${bucket}`]||0),
+    backgroundColor: AGE_COLORS[i],
+    borderWidth: 0,
+  }));
+
+  if (chart3Instance) chart3Instance.destroy();
+  chart3Instance = new Chart(document.getElementById('chart3'), {
+    type: 'bar',
+    data: { labels: uniqDates, datasets },
+    options: {
+      responsive:true, maintainAspectRatio:true,
+      plugins: { legend:{ position:'bottom', labels:{boxWidth:12,font:{size:11}} } },
+      scales: {
+        x: { stacked:true, ticks:{ maxTicksLimit:10, font:{size:10} } },
+        y: { stacked:true, ticks:{ callback: v=>'$'+v.toLocaleString(), font:{size:10} } }
+      }
+    }
+  });
+}
+
+// ─── Summary stats + insights ─────────────────────────────────────────────────
+
+function buildSummary(adList, hitThreshold) {
+  const totalAds  = adList.length;
+  const totalHits = adList.filter(a => a.isHit).length;
+  const hitRate   = totalAds ? ((totalHits/totalAds)*100).toFixed(1) : 0;
+  const totalSpend = adList.reduce((s,a) => s+a.totalSpend, 0);
+  const avgLife   = adList.length ? Math.round(
+    adList.reduce((s,a) => {
+      const dates = a.rows.map(r => r.date);
+      const span  = Math.max(0, (Math.max(...dates) - Math.min(...dates)) / 86400000);
+      return s + span;
+    }, 0) / adList.length
+  ) : 0;
+
+  const statsEl = document.getElementById('summaryStats');
+  statsEl.innerHTML = [
+    { label:'Total ads', val: totalAds.toLocaleString() },
+    { label:`Hits (≥$${hitThreshold.toLocaleString()})`, val: `${totalHits} / ${hitRate}%` },
+    { label:'Total spend', val: '$'+Math.round(totalSpend).toLocaleString() },
+    { label:'Avg creative lifespan', val: avgLife+'d' },
+  ].map(s => `
+    <div class="stat-card bg-white rounded-lg p-4 border shadow-sm">
+      <div class="text-2xl font-extrabold text-gray-900">${s.val}</div>
+      <div class="text-xs text-gray-500 mt-1">${s.label}</div>
+    </div>`).join('');
+
+  return { totalAds, totalHits, hitRate, totalSpend, avgLife };
+}
+
+function buildInsights(adList, uniqDates, allMonths, stats, hitThreshold) {
+  const insights = [];
+  const { totalAds, totalHits, hitRate } = stats;
+
+  // Hit rate
+  const hr = parseFloat(hitRate);
+  if (hr >= 15) insights.push({ type:'good', msg: `Hit rate is ${hitRate}% — above the 10–15% benchmark. Creative quality is strong.` });
+  else if (hr >= 8) insights.push({ type:'warn', msg: `Hit rate is ${hitRate}% — slightly below the 10–15% benchmark. Consider tightening creative briefs.` });
+  else insights.push({ type:'bad', msg: `Hit rate is only ${hitRate}% — well below the 10–15% target. Most launched ads aren't reaching $${hitThreshold.toLocaleString()} in spend. Review creative quality or the hit threshold.` });
+
+  // Reliance on old creative (last 14 days)
+  if (uniqDates.length >= 14) {
+    const recent = uniqDates.slice(-14);
+    let youngSpend = 0, totalRecentSpend = 0;
+    for (const ad of adList) {
+      for (const r of ad.rows) {
+        if (recent.includes(fmtDate(r.date))) {
+          totalRecentSpend += r.spend;
+          if (r.ageDays <= 30) youngSpend += r.spend;
+        }
+      }
+    }
+    const youngPct = totalRecentSpend ? Math.round(youngSpend/totalRecentSpend*100) : 0;
+    if (youngPct >= 40) insights.push({ type:'good', msg: `${youngPct}% of recent spend is from ads under 30 days old — healthy creative rotation.` });
+    else if (youngPct >= 20) insights.push({ type:'warn', msg: `Only ${youngPct}% of recent spend is from ads under 30 days old. You may be riding older creative — launch 2–3 new ads this week.` });
+    else insights.push({ type:'bad', msg: `Only ${youngPct}% of recent spend is on ads under 30 days old. Old creative is carrying your account — churn is likely coming. Launch new creative immediately.` });
+  }
+
+  // Cohort longevity: oldest active cohort
+  if (allMonths.length >= 2) {
+    const oldestMonth = allMonths[0];
+    const oldestCohortSpend = adList
+      .filter(a => a.launchMonth === oldestMonth)
+      .flatMap(a => a.rows.filter(r => uniqDates.slice(-14).includes(fmtDate(r.date))))
+      .reduce((s,r) => s+r.spend, 0);
+    const oldestCohortTotal = adList
+      .filter(a => a.launchMonth === oldestMonth)
+      .flatMap(a => a.rows)
+      .reduce((s,r) => s+r.spend, 0);
+    const recentAllSpend = adList.flatMap(a => a.rows.filter(r => uniqDates.slice(-14).includes(fmtDate(r.date)))).reduce((s,r)=>s+r.spend,0);
+    if (recentAllSpend > 0) {
+      const pct = Math.round(oldestCohortSpend/recentAllSpend*100);
+      if (pct > 30) insights.push({ type:'warn', msg: `Your oldest cohort (${oldestMonth}) still carries ${pct}% of recent spend. You're leaning on old creative — scale new launches.` });
+    }
+    if (oldestCohortTotal < hitThreshold * 0.5) {
+      insights.push({ type:'warn', msg: `Oldest cohort (${oldestMonth}) generated under $${Math.round(oldestCohortTotal).toLocaleString()} total — it may be too small a sample to draw churn conclusions.` });
+    }
+  }
+
+  // Avg lifespan note
+  if (stats.avgLife > 0 && stats.avgLife < 7) {
+    insights.push({ type:'bad', msg: `Average creative lifespan is only ${stats.avgLife} days — ads are churning extremely fast. Check your audience overlap and frequency caps.` });
+  } else if (stats.avgLife > 90) {
+    insights.push({ type:'warn', msg: `Average creative lifespan is ${stats.avgLife} days — very long runs. Consider refreshing creative even when performance looks steady.` });
+  }
+
+  const insightsEl = document.getElementById('insightsList');
+  insightsEl.innerHTML = insights.map(i => `
+    <div class="insight-${i.type} p-4 rounded-lg text-sm text-gray-800">
+      <i class="fa-solid fa-${i.type==='good'?'circle-check text-green-600':i.type==='warn'?'triangle-exclamation text-amber-600':'circle-xmark text-red-600'} mr-2"></i>
+      ${i.msg}
+    </div>`).join('') || '<p class="text-gray-500 text-sm">No insights generated — check that your CSV has enough data (at least 30 days recommended).</p>';
+}
+
+// ─── Main entry point ─────────────────────────────────────────────────────────
+
+function runAnalysis(csvText) {
+  const threshold = parseInt(document.getElementById('hitThreshold').value) || 1000;
+  const statusEl  = document.getElementById('parseStatus');
+  const errorEl   = document.getElementById('parseError');
+  errorEl.classList.add('hidden');
+
+  Papa.parse(csvText, {
+    header: true, skipEmptyLines: true,
+    complete(results) {
+      const headers = results.meta.fields || [];
+      const cols    = detectCols(headers);
+
+      if (cols.adId < 0 || cols.date < 0 || cols.spend < 0) {
+        errorEl.textContent = "Couldn't find required columns (Ad ID, Day, Amount spent). Make sure you exported at the Ad level with Daily breakdown.";
+        errorEl.classList.remove('hidden');
+        statusEl.classList.add('hidden');
+        return;
+      }
+
+      const rawRows = results.data.map(r => Object.values(r));
+      const { adList, uniqDates, allMonths, allWeeks } = processRows(rawRows, cols, threshold);
+
+      if (!adList.length || !uniqDates.length) {
+        errorEl.textContent = "No valid spend rows found. Check that 'Amount spent' has non-zero values.";
+        errorEl.classList.remove('hidden');
+        statusEl.classList.add('hidden');
+        return;
+      }
+
+      // Store globally for channel switching
+      _allAdList = adList; _allDates = uniqDates; _allMonths = allMonths; _allWeeks = allWeeks;
+      _activeChannel = 'All';
+
+      const hasPlatform = cols.platform >= 0;
+      statusEl.textContent = `Loaded ${adList.length} ads · ${uniqDates.length} days of data · ${allMonths.length} cohorts${hasPlatform ? ' · channel breakdown available' : ''}`;
+
+      buildChannelTabs(adList, threshold);
+      buildChart1(adList, uniqDates, allMonths);
+      buildChart2(adList, allWeeks, threshold);
+      buildChart3(adList, uniqDates);
+      const stats = buildSummary(adList, threshold);
+      buildInsights(adList, uniqDates, allMonths, stats, threshold);
+
+      document.getElementById('results').classList.remove('hidden');
+      document.getElementById('results').scrollIntoView({ behavior:'smooth', block:'start' });
+    },
+    error(err) {
+      errorEl.textContent = 'Failed to parse CSV: ' + err.message;
+      errorEl.classList.remove('hidden');
+    }
+  });
+}
+
+// ─── File upload handlers ──────────────────────────────────────────────────────
+
+document.getElementById('csvInput').addEventListener('change', function() {
+  if (!this.files[0]) return;
+  const statusEl = document.getElementById('parseStatus');
+  statusEl.textContent = 'Reading file…';
+  statusEl.classList.remove('hidden');
+  const reader = new FileReader();
+  reader.onload = e => runAnalysis(e.target.result);
+  reader.readAsText(this.files[0]);
+});
+
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (!file || !file.name.endsWith('.csv')) {
+    document.getElementById('parseError').textContent = 'Please drop a .csv file.';
+    document.getElementById('parseError').classList.remove('hidden');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = ev => runAnalysis(ev.target.result);
+  reader.readAsText(file);
+});
+
+// ─── Sample data ──────────────────────────────────────────────────────────────
+
+function loadSampleData() {
+  const statusEl = document.getElementById('parseStatus');
+  statusEl.textContent = 'Loading HVAC sample data…';
+  statusEl.classList.remove('hidden');
+
+  // Generate 6 months of realistic HVAC ad data
+  const lines = ['Ad ID,Ad name,Day,Amount spent (USD),Platform'];
+  const now = new Date();
+  const ads = [
+    { id:'1001', name:'Summer AC Promo — Family',      launch: new Date(now.getFullYear(), now.getMonth()-5, 3),  budget: 45, platform:'Facebook' },
+    { id:'1002', name:'Emergency Repair — Homeowner',  launch: new Date(now.getFullYear(), now.getMonth()-5, 10), budget: 30, platform:'Instagram' },
+    { id:'1003', name:'Tune-Up Special — Video',       launch: new Date(now.getFullYear(), now.getMonth()-4, 5),  budget: 60, platform:'Facebook' },
+    { id:'1004', name:'Free Estimate — Carousel',      launch: new Date(now.getFullYear(), now.getMonth()-4, 18), budget: 25, platform:'Instagram' },
+    { id:'1005', name:'AC Install — Static Image',     launch: new Date(now.getFullYear(), now.getMonth()-3, 2),  budget: 80, platform:'Facebook' },
+    { id:'1006', name:'Maintenance Contract — Video',  launch: new Date(now.getFullYear(), now.getMonth()-3, 15), budget: 55, platform:'Instagram' },
+    { id:'1007', name:'Fall Furnace — Static',         launch: new Date(now.getFullYear(), now.getMonth()-2, 1),  budget: 70, platform:'Facebook' },
+    { id:'1008', name:'Heating Season — Video',        launch: new Date(now.getFullYear(), now.getMonth()-2, 20), budget: 90, platform:'Instagram' },
+    { id:'1009', name:'Emergency Heat — Homeowner',    launch: new Date(now.getFullYear(), now.getMonth()-1, 5),  budget: 40, platform:'Facebook' },
+    { id:'1010', name:'Winter Special — Carousel',     launch: new Date(now.getFullYear(), now.getMonth()-1, 22), budget: 65, platform:'Instagram' },
+    { id:'1011', name:'New Year Promo — Video',        launch: new Date(now.getFullYear(), now.getMonth(), 1),    budget: 85, platform:'Facebook' },
+    { id:'1012', name:'Heat Pump Install — Static',    launch: new Date(now.getFullYear(), now.getMonth(), 8),    budget: 50, platform:'Instagram' },
+  ];
+
+  for (const ad of ads) {
+    const lifespan = 14 + Math.floor(Math.random() * 60);
+    for (let d=0; d<lifespan; d++) {
+      const dt = new Date(ad.launch);
+      dt.setDate(dt.getDate() + d);
+      if (dt > now) break;
+      const decay = Math.max(0.1, 1 - d / (lifespan * 1.5));
+      const spend = (ad.budget * decay * (0.7 + Math.random()*0.6)).toFixed(2);
+      if (spend > 0) {
+        lines.push(`${ad.id},"${ad.name}",${fmtDate(dt)},${spend},${ad.platform}`);
+      }
+    }
+  }
+
+  runAnalysis(lines.join('\n'));
+}
+</script>
+
+{% endblock %}

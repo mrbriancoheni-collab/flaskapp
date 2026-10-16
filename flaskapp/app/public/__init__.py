@@ -60,6 +60,11 @@ def spend_when_open():
 def see_what_works():
     return render_template("see_what_works.html")
 
+
+@public_bp.route("/solutions/crm-sync", endpoint="crm_sync")
+def crm_sync():
+    return render_template("crm_sync.html")
+
 @public_bp.route("/podcast", endpoint="podcast")
 def podcast():
     return render_template("public/podcast.html")
@@ -68,6 +73,11 @@ def podcast():
 @public_bp.route("/free-tools", endpoint="free_tools")
 def free_tools():
     return render_template("free_tools.html")
+
+
+@public_bp.route("/free-tools/meta-creative-audit", endpoint="meta_creative_audit")
+def meta_creative_audit():
+    return render_template("meta_creative_audit.html")
 
 
 @public_bp.route("/roadmap", endpoint="roadmap")
@@ -131,25 +141,65 @@ def industry_solar():
     return render_template("industries/solar.html")
 
 
-@public_bp.route("/industries/<trade>/<channel>", endpoint="industry_sub")
-def industry_sub(trade, channel):
-    from flask import abort
-    try:
-        return render_template(f"industries/{trade}-{channel}.html")
-    except Exception:
-        abort(404)
+@public_bp.route("/industries/concrete", endpoint="industry_concrete")
+def industry_concrete():
+    return render_template("industries/concrete.html")
+
+
+@public_bp.route("/industries/fencing", endpoint="industry_fencing")
+def industry_fencing():
+    return render_template("industries/fencing.html")
+
+
+@public_bp.route("/industries/irrigation", endpoint="industry_irrigation")
+def industry_irrigation():
+    return render_template("industries/irrigation.html")
+
+
+@public_bp.route("/industries/lawn-care", endpoint="industry_lawn_care")
+def industry_lawn_care():
+    return render_template("industries/lawn-care.html")
+
+
+@public_bp.route("/industries/restoration", endpoint="industry_restoration")
+def industry_restoration():
+    return render_template("industries/restoration.html")
+
+
+@public_bp.route("/industries/windows-doors", endpoint="industry_windows_doors")
+def industry_windows_doors():
+    return render_template("industries/windows-doors.html")
 
 
 _INDUSTRY_TEMPLATE_OVERRIDES = {
+    # electricians → electrical-*.html
     'electricians-google-ads':        'industries/electrical-google-ads.html',
     'electricians-local-service-ads': 'industries/electrical-local-service-ads.html',
     'electricians-meta-ads':          'industries/electrical-meta-ads.html',
     'electricians-website-cro':       'industries/electrical-website-cro.html',
+    'electricians-lead-generation':   'industries/electrical-lead-generation.html',
+    'electricians-local-seo':         'industries/electrical-local-seo.html',
+    'electricians-gbp':               'industries/electrical-gbp.html',
+    # pool-service → pools-*.html
     'pool-service-google-ads':        'industries/pools-google-ads.html',
     'pool-service-local-service-ads': 'industries/pools-local-service-ads.html',
     'pool-service-meta-ads':          'industries/pools-meta-ads.html',
     'pool-service-website-cro':       'industries/pools-website-cro.html',
+    'pool-service-lead-generation':   'industries/pools-lead-generation.html',
+    'pool-service-local-seo':         'industries/pools-local-seo.html',
+    'pool-service-gbp':               'industries/pools-gbp.html',
 }
+
+
+@public_bp.route("/industries/<trade>/<channel>", endpoint="industry_sub")
+def industry_sub(trade, channel):
+    from flask import abort
+    slug = f"{trade}-{channel}"
+    template = _INDUSTRY_TEMPLATE_OVERRIDES.get(slug, f"industries/{slug}.html")
+    try:
+        return render_template(template)
+    except Exception:
+        abort(404)
 
 
 @public_bp.route("/industries/<slug>", endpoint="industry_subpage")

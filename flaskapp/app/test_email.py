@@ -182,13 +182,13 @@ _FORM_HTML = """
         <label class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
         <input name="subject"
                class="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-               value="FieldSprout Test Email">
+               value="RevForge Test Email">
       </div>
 
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">Body</label>
         <textarea name="body" rows="6"
-                  class="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">Hello from FieldSprout!
+                  class="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">Hello from RevForge!
 
 This is a test email sent from the admin panel.
 
@@ -239,8 +239,8 @@ def test_email():
     """
     if request.method == "POST":
         to_addr = (request.form.get("to") or "").strip()
-        subject = (request.form.get("subject") or "FieldSprout test email").strip()
-        body = (request.form.get("body") or "Hello from FieldSprout!").strip()
+        subject = (request.form.get("subject") or "RevForge test email").strip()
+        body = (request.form.get("body") or "Hello from RevForge!").strip()
 
         if not to_addr:
             flash("Please enter a recipient email.", "error")

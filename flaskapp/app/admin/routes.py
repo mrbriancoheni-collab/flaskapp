@@ -962,7 +962,7 @@ def email_send():
                     <tr>
                         <td style="padding: 20px 40px; text-align: center; background-color: #f9fafb; border-radius: 0 0 8px 8px;">
                             <p style="margin: 0; font-size: 12px; color: #9ca3af;">
-                                © 2025 FieldSprout. All rights reserved.
+                                © 2025 RevForge. All rights reserved.
                             </p>
                         </td>
                     </tr>
@@ -1042,7 +1042,7 @@ def email_send():
                     <tr>
                         <td style="padding: 20px 40px; text-align: center; background-color: #f9fafb; border-radius: 0 0 8px 8px;">
                             <p style="margin: 0; font-size: 12px; color: #9ca3af;">
-                                © 2025 FieldSprout. All rights reserved.
+                                © 2025 RevForge. All rights reserved.
                             </p>
                         </td>
                     </tr>
@@ -1112,7 +1112,7 @@ def email_send():
                     <tr>
                         <td style="padding: 20px 40px; text-align: center; background-color: #f9fafb; border-radius: 0 0 8px 8px;">
                             <p style="margin: 0; font-size: 12px; color: #9ca3af;">
-                                © 2025 FieldSprout. All rights reserved.
+                                © 2025 RevForge. All rights reserved.
                             </p>
                         </td>
                     </tr>
@@ -1832,7 +1832,7 @@ def test_email():
         if provider == 'mailgun':
             # Use Mailgun API directly
             api_key = os.getenv('MAILGUN_API_KEY')
-            domain = os.getenv('MAILGUN_DOMAIN', 'fieldsprout.io')
+            domain = os.getenv('MAILGUN_DOMAIN', 'getrevforge.io')
 
             if not api_key:
                 return jsonify({
@@ -1850,10 +1850,10 @@ def test_email():
                     f"https://api.mailgun.net/v3/{domain}/messages",
                     auth=("api", api_key),
                     data={
-                        "from": f"FieldSprout Test <postmaster@{domain}>",
+                        "from": f"RevForge Test <postmaster@{domain}>",
                         "to": recipient,
-                        "subject": f"Test Email from FieldSprout - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-                        "text": f"Congratulations! This is a test email sent from FieldSprout.\n\nRecipient: {recipient}\nProvider: Mailgun\nTime: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\nIf you received this, your email configuration is working correctly!",
+                        "subject": f"Test Email from RevForge - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                        "text": f"Congratulations! This is a test email sent from RevForge.\n\nRecipient: {recipient}\nProvider: Mailgun\nTime: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\nIf you received this, your email configuration is working correctly!",
                         "html": f"""
                         <html>
                         <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -1861,7 +1861,7 @@ def test_email():
                                 <h1 style="margin: 0;">✅ Email Test Successful!</h1>
                             </div>
                             <div style="padding: 30px; background-color: #f9fafb; border-radius: 8px; margin-top: 20px;">
-                                <p style="font-size: 16px; color: #111827;">Congratulations! This is a test email sent from FieldSprout.</p>
+                                <p style="font-size: 16px; color: #111827;">Congratulations! This is a test email sent from RevForge.</p>
                                 <div style="background-color: #ffffff; padding: 20px; border-radius: 6px; margin: 20px 0;">
                                     <p style="margin: 5px 0;"><strong>Recipient:</strong> {recipient}</p>
                                     <p style="margin: 5px 0;"><strong>Provider:</strong> Mailgun</p>
@@ -1871,7 +1871,7 @@ def test_email():
                                 <p style="font-size: 14px; color: #6b7280;">If you received this email, your email configuration is working correctly!</p>
                             </div>
                             <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;">
-                                <p>© 2025 FieldSprout. All rights reserved.</p>
+                                <p>© 2025 RevForge. All rights reserved.</p>
                             </div>
                         </body>
                         </html>
@@ -1953,7 +1953,7 @@ def test_email():
 
             success = send_email(
                 to=recipient,
-                subject=f"Test Email from FieldSprout - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                subject=f"Test Email from RevForge - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
                 html_body=f"""
                 <html>
                 <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -1961,7 +1961,7 @@ def test_email():
                         <h1 style="margin: 0;">✅ Email Test Successful!</h1>
                     </div>
                     <div style="padding: 30px; background-color: #f9fafb; border-radius: 8px; margin-top: 20px;">
-                        <p style="font-size: 16px; color: #111827;">Congratulations! This is a test email sent from FieldSprout.</p>
+                        <p style="font-size: 16px; color: #111827;">Congratulations! This is a test email sent from RevForge.</p>
                         <div style="background-color: #ffffff; padding: 20px; border-radius: 6px; margin: 20px 0;">
                             <p style="margin: 5px 0;"><strong>Recipient:</strong> {recipient}</p>
                             <p style="margin: 5px 0;"><strong>Provider:</strong> {provider}</p>
@@ -1970,12 +1970,12 @@ def test_email():
                         <p style="font-size: 14px; color: #6b7280;">If you received this email, your email configuration is working correctly!</p>
                     </div>
                     <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;">
-                        <p>© 2025 FieldSprout. All rights reserved.</p>
+                        <p>© 2025 RevForge. All rights reserved.</p>
                     </div>
                 </body>
                 </html>
                 """,
-                text_body=f"Congratulations! This is a test email sent from FieldSprout.\n\nRecipient: {recipient}\nProvider: {provider}\nTime: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\nIf you received this, your email configuration is working correctly!"
+                text_body=f"Congratulations! This is a test email sent from RevForge.\n\nRecipient: {recipient}\nProvider: {provider}\nTime: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\nIf you received this, your email configuration is working correctly!"
             )
 
             if success:

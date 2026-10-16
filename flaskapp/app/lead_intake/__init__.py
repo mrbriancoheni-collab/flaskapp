@@ -227,7 +227,7 @@ def elocal_webhook():
 def setup():
     account_id = _current_account_id()
     cfg = _get_or_create_config(account_id)
-    base_url = os.getenv("BASE_PUBLIC_URL", "https://app.fieldsprout.io").rstrip("/")
+    base_url = os.getenv("BASE_PUBLIC_URL", "https://app.getrevforge.io").rstrip("/")
 
     if request.method == "POST":
         cfg.networx_default_lead_cost = request.form.get("networx_default_lead_cost") or cfg.networx_default_lead_cost

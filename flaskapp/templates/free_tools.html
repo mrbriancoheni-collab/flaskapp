@@ -307,6 +307,112 @@
       </div>
     </div>
 
+    <!-- Google Ads Planning Tools — new section -->
+    <h2 class="text-2xl font-bold text-gray-900 mb-2 mt-4">Google Ads Planning Tools</h2>
+    <p class="text-gray-500 mb-8">Budget, schedule, and structure tools — no account connection needed.</p>
+
+    <div class="grid md:grid-cols-3 gap-6 mb-12">
+
+      <!-- Budget Calculator -->
+      <a href="{{ url_for('public_bp.budget_calculator') }}" class="group rounded-2xl border-2 border-gray-100 hover:border-green-300 p-6 shadow-sm hover:shadow-lg transition-all flex flex-col bg-white">
+        <div class="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center mb-4">
+          <i class="fa-solid fa-coins text-xl text-green-700"></i>
+        </div>
+        <div class="font-bold text-gray-900 mb-1">Budget Calculator</div>
+        <p class="text-sm text-gray-500 mb-3 flex-1">Trade + market size + target leads → recommended monthly budget with CPL benchmarks and ROI projection.</p>
+        <span class="text-sm font-semibold text-green-700 group-hover:underline">Try it free →</span>
+      </a>
+
+      <!-- Wasted Spend Estimator -->
+      <a href="{{ url_for('public_bp.wasted_spend_estimator') }}" class="group rounded-2xl border-2 border-gray-100 hover:border-red-300 p-6 shadow-sm hover:shadow-lg transition-all flex flex-col bg-white">
+        <div class="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center mb-4">
+          <i class="fa-solid fa-money-bill-wave text-xl text-red-600"></i>
+        </div>
+        <div class="font-bold text-gray-900 mb-1">Wasted Spend Estimator</div>
+        <p class="text-sm text-gray-500 mb-3 flex-1">5 quick inputs → estimated monthly waste with a donut chart breakdown of exactly where budget bleeds.</p>
+        <span class="text-sm font-semibold text-red-600 group-hover:underline">Estimate my waste →</span>
+      </a>
+
+      <!-- Quality Score Calculator -->
+      <a href="{{ url_for('public_bp.quality_score_calculator') }}" class="group rounded-2xl border-2 border-gray-100 hover:border-blue-300 p-6 shadow-sm hover:shadow-lg transition-all flex flex-col bg-white">
+        <div class="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center mb-4">
+          <i class="fa-solid fa-star-half-stroke text-xl text-blue-600"></i>
+        </div>
+        <div class="font-bold text-gray-900 mb-1">Quality Score Calculator</div>
+        <p class="text-sm text-gray-500 mb-3 flex-1">Enter your current QS and CPC → see exact dollar savings from improving Quality Score.</p>
+        <span class="text-sm font-semibold text-blue-600 group-hover:underline">Calculate savings →</span>
+      </a>
+
+      <!-- Seasonal Budget Planner -->
+      <a href="{{ url_for('public_bp.seasonal_budget_planner') }}" class="group rounded-2xl border-2 border-gray-100 hover:border-amber-300 p-6 shadow-sm hover:shadow-lg transition-all flex flex-col bg-white">
+        <div class="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center mb-4">
+          <i class="fa-solid fa-calendar-days text-xl text-amber-600"></i>
+        </div>
+        <div class="font-bold text-gray-900 mb-1">Seasonal Budget Planner</div>
+        <p class="text-sm text-gray-500 mb-3 flex-1">Trade + climate → 12-month budget allocation chart showing exactly when to spend more and when to pull back.</p>
+        <span class="text-sm font-semibold text-amber-600 group-hover:underline">Plan my year →</span>
+      </a>
+
+      <!-- Ad Schedule Optimizer -->
+      <a href="{{ url_for('public_bp.ad_schedule_optimizer') }}" class="group rounded-2xl border-2 border-gray-100 hover:border-purple-300 p-6 shadow-sm hover:shadow-lg transition-all flex flex-col bg-white">
+        <div class="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center mb-4">
+          <i class="fa-solid fa-clock text-xl text-purple-600"></i>
+        </div>
+        <div class="font-bold text-gray-900 mb-1">Ad Schedule Optimizer</div>
+        <p class="text-sm text-gray-500 mb-3 flex-1">Trade + region → color-coded 7×24 bid modifier grid showing peak hours, off-hours, and when to pause.</p>
+        <span class="text-sm font-semibold text-purple-600 group-hover:underline">See my schedule →</span>
+      </a>
+
+      <!-- Campaign Structure Grader -->
+      <a href="{{ url_for('public_bp.campaign_structure_grader') }}" class="group rounded-2xl border-2 border-gray-100 hover:border-indigo-300 p-6 shadow-sm hover:shadow-lg transition-all flex flex-col bg-white">
+        <div class="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center mb-4">
+          <i class="fa-solid fa-sitemap text-xl text-indigo-600"></i>
+        </div>
+        <div class="font-bold text-gray-900 mb-1">Campaign Structure Grader</div>
+        <p class="text-sm text-gray-500 mb-3 flex-1">Describe your current campaign setup → get a 0–100 score, grade, and specific restructuring actions.</p>
+        <span class="text-sm font-semibold text-indigo-600 group-hover:underline">Grade my structure →</span>
+      </a>
+
+    </div>
+
+    <!-- Ad Creative & Copy Tools -->
+    <h2 class="text-2xl font-bold text-gray-900 mb-2">Ad Creative &amp; Copy Tools</h2>
+    <p class="text-gray-500 mb-8">Analyze and improve your ads before they cost you money.</p>
+
+    <div class="grid md:grid-cols-3 gap-6 mb-12">
+
+      <!-- Ad Copy Analyzer -->
+      <a href="{{ url_for('public_bp.ad_copy_analyzer') }}" class="group rounded-2xl border-2 border-gray-100 hover:border-orange-300 p-6 shadow-sm hover:shadow-lg transition-all flex flex-col bg-white">
+        <div class="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center mb-4">
+          <i class="fa-solid fa-pen-nib text-xl text-orange-600"></i>
+        </div>
+        <div class="font-bold text-gray-900 mb-1">Ad Copy Strength Analyzer</div>
+        <p class="text-sm text-gray-500 mb-3 flex-1">Paste your RSA headlines and descriptions → 5-dimension score with trade-specific improvement suggestions.</p>
+        <span class="text-sm font-semibold text-orange-600 group-hover:underline">Score my copy →</span>
+      </a>
+
+      <!-- Negative Keywords Library -->
+      <a href="{{ url_for('public_bp.negative_keywords') }}" class="group rounded-2xl border-2 border-gray-100 hover:border-red-300 p-6 shadow-sm hover:shadow-lg transition-all flex flex-col bg-white">
+        <div class="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center mb-4">
+          <i class="fa-solid fa-ban text-xl text-red-600"></i>
+        </div>
+        <div class="font-bold text-gray-900 mb-1">Negative Keyword Library</div>
+        <p class="text-sm text-gray-500 mb-3 flex-1">30+ negative keywords per trade — HVAC, plumbing, roofing, electrical, pest control, landscaping. Copy or download as CSV.</p>
+        <span class="text-sm font-semibold text-red-600 group-hover:underline">Get my list →</span>
+      </a>
+
+      <!-- LSA Eligibility Checker -->
+      <a href="{{ url_for('public_bp.lsa_eligibility') }}" class="group rounded-2xl border-2 border-gray-100 hover:border-green-300 p-6 shadow-sm hover:shadow-lg transition-all flex flex-col bg-white">
+        <div class="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center mb-4">
+          <i class="fa-solid fa-shield-check text-xl text-green-700"></i>
+        </div>
+        <div class="font-bold text-gray-900 mb-1">LSA Eligibility Checker</div>
+        <p class="text-sm text-gray-500 mb-3 flex-1">Trade + state + license/insurance status → are you eligible for Google Guaranteed? Includes CPL estimates and next steps.</p>
+        <span class="text-sm font-semibold text-green-700 group-hover:underline">Check eligibility →</span>
+      </a>
+
+    </div>
+
     <h2 class="text-2xl font-bold text-gray-900 mb-2">More Free Tools</h2>
     <p class="text-gray-500 mb-8">Additional tools to understand and grow your marketing.</p>
 

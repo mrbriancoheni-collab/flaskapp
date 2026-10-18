@@ -80,6 +80,61 @@ def meta_creative_audit():
     return render_template("meta_creative_audit.html")
 
 
+@public_bp.route("/free-tools/budget-calculator", endpoint="budget_calculator")
+def budget_calculator():
+    return render_template("budget_calculator.html")
+
+
+@public_bp.route("/free-tools/wasted-spend-estimator", endpoint="wasted_spend_estimator")
+def wasted_spend_estimator():
+    return render_template("wasted_spend_estimator.html")
+
+
+@public_bp.route("/free-tools/quality-score-calculator", endpoint="quality_score_calculator")
+def quality_score_calculator():
+    return render_template("quality_score_calculator.html")
+
+
+@public_bp.route("/free-tools/seasonal-budget-planner", endpoint="seasonal_budget_planner")
+def seasonal_budget_planner():
+    return render_template("seasonal_budget_planner.html")
+
+
+@public_bp.route("/free-tools/ad-schedule-optimizer", endpoint="ad_schedule_optimizer")
+def ad_schedule_optimizer():
+    return render_template("ad_schedule_optimizer.html")
+
+
+@public_bp.route("/free-tools/ad-copy-analyzer", endpoint="ad_copy_analyzer")
+def ad_copy_analyzer():
+    return render_template("ad_copy_analyzer.html")
+
+
+@public_bp.route("/free-tools/negative-keywords", endpoint="negative_keywords")
+def negative_keywords():
+    return render_template("negative_keywords.html")
+
+
+@public_bp.route("/free-tools/lsa-eligibility", endpoint="lsa_eligibility")
+def lsa_eligibility():
+    return render_template("lsa_eligibility.html")
+
+
+@public_bp.route("/free-tools/campaign-structure-grader", endpoint="campaign_structure_grader")
+def campaign_structure_grader():
+    return render_template("campaign_structure_grader.html")
+
+
+@public_bp.route("/solutions/local-services-ads", endpoint="local_services_ads")
+def local_services_ads():
+    return render_template("solutions/local_services_ads.html")
+
+
+@public_bp.route("/results/hvac", endpoint="results_hvac")
+def results_hvac():
+    return render_template("results/hvac_case_study.html")
+
+
 @public_bp.route("/roadmap", endpoint="roadmap")
 def roadmap():
     return render_template("roadmap.html")
@@ -169,6 +224,26 @@ def industry_restoration():
 @public_bp.route("/industries/windows-doors", endpoint="industry_windows_doors")
 def industry_windows_doors():
     return render_template("industries/windows-doors.html")
+
+
+@public_bp.route("/industries/painting", endpoint="industry_painting")
+def industry_painting():
+    return render_template("industries/painting.html")
+
+
+@public_bp.route("/industries/cleaning", endpoint="industry_cleaning")
+def industry_cleaning():
+    return render_template("industries/cleaning.html")
+
+
+@public_bp.route("/industries/general-contracting", endpoint="industry_general_contracting")
+def industry_general_contracting():
+    return render_template("industries/general_contracting.html")
+
+
+@public_bp.route("/industries/flooring", endpoint="industry_flooring")
+def industry_flooring():
+    return render_template("industries/flooring.html")
 
 
 _INDUSTRY_TEMPLATE_OVERRIDES = {

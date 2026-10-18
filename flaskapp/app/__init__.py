@@ -598,6 +598,15 @@ def create_app():
     except Exception:
         app.logger.exception("Failed to import/register budget_groups_bp")
 
+    # Import extra account route modules — they attach to account_bp directly
+    try:
+        import app.account.revenue_attribution_routes  # noqa: F401
+        import app.account.capacity_bidding_routes     # noqa: F401
+        import app.account.phone_verification_routes   # noqa: F401
+        app.logger.info("Extra account routes registered (attribution, capacity, phone)")
+    except Exception:
+        app.logger.exception("Failed to import extra account route modules")
+
     try:
         from app.onboarding_bp import onboarding_bp
         app.register_blueprint(onboarding_bp)

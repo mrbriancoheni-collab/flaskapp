@@ -251,19 +251,22 @@
   </div>
 
   <div class="container-max relative py-12 lg:py-20 text-center">
-    <span class="badge animate-fade-in">The Marketing Command Center for Local Pros</span>
+    <span class="badge animate-fade-in">For HVAC, Plumbing, Roofing &amp; More</span>
 
-    <h1 class="mt-6 text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight animate-fade-in-up">
-      Run all your marketing from <span class="text-primary-700 relative">
-        one command center
+    {# PROBLEM — what they feel every morning #}
+    <h1 class="mt-6 text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight animate-fade-in-up speakable-summary">
+      You're spending money on ads.<br>
+      <span class="text-primary-700 relative">
+        You don't know if they're working.
         <svg class="absolute -bottom-2 left-0 w-full" height="8" viewBox="0 0 200 8" fill="none">
           <path d="M0 7C60 1 140 1 200 7" stroke="currentColor" stroke-width="2" class="text-accent-500"/>
         </svg>
       </span>
     </h1>
 
-    <p class="mt-6 text-xl md:text-2xl text-gray-700 max-w-4xl mx-auto font-medium animate-fade-in-up animation-delay-200">
-      RevForge is your Marketing Command Center — AI agents manage your Google Ads, Facebook Ads, and website 24/7 from a single dashboard, so you get more booked jobs and less wasted spend without juggling tools or agencies.
+    {# VISION — what life looks like when solved #}
+    <p class="mt-6 text-xl md:text-2xl text-gray-700 max-w-4xl mx-auto font-medium animate-fade-in-up animation-delay-200 hero-subtitle">
+      RevForge connects your ads to your booked jobs — then AI agents optimize every campaign, 24/7, until your cost per lead drops and your calendar fills. No agency. No guessing. Just results tied to real revenue.
     </p>
 
     <!-- CTA buttons -->
@@ -394,6 +397,43 @@
         <div class="text-2xl font-bold text-gray-900">2.5x</div>
         <div class="text-xs text-gray-600">Avg Lead Growth</div>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROBLEM AGITATION — names the pain before showing the solution -->
+<section class="py-14 bg-gray-950 text-white">
+  <div class="container-max">
+    <p class="text-center text-xs font-bold tracking-widest text-gray-400 uppercase mb-8">Sound familiar?</p>
+    <div class="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+      <div class="bg-gray-900 rounded-2xl p-6 border border-gray-800">
+        <div class="text-2xl mb-3">💸</div>
+        <h3 class="font-bold text-white mb-2">You don't know what's actually working</h3>
+        <p class="text-sm text-gray-400">Your Google Ads dashboard shows clicks and impressions. But which campaigns book jobs? Which drain your budget for nothing?</p>
+      </div>
+      <div class="bg-gray-900 rounded-2xl p-6 border border-gray-800">
+        <div class="text-2xl mb-3">📅</div>
+        <h3 class="font-bold text-white mb-2">Your ads spend whether you're busy or not</h3>
+        <p class="text-sm text-gray-400">When your crew is full, you're still paying for leads you can't service. When you're slow, the budget's already gone.</p>
+      </div>
+      <div class="bg-gray-900 rounded-2xl p-6 border border-gray-800">
+        <div class="text-2xl mb-3">🏢</div>
+        <h3 class="font-bold text-white mb-2">Your agency charges more than it delivers</h3>
+        <p class="text-sm text-gray-400">$2,000–$5,000/month for changes made once or twice a month. No transparency. No accountability. No one on call at 7am when something breaks.</p>
+      </div>
+    </div>
+    <p class="text-center mt-10 text-lg text-white font-semibold max-w-2xl mx-auto">
+      The problem isn't your trade. It's that your marketing was never built to connect spend to booked revenue.
+    </p>
+    <p class="text-center mt-3 text-gray-400 max-w-xl mx-auto">RevForge fixes that — and keeps fixing it every day.</p>
+    <div class="text-center mt-8">
+      {% if has_endpoint('signup') %}
+        <a href="{{ url_for(ep('signup')) }}?plan=annual" class="btn btn-primary btn-lg">Fix it — Start free →</a>
+      {% elif has_endpoint('register') %}
+        <a href="{{ url_for(ep('register')) }}?plan=annual" class="btn btn-primary btn-lg">Fix it — Start free →</a>
+      {% else %}
+        <a href="/signup?plan=annual" class="btn btn-primary btn-lg">Fix it — Start free →</a>
+      {% endif %}
     </div>
   </div>
 </section>
@@ -607,58 +647,58 @@
 <section id="how-it-works" class="section bg-gradient-to-b from-gray-50 to-white">
   <div class="container-max">
     <div class="text-center max-w-3xl mx-auto mb-16">
-      <span class="badge">Simple Setup</span>
-      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">How It Works</h2>
-      <p class="mt-4 text-lg text-gray-600">Get started in minutes and start seeing results within days</p>
+      <span class="badge">Your first 7 days</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">Here's exactly what happens</h2>
+      <p class="mt-4 text-lg text-gray-600">No agency onboarding call. No 90-day "ramp period." Results start on day one.</p>
     </div>
 
-    <div class="grid md:grid-cols-3 gap-12 max-w-5xl mx-auto">
-      <!-- Step 1 -->
+    <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+      <!-- Day 1 -->
       <div class="relative text-center">
-        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 text-white text-3xl font-bold mb-6 shadow-xl">
-          1
+        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-primary-600 to-primary-700 text-white text-xl font-bold mb-6 shadow-xl">
+          Day 1
         </div>
-        <h3 class="text-xl font-bold mb-3">Connect your marketing accounts</h3>
-        <p class="text-gray-600">Link Google Ads, Meta, Google Business, and more in minutes. No technical setup or marketing experience required.</p>
+        <h3 class="text-xl font-bold mb-3">Connect in 15 minutes</h3>
+        <p class="text-gray-600">Link your Google Ads, Google Business Profile, and Meta accounts. RevForge immediately audits every campaign, keyword, and bid — and shows you exactly where money is being wasted.</p>
         <div class="mt-4 inline-block px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-semibold">
-          ⚡ 30 seconds
+          ⚡ Setup complete
         </div>
       </div>
 
-      <!-- Step 2 -->
+      <!-- Day 2 -->
       <div class="relative text-center">
-        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-blue-600 to-cyan-600 text-white text-3xl font-bold mb-6 shadow-xl">
-          2
+        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-blue-600 to-cyan-600 text-white text-xl font-bold mb-6 shadow-xl">
+          Day 2
         </div>
-        <h3 class="text-xl font-bold mb-3">AI agents analyze your entire marketing</h3>
-        <p class="text-gray-600">Our AI audits your ads, SEO, reputation, and lead pipeline—finding wasted spend and missed opportunities across every channel.</p>
+        <h3 class="text-xl font-bold mb-3">AI starts optimizing</h3>
+        <p class="text-gray-600">Negative keywords added. Low-quality ads paused. Bids adjusted by time-of-day and job type. Your account is already more efficient than it was under manual management.</p>
         <div class="mt-4 inline-block px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
-          🤖 Fully automated
+          🤖 Running autonomously
         </div>
       </div>
 
-      <!-- Step 3 -->
+      <!-- Day 7+ -->
       <div class="relative text-center">
-        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-green-600 to-emerald-600 text-white text-3xl font-bold mb-6 shadow-xl">
-          3
+        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-green-600 to-emerald-600 text-white text-xl font-bold mb-6 shadow-xl">
+          Day 7+
         </div>
-        <h3 class="text-xl font-bold mb-3">Watch your calendar fill up</h3>
-        <p class="text-gray-600">AI continuously runs and improves your marketing every day—more leads, more booked jobs, less wasted time and money.</p>
+        <h3 class="text-xl font-bold mb-3">Revenue attribution is live</h3>
+        <p class="text-gray-600">Every booked job ties back to the campaign that drove it. You see cost per booked job — not just cost per click. The AI uses that data to keep improving every week.</p>
         <div class="mt-4 inline-block px-4 py-2 bg-purple-100 text-purple-800 rounded-full text-sm font-semibold">
-          📈 24/7 optimization
+          📈 Compounding results
         </div>
       </div>
     </div>
 
     <div class="mt-12 text-center">
       {% if has_endpoint('signup') %}
-        <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary btn-lg">Get Started Now →</a>
+        <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary btn-lg">Start today — free for 14 days →</a>
       {% elif has_endpoint('register') %}
-        <a href="{{ url_for(ep('register')) }}" class="btn btn-primary btn-lg">Get Started Now →</a>
+        <a href="{{ url_for(ep('register')) }}" class="btn btn-primary btn-lg">Start today — free for 14 days →</a>
       {% else %}
-        <a href="/signup" class="btn btn-primary btn-lg">Get Started Now →</a>
+        <a href="/signup" class="btn btn-primary btn-lg">Start today — free for 14 days →</a>
       {% endif %}
-      <p class="mt-4 text-sm text-gray-500">Cancel anytime • 30-day guarantee</p>
+      <p class="mt-4 text-sm text-gray-500">No credit card · Cancel anytime · Setup takes 15 minutes</p>
     </div>
   </div>
 </section>

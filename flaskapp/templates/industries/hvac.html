@@ -95,11 +95,13 @@
         <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-orange-100 text-orange-800 rounded-full text-sm font-semibold mb-6">
           <i class="fa-solid fa-temperature-half"></i> AI Marketing for HVAC Companies
         </div>
+        {# PROBLEM — the specific pain HVAC owners feel #}
         <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-tight">
-          Stop Overpaying for<br>HVAC Leads on Google
+          Your Google Ads are running.<br>You can't tell if they're<br>booking jobs.
         </h1>
+        {# VISION — what changes when this is solved #}
         <p class="text-xl text-gray-600 mb-8">
-          RevForge's AI agents manage your Google Ads, Meta campaigns, and Google Business Profile around the clock — cutting wasted ad spend, filling your review pipeline, and booking more tune-ups, repairs, and installs automatically.
+          RevForge connects your ad spend to your booked service calls — then AI agents cut the waste, ramp up for AC season automatically, and keep your cost per lead below $100. No agency. No guessing. No wasted AC season spend.
         </p>
         <div class="flex flex-col sm:flex-row gap-4">
           {% if has_endpoint('ads_grader_bp.index') %}
@@ -155,6 +157,41 @@
             </div>
           </div>
           <p class="text-xs text-gray-400 mt-4 text-center">Anonymized averages across HVAC accounts on RevForge</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PLAN — what happens in the first week (removes fear of commitment) -->
+<section class="py-12 bg-white border-b border-gray-100">
+  <div class="container-lg">
+    <div class="flex flex-col md:flex-row items-start gap-0 max-w-4xl mx-auto divide-y md:divide-y-0 md:divide-x divide-gray-100">
+      <div class="flex-1 flex items-start gap-4 py-6 md:py-0 md:px-8 first:md:pl-0 last:md:pr-0">
+        <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <span class="text-green-700 font-bold text-sm">1</span>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900">Connect in 15 min</div>
+          <div class="text-sm text-gray-500 mt-1">Link your Google Ads with one OAuth click. RevForge audits every keyword and campaign instantly.</div>
+        </div>
+      </div>
+      <div class="flex-1 flex items-start gap-4 py-6 md:py-0 md:px-8">
+        <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <span class="text-orange-700 font-bold text-sm">2</span>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900">Waste stops by day 2</div>
+          <div class="text-sm text-gray-500 mt-1">200+ HVAC-specific negative keywords added. Off-hours ads paused. Low-QS campaigns flagged.</div>
+        </div>
+      </div>
+      <div class="flex-1 flex items-start gap-4 py-6 md:py-0 md:px-8">
+        <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <span class="text-blue-700 font-bold text-sm">3</span>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900">CPL drops in 30 days</div>
+          <div class="text-sm text-gray-500 mt-1">AI optimizes bids, budget, and scheduling daily. Most HVAC accounts drop from $147 → $89 CPL within a month.</div>
         </div>
       </div>
     </div>

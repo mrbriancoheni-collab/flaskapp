@@ -1,0 +1,446 @@
+{% extends "base_public.html" %}
+{% block title %}Google Ads Quality Score Impact Calculator — Free Tool | RevForge{% endblock %}
+{% block meta_description %}Calculate the exact dollar impact of improving your Google Ads Quality Score. See how moving from QS 5 to QS 8 reduces your CPC, cuts monthly spend, and unlocks thousands in annual savings — for HVAC, plumbing, roofing, and other trade contractors.{% endblock %}
+{% block og_title %}Google Ads Quality Score Impact Calculator — RevForge{% endblock %}
+{% block og_description %}Quality Score directly controls what you pay per click. Calculate your savings from improving QS — and see exactly how much lower CPCs could save your trade business each year.{% endblock %}
+
+{% block head_extra %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Google Ads Quality Score Impact Calculator",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Web",
+  "description": "Calculate the exact savings from improving your Google Ads Quality Score. See your new CPC, monthly spend reduction, and annual savings — built for trade contractors in HVAC, plumbing, electrical, roofing, and more.",
+  "url": "https://getrevforge.io/free-tools/quality-score-calculator",
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+  "provider": {"@type": "Organization", "name": "RevForge", "url": "https://getrevforge.io"}
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="bg-gradient-to-b from-gray-50 to-white pt-12 pb-8">
+  <div class="container-lg">
+    <nav class="text-sm text-gray-500 mb-6" aria-label="Breadcrumb">
+      <ol class="flex items-center gap-2">
+        <li><a href="/" class="hover:text-gray-700 transition">Home</a></li>
+        <li><span class="text-gray-300">/</span></li>
+        <li><a href="/free-tools" class="hover:text-gray-700 transition">Free Tools</a></li>
+        <li><span class="text-gray-300">/</span></li>
+        <li class="text-gray-700 font-medium">Quality Score Calculator</li>
+      </ol>
+    </nav>
+
+    <div class="max-w-3xl mb-10">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-4" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;">
+        <i class="fa-solid fa-star-half-stroke"></i> FREE TOOL — No login required
+      </div>
+      <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-900 leading-tight mb-4">
+        Google Ads Quality Score<br class="hidden sm:block">
+        <span style="color:#1E5FA8;">Impact Calculator</span>
+      </h1>
+      <p class="text-lg text-gray-600 leading-relaxed mb-4">
+        Quality Score (1–10) is one of the most powerful levers in Google Ads — yet most trade contractors ignore it. It directly multiplies or discounts every CPC you pay.
+      </p>
+
+      <!-- QS explanation strip -->
+      <div class="rounded-xl border overflow-hidden" style="border-color:#bfdbfe;">
+        <div class="px-4 py-2 text-xs font-bold uppercase tracking-wider text-white" style="background:#1E5FA8;">How Quality Score affects your cost per click</div>
+        <div class="grid grid-cols-5 divide-x" style="divide-color:#e0e7ff;">
+          <div class="p-3 text-center bg-red-50">
+            <p class="text-xs text-gray-500 font-medium">QS 4</p>
+            <p class="text-sm font-extrabold text-red-600">+25%</p>
+            <p class="text-xs text-gray-400">vs QS 5</p>
+          </div>
+          <div class="p-3 text-center bg-gray-50">
+            <p class="text-xs text-gray-500 font-medium">QS 5</p>
+            <p class="text-sm font-extrabold text-gray-600">Base</p>
+            <p class="text-xs text-gray-400">industry avg</p>
+          </div>
+          <div class="p-3 text-center" style="background:#eff6ff;">
+            <p class="text-xs text-gray-500 font-medium">QS 7</p>
+            <p class="text-sm font-extrabold" style="color:#1E5FA8;">−29%</p>
+            <p class="text-xs text-gray-400">vs QS 5</p>
+          </div>
+          <div class="p-3 text-center" style="background:#dbeafe;">
+            <p class="text-xs text-gray-500 font-medium">QS 8</p>
+            <p class="text-sm font-extrabold" style="color:#1E5FA8;">−38%</p>
+            <p class="text-xs text-gray-400">vs QS 5</p>
+          </div>
+          <div class="p-3 text-center" style="background:#bfdbfe;">
+            <p class="text-xs text-gray-500 font-medium">QS 10</p>
+            <p class="text-sm font-extrabold" style="color:#1e3a8a;">−50%</p>
+            <p class="text-xs text-gray-400">vs QS 5</p>
+          </div>
+        </div>
+        <div class="px-4 py-2 text-xs text-gray-500 bg-gray-50">A competitor at QS 8 pays <strong>38% less</strong> per click than you at QS 5 — for the exact same ad position.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Tool -->
+<section class="py-10">
+  <div class="container-lg">
+    <div class="grid lg:grid-cols-2 gap-8 items-start">
+
+      <!-- Inputs -->
+      <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 sm:p-8 sticky top-24">
+        <h2 class="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+          <span class="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold" style="background:#1E5FA8;">1</span>
+          Your Current Numbers
+        </h2>
+
+        <div class="space-y-6">
+          <!-- Current QS -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">
+              Current average Quality Score:
+              <span id="cur-qs-display" class="font-extrabold ml-1" style="color:#1E5FA8;">5</span>
+              <span id="cur-qs-label" class="ml-1 text-xs font-normal text-gray-400">/ 10</span>
+            </label>
+            <input type="range" id="cur-qs-slider" min="1" max="10" step="1" value="5"
+              class="w-full h-2 rounded-full appearance-none cursor-pointer" style="accent-color:#1E5FA8;">
+            <div class="flex justify-between text-xs text-gray-400 mt-1"><span>1 (poor)</span><span>10 (excellent)</span></div>
+          </div>
+
+          <!-- Current CPC -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2" for="cur-cpc">Current average CPC ($)</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">$</span>
+              <input type="number" id="cur-cpc" value="8.50" min="0.5" max="200" step="0.5"
+                class="w-full border border-gray-200 rounded-xl pl-8 pr-4 py-3 text-gray-800 bg-gray-50 focus:bg-white focus:border-gray-400 focus:outline-none transition text-sm">
+            </div>
+            <p class="text-xs text-gray-400 mt-1">Find this in your Google Ads account → Campaigns → Columns → Avg. CPC</p>
+          </div>
+
+          <!-- Monthly Clicks -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2" for="monthly-clicks">Monthly clicks</label>
+            <input type="number" id="monthly-clicks" value="500" min="50" max="50000" step="50"
+              class="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-gray-50 focus:bg-white focus:border-gray-400 focus:outline-none transition text-sm">
+            <p class="text-xs text-gray-400 mt-1">Your Campaigns tab → Clicks column for last 30 days</p>
+          </div>
+
+          <!-- Target QS -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">
+              Target Quality Score:
+              <span id="tgt-qs-display" class="font-extrabold ml-1" style="color:#1E5FA8;">8</span>
+              <span class="text-xs text-gray-400 ml-1">/ 10</span>
+            </label>
+            <input type="range" id="tgt-qs-slider" min="1" max="10" step="1" value="8"
+              class="w-full h-2 rounded-full appearance-none cursor-pointer" style="accent-color:#1A5C35;">
+            <div class="flex justify-between text-xs text-gray-400 mt-1"><span>1</span><span>10</span></div>
+            <p id="qs-warning" class="text-xs mt-1 hidden" style="color:#D97706;"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Target QS must be higher than current QS to show savings.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div class="space-y-5">
+
+        <!-- Savings Summary -->
+        <div class="rounded-2xl p-6" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border:2px solid #1E5FA8;">
+          <p class="text-xs font-semibold uppercase tracking-wider mb-2" style="color:#1e40af;">Moving from QS <span id="r-cur-qs">5</span> → QS <span id="r-tgt-qs">8</span></p>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <p class="text-xs text-gray-500 font-medium">Monthly savings</p>
+              <p class="text-3xl font-extrabold" style="color:#1E5FA8;" id="monthly-savings">$0</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 font-medium">Annual savings</p>
+              <p class="text-3xl font-extrabold" style="color:#1A5C35;" id="annual-savings">$0</p>
+            </div>
+          </div>
+          <div class="mt-4 p-3 bg-white/70 rounded-xl text-center">
+            <p class="text-xs text-gray-500 font-medium mb-0.5">Equivalent to</p>
+            <p class="text-base font-bold" style="color:#1E5FA8;" id="extra-clicks-text">X% more clicks for the same budget</p>
+          </div>
+        </div>
+
+        <!-- CPC Comparison -->
+        <div class="bg-white rounded-2xl border border-gray-200 p-6">
+          <h3 class="text-sm font-bold text-gray-800 mb-1">CPC Comparison</h3>
+          <p class="text-xs text-gray-400 mb-4">Same clicks, same ad position — very different cost</p>
+          <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="rounded-xl border border-red-100 p-4 bg-red-50 text-center">
+              <p class="text-xs text-gray-500 font-medium mb-1">Current CPC <span class="text-xs text-gray-400">(QS <span id="cur-qs-badge">5</span>)</span></p>
+              <p class="text-2xl font-extrabold text-red-600" id="cur-cpc-display">$8.50</p>
+              <p class="text-xs text-gray-400 mt-1" id="cur-spend-display">$4,250/mo</p>
+            </div>
+            <div class="rounded-xl border p-4 text-center" style="background:#eff6ff;border-color:#bfdbfe;">
+              <p class="text-xs text-gray-500 font-medium mb-1">New CPC <span class="text-xs text-gray-400">(QS <span id="tgt-qs-badge">8</span>)</span></p>
+              <p class="text-2xl font-extrabold" style="color:#1E5FA8;" id="new-cpc-display">$5.27</p>
+              <p class="text-xs text-gray-400 mt-1" id="new-spend-display">$2,635/mo</p>
+            </div>
+          </div>
+          <canvas id="qs-chart" height="120"></canvas>
+        </div>
+
+        <!-- Metrics table -->
+        <div class="bg-white rounded-2xl border border-gray-200 p-6">
+          <h3 class="text-sm font-bold text-gray-800 mb-4">Full Impact Summary</h3>
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-gray-100">
+                <th class="text-left text-xs font-semibold text-gray-400 pb-2">Metric</th>
+                <th class="text-right text-xs font-semibold text-gray-400 pb-2">Current</th>
+                <th class="text-right text-xs font-semibold pb-2" style="color:#1E5FA8;">Target</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+              <tr><td class="py-2.5 text-gray-700">Quality Score</td><td class="py-2.5 text-right font-semibold text-gray-900" id="t-cur-qs">5/10</td><td class="py-2.5 text-right font-bold" id="t-tgt-qs" style="color:#1E5FA8;">8/10</td></tr>
+              <tr><td class="py-2.5 text-gray-700">Avg. CPC</td><td class="py-2.5 text-right text-red-600 font-semibold" id="t-cur-cpc">$8.50</td><td class="py-2.5 text-right font-bold" id="t-new-cpc" style="color:#1E5FA8;">$5.27</td></tr>
+              <tr><td class="py-2.5 text-gray-700">Monthly clicks</td><td class="py-2.5 text-right font-semibold text-gray-900" id="t-clicks">500</td><td class="py-2.5 text-right font-bold" id="t-clicks-2" style="color:#1E5FA8;">500</td></tr>
+              <tr><td class="py-2.5 text-gray-700">Monthly spend</td><td class="py-2.5 text-right font-semibold text-red-600" id="t-cur-spend">$4,250</td><td class="py-2.5 text-right font-bold" id="t-new-spend" style="color:#1E5FA8;">$2,635</td></tr>
+              <tr class="font-bold"><td class="py-2.5 text-gray-900">Annual spend</td><td class="py-2.5 text-right text-red-600" id="t-cur-annual">$51,000</td><td class="py-2.5 text-right" id="t-new-annual" style="color:#1A5C35;">$31,620</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How RevForge improves QS -->
+<section class="py-12 bg-gray-50 border-t border-gray-100">
+  <div class="container-lg">
+    <div class="max-w-3xl mx-auto">
+      <h2 class="text-2xl font-extrabold text-gray-900 mb-2 text-center">How RevForge Improves Quality Score</h2>
+      <p class="text-gray-500 text-center mb-8">QS is determined by 3 factors: Expected CTR, Ad Relevance, and Landing Page Experience. RevForge's AI works all three.</p>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="bg-white rounded-xl border border-gray-100 p-5">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style="background:#eff6ff;">
+            <i class="fa-solid fa-file-lines" style="color:#1E5FA8;"></i>
+          </div>
+          <h3 class="font-bold text-gray-900 text-sm mb-1">Landing Page Relevance</h3>
+          <p class="text-xs text-gray-500">RevForge aligns your ad copy and landing page content so Google sees strong keyword → page relevance, directly boosting "Landing Page Experience" QS sub-score.</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-100 p-5">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style="background:#f0fdf4;">
+            <i class="fa-solid fa-pen-nib" style="color:#1A5C35;"></i>
+          </div>
+          <h3 class="font-bold text-gray-900 text-sm mb-1">Ad Copy Alignment</h3>
+          <p class="text-xs text-gray-500">AI-generated ad copy mirrors the intent of each keyword group — improving "Ad Relevance" QS sub-score and expected CTR simultaneously.</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-100 p-5">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style="background:#fff7ed;">
+            <i class="fa-solid fa-arrow-pointer" style="color:#D97706;"></i>
+          </div>
+          <h3 class="font-bold text-gray-900 text-sm mb-1">CTR Improvement</h3>
+          <p class="text-xs text-gray-500">RevForge tests headlines, descriptions, and call-to-actions automatically. Higher historical CTR directly raises your expected CTR QS component.</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-100 p-5">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style="background:#fef3c7;">
+            <i class="fa-solid fa-ban" style="color:#92400e;"></i>
+          </div>
+          <h3 class="font-bold text-gray-900 text-sm mb-1">Negative Keyword Tightening</h3>
+          <p class="text-xs text-gray-500">Irrelevant impressions drag down CTR even if you don't pay for them. RevForge continuously prunes your keyword lists to keep impression quality high.</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-100 p-5">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style="background:#f5f3ff;">
+            <i class="fa-solid fa-sliders" style="color:#7c3aed;"></i>
+          </div>
+          <h3 class="font-bold text-gray-900 text-sm mb-1">Bid Adjustments</h3>
+          <p class="text-xs text-gray-500">Smart bid adjustments shift budget toward high-QS keywords where you're getting efficient CPCs and pull back from keyword segments where QS is dragging performance.</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-100 p-5 flex flex-col justify-between">
+          <div>
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style="background:#eff6ff;">
+              <i class="fa-solid fa-chart-line" style="color:#1E5FA8;"></i>
+            </div>
+            <h3 class="font-bold text-gray-900 text-sm mb-1">Ongoing QS Monitoring</h3>
+            <p class="text-xs text-gray-500">RevForge tracks QS at the keyword level and flags drops before they compound into higher CPCs.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="py-12">
+  <div class="container-lg">
+    <div class="rounded-2xl p-8 sm:p-10 text-white text-center" style="background:linear-gradient(135deg,#1E5FA8,#1e3a8a);">
+      <h2 class="text-2xl sm:text-3xl font-extrabold mb-3">Let RevForge raise your Quality Score</h2>
+      <p class="text-blue-100 mb-6 max-w-xl mx-auto">Our AI audits your ad copy, keywords, and landing pages to find exactly where your QS is dragging — and fixes it automatically.</p>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center">
+        <a href="/pricing" class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition" style="background:#D97706;color:white;" onmouseover="this.style.background='#b45309'" onmouseout="this.style.background='#D97706'">
+          <i class="fa-solid fa-rocket"></i> See RevForge Plans
+        </a>
+        <a href="/ads-grader" class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm bg-white/10 text-white border border-white/30 hover:bg-white/20 transition">
+          <i class="fa-solid fa-magnifying-glass-chart"></i> Free Ads Audit
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Also Try -->
+<section class="py-8 bg-gray-50 border-t border-gray-100">
+  <div class="container-lg">
+    <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Also try these free tools</h3>
+    <div class="grid sm:grid-cols-3 gap-4">
+      <a href="/free-tools/budget-calculator" class="bg-white rounded-xl border border-gray-200 p-4 hover:border-gray-300 hover:shadow-sm transition group">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm" style="background:#1A5C35;">
+            <i class="fa-solid fa-calculator"></i>
+          </div>
+          <p class="font-semibold text-gray-900 text-sm">Budget Calculator</p>
+        </div>
+        <p class="text-xs text-gray-500">Find the right monthly spend for your lead goals</p>
+      </a>
+      <a href="/free-tools/wasted-spend-estimator" class="bg-white rounded-xl border border-gray-200 p-4 hover:border-gray-300 hover:shadow-sm transition group">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm" style="background:#D97706;">
+            <i class="fa-solid fa-fire"></i>
+          </div>
+          <p class="font-semibold text-gray-900 text-sm">Wasted Spend Estimator</p>
+        </div>
+        <p class="text-xs text-gray-500">Find out how much of your budget is being thrown away</p>
+      </a>
+      <a href="/free-tools/seasonal-budget-planner" class="bg-white rounded-xl border border-gray-200 p-4 hover:border-gray-300 hover:shadow-sm transition group">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm" style="background:#1A5C35;">
+            <i class="fa-solid fa-calendar-days"></i>
+          </div>
+          <p class="font-semibold text-gray-900 text-sm">Seasonal Budget Planner</p>
+        </div>
+        <p class="text-xs text-gray-500">Plan 12-month ad spend around demand peaks</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Methodology -->
+<section class="py-10 border-t border-gray-100">
+  <div class="container-md">
+    <h3 class="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
+      <i class="fa-solid fa-circle-info" style="color:#1E5FA8;"></i> How This Calculator Works
+    </h3>
+    <div class="text-sm text-gray-500 space-y-2 leading-relaxed">
+      <p>Google's Quality Score system applies a CPC multiplier relative to a "base" CPC at QS 5. The multiplier table (QS 1 = 5x base cost, QS 5 = 1x, QS 10 = 0.5x) is derived from Google's published documentation on Ad Rank and Quality Score pricing.</p>
+      <p>This calculator back-calculates your implied base CPC from your current QS level, then applies the target QS multiplier to find your new CPC. The savings projection assumes constant click volume — in reality, lower CPCs at the same budget buys <em>more</em> clicks, so actual savings compound further.</p>
+      <p>QS improvements in real accounts typically take 30–90 days as Google updates its historical data. Improvements above QS 8 require sustained high CTR and landing page experience scores, which depend on your industry's benchmark CTR.</p>
+    </div>
+  </div>
+</section>
+
+<script nonce="{{ g.csp_nonce }}">
+(function() {
+  // QS → CPC multiplier (relative to QS 5 = 1.0x base)
+  const QS_MULT = { 1: 5.0, 2: 2.5, 3: 1.67, 4: 1.25, 5: 1.0, 6: 0.83, 7: 0.71, 8: 0.62, 9: 0.56, 10: 0.5 };
+  const fmt = (n) => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtInt = (n) => '$' + Math.round(n).toLocaleString('en-US');
+
+  let chartInstance = null;
+
+  function calculate() {
+    const curQS    = parseInt(document.getElementById('cur-qs-slider').value, 10);
+    const tgtQS    = parseInt(document.getElementById('tgt-qs-slider').value, 10);
+    const curCPC   = parseFloat(document.getElementById('cur-cpc').value) || 8.5;
+    const clicks   = parseInt(document.getElementById('monthly-clicks').value, 10) || 500;
+
+    const warning  = document.getElementById('qs-warning');
+    if (tgtQS <= curQS) {
+      warning.classList.remove('hidden');
+    } else {
+      warning.classList.add('hidden');
+    }
+
+    // Back-calculate base CPC from current QS
+    const baseCPC  = curCPC / QS_MULT[curQS];
+    const newCPC   = baseCPC * QS_MULT[tgtQS];
+
+    const curSpend = curCPC * clicks;
+    const newSpend = newCPC * clicks;
+    const mthSave  = curSpend - newSpend;
+    const annSave  = mthSave * 12;
+
+    // Extra clicks calculation
+    const extraClicksPct = tgtQS > curQS ? Math.round(((curSpend / newCPC) / clicks - 1) * 100) : 0;
+
+    // Update UI
+    document.getElementById('r-cur-qs').textContent = curQS;
+    document.getElementById('r-tgt-qs').textContent = tgtQS;
+    document.getElementById('monthly-savings').textContent = mthSave > 0 ? fmtInt(mthSave) : '$0';
+    document.getElementById('annual-savings').textContent  = annSave > 0 ? fmtInt(annSave)  : '$0';
+    document.getElementById('extra-clicks-text').textContent = tgtQS > curQS ? extraClicksPct + '% more clicks for the same budget' : 'Increase target QS above current to see savings';
+
+    document.getElementById('cur-qs-badge').textContent   = curQS;
+    document.getElementById('tgt-qs-badge').textContent   = tgtQS;
+    document.getElementById('cur-cpc-display').textContent = fmt(curCPC);
+    document.getElementById('new-cpc-display').textContent = fmt(newCPC);
+    document.getElementById('cur-spend-display').textContent = fmtInt(curSpend) + '/mo';
+    document.getElementById('new-spend-display').textContent = fmtInt(newSpend) + '/mo';
+
+    document.getElementById('t-cur-qs').textContent    = curQS + '/10';
+    document.getElementById('t-tgt-qs').textContent    = tgtQS + '/10';
+    document.getElementById('t-cur-cpc').textContent   = fmt(curCPC);
+    document.getElementById('t-new-cpc').textContent   = fmt(newCPC);
+    document.getElementById('t-clicks').textContent    = clicks.toLocaleString('en-US');
+    document.getElementById('t-clicks-2').textContent  = clicks.toLocaleString('en-US');
+    document.getElementById('t-cur-spend').textContent = fmtInt(curSpend);
+    document.getElementById('t-new-spend').textContent = fmtInt(newSpend);
+    document.getElementById('t-cur-annual').textContent = fmtInt(curSpend * 12);
+    document.getElementById('t-new-annual').textContent = fmtInt(newSpend * 12);
+
+    // Chart
+    const ctx = document.getElementById('qs-chart').getContext('2d');
+    if (chartInstance) chartInstance.destroy();
+    chartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['Current CPC (QS ' + curQS + ')', 'Target CPC (QS ' + tgtQS + ')'],
+        datasets: [
+          {
+            label: 'Savings vs Current',
+            data: [0, mthSave > 0 ? mthSave / clicks : 0],
+            backgroundColor: 'rgba(26, 92, 53, 0.25)',
+            borderColor: '#1A5C35',
+            borderWidth: 1,
+          },
+          {
+            label: 'CPC',
+            data: [curCPC, newCPC],
+            backgroundColor: ['rgba(220,38,38,0.15)', 'rgba(30,95,168,0.15)'],
+            borderColor: ['#dc2626', '#1E5FA8'],
+            borderWidth: 2,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: function(ctx) { return ' $' + ctx.raw.toFixed(2); } } }
+        },
+        scales: {
+          y: { ticks: { callback: function(v) { return '$' + v.toFixed(2); } }, grid: { color: '#f3f4f6' } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  document.getElementById('cur-qs-slider').addEventListener('input', function() {
+    document.getElementById('cur-qs-display').textContent = this.value;
+    calculate();
+  });
+  document.getElementById('tgt-qs-slider').addEventListener('input', function() {
+    document.getElementById('tgt-qs-display').textContent = this.value;
+    calculate();
+  });
+  ['cur-cpc','monthly-clicks'].forEach(function(id) {
+    document.getElementById(id).addEventListener('input', calculate);
+  });
+
+  calculate();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,569 @@
+{% extends "base_public.html" %}
+{% block title %}Ad Copy Strength Analyzer for Trade Contractors | RevForge{% endblock %}
+{% block meta_description %}Free Google Ads copy analyzer for HVAC, plumbing, electrical, and roofing contractors. Paste your RSA headlines and descriptions to get a score, grade, and specific improvement suggestions.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Google Ads Copy Strength Analyzer for Trade Contractors",
+  "url": "https://getrevforge.io/free-tools/ad-copy-analyzer",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Any",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "description": "Paste your Google Ads RSA headlines and descriptions to get scored on headline count, character use, CTA presence, keyword diversity, and trust signals. Includes trade-specific suggestions.",
+  "provider": { "@type": "Organization", "name": "RevForge", "url": "https://getrevforge.io" }
+}
+</script>
+<style>
+  :root {
+    --forge-green: #1A5C35;
+    --forge-green-dark: #144a2a;
+    --forge-green-light: #e8f5ee;
+    --rev-amber: #D97706;
+    --rev-amber-light: #fef3c7;
+    --prec-blue: #1E5FA8;
+    --prec-blue-light: #eff6ff;
+    --grade-a: #1A5C35; --grade-a-bg: #e8f5ee;
+    --grade-b: #2563eb; --grade-b-bg: #eff6ff;
+    --grade-c: #D97706; --grade-c-bg: #fef3c7;
+    --grade-d: #dc2626; --grade-d-bg: #fee2e2;
+    --grade-f: #991b1b; --grade-f-bg: #fef2f2;
+  }
+
+  .tool-hero {
+    background: linear-gradient(135deg, #eff6ff 0%, #fff 60%, var(--forge-green-light) 100%);
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .tool-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
+  }
+
+  .form-label { display: block; font-weight: 600; font-size: 0.875rem; color: #374151; margin-bottom: 0.375rem; }
+  .form-label span { font-weight: 400; color: #6b7280; margin-left: 0.25rem; }
+
+  .form-textarea {
+    width: 100%; padding: 0.75rem 1rem; border: 1.5px solid #d1d5db; border-radius: 10px;
+    font-size: 0.875rem; color: #111827; background: #fafafa; outline: none;
+    transition: border-color 0.15s; resize: vertical; font-family: 'Courier New', monospace;
+    line-height: 1.6;
+  }
+  .form-textarea:focus { border-color: var(--forge-green); background: #fff; box-shadow: 0 0 0 3px rgba(26,92,53,0.1); }
+
+  .form-select {
+    width: 100%; padding: 0.75rem 1rem; border: 1.5px solid #d1d5db; border-radius: 10px;
+    font-size: 0.9375rem; color: #111827; background: #fff; outline: none; font-family: inherit;
+    transition: border-color 0.15s;
+  }
+  .form-select:focus { border-color: var(--forge-green); box-shadow: 0 0 0 3px rgba(26,92,53,0.1); }
+
+  .char-counter { font-size: 0.75rem; color: #9ca3af; text-align: right; margin-top: 0.25rem; }
+
+  .rf-btn-primary {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: var(--forge-green); color: #fff;
+    padding: 0.875rem 2rem; border-radius: 10px; font-weight: 600; font-size: 1rem;
+    cursor: pointer; border: none; text-decoration: none; transition: background 0.18s;
+  }
+  .rf-btn-primary:hover { background: var(--forge-green-dark); }
+
+  .rf-btn-amber {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: var(--rev-amber); color: #fff;
+    padding: 0.75rem 1.5rem; border-radius: 10px; font-weight: 600; font-size: 0.9375rem;
+    cursor: pointer; border: none; text-decoration: none; transition: background 0.18s;
+  }
+  .rf-btn-amber:hover { background: #b45309; color: #fff; }
+
+  /* Score display */
+  .score-ring-wrap { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+  .score-ring-svg { transform: rotate(-90deg); }
+  .score-ring-track { fill: none; stroke: #e5e7eb; stroke-width: 8; }
+  .score-ring-fill { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 0.8s cubic-bezier(.4,0,.2,1); }
+
+  .grade-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 52px; height: 52px; border-radius: 50%; font-size: 1.75rem; font-weight: 900;
+  }
+
+  .category-bar-track {
+    height: 10px; background: #f3f4f6; border-radius: 100px; overflow: hidden; flex: 1;
+  }
+  .category-bar-fill {
+    height: 100%; border-radius: 100px; transition: width 0.7s cubic-bezier(.4,0,.2,1);
+  }
+
+  .missing-pill {
+    display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.25rem 0.75rem;
+    background: #fef3c7; color: #92400e; border-radius: 100px; font-size: 0.8125rem; font-weight: 500;
+  }
+
+  .suggestion-chip {
+    display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.375rem 0.75rem;
+    background: var(--forge-green-light); color: var(--forge-green); border: 1px solid #a7f3c4;
+    border-radius: 8px; font-size: 0.8125rem; font-weight: 600; cursor: pointer; transition: background 0.15s;
+    user-select: all;
+  }
+  .suggestion-chip:hover { background: #d1fae5; }
+
+  .cta-section {
+    background: linear-gradient(135deg, var(--forge-green) 0%, var(--forge-green-dark) 100%);
+    border-radius: 20px; color: #fff; padding: 3rem 2rem; text-align: center;
+  }
+
+  .also-try-link {
+    display: inline-flex; align-items: center; gap: 0.375rem;
+    color: var(--forge-green); font-weight: 600; font-size: 0.875rem;
+    padding: 0.5rem 1rem; border: 1.5px solid #a7f3c4; border-radius: 8px;
+    text-decoration: none; transition: background 0.15s;
+  }
+  .also-try-link:hover { background: var(--forge-green-light); }
+
+  #resultsSection { transition: opacity 0.3s; }
+
+  @media (max-width: 768px) {
+    .score-overview-grid { flex-direction: column; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<section class="tool-hero py-12 lg:py-16">
+  <div class="container-lg">
+    <div class="max-w-3xl">
+      <div class="inline-flex items-center gap-2 text-sm font-semibold px-3 py-1 rounded-full mb-4"
+           style="background: var(--forge-green-light); color: var(--forge-green);">
+        <i class="fa-solid fa-screwdriver-wrench"></i> Free Tool
+      </div>
+      <h1 class="text-3xl lg:text-4xl font-extrabold text-gray-900 mb-4" style="text-wrap: balance;">
+        Google Ads Copy Strength Analyzer<br>for Trade Contractors
+      </h1>
+      <p class="text-lg text-gray-600 mb-3" style="max-width: 60ch;">
+        Paste your Responsive Search Ad headlines and descriptions and get an instant score — with specific fixes ranked by impact.
+      </p>
+      <p class="text-sm text-gray-500">No sign-up. Results in under 3 seconds.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Tool body -->
+<section class="py-10 bg-gray-50">
+  <div class="container-lg">
+    <div class="grid lg:grid-cols-5 gap-8">
+
+      <!-- Input panel -->
+      <div class="lg:col-span-2">
+        <div class="tool-card p-6 space-y-5">
+          <h2 class="text-lg font-bold text-gray-900">
+            <i class="fa-solid fa-keyboard mr-2" style="color: var(--forge-green);"></i>Paste Your Ad Copy
+          </h2>
+
+          <div>
+            <label class="form-label" for="tradeType">
+              Your Trade <span>(for keyword suggestions)</span>
+            </label>
+            <select class="form-select" id="tradeType">
+              <option value="hvac">HVAC</option>
+              <option value="plumbing">Plumbing</option>
+              <option value="electrical">Electrical</option>
+              <option value="roofing">Roofing</option>
+              <option value="pest">Pest Control</option>
+              <option value="landscaping">Landscaping</option>
+              <option value="garage">Garage Door</option>
+              <option value="pool">Pool Service</option>
+              <option value="solar">Solar</option>
+              <option value="general">General Contractor</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="form-label" for="headlines">
+              Headlines <span>(paste up to 15, one per line)</span>
+            </label>
+            <textarea class="form-textarea" id="headlines" rows="10"
+              placeholder="AC Repair Near Me&#10;Same-Day HVAC Service&#10;Licensed &amp; Insured&#10;Free Estimates&#10;24/7 Emergency Service&#10;Call Today for a Quote&#10;Certified HVAC Technicians"></textarea>
+            <div class="char-counter"><span id="headlineCount">0</span> / 15 headlines</div>
+          </div>
+
+          <div>
+            <label class="form-label" for="descriptions">
+              Descriptions <span>(up to 4, one per line)</span>
+            </label>
+            <textarea class="form-textarea" id="descriptions" rows="5"
+              placeholder="Fast, reliable HVAC repair. Licensed technicians available 24/7. Call for a free estimate today.&#10;We've served homeowners since 2005. All work guaranteed. Same-day appointments available."></textarea>
+            <div class="char-counter"><span id="descCount">0</span> / 4 descriptions</div>
+          </div>
+
+          <button class="rf-btn-primary w-full justify-center" onclick="analyzeAdCopy()">
+            <i class="fa-solid fa-magnifying-glass"></i> Analyze My Ad Copy
+          </button>
+        </div>
+      </div>
+
+      <!-- Results panel -->
+      <div class="lg:col-span-3" id="resultsSection">
+
+        <!-- Score overview -->
+        <div class="tool-card p-6 mb-6">
+          <div class="flex flex-wrap items-center gap-6" id="scoreOverview">
+            <div class="text-center">
+              <div class="score-ring-wrap mb-2">
+                <svg class="score-ring-svg" width="120" height="120" viewBox="0 0 120 120">
+                  <circle class="score-ring-track" cx="60" cy="60" r="50"/>
+                  <circle class="score-ring-fill" id="scoreRingFill" cx="60" cy="60" r="50"
+                    stroke="#1A5C35" stroke-dasharray="314" stroke-dashoffset="314"/>
+                </svg>
+                <div style="position:absolute; text-align:center;">
+                  <div id="scoreNum" class="text-3xl font-black text-gray-900">—</div>
+                  <div class="text-xs font-semibold text-gray-400">/ 100</div>
+                </div>
+              </div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-3 mb-2">
+                <div class="grade-badge" id="gradeBadge" style="background:#f3f4f6; color:#9ca3af;">—</div>
+                <div>
+                  <div id="gradeLabel" class="font-bold text-gray-900 text-lg">Paste your ad copy to get started</div>
+                  <div id="gradeDesc" class="text-sm text-gray-500">Enter your RSA headlines and descriptions on the left</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category scores -->
+        <div class="tool-card p-6 mb-6" id="categoryScores">
+          <h3 class="font-bold text-gray-900 mb-4">Score Breakdown</h3>
+          <div class="space-y-5" id="categoryList">
+            <div class="text-center py-8 text-gray-400">
+              <i class="fa-solid fa-chart-bar text-3xl mb-2 block"></i>
+              Run the analyzer to see your category breakdown
+            </div>
+          </div>
+        </div>
+
+        <!-- What's missing -->
+        <div class="tool-card p-6 mb-6" id="missingPanel">
+          <h3 class="font-bold text-gray-900 mb-1">What's Missing</h3>
+          <p class="text-sm text-gray-500 mb-4">Specific elements your ad copy isn't using</p>
+          <div id="missingList" class="flex flex-wrap gap-2">
+            <span class="text-gray-400 text-sm">Results will appear here after analysis</span>
+          </div>
+        </div>
+
+        <!-- Trade-specific suggestions -->
+        <div class="tool-card p-6">
+          <h3 class="font-bold text-gray-900 mb-1" id="suggestionsTitle">Headline Ideas for Your Trade</h3>
+          <p class="text-sm text-gray-500 mb-4">Click any suggestion to copy it</p>
+          <div id="suggestionsList" class="flex flex-wrap gap-2">
+            <span class="text-gray-400 text-sm">Select your trade and run the analyzer to see suggestions</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="py-12 bg-white">
+  <div class="container-lg">
+    <div class="cta-section">
+      <div class="inline-flex items-center gap-2 text-sm font-semibold px-3 py-1 rounded-full mb-4"
+           style="background: rgba(255,255,255,0.15); color: #fff;">
+        <i class="fa-solid fa-bolt"></i> RevForge AI
+      </div>
+      <h2 class="text-2xl lg:text-3xl font-extrabold mb-3">RevForge's AI writes and A/B tests your ad copy automatically.</h2>
+      <p class="text-green-100 mb-6 max-w-xl mx-auto">
+        No copywriting needed. Our AI generates trade-specific headlines, continuously tests combinations, and promotes winners — so your ads always run with proven copy.
+      </p>
+      <a href="/signup" class="rf-btn-amber text-base px-8 py-3">
+        See RevForge in Action <i class="fa-solid fa-arrow-right"></i>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Also try -->
+<section class="py-10 border-t border-gray-100 bg-gray-50">
+  <div class="container-lg">
+    <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Also Try</p>
+    <div class="flex flex-wrap gap-3">
+      <a href="/free-tools/ad-schedule-optimizer" class="also-try-link">
+        <i class="fa-solid fa-calendar-check"></i> Ad Schedule Optimizer
+      </a>
+      <a href="/free-tools/negative-keywords" class="also-try-link">
+        <i class="fa-solid fa-ban"></i> Negative Keyword Lists
+      </a>
+      <a href="/free-tools/lsa-eligibility" class="also-try-link">
+        <i class="fa-solid fa-shield-check"></i> LSA Eligibility Checker
+      </a>
+      <a href="/free-tools/campaign-structure-grader" class="also-try-link">
+        <i class="fa-solid fa-chart-bar"></i> Campaign Structure Grader
+      </a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block body_extra %}
+<script nonce="{{ g.csp_nonce }}">
+(function() {
+  const TRADE_KEYWORDS = {
+    hvac: ['AC Repair Near Me','24/7 HVAC Service','Same-Day Service','Free Estimate','Licensed & Insured',
+           'AC Tune-Up','Furnace Repair','Heat Pump Service','Emergency HVAC','HVAC Financing Available',
+           'No Heat? Call Now','Air Conditioning Experts','Local HVAC Company','Fast Response','Book Online Today'],
+    plumbing: ['Emergency Plumber','Same-Day Plumbing','Licensed Plumber','Drain Cleaning','Water Heater Repair',
+               '24/7 Service','Free Quote','Leak Detection','Sewer Line Repair','Clog Cleared Same Day',
+               'No Overtime Charges','Local Plumbing Experts','Certified Plumbers','Book Online','Fast Response Time'],
+    electrical: ['Licensed Electrician','Same-Day Service','Panel Upgrade','EV Charger Installation',
+                 '24/7 Emergency','Free Estimate','Certified Electricians','Whole-Home Rewiring',
+                 'Generator Installation','Electrical Inspection','Code-Compliant Work','Fast & Reliable',
+                 'No Hidden Fees','Book Online Today','Local Electricians'],
+    roofing: ['Free Roof Inspection','Licensed Roofer','Storm Damage Repair','Roof Replacement',
+              'Free Estimate','Local Roofer','GAF Certified','Insurance Claims Handled',
+              'Lifetime Warranty','Same-Week Installation','Shingle & Metal Roofing','Fast Turnaround',
+              'Licensed & Insured','Financing Available','Book Your Free Inspection'],
+    pest: ['Same-Day Pest Control','Licensed Exterminator','Free Inspection','Child & Pet Safe Treatments',
+           'Guaranteed Results','Bed Bug Treatment','Termite Control','Mosquito Service','Rodent Control',
+           'Monthly Pest Plans','Fast Response','Local Pest Experts','No Contracts Required','Book Online','Call Today'],
+    landscaping: ['Free Landscape Quote','Licensed & Insured','Lawn Maintenance Plans','Seasonal Cleanup',
+                  'Irrigation Installation','Hardscape Design','Same-Week Start','Local Landscapers',
+                  'Fertilization & Weed Control','Snow Removal','Mulching & Edging','Sprinkler Repair',
+                  'Book Online','Serving [City] Since 2005','Trusted Local Crews'],
+    garage: ['Same-Day Garage Repair','24/7 Emergency Service','Free Service Call','Spring Replacement',
+             'Opener Installation','New Garage Doors','Licensed Technicians','All Brands Serviced',
+             'Same-Day Parts','No Hidden Fees','Book Online','Licensed & Insured','Fast Response',
+             'Free Estimate','Local Garage Door Pros'],
+    pool: ['Pool Cleaning Service','Weekly Pool Maintenance','Algae Removal','Pool Opening & Closing',
+           'Filter Repair','Pump Replacement','Chemical Balancing','Same-Week Service','Licensed Pool Tech',
+           'Free Water Test','Serving [City]','Book Online','Pool Renovation','Affordable Rates','Call Today'],
+    solar: ['Free Solar Quote','Save on Energy Bills','Federal Tax Credit Available','Zero-Down Solar',
+            'Licensed Solar Installer','Local Solar Company','25-Year Warranty','Increase Home Value',
+            'Battery Storage Available','No Upfront Cost','See Your Savings','Book Free Consultation',
+            'Trusted Since 2010','Finance From $0 Down','Switch to Solar Today'],
+    general: ['Free Estimate','Licensed & Insured','Same-Week Availability','Quality Guaranteed',
+              'Serving [City] Area','Experienced Contractors','No Job Too Small','Fair Pricing',
+              'Call for a Free Quote','Book Online Today','Trusted Local Company','Fast Response',
+              'All Work Warranted','Financing Available','5-Star Rated']
+  };
+
+  const CTA_WORDS = ['call','schedule','book','get','free','today','now','contact','request',
+                     'quote','estimate','appointment','hire','start','claim'];
+  const TRUST_TERMS = ['licensed','insured','certified','guarantee','guaranteed','24/7','same-day',
+                        'same day','free estimate','free quote','years','since','background','bonded',
+                        'warranty','warranted','rated','trusted','veteran','family-owned','family owned'];
+
+  // Update counters
+  document.getElementById('headlines').addEventListener('input', function() {
+    const lines = this.value.split('\n').filter(l => l.trim().length > 0);
+    document.getElementById('headlineCount').textContent = Math.min(lines.length, 15);
+  });
+  document.getElementById('descriptions').addEventListener('input', function() {
+    const lines = this.value.split('\n').filter(l => l.trim().length > 0);
+    document.getElementById('descCount').textContent = Math.min(lines.length, 4);
+  });
+
+  function analyzeAdCopy() {
+    const trade = document.getElementById('tradeType').value;
+    const rawHeadlines = document.getElementById('headlines').value;
+    const rawDescs = document.getElementById('descriptions').value;
+
+    const headlines = rawHeadlines.split('\n').map(s=>s.trim()).filter(s=>s.length>0).slice(0,15);
+    const descs = rawDescs.split('\n').map(s=>s.trim()).filter(s=>s.length>0).slice(0,4);
+
+    if (headlines.length === 0) {
+      alert('Please paste at least one headline before analyzing.');
+      return;
+    }
+
+    // ---- SCORING ----
+
+    // 1. Headline count (0-20)
+    let headlineScore = headlines.length >= 15 ? 20 : headlines.length >= 12 ? 15 : headlines.length >= 8 ? 10 : 5;
+    let headlineDetail = headlines.length >= 15 ? 'Great — you have all 15 headlines.' :
+      headlines.length >= 12 ? 'Good, but add ' + (15-headlines.length) + ' more to maximize testing.' :
+      headlines.length >= 8 ? 'Add at least ' + (12-headlines.length) + ' more headlines for better coverage.' :
+      'You only have ' + headlines.length + ' headline(s). Google needs 12+ to test combinations.';
+
+    // 2. Character use (0-20)
+    const charPcts = headlines.map(h => Math.min(h.length / 30, 1));
+    const avgCharPct = charPcts.reduce((a,b)=>a+b,0) / charPcts.length;
+    let charScore = avgCharPct >= 0.80 ? 20 : avgCharPct >= 0.60 ? 15 : 5;
+    let charDetail = avgCharPct >= 0.80
+      ? 'Excellent character use — you\'re filling ' + Math.round(avgCharPct*100) + '% of available space.'
+      : avgCharPct >= 0.60
+        ? 'Avg ' + Math.round(avgCharPct*100) + '% of 30 chars used. Try longer, more specific headlines.'
+        : 'Only ' + Math.round(avgCharPct*100) + '% of headline space used. More detail = higher relevance scores.';
+
+    // 3. CTA presence (0-20)
+    const headlinesWithCTA = headlines.filter(h => {
+      const lower = h.toLowerCase();
+      return CTA_WORDS.some(w => lower.includes(w));
+    });
+    let ctaScore = headlinesWithCTA.length >= 3 ? 20 : headlinesWithCTA.length === 2 ? 13 : headlinesWithCTA.length === 1 ? 7 : 0;
+    let ctaDetail = headlinesWithCTA.length >= 3 ? headlinesWithCTA.length + ' headlines include a strong CTA. Well done.' :
+      headlinesWithCTA.length > 0 ? 'Only ' + headlinesWithCTA.length + ' CTA headline(s). Add "Call Today", "Book Online", or "Get Free Estimate".' :
+      'No headlines contain a call-to-action. Add "Call Now", "Book Today", or "Get Your Free Estimate".';
+
+    // 4. Keyword diversity (0-20)
+    let diversityScore = 20;
+    let diversityDetail = '';
+    const starters = headlines.map(h => h.trim().split(' ')[0].toLowerCase());
+    const starterFreq = {};
+    starters.forEach(s => starterFreq[s] = (starterFreq[s]||0)+1);
+    const maxRepeat = Math.max(...Object.values(starterFreq));
+    if (maxRepeat > 3) { diversityScore -= 10; }
+    if (maxRepeat > 5) { diversityScore -= 5; }
+    const tradeKws = TRADE_KEYWORDS[trade] || [];
+    const headlinesLower = headlines.map(h => h.toLowerCase());
+    const foundKws = tradeKws.filter(kw => headlinesLower.some(h => h.includes(kw.toLowerCase())));
+    const coveragePct = foundKws.length / Math.min(tradeKws.length, 8);
+    if (coveragePct < 0.25) diversityScore -= 5;
+    diversityScore = Math.max(0, Math.min(20, diversityScore));
+    diversityDetail = maxRepeat > 3
+      ? 'Too many headlines start with the same word (' + maxRepeat + ' in a row). Google penalizes repetitive RSAs.'
+      : coveragePct < 0.25
+        ? 'Low trade-keyword coverage. Include more service-specific terms (see suggestions below).'
+        : 'Good variety across your headlines.';
+
+    // 5. Trust signals (0-20)
+    const allCopy = headlines.concat(descs).join(' ').toLowerCase();
+    const foundTrust = TRUST_TERMS.filter(t => allCopy.includes(t));
+    let trustScore = foundTrust.length >= 4 ? 20 : foundTrust.length === 3 ? 15 : foundTrust.length === 2 ? 10 : foundTrust.length === 1 ? 5 : 0;
+    let trustDetail = foundTrust.length >= 4 ? 'Strong trust signals: ' + foundTrust.slice(0,4).join(', ') + '.' :
+      foundTrust.length > 0 ? 'Found: ' + foundTrust.join(', ') + '. Add "Licensed & Insured", "Guaranteed", and years in business.' :
+      'No trust signals found. Add "Licensed & Insured", "Guaranteed Results", "24/7 Service".';
+
+    const total = headlineScore + charScore + ctaScore + diversityScore + trustScore;
+
+    // ---- RENDER RESULTS ----
+    renderScore(total);
+    renderCategories([
+      {name:'Headline Count', icon:'fa-list-ol', score:headlineScore, max:20, detail:headlineDetail},
+      {name:'Character Use', icon:'fa-text-width', score:charScore, max:20, detail:charDetail},
+      {name:'CTA Presence', icon:'fa-bullhorn', score:ctaScore, max:20, detail:ctaDetail},
+      {name:'Keyword Diversity', icon:'fa-shuffle', score:diversityScore, max:20, detail:diversityDetail},
+      {name:'Trust Signals', icon:'fa-shield-halved', score:trustScore, max:20, detail:trustDetail}
+    ]);
+    renderMissing(headlines, descs, trade);
+    renderSuggestions(trade, headlines);
+  }
+
+  function renderScore(total) {
+    const grades = [
+      {min:90,grade:'A',color:'var(--grade-a)',bg:'var(--grade-a-bg)',label:'Excellent',desc:'Your ad copy is strong. Fine-tune with the suggestions below.'},
+      {min:80,grade:'B',color:'var(--grade-b)',bg:'var(--grade-b-bg)',label:'Good',desc:'Solid foundation — a few quick fixes could boost this to A-level.'},
+      {min:65,grade:'C',color:'var(--grade-c)',bg:'var(--grade-c-bg)',label:'Average',desc:'Your copy is functional but leaving conversions on the table.'},
+      {min:50,grade:'D',color:'#dc2626',bg:'#fee2e2',label:'Below Average',desc:'Significant gaps in your ad copy structure. Follow the fixes below.'},
+      {min:0, grade:'F',color:'#991b1b',bg:'#fef2f2',label:'Needs Major Work',desc:'Your ad copy needs a full rebuild. Use the suggestions below to start over.'}
+    ];
+    const g = grades.find(x => total >= x.min) || grades[grades.length-1];
+
+    document.getElementById('scoreNum').textContent = total;
+    const ring = document.getElementById('scoreRingFill');
+    ring.style.stroke = g.color;
+    const circum = 314;
+    ring.style.strokeDashoffset = circum - (total/100)*circum;
+
+    const badge = document.getElementById('gradeBadge');
+    badge.textContent = g.grade;
+    badge.style.background = g.bg;
+    badge.style.color = g.color;
+
+    document.getElementById('gradeLabel').textContent = g.label + ' — ' + total + '/100';
+    document.getElementById('gradeDesc').textContent = g.desc;
+  }
+
+  function renderCategories(cats) {
+    const list = document.getElementById('categoryList');
+    list.innerHTML = cats.map(c => {
+      const pct = Math.round((c.score/c.max)*100);
+      const color = pct>=80?'var(--forge-green)': pct>=60?'var(--prec-blue)': pct>=40?'var(--rev-amber)': '#dc2626';
+      return `
+        <div>
+          <div class="flex items-center gap-3 mb-1">
+            <i class="fa-solid ${c.icon} w-4" style="color:${color}"></i>
+            <span class="font-semibold text-sm text-gray-900 flex-1">${c.name}</span>
+            <span class="font-bold text-sm tabular-nums" style="color:${color}">${c.score}<span class="text-gray-400 font-normal">/${c.max}</span></span>
+          </div>
+          <div class="flex items-center gap-3">
+            <div style="width:1.5rem"></div>
+            <div class="category-bar-track">
+              <div class="category-bar-fill" style="width:${pct}%; background:${color};"></div>
+            </div>
+          </div>
+          <p class="text-xs text-gray-500 mt-1 ml-7">${c.detail}</p>
+        </div>`;
+    }).join('');
+  }
+
+  function renderMissing(headlines, descs, trade) {
+    const allText = headlines.concat(descs).join(' ').toLowerCase();
+    const missing = [];
+
+    if (!headlines.some(h => CTA_WORDS.some(w => h.toLowerCase().includes(w)))) {
+      missing.push('No call-to-action headline');
+    }
+    if (!allText.includes('licensed') && !allText.includes('certified')) missing.push('"Licensed" or "Certified"');
+    if (!allText.includes('insured') && !allText.includes('bonded')) missing.push('"Insured" or "Bonded"');
+    if (!allText.includes('free')) missing.push('"Free Estimate/Quote"');
+    if (!allText.includes('24/7') && !allText.includes('24 hour') && !allText.includes('emergency')) missing.push('Emergency / 24/7 availability');
+    if (!allText.includes('same-day') && !allText.includes('same day')) missing.push('"Same-Day" availability');
+    if (!allText.match(/\d{4}|\d+ year/)) missing.push('Years in business / experience signal');
+    if (!allText.includes('local') && !allText.includes('near me') && !allText.includes('serving')) missing.push('Local service area mention');
+    if (!allText.includes('guarantee') && !allText.includes('warranted') && !allText.includes('warranty')) missing.push('Guarantee or warranty');
+    if (headlines.length < 12) missing.push('Fewer than 12 headlines (need ' + (12-headlines.length) + ' more)');
+
+    const el = document.getElementById('missingList');
+    if (missing.length === 0) {
+      el.innerHTML = '<span class="text-green-600 font-semibold text-sm"><i class="fa-solid fa-circle-check mr-1"></i>No major gaps found. Great work!</span>';
+    } else {
+      el.innerHTML = missing.map(m =>
+        `<span class="missing-pill"><i class="fa-solid fa-triangle-exclamation" style="color:var(--rev-amber)"></i>${m}</span>`
+      ).join('');
+    }
+  }
+
+  function renderSuggestions(trade, existingHeadlines) {
+    const kws = TRADE_KEYWORDS[trade] || TRADE_KEYWORDS.general;
+    const existingLower = existingHeadlines.map(h => h.toLowerCase());
+    const unused = kws.filter(kw => !existingLower.some(h => h.includes(kw.toLowerCase())));
+    const toShow = unused.slice(0,12);
+
+    const titleEl = document.getElementById('suggestionsTitle');
+    titleEl.innerHTML = 'Headline Ideas You\'re Not Using <span class="text-sm font-normal text-gray-400 ml-1">(' + (document.getElementById('tradeType').options[document.getElementById('tradeType').selectedIndex].text) + ')</span>';
+
+    const el = document.getElementById('suggestionsList');
+    if (toShow.length === 0) {
+      el.innerHTML = '<span class="text-green-600 font-semibold text-sm"><i class="fa-solid fa-circle-check mr-1"></i>You\'re using the key trade keywords. Well done!</span>';
+      return;
+    }
+    el.innerHTML = toShow.map(kw => {
+      const escaped = kw.replace(/'/g, "\\'");
+      return `<button class="suggestion-chip" onclick="copyChip(this, '${escaped}')" title="Click to copy">
+        <i class="fa-regular fa-copy"></i>${kw}
+      </button>`;
+    }).join('');
+  }
+
+  window.copyChip = function(btn, text) {
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
+      btn.style.background = '#d1fae5';
+      setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; }, 1500);
+    }).catch(() => {
+      // Fallback: select the chip text
+      window.getSelection().selectAllChildren(btn);
+    });
+  };
+
+  window.analyzeAdCopy = analyzeAdCopy;
+})();
+</script>
+{% endblock %}

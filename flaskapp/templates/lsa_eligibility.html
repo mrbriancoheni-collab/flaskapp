@@ -1,0 +1,603 @@
+{% extends "base_public.html" %}
+{% block title %}Google LSA Eligibility Checker for Trade Contractors | RevForge{% endblock %}
+{% block meta_description %}Check if your trade contracting business qualifies for Google Local Services Ads (Google Guaranteed). Instant eligibility results, CPL estimates, and next steps — free, no sign-up.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Google Local Services Ads Eligibility Checker",
+  "url": "https://getrevforge.io/free-tools/lsa-eligibility",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Any",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "description": "Free tool to check Google Local Services Ads eligibility for HVAC, plumbing, electrical, roofing, and other trade contractors. Includes cost-per-lead estimates and next steps.",
+  "provider": { "@type": "Organization", "name": "RevForge", "url": "https://getrevforge.io" }
+}
+</script>
+<style>
+  :root {
+    --forge-green: #1A5C35;
+    --forge-green-dark: #144a2a;
+    --forge-green-light: #e8f5ee;
+    --rev-amber: #D97706;
+    --rev-amber-light: #fef3c7;
+    --prec-blue: #1E5FA8;
+    --prec-blue-light: #eff6ff;
+  }
+
+  .tool-hero {
+    background: linear-gradient(135deg, var(--prec-blue-light) 0%, #fff 60%, var(--forge-green-light) 100%);
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .tool-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
+  }
+
+  .form-label { display: block; font-weight: 600; font-size: 0.875rem; color: #374151; margin-bottom: 0.375rem; }
+  .form-select {
+    width: 100%; padding: 0.75rem 1rem; border: 1.5px solid #d1d5db; border-radius: 10px;
+    font-size: 0.9375rem; color: #111827; background: #fff; outline: none; font-family: inherit;
+    transition: border-color 0.15s;
+  }
+  .form-select:focus { border-color: var(--forge-green); box-shadow: 0 0 0 3px rgba(26,92,53,0.1); }
+
+  .radio-group { display: flex; flex-direction: column; gap: 0.5rem; }
+  .radio-option {
+    display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem;
+    border: 1.5px solid #e5e7eb; border-radius: 10px; cursor: pointer; transition: all 0.15s;
+  }
+  .radio-option:hover { border-color: var(--forge-green); background: var(--forge-green-light); }
+  .radio-option input[type="radio"] { accent-color: var(--forge-green); width: 18px; height: 18px; flex-shrink: 0; }
+  .radio-option.selected { border-color: var(--forge-green); background: var(--forge-green-light); }
+  .radio-label { font-size: 0.9rem; color: #374151; font-weight: 500; }
+
+  .rf-btn-primary {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: var(--forge-green); color: #fff; padding: 0.875rem 2rem;
+    border-radius: 10px; font-weight: 600; font-size: 1rem; cursor: pointer; border: none;
+    transition: background 0.18s; width: 100%; justify-content: center;
+  }
+  .rf-btn-primary:hover { background: var(--forge-green-dark); }
+
+  .rf-btn-amber {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: var(--rev-amber); color: #fff; padding: 0.75rem 1.5rem;
+    border-radius: 10px; font-weight: 600; font-size: 0.9375rem;
+    cursor: pointer; border: none; transition: background 0.18s; text-decoration: none;
+  }
+  .rf-btn-amber:hover { background: #b45309; color: #fff; }
+
+  /* Results */
+  .result-eligible   { border: 2px solid #86efac; background: var(--forge-green-light); }
+  .result-partial    { border: 2px solid #fde68a; background: var(--rev-amber-light); }
+  .result-ineligible { border: 2px solid #fca5a5; background: #fef2f2; }
+
+  .status-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+
+  .checklist-item { display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.625rem 0; }
+  .checklist-icon { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; margin-top: 1px; }
+  .check-yes   { background: #d1fae5; color: #065f46; }
+  .check-no    { background: #fee2e2; color: #991b1b; }
+  .check-warn  { background: #fef3c7; color: #92400e; }
+  .check-na    { background: #f3f4f6; color: #6b7280; }
+
+  .cpl-badge {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.5rem 1rem; border-radius: 100px; font-weight: 700; font-size: 1.125rem;
+    background: var(--forge-green-light); color: var(--forge-green); border: 1px solid #a7f3c4;
+  }
+
+  /* Comparison table */
+  .compare-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  .compare-table th { padding: 1rem; text-align: left; font-weight: 700; border-bottom: 2px solid #e5e7eb; white-space: nowrap; }
+  .compare-table td { padding: 0.75rem 1rem; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
+  .compare-table tr:last-child td { border-bottom: none; }
+  .compare-table .col-lsa { background: var(--forge-green-light); }
+  .compare-table th.col-lsa { color: var(--forge-green); }
+  .compare-icon-yes { color: #16a34a; }
+  .compare-icon-no  { color: #dc2626; }
+  .compare-icon-mid { color: var(--rev-amber); }
+
+  .next-step-item { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .step-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--forge-green);
+    flex-shrink: 0; margin-top: 6px;
+  }
+
+  .info-box {
+    background: var(--prec-blue-light); border: 1px solid #bfdbfe; border-radius: 12px; padding: 1rem 1.25rem;
+  }
+
+  .cta-section {
+    background: linear-gradient(135deg, var(--forge-green) 0%, var(--forge-green-dark) 100%);
+    border-radius: 20px; color: #fff; padding: 3rem 2rem; text-align: center;
+  }
+
+  .also-try-link {
+    display: inline-flex; align-items: center; gap: 0.375rem;
+    color: var(--forge-green); font-weight: 600; font-size: 0.875rem;
+    padding: 0.5rem 1rem; border: 1.5px solid #a7f3c4; border-radius: 8px;
+    text-decoration: none; transition: background 0.15s;
+  }
+  .also-try-link:hover { background: var(--forge-green-light); }
+
+  #resultsPanel { display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<section class="tool-hero py-12 lg:py-16">
+  <div class="container-lg">
+    <div class="max-w-3xl">
+      <div class="inline-flex items-center gap-2 text-sm font-semibold px-3 py-1 rounded-full mb-4"
+           style="background: var(--prec-blue-light); color: var(--prec-blue);">
+        <i class="fa-solid fa-shield-check"></i> Free Eligibility Check
+      </div>
+      <h1 class="text-3xl lg:text-4xl font-extrabold text-gray-900 mb-4" style="text-wrap: balance;">
+        Google Local Services Ads Eligibility Checker
+      </h1>
+      <p class="text-lg text-gray-600 mb-5" style="max-width: 60ch;">
+        LSA puts your business above every regular ad with a <strong>Google Guaranteed</strong> badge — and you only pay per call, not per click. Find out if you qualify in 60 seconds.
+      </p>
+      <div class="info-box" style="max-width: 520px;">
+        <p class="text-sm text-blue-900">
+          <strong>What is LSA?</strong> Google Local Services Ads appear at the very top of search results — above PPC ads and organic results. Businesses display the green Google Guaranteed badge and pay only when a customer calls or messages directly through the ad. Average CPL is 30–50% lower than standard Google Ads.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Tool -->
+<section class="py-10 bg-gray-50">
+  <div class="container-lg">
+    <div class="grid lg:grid-cols-5 gap-8">
+
+      <!-- Form -->
+      <div class="lg:col-span-2">
+        <div class="tool-card p-6 space-y-6">
+          <h2 class="text-lg font-bold text-gray-900">
+            <i class="fa-solid fa-clipboard-check mr-2" style="color: var(--forge-green);"></i>Check Your Eligibility
+          </h2>
+
+          <div>
+            <label class="form-label" for="tradeType">Trade Type</label>
+            <select class="form-select" id="tradeType">
+              <option value="hvac">HVAC</option>
+              <option value="plumbing">Plumbing</option>
+              <option value="electrical">Electrical</option>
+              <option value="roofing">Roofing</option>
+              <option value="pest">Pest Control</option>
+              <option value="landscaping">Landscaping</option>
+              <option value="garage">Garage Door</option>
+              <option value="pool">Pool Service</option>
+              <option value="solar">Solar</option>
+              <option value="locksmith">Locksmith</option>
+              <option value="handyman">Handyman</option>
+              <option value="painting">Painting</option>
+              <option value="flooring">Flooring</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="form-label" for="usState">Your State</label>
+            <select class="form-select" id="usState">
+              <option value="">Select your state…</option>
+              <option value="AL">Alabama</option><option value="AK">Alaska</option><option value="AZ">Arizona</option>
+              <option value="AR">Arkansas</option><option value="CA">California</option><option value="CO">Colorado</option>
+              <option value="CT">Connecticut</option><option value="DE">Delaware</option><option value="FL">Florida</option>
+              <option value="GA">Georgia</option><option value="HI">Hawaii</option><option value="ID">Idaho</option>
+              <option value="IL">Illinois</option><option value="IN">Indiana</option><option value="IA">Iowa</option>
+              <option value="KS">Kansas</option><option value="KY">Kentucky</option><option value="LA">Louisiana</option>
+              <option value="ME">Maine</option><option value="MD">Maryland</option><option value="MA">Massachusetts</option>
+              <option value="MI">Michigan</option><option value="MN">Minnesota</option><option value="MS">Mississippi</option>
+              <option value="MO">Missouri</option><option value="MT">Montana</option><option value="NE">Nebraska</option>
+              <option value="NV">Nevada</option><option value="NH">New Hampshire</option><option value="NJ">New Jersey</option>
+              <option value="NM">New Mexico</option><option value="NY">New York</option><option value="NC">North Carolina</option>
+              <option value="ND">North Dakota</option><option value="OH">Ohio</option><option value="OK">Oklahoma</option>
+              <option value="OR">Oregon</option><option value="PA">Pennsylvania</option><option value="RI">Rhode Island</option>
+              <option value="SC">South Carolina</option><option value="SD">South Dakota</option><option value="TN">Tennessee</option>
+              <option value="TX">Texas</option><option value="UT">Utah</option><option value="VT">Vermont</option>
+              <option value="VA">Virginia</option><option value="WA">Washington</option><option value="WV">West Virginia</option>
+              <option value="WI">Wisconsin</option><option value="WY">Wyoming</option><option value="DC">Washington DC</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="form-label">Are you licensed in your state?</label>
+            <div class="radio-group" id="licenseGroup">
+              <label class="radio-option"><input type="radio" name="licensed" value="yes"> <span class="radio-label">Yes, I have the required state license</span></label>
+              <label class="radio-option"><input type="radio" name="licensed" value="no"> <span class="radio-label">No, not yet licensed</span></label>
+              <label class="radio-option"><input type="radio" name="licensed" value="na"> <span class="radio-label">Not required for my trade in my state</span></label>
+            </div>
+          </div>
+
+          <div>
+            <label class="form-label">General Liability Insurance?</label>
+            <div class="radio-group">
+              <label class="radio-option"><input type="radio" name="liability" value="yes"> <span class="radio-label">Yes — I have general liability coverage</span></label>
+              <label class="radio-option"><input type="radio" name="liability" value="no"> <span class="radio-label">No — not yet insured</span></label>
+            </div>
+          </div>
+
+          <div>
+            <label class="form-label">Workers' Compensation Insurance?</label>
+            <div class="radio-group">
+              <label class="radio-option"><input type="radio" name="workerscomp" value="yes"> <span class="radio-label">Yes — I have workers' comp</span></label>
+              <label class="radio-option"><input type="radio" name="workerscomp" value="no"> <span class="radio-label">No — not currently</span></label>
+              <label class="radio-option"><input type="radio" name="workerscomp" value="sole"> <span class="radio-label">Not applicable — I'm a sole proprietor with no employees</span></label>
+            </div>
+          </div>
+
+          <div>
+            <label class="form-label">Google Background Check?</label>
+            <div class="radio-group">
+              <label class="radio-option"><input type="radio" name="bgcheck" value="yes"> <span class="radio-label">Yes — I've passed Google's background check</span></label>
+              <label class="radio-option"><input type="radio" name="bgcheck" value="no"> <span class="radio-label">Not yet — haven't applied</span></label>
+              <label class="radio-option"><input type="radio" name="bgcheck" value="inprogress"> <span class="radio-label">In progress / pending</span></label>
+            </div>
+          </div>
+
+          <button class="rf-btn-primary" onclick="checkEligibility()">
+            <i class="fa-solid fa-bolt"></i> Check My Eligibility
+          </button>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div class="lg:col-span-3 space-y-6" id="resultsPanel">
+
+        <!-- Status card -->
+        <div class="tool-card p-6" id="statusCard">
+          <div class="text-center py-2">
+            <div class="status-icon" id="statusIcon">✅</div>
+            <h3 class="text-xl font-extrabold mb-2" id="statusTitle">Likely Eligible</h3>
+            <p class="text-gray-600" id="statusDesc">Based on your inputs, your business meets the core LSA requirements.</p>
+          </div>
+        </div>
+
+        <!-- Checklist -->
+        <div class="tool-card p-6">
+          <h3 class="font-bold text-gray-900 mb-4">Your Requirements Checklist</h3>
+          <div id="checklistItems" class="divide-y divide-gray-100"></div>
+        </div>
+
+        <!-- CPL estimate -->
+        <div class="tool-card p-6">
+          <h3 class="font-bold text-gray-900 mb-1">Estimated Cost Per Lead via LSA</h3>
+          <p class="text-sm text-gray-500 mb-3">Based on national averages for your trade type</p>
+          <div class="flex flex-wrap items-center gap-4">
+            <div class="cpl-badge">
+              <i class="fa-solid fa-phone"></i>
+              <span id="cplRange">$45–$85 per call</span>
+            </div>
+            <div class="text-sm text-gray-600" id="cplContext">vs. $85–$180 per lead via standard Google Ads for the same trade</div>
+          </div>
+        </div>
+
+        <!-- Next steps -->
+        <div class="tool-card p-6">
+          <h3 class="font-bold text-gray-900 mb-4">
+            <i class="fa-solid fa-arrow-right mr-2" style="color: var(--forge-green);"></i>Next Steps to Get Set Up
+          </h3>
+          <div id="nextStepsList" class="space-y-3"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Comparison table -->
+    <div class="mt-8 tool-card overflow-hidden">
+      <div class="p-6 border-b border-gray-100">
+        <h2 class="text-lg font-bold text-gray-900">LSA vs. Google Ads vs. Google Maps — Which Is Right for You?</h2>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th class="text-gray-500 font-semibold" style="min-width:180px;">Feature</th>
+              <th class="col-lsa"><i class="fa-solid fa-shield-check mr-1"></i>Local Services Ads</th>
+              <th>Google Ads (PPC)</th>
+              <th>Google Maps (GBP)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="font-semibold text-gray-700">Placement</td>
+              <td class="col-lsa">Above all ads &amp; organic</td>
+              <td>Top of search (below LSA)</td>
+              <td>Map pack / local results</td>
+            </tr>
+            <tr>
+              <td class="font-semibold text-gray-700">How You Pay</td>
+              <td class="col-lsa"><i class="compare-icon-yes fa-solid fa-circle-check mr-1"></i>Per call/message</td>
+              <td><i class="compare-icon-mid fa-solid fa-triangle-exclamation mr-1"></i>Per click (no call guarantee)</td>
+              <td><i class="compare-icon-yes fa-solid fa-circle-check mr-1"></i>Free (organic)</td>
+            </tr>
+            <tr>
+              <td class="font-semibold text-gray-700">Google Guaranteed Badge</td>
+              <td class="col-lsa"><i class="compare-icon-yes fa-solid fa-circle-check mr-1"></i>Yes — increases trust</td>
+              <td><i class="compare-icon-no fa-solid fa-circle-xmark mr-1"></i>No</td>
+              <td><i class="compare-icon-no fa-solid fa-circle-xmark mr-1"></i>No</td>
+            </tr>
+            <tr>
+              <td class="font-semibold text-gray-700">Background Check Required</td>
+              <td class="col-lsa"><i class="compare-icon-mid fa-solid fa-triangle-exclamation mr-1"></i>Yes (one-time)</td>
+              <td><i class="compare-icon-yes fa-solid fa-circle-check mr-1"></i>No</td>
+              <td><i class="compare-icon-yes fa-solid fa-circle-check mr-1"></i>No</td>
+            </tr>
+            <tr>
+              <td class="font-semibold text-gray-700">License Verification</td>
+              <td class="col-lsa"><i class="compare-icon-mid fa-solid fa-triangle-exclamation mr-1"></i>Required for most trades</td>
+              <td><i class="compare-icon-yes fa-solid fa-circle-check mr-1"></i>Not required</td>
+              <td><i class="compare-icon-yes fa-solid fa-circle-check mr-1"></i>Not required</td>
+            </tr>
+            <tr>
+              <td class="font-semibold text-gray-700">Speed to Set Up</td>
+              <td class="col-lsa">1–4 weeks (verification)</td>
+              <td>Same day</td>
+              <td>2–4 weeks (verification)</td>
+            </tr>
+            <tr>
+              <td class="font-semibold text-gray-700">Typical CPL (Trade Avg.)</td>
+              <td class="col-lsa font-bold" style="color:var(--forge-green);">$35–$100</td>
+              <td>$80–$200+</td>
+              <td>$0 (organic) / indirect</td>
+            </tr>
+            <tr>
+              <td class="font-semibold text-gray-700">Review Integration</td>
+              <td class="col-lsa"><i class="compare-icon-yes fa-solid fa-circle-check mr-1"></i>Star rating shown on ad</td>
+              <td><i class="compare-icon-mid fa-solid fa-triangle-exclamation mr-1"></i>Extensions only</td>
+              <td><i class="compare-icon-yes fa-solid fa-circle-check mr-1"></i>Reviews shown prominently</td>
+            </tr>
+            <tr>
+              <td class="font-semibold text-gray-700">Best For</td>
+              <td class="col-lsa">Immediate job leads, high-intent service calls</td>
+              <td>Scalable volume, custom targeting, seasonal campaigns</td>
+              <td>Long-term visibility, reputation, local SEO</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="py-12 bg-white">
+  <div class="container-lg">
+    <div class="cta-section">
+      <div class="inline-flex items-center gap-2 text-sm font-semibold px-3 py-1 rounded-full mb-4"
+           style="background: rgba(255,255,255,0.15); color: #fff;">
+        <i class="fa-solid fa-bolt"></i> RevForge AI
+      </div>
+      <h2 class="text-2xl lg:text-3xl font-extrabold mb-3">RevForge manages both LSA and Google Ads — one dashboard, full attribution.</h2>
+      <p class="text-green-100 mb-6 max-w-xl mx-auto">
+        See exactly which calls came from LSA, which from PPC, and which from Google Maps. Optimize spend across all three channels from one place.
+      </p>
+      <a href="/signup" class="rf-btn-amber text-base px-8 py-3">
+        Connect Your Account Free <i class="fa-solid fa-arrow-right"></i>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Also try -->
+<section class="py-10 border-t border-gray-100 bg-gray-50">
+  <div class="container-lg">
+    <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Also Try</p>
+    <div class="flex flex-wrap gap-3">
+      <a href="/free-tools/ad-schedule-optimizer" class="also-try-link">
+        <i class="fa-solid fa-calendar-check"></i> Ad Schedule Optimizer
+      </a>
+      <a href="/free-tools/ad-copy-analyzer" class="also-try-link">
+        <i class="fa-solid fa-magnifying-glass"></i> Ad Copy Analyzer
+      </a>
+      <a href="/free-tools/negative-keywords" class="also-try-link">
+        <i class="fa-solid fa-ban"></i> Negative Keyword Lists
+      </a>
+      <a href="/free-tools/campaign-structure-grader" class="also-try-link">
+        <i class="fa-solid fa-chart-bar"></i> Campaign Structure Grader
+      </a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block body_extra %}
+<script nonce="{{ g.csp_nonce }}">
+(function() {
+
+  // License requirements: true = required, false = not required for LSA
+  const LICENSE_REQUIRED = {
+    hvac: true, plumbing: true, electrical: true, roofing: true,
+    pest: true, landscaping: false, garage: false, pool: false,
+    solar: true, locksmith: false, handyman: false, painting: false, flooring: false
+  };
+
+  // Trades where workers' comp is strongly recommended (legally required if you have employees)
+  const WORKERSCOMP_IMPORTANT = {
+    hvac:true, plumbing:true, electrical:true, roofing:true, pest:true
+  };
+
+  const CPL_DATA = {
+    hvac:      { range:'$45–$85 per call',      compare:'vs. $90–$180 per lead via standard Google Ads' },
+    plumbing:  { range:'$35–$65 per call',      compare:'vs. $75–$150 per lead via standard Google Ads' },
+    electrical:{ range:'$40–$75 per call',      compare:'vs. $80–$160 per lead via standard Google Ads' },
+    roofing:   { range:'$55–$100 per call',     compare:'vs. $100–$200+ per lead via standard Google Ads' },
+    pest:      { range:'$25–$50 per call',      compare:'vs. $55–$110 per lead via standard Google Ads' },
+    landscaping:{ range:'$30–$60 per call',     compare:'vs. $60–$120 per lead via standard Google Ads' },
+    garage:    { range:'$30–$55 per call',      compare:'vs. $65–$130 per lead via standard Google Ads' },
+    pool:      { range:'$35–$65 per call',      compare:'vs. $70–$130 per lead via standard Google Ads' },
+    solar:     { range:'$60–$120 per call',     compare:'vs. $120–$250+ per lead via standard Google Ads' },
+    locksmith: { range:'$25–$45 per call',      compare:'vs. $50–$100 per lead via standard Google Ads' },
+    handyman:  { range:'$30–$55 per call',      compare:'vs. $60–$110 per lead via standard Google Ads' },
+    painting:  { range:'$35–$65 per call',      compare:'vs. $70–$130 per lead via standard Google Ads' },
+    flooring:  { range:'$40–$70 per call',      compare:'vs. $80–$150 per lead via standard Google Ads' }
+  };
+
+  const TRADE_LABELS = {
+    hvac:'HVAC', plumbing:'Plumbing', electrical:'Electrical', roofing:'Roofing',
+    pest:'Pest Control', landscaping:'Landscaping', garage:'Garage Door', pool:'Pool Service',
+    solar:'Solar', locksmith:'Locksmith', handyman:'Handyman', painting:'Painting', flooring:'Flooring'
+  };
+
+  function getRadio(name) {
+    const el = document.querySelector('input[name="'+name+'"]:checked');
+    return el ? el.value : null;
+  }
+
+  function checkEligibility() {
+    const trade = document.getElementById('tradeType').value;
+    const state = document.getElementById('usState').value;
+    const licensed = getRadio('licensed');
+    const liability = getRadio('liability');
+    const wc = getRadio('workerscomp');
+    const bg = getRadio('bgcheck');
+
+    if (!state) { alert('Please select your state.'); return; }
+    if (!licensed || !liability || !wc || !bg) { alert('Please answer all questions to check eligibility.'); return; }
+
+    const licenseRequired = LICENSE_REQUIRED[trade] !== false;
+
+    // Determine eligibility
+    const issues = [];
+    const checklist = [];
+
+    // License
+    if (licenseRequired) {
+      if (licensed === 'yes') {
+        checklist.push({label:'State License', status:'yes', note:'Licensed in ' + state + ' ✓'});
+      } else if (licensed === 'na') {
+        checklist.push({label:'State License', status:'warn', note:'You selected "not required" — verify this for ' + TRADE_LABELS[trade] + ' in ' + state + ' at your state licensing board.'});
+      } else {
+        checklist.push({label:'State License', status:'no', note:'A state license is required for ' + TRADE_LABELS[trade] + ' LSA in most states. Obtain your license before applying.'});
+        issues.push('no-license');
+      }
+    } else {
+      checklist.push({label:'State License', status:licensed==='yes'?'yes':'na', note: licensed==='yes'?'Licensed ✓':'License not required for this trade type in most states.'});
+    }
+
+    // Liability
+    if (liability === 'yes') {
+      checklist.push({label:'General Liability Insurance', status:'yes', note:'Required and confirmed ✓'});
+    } else {
+      checklist.push({label:'General Liability Insurance', status:'no', note:'General liability insurance is required for all LSA businesses. Obtain a policy before applying.'});
+      issues.push('no-liability');
+    }
+
+    // Workers' comp
+    if (wc === 'yes') {
+      checklist.push({label:"Workers' Compensation", status:'yes', note:"Workers' comp confirmed ✓"});
+    } else if (wc === 'sole') {
+      checklist.push({label:"Workers' Compensation", status:'na', note:"Sole proprietors with no employees may be exempt — confirm with your state's labor board."});
+    } else {
+      if (WORKERSCOMP_IMPORTANT[trade]) {
+        checklist.push({label:"Workers' Compensation", status:'warn', note:"Strongly recommended for " + TRADE_LABELS[trade] + ". Required if you have any employees. Google may require it for verification."});
+        issues.push('no-wc');
+      } else {
+        checklist.push({label:"Workers' Compensation", status:'warn', note:"Check your state requirements. Some states require workers' comp even for small crews."});
+      }
+    }
+
+    // Background check
+    if (bg === 'yes') {
+      checklist.push({label:"Google Background Check", status:'yes', note:"Background check passed — your badge is or will be active ✓"});
+    } else if (bg === 'inprogress') {
+      checklist.push({label:"Google Background Check", status:'warn', note:"In progress — once approved, your Google Guaranteed badge activates (typically 1–3 weeks)."});
+      issues.push('bg-pending');
+    } else {
+      checklist.push({label:"Google Background Check", status:'no', note:"You must complete Google's background check through Pinkerton or Evident ID. Apply at ads.google.com/local-services-ads."});
+      issues.push('no-bg');
+    }
+
+    // Determine overall status
+    const hardBlocks = issues.filter(i => i==='no-license'||i==='no-liability');
+    const softBlocks = issues.filter(i => i==='bg-pending'||i==='no-wc'||i==='no-bg');
+
+    let status, title, desc, statusClass;
+    if (hardBlocks.length === 0 && softBlocks.length === 0) {
+      status = '✅'; title = 'Likely Eligible for Google LSA'; statusClass = 'result-eligible';
+      desc = 'Your business meets all core requirements for Google Local Services Ads. Apply now to get your Google Guaranteed badge.';
+    } else if (hardBlocks.length === 0 && softBlocks.length > 0) {
+      status = '⚠️'; title = 'Partially Eligible — Action Required'; statusClass = 'result-partial';
+      desc = 'You\'re close, but need to complete ' + softBlocks.length + ' more requirement(s) before your LSA goes live.';
+    } else {
+      status = '❌'; title = 'Not Currently Eligible'; statusClass = 'result-ineligible';
+      desc = 'Your business has ' + hardBlocks.length + ' blocking requirement(s) to resolve before you can run LSA. See the checklist below.';
+    }
+
+    // Render
+    const panel = document.getElementById('resultsPanel');
+    panel.style.display = 'block';
+
+    const statusCard = document.getElementById('statusCard');
+    statusCard.className = 'tool-card p-6 ' + statusClass;
+    document.getElementById('statusIcon').textContent = status;
+    document.getElementById('statusTitle').textContent = title;
+    document.getElementById('statusDesc').textContent = desc;
+
+    // Checklist
+    const listEl = document.getElementById('checklistItems');
+    listEl.innerHTML = checklist.map(item => {
+      const iconClass = item.status==='yes'?'check-yes fa-check': item.status==='no'?'check-no fa-xmark': item.status==='warn'?'check-warn fa-triangle-exclamation':'check-na fa-minus';
+      const [cls, icon] = iconClass.split(' ');
+      return `<div class="checklist-item">
+        <div class="checklist-icon ${cls}"><i class="fa-solid ${icon}"></i></div>
+        <div>
+          <p class="font-semibold text-gray-900 text-sm">${item.label}</p>
+          <p class="text-sm text-gray-600">${item.note}</p>
+        </div>
+      </div>`;
+    }).join('');
+
+    // CPL
+    const cpl = CPL_DATA[trade] || CPL_DATA.hvac;
+    document.getElementById('cplRange').textContent = cpl.range;
+    document.getElementById('cplContext').textContent = cpl.compare;
+
+    // Next steps
+    const steps = [];
+    if (issues.includes('no-license')) steps.push('Contact your state licensing board for ' + TRADE_LABELS[trade] + ' licensure requirements in ' + state + '.');
+    if (issues.includes('no-liability')) steps.push('Obtain a general liability insurance policy. Most LSA-eligible businesses need $1M+ per occurrence.');
+    if (issues.includes('no-bg')) steps.push('Apply for Google\'s background check at <strong>ads.google.com/local-services-ads</strong>. This is done through Pinkerton or Evident ID.');
+    if (issues.includes('bg-pending')) steps.push('Wait for your background check to be approved (1–3 weeks). Google will notify you by email.');
+    if (issues.includes('no-wc')) steps.push("Obtain workers' compensation insurance if you have any employees. Check your state's specific requirements.");
+    if (steps.length === 0) {
+      steps.push('Apply at <strong>ads.google.com/local-services-ads</strong> — click "Get started" and select your business category.');
+      steps.push('Have these documents ready: business license, general liability certificate, workers\' comp certificate (if applicable).');
+      steps.push('Complete your LSA profile: add photos, your service area, hours, and services offered. A complete profile ranks higher.');
+      steps.push('Set your weekly lead budget. Start conservative ($300–500/week) and scale as you verify lead quality.');
+      steps.push('Respond to every LSA lead within 5 minutes. Response rate directly affects your ad ranking.');
+    }
+
+    const nextEl = document.getElementById('nextStepsList');
+    nextEl.innerHTML = steps.map(s => `
+      <div class="next-step-item">
+        <div class="step-dot mt-1.5"></div>
+        <p class="text-sm text-gray-700">${s}</p>
+      </div>`).join('');
+
+    panel.scrollIntoView({behavior:'smooth', block:'start'});
+  }
+
+  // Highlight radio options on selection
+  document.querySelectorAll('.radio-option input[type="radio"]').forEach(input => {
+    input.addEventListener('change', function() {
+      const group = this.closest('.radio-group');
+      if (!group) return;
+      group.querySelectorAll('.radio-option').forEach(opt => opt.classList.remove('selected'));
+      this.closest('.radio-option').classList.add('selected');
+    });
+  });
+
+  window.checkEligibility = checkEligibility;
+})();
+</script>
+{% endblock %}

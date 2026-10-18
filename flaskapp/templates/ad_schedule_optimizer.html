@@ -1,0 +1,893 @@
+{% extends "base_public.html" %}
+{% block title %}Ad Schedule Optimizer for Trade Contractors | RevForge{% endblock %}
+{% block meta_description %}Free Google Ads schedule optimizer for HVAC, plumbing, roofing, and electrical contractors. Get a trade-specific 7×24 bid modifier grid to stop wasting budget on overnight clicks.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Google Ads Schedule Optimizer for Trade Contractors",
+  "url": "https://getrevforge.io/free-tools/ad-schedule-optimizer",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Any",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "description": "Free tool that generates a 7x24 Google Ads bid modifier schedule for HVAC, plumbing, roofing, electrical and other trade contractors based on trade type, service model, and region.",
+  "provider": { "@type": "Organization", "name": "RevForge", "url": "https://getrevforge.io" }
+}
+</script>
+<style>
+  :root {
+    --forge-green: #1A5C35;
+    --forge-green-dark: #144a2a;
+    --forge-green-mid: #2a7a4a;
+    --forge-green-light: #e8f5ee;
+    --forge-green-xlight: #f2faf5;
+    --rev-amber: #D97706;
+    --rev-amber-light: #fef3c7;
+    --rev-amber-mid: #f59e0b;
+    --prec-blue: #1E5FA8;
+    --prec-blue-light: #eff6ff;
+    --cell-peak: #1A5C35;
+    --cell-peak-text: #fff;
+    --cell-standard: #86efac;
+    --cell-standard-text: #14532d;
+    --cell-low: #fef08a;
+    --cell-low-text: #854d0e;
+    --cell-pause: #e5e7eb;
+    --cell-pause-text: #9ca3af;
+    --tool-border: #e5e7eb;
+  }
+
+  .tool-hero {
+    background: linear-gradient(135deg, var(--forge-green-xlight) 0%, #fff 60%, var(--rev-amber-light) 100%);
+    border-bottom: 1px solid var(--tool-border);
+  }
+
+  .tool-card {
+    background: #fff;
+    border: 1px solid var(--tool-border);
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
+  }
+
+  .rf-btn-primary {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: var(--forge-green); color: #fff;
+    padding: 0.75rem 1.5rem; border-radius: 10px; font-weight: 600; font-size: 0.9375rem;
+    cursor: pointer; border: none; text-decoration: none; transition: background 0.18s;
+  }
+  .rf-btn-primary:hover { background: var(--forge-green-dark); color: #fff; }
+
+  .rf-btn-amber {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: var(--rev-amber); color: #fff;
+    padding: 0.75rem 1.5rem; border-radius: 10px; font-weight: 600; font-size: 0.9375rem;
+    cursor: pointer; border: none; text-decoration: none; transition: background 0.18s;
+  }
+  .rf-btn-amber:hover { background: #b45309; color: #fff; }
+
+  .rf-btn-outline {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: transparent; color: var(--forge-green);
+    border: 2px solid var(--forge-green); padding: 0.625rem 1.25rem;
+    border-radius: 10px; font-weight: 600; font-size: 0.875rem;
+    cursor: pointer; text-decoration: none; transition: all 0.18s;
+  }
+  .rf-btn-outline:hover { background: var(--forge-green-light); }
+
+  .form-label { display: block; font-weight: 600; font-size: 0.875rem; color: #374151; margin-bottom: 0.375rem; }
+  .form-select {
+    width: 100%; padding: 0.75rem 1rem; border: 1.5px solid #d1d5db; border-radius: 10px;
+    font-size: 0.9375rem; color: #111827; background: #fff; outline: none;
+    transition: border-color 0.15s;
+    font-family: inherit;
+  }
+  .form-select:focus { border-color: var(--forge-green); box-shadow: 0 0 0 3px rgba(26,92,53,0.1); }
+
+  /* Grid table */
+  .schedule-grid-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .schedule-grid { border-collapse: collapse; font-size: 0.6875rem; min-width: 900px; width: 100%; }
+  .schedule-grid th { padding: 4px 2px; text-align: center; font-weight: 600; color: #6b7280; white-space: nowrap; }
+  .schedule-grid th.day-header { text-align: left; padding-left: 8px; font-size: 0.75rem; color: #374151; min-width: 60px; }
+  .schedule-grid td { width: 36px; height: 32px; text-align: center; border: 1px solid #f3f4f6; cursor: default; transition: opacity 0.1s; }
+  .schedule-grid td:hover { opacity: 0.8; }
+  .cell-peak    { background: var(--cell-peak); color: var(--cell-peak-text); font-weight: 700; }
+  .cell-standard { background: var(--cell-standard); color: var(--cell-standard-text); }
+  .cell-low     { background: var(--cell-low); color: var(--cell-low-text); }
+  .cell-pause   { background: var(--cell-pause); color: var(--cell-pause-text); }
+
+  .legend-dot { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+
+  .saving-badge {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: var(--forge-green-light); color: var(--forge-green);
+    border: 1px solid #a7f3c4; border-radius: 100px;
+    padding: 0.5rem 1rem; font-weight: 700; font-size: 1.125rem;
+  }
+
+  .step-num {
+    width: 32px; height: 32px; border-radius: 50%; background: var(--forge-green);
+    color: #fff; font-weight: 700; font-size: 0.875rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+
+  .cta-section {
+    background: linear-gradient(135deg, var(--forge-green) 0%, var(--forge-green-dark) 100%);
+    border-radius: 20px; color: #fff; padding: 3rem 2rem; text-align: center;
+  }
+
+  .also-try-link {
+    display: inline-flex; align-items: center; gap: 0.375rem;
+    color: var(--forge-green); font-weight: 600; font-size: 0.875rem;
+    padding: 0.5rem 1rem; border: 1.5px solid #a7f3c4; border-radius: 8px;
+    text-decoration: none; transition: background 0.15s;
+  }
+  .also-try-link:hover { background: var(--forge-green-light); }
+
+  @media (max-width: 640px) {
+    .tool-inputs-grid { grid-template-columns: 1fr !important; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<section class="tool-hero py-12 lg:py-16">
+  <div class="container-lg">
+    <div class="max-w-3xl">
+      <div class="inline-flex items-center gap-2 text-sm font-semibold px-3 py-1 rounded-full mb-4"
+           style="background: var(--forge-green-light); color: var(--forge-green);">
+        <i class="fa-solid fa-screwdriver-wrench"></i> Free Tool
+      </div>
+      <h1 class="text-3xl lg:text-4xl font-extrabold text-gray-900 mb-4" style="text-wrap: balance;">
+        Google Ads Schedule Optimizer<br>for Trade Contractors
+      </h1>
+      <p class="text-lg text-gray-600 mb-6" style="max-width: 60ch;">
+        Running ads 24/7 wastes 15–25% of your budget on overnight clicks that never convert.
+        Here's your optimal schedule.
+      </p>
+      <p class="text-sm text-gray-500">No sign-up required. Results in seconds.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Tool -->
+<section class="py-10 bg-gray-50">
+  <div class="container-lg">
+    <div class="grid lg:grid-cols-3 gap-8">
+
+      <!-- Inputs -->
+      <div class="lg:col-span-1">
+        <div class="tool-card p-6 sticky top-24">
+          <h2 class="text-lg font-bold text-gray-900 mb-5">
+            <i class="fa-solid fa-sliders mr-2" style="color: var(--forge-green);"></i>Configure Your Schedule
+          </h2>
+          <div class="space-y-5">
+            <div>
+              <label class="form-label" for="tradeType">Trade Type</label>
+              <select class="form-select" id="tradeType">
+                <option value="hvac">HVAC</option>
+                <option value="plumbing">Plumbing</option>
+                <option value="electrical">Electrical</option>
+                <option value="roofing">Roofing</option>
+                <option value="pest">Pest Control</option>
+                <option value="landscaping">Landscaping</option>
+                <option value="garage">Garage Door</option>
+                <option value="pool">Pool Service</option>
+                <option value="solar">Solar</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label" for="businessType">Business Type</label>
+              <select class="form-select" id="businessType">
+                <option value="standard">Standard Business Hours</option>
+                <option value="emergency">Emergency / 24-Hour Service</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label" for="region">Service Area Region</label>
+              <select class="form-select" id="region">
+                <option value="sunbelt">Sunbelt / Warm Climate</option>
+                <option value="northeast">Northeast / Midwest</option>
+                <option value="mountain">Mountain West</option>
+                <option value="pacific">Pacific Coast</option>
+              </select>
+            </div>
+            <button class="rf-btn-primary w-full justify-center" onclick="generateSchedule()">
+              <i class="fa-solid fa-bolt"></i> Generate My Schedule
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Output -->
+      <div class="lg:col-span-2 space-y-6">
+
+        <!-- Savings badge -->
+        <div id="savingsBadgeWrap" class="tool-card p-5 flex flex-wrap items-center gap-4">
+          <div>
+            <p class="text-sm font-medium text-gray-500 mb-1">Estimated Monthly Budget Savings</p>
+            <div class="saving-badge">
+              <i class="fa-solid fa-piggy-bank"></i>
+              <span id="savingsPct">18%</span> of monthly spend
+            </div>
+          </div>
+          <div class="ml-auto flex gap-2 flex-wrap">
+            <button class="rf-btn-outline" onclick="downloadSchedule()">
+              <i class="fa-solid fa-download"></i> Download .txt
+            </button>
+          </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="tool-card p-4">
+          <div class="flex flex-wrap gap-4 text-sm">
+            <div class="flex items-center gap-2">
+              <div class="legend-dot" style="background: var(--cell-peak);"></div>
+              <span><strong>+20% bid</strong> — Peak demand</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="legend-dot" style="background: var(--cell-standard);"></div>
+              <span><strong>Standard bid</strong> — Active hours</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="legend-dot" style="background: var(--cell-low);"></div>
+              <span><strong>−20% bid</strong> — Low demand</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="legend-dot" style="background: var(--cell-pause);"></div>
+              <span><strong>Pause / $0</strong> — Near-zero conversion</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grid -->
+        <div class="tool-card p-4">
+          <h3 class="font-bold text-gray-900 mb-3 text-base" id="gridTitle">HVAC — Standard Hours (Sunbelt)</h3>
+          <div class="schedule-grid-wrap">
+            <table class="schedule-grid" id="scheduleGrid">
+              <!-- Built by JS -->
+            </table>
+          </div>
+          <p class="text-xs text-gray-400 mt-2">Scroll right to see all hours &rarr;</p>
+        </div>
+
+        <!-- How to apply -->
+        <div class="tool-card p-6">
+          <h3 class="font-bold text-gray-900 mb-4 text-base">
+            <i class="fa-brands fa-google mr-2 text-blue-500"></i>How to Apply This in Google Ads (5 Steps)
+          </h3>
+          <ol class="space-y-4">
+            <li class="flex gap-3">
+              <span class="step-num">1</span>
+              <div>
+                <p class="font-semibold text-gray-900 text-sm">Open your campaign in Google Ads</p>
+                <p class="text-sm text-gray-600">Go to <strong>Campaigns → [Your Campaign] → Settings → Ad Schedule</strong>.</p>
+              </div>
+            </li>
+            <li class="flex gap-3">
+              <span class="step-num">2</span>
+              <div>
+                <p class="font-semibold text-gray-900 text-sm">Click "+ Ad Schedule" and add time blocks</p>
+                <p class="text-sm text-gray-600">Add each time block from the grid above as a separate row. Use the exact day/hour ranges shown in your downloaded schedule.</p>
+              </div>
+            </li>
+            <li class="flex gap-3">
+              <span class="step-num">3</span>
+              <div>
+                <p class="font-semibold text-gray-900 text-sm">Set bid adjustments per block</p>
+                <p class="text-sm text-gray-600">Click the pencil icon on each row → set the bid adjustment. Use <strong>+20%</strong> for dark green blocks, <strong>0%</strong> for light green, <strong>−20%</strong> for yellow. Remove gray-period rows entirely.</p>
+              </div>
+            </li>
+            <li class="flex gap-3">
+              <span class="step-num">4</span>
+              <div>
+                <p class="font-semibold text-gray-900 text-sm">Save and monitor for 2 weeks</p>
+                <p class="text-sm text-gray-600">Give the schedule at least 14 days of data before adjusting. Compare conversion rate by hour in <strong>Reports → Predefined Reports → Time → Hour of day</strong>.</p>
+              </div>
+            </li>
+            <li class="flex gap-3">
+              <span class="step-num">5</span>
+              <div>
+                <p class="font-semibold text-gray-900 text-sm">Refine based on your own data</p>
+                <p class="text-sm text-gray-600">After 30 days, cross-reference with your CRM call logs. If jobs are coming in at 8pm, adjust that block from yellow to standard.</p>
+              </div>
+            </li>
+          </ol>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="py-12 bg-white">
+  <div class="container-lg">
+    <div class="cta-section">
+      <div class="inline-flex items-center gap-2 text-sm font-semibold px-3 py-1 rounded-full mb-4"
+           style="background: rgba(255,255,255,0.15); color: #fff;">
+        <i class="fa-solid fa-bolt"></i> RevForge AI
+      </div>
+      <h2 class="text-2xl lg:text-3xl font-extrabold mb-3">RevForge applies your optimal schedule automatically.</h2>
+      <p class="text-green-100 mb-6 max-w-xl mx-auto">
+        No more manual adjustments. Our AI monitors your conversion data 24/7 and adjusts bid modifiers in real time — so your budget always goes where the jobs are.
+      </p>
+      <a href="/signup" class="rf-btn-amber text-base px-8 py-3">
+        See RevForge in Action <i class="fa-solid fa-arrow-right"></i>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Also try -->
+<section class="py-10 border-t border-gray-100 bg-gray-50">
+  <div class="container-lg">
+    <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Also Try</p>
+    <div class="flex flex-wrap gap-3">
+      <a href="/free-tools/ad-copy-analyzer" class="also-try-link">
+        <i class="fa-solid fa-magnifying-glass"></i> Ad Copy Strength Analyzer
+      </a>
+      <a href="/free-tools/negative-keywords" class="also-try-link">
+        <i class="fa-solid fa-ban"></i> Negative Keyword Lists
+      </a>
+      <a href="/free-tools/lsa-eligibility" class="also-try-link">
+        <i class="fa-solid fa-shield-check"></i> LSA Eligibility Checker
+      </a>
+      <a href="/free-tools/campaign-structure-grader" class="also-try-link">
+        <i class="fa-solid fa-chart-bar"></i> Campaign Structure Grader
+      </a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block body_extra %}
+<script nonce="{{ g.csp_nonce }}">
+(function() {
+  // 0=pause, 1=low(-20%), 2=standard, 3=peak(+20%)
+  // Dimensions: [day 0-6 Mon-Sun][hour 0-23]
+  function makeGrid(fn) {
+    return Array.from({length:7}, (_,d) => Array.from({length:24}, (_,h) => fn(d,h)));
+  }
+
+  const SCHEDULES = {
+    hvac: {
+      standard: {
+        sunbelt: makeGrid((d,h) => {
+          if (d<5) { // Mon-Fri
+            if (h>=9&&h<17) return 3;
+            if ((h>=7&&h<9)||(h>=17&&h<20)) return 2;
+            if (h===6||h===20) return 1;
+            return 0;
+          }
+          if (d===5) { // Sat
+            if (h>=8&&h<17) return 2;
+            if (h>=17&&h<19) return 1;
+            return 0;
+          }
+          // Sun
+          if (h>=10&&h<16) return 1;
+          return 0;
+        }),
+        northeast: makeGrid((d,h) => {
+          if (d<5) {
+            if (h>=8&&h<18) return 3; // Wider peak in cold climates
+            if ((h>=7&&h<8)||(h>=18&&h<21)) return 2;
+            if (h===6||h===21) return 1;
+            return 0;
+          }
+          if (d===5) {
+            if (h>=8&&h<17) return 2;
+            if (h===17||h===18) return 1;
+            return 0;
+          }
+          if (h>=10&&h<15) return 1;
+          return 0;
+        }),
+        mountain: makeGrid((d,h) => {
+          if (d<5) {
+            if (h>=9&&h<17) return 3;
+            if ((h>=7&&h<9)||(h>=17&&h<19)) return 2;
+            if (h===6) return 1;
+            return 0;
+          }
+          if (d===5) { if (h>=8&&h<16) return 2; return 0; }
+          return 0;
+        }),
+        pacific: makeGrid((d,h) => {
+          if (d<5) {
+            if (h>=9&&h<18) return 3;
+            if ((h>=7&&h<9)||(h>=18&&h<20)) return 2;
+            if (h===6) return 1;
+            return 0;
+          }
+          if (d===5) { if (h>=9&&h<16) return 2; return 0; }
+          if (h>=10&&h<15) return 1;
+          return 0;
+        })
+      },
+      emergency: {
+        sunbelt: makeGrid((d,h) => {
+          if (d<5) {
+            if (h>=9&&h<17) return 3;
+            if (h>=7&&h<9||h>=17&&h<22) return 2;
+            return 2; // 24/7 standard for emergency
+          }
+          return 2; // Weekends standard
+        }),
+        northeast: makeGrid(()=>2), // All standard, peak during business hours
+        mountain: makeGrid((d,h)=>{ if(d<5&&h>=9&&h<17) return 3; return 2; }),
+        pacific: makeGrid((d,h)=>{ if(d<5&&h>=9&&h<17) return 3; return 2; })
+      }
+    },
+
+    plumbing: {
+      standard: {
+        sunbelt: makeGrid((d,h) => {
+          if (d<5) {
+            if (h>=8&&h<17) return 3;
+            if ((h>=7&&h<8)||(h>=17&&h<19)) return 2;
+            if (h===19||h===20) return 1;
+            return 0;
+          }
+          if (d===5) { if (h>=8&&h<15) return 2; if (h>=15&&h<17) return 1; return 0; }
+          if (h>=9&&h<14) return 1;
+          return 0;
+        }),
+        northeast: makeGrid((d,h) => {
+          if (d<5) {
+            if (h>=8&&h<17) return 3;
+            if ((h>=7&&h<8)||(h>=17&&h<20)) return 2;
+            return 0;
+          }
+          if (d===5) { if (h>=8&&h<14) return 2; return 0; }
+          return 0;
+        }),
+        mountain: makeGrid((d,h) => {
+          if (d<5) { if (h>=8&&h<17) return 3; if (h>=7&&h<8||h>=17&&h<19) return 2; return 0; }
+          if (d===5) { if (h>=8&&h<14) return 2; return 0; }
+          return 0;
+        }),
+        pacific: makeGrid((d,h) => {
+          if (d<5) { if (h>=8&&h<18) return 3; if (h>=7&&h<8||h>=18&&h<20) return 2; return 0; }
+          if (d===5) { if (h>=8&&h<15) return 2; return 0; }
+          return 0;
+        })
+      },
+      emergency: {
+        sunbelt: makeGrid((d,h) => { if (d<5&&h>=8&&h<17) return 3; return 2; }),
+        northeast: makeGrid((d,h) => { if (d<5&&h>=8&&h<17) return 3; return 2; }),
+        mountain: makeGrid((d,h) => { if (d<5&&h>=8&&h<17) return 3; return 2; }),
+        pacific: makeGrid((d,h) => { if (d<5&&h>=8&&h<17) return 3; return 2; })
+      }
+    },
+
+    electrical: {
+      standard: {
+        sunbelt: makeGrid((d,h) => {
+          if (d<5) {
+            if (h>=8&&h<17) return 3;
+            if (h===7||h===17||h===18) return 2;
+            if (h===19||h===20) return 1;
+            return 0;
+          }
+          if (d===5) { if (h>=8&&h<15) return 2; return 0; }
+          return 0;
+        }),
+        northeast: makeGrid((d,h) => {
+          if (d<5) { if (h>=8&&h<17) return 3; if (h===7||h===17) return 2; return 0; }
+          if (d===5) { if (h>=8&&h<14) return 2; return 0; }
+          return 0;
+        }),
+        mountain: makeGrid((d,h) => {
+          if (d<5) { if (h>=8&&h<17) return 3; if (h===7||h===17) return 2; return 0; }
+          if (d===5) { if (h>=8&&h<14) return 2; return 0; }
+          return 0;
+        }),
+        pacific: makeGrid((d,h) => {
+          if (d<5) { if (h>=8&&h<17) return 3; if (h===7||h>=17&&h<19) return 2; return 0; }
+          if (d===5) { if (h>=8&&h<15) return 2; return 0; }
+          return 0;
+        })
+      },
+      emergency: {
+        sunbelt: makeGrid((d,h)=>{ if(d<5&&h>=8&&h<17) return 3; if(h>=18||h<6) return 2; return 2; }),
+        northeast: makeGrid((d,h)=>{ if(d<5&&h>=8&&h<17) return 3; return 2; }),
+        mountain: makeGrid((d,h)=>{ if(d<5&&h>=8&&h<17) return 3; return 2; }),
+        pacific: makeGrid((d,h)=>{ if(d<5&&h>=8&&h<17) return 3; return 2; })
+      }
+    },
+
+    roofing: {
+      standard: {
+        sunbelt: makeGrid((d,h) => {
+          if (d<5) {
+            if (h>=8&&h<17) return 3;
+            if (h===7||h===17) return 2;
+            return 0;
+          }
+          if (d===5) { if (h>=8&&h<14) return 2; return 0; }
+          return 0;
+        }),
+        northeast: makeGrid((d,h) => {
+          // Spring/summer focus, Mon-Fri heavy
+          if (d<5) { if (h>=8&&h<17) return 3; if (h===7) return 2; return 0; }
+          if (d===5) { if (h>=8&&h<13) return 2; return 0; }
+          return 0;
+        }),
+        mountain: makeGrid((d,h) => {
+          if (d<5) { if (h>=8&&h<16) return 3; if (h===7) return 2; return 0; }
+          if (d===5) { if (h>=8&&h<13) return 2; return 0; }
+          return 0;
+        }),
+        pacific: makeGrid((d,h) => {
+          if (d<5) { if (h>=8&&h<17) return 3; if (h===7||h===17) return 2; return 0; }
+          if (d===5) { if (h>=8&&h<14) return 2; return 0; }
+          return 0;
+        })
+      },
+      emergency: {
+        sunbelt: makeGrid((d,h) => {
+          if (d<5) { if (h>=8&&h<17) return 3; if (h>=17&&h<20) return 2; return 1; }
+          if (d===5) { if (h>=8&&h<17) return 2; return 1; }
+          return 1;
+        }),
+        northeast: makeGrid((d,h) => {
+          if (d<5) { if (h>=8&&h<17) return 3; if (h>=17&&h<20) return 2; return 1; }
+          return 1;
+        }),
+        mountain: makeGrid((d,h) => {
+          if (d<5) { if (h>=8&&h<17) return 3; return 1; }
+          return 1;
+        }),
+        pacific: makeGrid((d,h) => {
+          if (d<5) { if (h>=8&&h<17) return 3; if (h>=17&&h<20) return 2; return 1; }
+          return 1;
+        })
+      }
+    },
+
+    pest: {
+      standard: {
+        sunbelt: makeGrid((d,h) => {
+          // Morning-heavy, spring/summer strongest
+          if (d<5) {
+            if (h>=7&&h<11) return 3;
+            if (h>=11&&h<15) return 2;
+            if (h>=15&&h<17) return 1;
+            return 0;
+          }
+          if (d===5) { if (h>=7&&h<12) return 3; if (h>=12&&h<14) return 2; return 0; }
+          return 0;
+        }),
+        northeast: makeGrid((d,h) => {
+          if (d<5) { if (h>=7&&h<11) return 3; if (h>=11&&h<16) return 2; return 0; }
+          if (d===5) { if (h>=7&&h<12) return 2; return 0; }
+          return 0;
+        }),
+        mountain: makeGrid((d,h) => {
+          if (d<5) { if (h>=7&&h<11) return 3; if (h>=11&&h<15) return 2; return 0; }
+          if (d===5) { if (h>=8&&h<12) return 2; return 0; }
+          return 0;
+        }),
+        pacific: makeGrid((d,h) => {
+          if (d<5) { if (h>=7&&h<11) return 3; if (h>=11&&h<16) return 2; return 0; }
+          if (d===5) { if (h>=7&&h<12) return 2; return 0; }
+          return 0;
+        })
+      },
+      emergency: {
+        sunbelt: makeGrid((d,h) => {
+          if (d<5) { if (h>=7&&h<17) return 3; if (h>=17&&h<20) return 2; return 1; }
+          if (d===5) { if (h>=7&&h<14) return 2; return 1; }
+          return 1;
+        }),
+        northeast: makeGrid((d,h)=>{ if(d<5&&h>=7&&h<17) return 3; return 1; }),
+        mountain: makeGrid((d,h)=>{ if(d<5&&h>=7&&h<17) return 3; return 1; }),
+        pacific: makeGrid((d,h)=>{ if(d<5&&h>=7&&h<17) return 3; return 1; })
+      }
+    },
+
+    landscaping: {
+      standard: {
+        sunbelt: makeGrid((d,h) => {
+          // Tue-Sat mornings best, Mon off for crews
+          if (d===0) return 0; // Mon off
+          if (d>=1&&d<=4) { // Tue-Fri
+            if (h>=6&&h<10) return 3;
+            if (h>=10&&h<13) return 2;
+            if (h>=13&&h<16) return 1;
+            return 0;
+          }
+          if (d===5) { // Sat
+            if (h>=6&&h<11) return 3;
+            if (h>=11&&h<14) return 2;
+            return 0;
+          }
+          return 0; // Sun off
+        }),
+        northeast: makeGrid((d,h) => {
+          if (d===0) return 0;
+          if (d>=1&&d<=4) {
+            if (h>=7&&h<11) return 3;
+            if (h>=11&&h<14) return 2;
+            if (h>=14&&h<17) return 1;
+            return 0;
+          }
+          if (d===5) { if (h>=7&&h<12) return 3; if (h>=12&&h<14) return 2; return 0; }
+          return 0;
+        }),
+        mountain: makeGrid((d,h) => {
+          if (d===0) return 0;
+          if (d>=1&&d<=4) { if (h>=7&&h<11) return 3; if (h>=11&&h<14) return 2; return 0; }
+          if (d===5) { if (h>=7&&h<12) return 2; return 0; }
+          return 0;
+        }),
+        pacific: makeGrid((d,h) => {
+          if (d===0) return 0;
+          if (d>=1&&d<=4) { if (h>=6&&h<10) return 3; if (h>=10&&h<14) return 2; return 0; }
+          if (d===5) { if (h>=6&&h<11) return 3; if (h>=11&&h<13) return 2; return 0; }
+          return 0;
+        })
+      },
+      emergency: {
+        sunbelt: makeGrid((d,h) => {
+          if (d===0) return 0;
+          if (d<6) { if (h>=6&&h<14) return 3; return 0; }
+          return 0;
+        }),
+        northeast: makeGrid((d,h)=>{ if(d>0&&d<6&&h>=7&&h<14) return 3; return 0; }),
+        mountain: makeGrid((d,h)=>{ if(d>0&&d<6&&h>=7&&h<14) return 3; return 0; }),
+        pacific: makeGrid((d,h)=>{ if(d>0&&d<6&&h>=6&&h<14) return 3; return 0; })
+      }
+    },
+
+    garage: {
+      standard: {
+        sunbelt: makeGrid((d,h) => {
+          if (d<5) {
+            if ((h>=7&&h<9)||(h>=17&&h<20)) return 3; // Morning/evening commute peaks
+            if (h>=9&&h<17) return 2;
+            if (h===20||h===21) return 1;
+            return 0;
+          }
+          if (d===5) { if (h>=8&&h<15) return 2; return 0; }
+          if (h>=9&&h<14) return 1;
+          return 0;
+        }),
+        northeast: makeGrid((d,h) => {
+          if (d<5) { if ((h>=7&&h<9)||(h>=17&&h<20)) return 3; if (h>=9&&h<17) return 2; return 0; }
+          if (d===5) { if (h>=8&&h<14) return 2; return 0; }
+          return 0;
+        }),
+        mountain: makeGrid((d,h) => {
+          if (d<5) { if ((h>=7&&h<9)||(h>=17&&h<19)) return 3; if (h>=9&&h<17) return 2; return 0; }
+          if (d===5) { if (h>=8&&h<14) return 2; return 0; }
+          return 0;
+        }),
+        pacific: makeGrid((d,h) => {
+          if (d<5) { if ((h>=7&&h<9)||(h>=17&&h<20)) return 3; if (h>=9&&h<17) return 2; return 0; }
+          if (d===5) { if (h>=8&&h<15) return 2; return 0; }
+          return 0;
+        })
+      },
+      emergency: {
+        sunbelt: makeGrid((d,h)=>{ if(d<5&&((h>=7&&h<9)||(h>=17&&h<20))) return 3; if(h>=6&&h<22) return 2; return 1; }),
+        northeast: makeGrid((d,h)=>{ if(d<5&&((h>=7&&h<9)||(h>=17&&h<20))) return 3; if(h>=6&&h<22) return 2; return 1; }),
+        mountain: makeGrid((d,h)=>{ if(d<5&&((h>=7&&h<9)||(h>=17&&h<19))) return 3; if(h>=6&&h<21) return 2; return 1; }),
+        pacific: makeGrid((d,h)=>{ if(d<5&&((h>=7&&h<9)||(h>=17&&h<20))) return 3; if(h>=6&&h<22) return 2; return 1; })
+      }
+    },
+
+    pool: {
+      standard: {
+        sunbelt: makeGrid((d,h) => {
+          if (d<5) { if (h>=8&&h<17) return 3; if (h===7||h===17) return 2; return 0; }
+          if (d===5) { if (h>=8&&h<13) return 2; return 0; }
+          return 0;
+        }),
+        northeast: makeGrid((d,h) => {
+          if (d<5) { if (h>=8&&h<16) return 3; if (h===7) return 2; return 0; }
+          if (d===5) { if (h>=8&&h<12) return 2; return 0; }
+          return 0;
+        }),
+        mountain: makeGrid((d,h) => {
+          if (d<5) { if (h>=8&&h<16) return 3; return 0; }
+          if (d===5) { if (h>=8&&h<12) return 2; return 0; }
+          return 0;
+        }),
+        pacific: makeGrid((d,h) => {
+          if (d<5) { if (h>=8&&h<17) return 3; if (h===17) return 2; return 0; }
+          if (d===5) { if (h>=8&&h<13) return 2; return 0; }
+          return 0;
+        })
+      },
+      emergency: {
+        sunbelt: makeGrid((d,h)=>{ if(d<5&&h>=8&&h<17) return 3; if(h>=8&&h<19) return 2; return 0; }),
+        northeast: makeGrid((d,h)=>{ if(d<5&&h>=8&&h<17) return 3; if(h>=8&&h<19) return 2; return 0; }),
+        mountain: makeGrid((d,h)=>{ if(d<5&&h>=8&&h<17) return 3; if(h>=8&&h<18) return 2; return 0; }),
+        pacific: makeGrid((d,h)=>{ if(d<5&&h>=8&&h<17) return 3; if(h>=8&&h<19) return 2; return 0; })
+      }
+    },
+
+    solar: {
+      standard: {
+        sunbelt: makeGrid((d,h) => {
+          if (d<5) {
+            if (h>=9&&h<17) return 3;
+            if ((h>=19&&h<21)) return 2; // Evening browsing
+            if (h===7||h===8||h===17||h===18) return 1;
+            return 0;
+          }
+          if (d===5||d===6) { if (h>=9&&h<17) return 3; if (h>=17&&h<19) return 1; return 0; }
+          return 0;
+        }),
+        northeast: makeGrid((d,h) => {
+          if (d<5) { if (h>=9&&h<17) return 3; if (h>=19&&h<21) return 2; return 0; }
+          if (d===5||d===6) { if (h>=9&&h<17) return 2; return 0; }
+          return 0;
+        }),
+        mountain: makeGrid((d,h) => {
+          if (d<5) { if (h>=9&&h<17) return 3; if (h>=19&&h<21) return 2; return 0; }
+          if (d===5||d===6) { if (h>=9&&h<17) return 2; return 0; }
+          return 0;
+        }),
+        pacific: makeGrid((d,h) => {
+          if (d<5) { if (h>=9&&h<17) return 3; if (h>=19&&h<21) return 2; return 0; }
+          if (d===5||d===6) { if (h>=9&&h<17) return 3; return 0; }
+          return 0;
+        })
+      },
+      emergency: {
+        sunbelt: makeGrid((d,h)=>{ if(h>=9&&h<17) return 3; if(h>=19&&h<21) return 2; return 0; }),
+        northeast: makeGrid((d,h)=>{ if(h>=9&&h<17) return 3; if(h>=19&&h<21) return 2; return 0; }),
+        mountain: makeGrid((d,h)=>{ if(h>=9&&h<17) return 3; if(h>=19&&h<21) return 2; return 0; }),
+        pacific: makeGrid((d,h)=>{ if(h>=9&&h<17) return 3; if(h>=19&&h<21) return 2; return 0; })
+      }
+    }
+  };
+
+  const TRADE_LABELS = {
+    hvac:'HVAC', plumbing:'Plumbing', electrical:'Electrical', roofing:'Roofing',
+    pest:'Pest Control', landscaping:'Landscaping', garage:'Garage Door', pool:'Pool Service', solar:'Solar'
+  };
+
+  const REGION_LABELS = {
+    sunbelt:'Sunbelt / Warm', northeast:'Northeast / Midwest', mountain:'Mountain West', pacific:'Pacific Coast'
+  };
+
+  const SAVINGS_BY_TRADE = {
+    hvac: {standard: 22, emergency: 10},
+    plumbing: {standard: 20, emergency: 8},
+    electrical: {standard: 21, emergency: 9},
+    roofing: {standard: 28, emergency: 12},
+    pest: {standard: 24, emergency: 11},
+    landscaping: {standard: 26, emergency: 10},
+    garage: {standard: 19, emergency: 9},
+    pool: {standard: 23, emergency: 10},
+    solar: {standard: 18, emergency: 8}
+  };
+
+  const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const CELL_CLASSES = ['cell-pause','cell-low','cell-standard','cell-peak'];
+  const CELL_LABELS = ['—','-20%','Std','+20%'];
+
+  function getGrid() {
+    const trade = document.getElementById('tradeType').value;
+    const btype = document.getElementById('businessType').value;
+    const region = document.getElementById('region').value;
+    const schedObj = SCHEDULES[trade];
+    if (!schedObj) return null;
+    const btObj = schedObj[btype] || schedObj['standard'];
+    return btObj[region] || btObj['sunbelt'];
+  }
+
+  function generateSchedule() {
+    const trade = document.getElementById('tradeType').value;
+    const btype = document.getElementById('businessType').value;
+    const region = document.getElementById('region').value;
+    const grid = getGrid();
+    if (!grid) return;
+
+    // Title
+    const btLabel = btype === 'emergency' ? '24-Hour Emergency' : 'Standard Hours';
+    document.getElementById('gridTitle').textContent =
+      TRADE_LABELS[trade] + ' — ' + btLabel + ' (' + REGION_LABELS[region] + ')';
+
+    // Savings
+    const sav = SAVINGS_BY_TRADE[trade];
+    document.getElementById('savingsPct').textContent = (sav[btype] || sav.standard) + '%';
+
+    // Build table
+    const table = document.getElementById('scheduleGrid');
+    let html = '<thead><tr><th class="day-header">Day</th>';
+    for (let h=0; h<24; h++) {
+      const label = h===0?'12a': h<12? h+'a': h===12?'12p': (h-12)+'p';
+      html += '<th>' + label + '</th>';
+    }
+    html += '</tr></thead><tbody>';
+
+    grid.forEach((dayArr, d) => {
+      html += '<tr><th class="day-header">' + DAYS[d] + '</th>';
+      dayArr.forEach((val) => {
+        html += '<td class="' + CELL_CLASSES[val] + '" title="' + CELL_LABELS[val] + '">'
+          + (val===3?'+20': val===2?'Std': val===1?'-20': '—') + '</td>';
+      });
+      html += '</tr>';
+    });
+    html += '</tbody>';
+    table.innerHTML = html;
+  }
+
+  function downloadSchedule() {
+    const trade = document.getElementById('tradeType').value;
+    const btype = document.getElementById('businessType').value;
+    const region = document.getElementById('region').value;
+    const grid = getGrid();
+    if (!grid) return;
+
+    let txt = 'GOOGLE ADS SCHEDULE — ' + TRADE_LABELS[trade].toUpperCase() + '\n';
+    txt += (btype==='emergency'?'24-Hour Emergency':'Standard Hours') + ' | ' + REGION_LABELS[region] + '\n';
+    txt += 'Generated by RevForge Free Tools — getrevforge.io\n';
+    txt += '='.repeat(60) + '\n\n';
+    txt += 'BID MODIFIER LEGEND:\n';
+    txt += '  +20% = Peak demand (dark green)\n';
+    txt += '   Std = Standard bid (light green)\n';
+    txt += '  -20% = Low demand (yellow)\n';
+    txt += '   --- = Pause ads (gray)\n\n';
+
+    const DAYS_FULL = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+    grid.forEach((dayArr, d) => {
+      txt += DAYS_FULL[d] + ':\n';
+      // Compress into ranges
+      let ranges = [];
+      let curVal = dayArr[0], start = 0;
+      for (let h=1; h<24; h++) {
+        if (dayArr[h] !== curVal) {
+          ranges.push({v:curVal, s:start, e:h-1});
+          curVal = dayArr[h]; start = h;
+        }
+      }
+      ranges.push({v:curVal, s:start, e:23});
+      ranges.forEach(r => {
+        if (r.v===0) return; // Skip paused
+        const label = r.v===3?'+20%': r.v===2?'Standard': r.v===1?'-20%': 'Pause';
+        const fmtH = h => h===0?'12:00am': h<12?h+':00am': h===12?'12:00pm': (h-12)+':00pm';
+        txt += '  ' + fmtH(r.s) + ' – ' + fmtH(r.e) + ':  ' + label + '\n';
+      });
+      txt += '\n';
+    });
+
+    txt += '='.repeat(60) + '\n';
+    txt += 'HOW TO APPLY IN GOOGLE ADS:\n';
+    txt += '1. Open Campaigns → [Campaign] → Settings → Ad Schedule\n';
+    txt += '2. Click "+ Ad Schedule" and add each time block above\n';
+    txt += '3. Set bid adjustments per block (+20%, 0%, -20%)\n';
+    txt += '4. Remove all hours marked "Pause" (don\'t add those rows)\n';
+    txt += '5. Monitor for 2 weeks, then refine based on your call data\n\n';
+    txt += 'Want this automated? RevForge.io adjusts your schedule\n';
+    txt += 'in real time based on your actual conversion data.\n';
+
+    const blob = new Blob([txt], {type:'text/plain'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'revforge-ad-schedule-' + trade + '.txt';
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  }
+
+  // Expose globals
+  window.generateSchedule = generateSchedule;
+  window.downloadSchedule = downloadSchedule;
+
+  // Auto-generate on load
+  generateSchedule();
+
+  // Regenerate on input change
+  ['tradeType','businessType','region'].forEach(id => {
+    document.getElementById(id).addEventListener('change', generateSchedule);
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,786 @@
+{% extends "base_public.html" %}
+{% block title %}Google Ads Campaign Structure Grader for Trade Contractors | RevForge{% endblock %}
+{% block meta_description %}Free Google Ads campaign structure grader for HVAC, plumbing, electrical, and roofing contractors. Get an instant score, red flags, and a recommended campaign hierarchy for your trade.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Google Ads Campaign Structure Grader for Trade Contractors",
+  "url": "https://getrevforge.io/free-tools/campaign-structure-grader",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Any",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "description": "Free tool that grades your Google Ads campaign structure and gives trade-specific recommendations for HVAC, plumbing, electrical, roofing, and other trade contractors.",
+  "provider": { "@type": "Organization", "name": "RevForge", "url": "https://getrevforge.io" }
+}
+</script>
+<style>
+  :root {
+    --forge-green: #1A5C35;
+    --forge-green-dark: #144a2a;
+    --forge-green-mid: #2a7a4a;
+    --forge-green-light: #e8f5ee;
+    --rev-amber: #D97706;
+    --rev-amber-light: #fef3c7;
+    --prec-blue: #1E5FA8;
+    --prec-blue-light: #eff6ff;
+  }
+
+  .tool-hero {
+    background: linear-gradient(135deg, #f0fdf4 0%, #fff 60%, var(--rev-amber-light) 100%);
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .tool-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
+  }
+
+  .form-label { display: block; font-weight: 600; font-size: 0.875rem; color: #374151; margin-bottom: 0.375rem; }
+  .form-label .hint { font-weight: 400; color: #9ca3af; font-size: 0.8125rem; margin-left: 0.25rem; }
+
+  .form-input, .form-select {
+    width: 100%; padding: 0.75rem 1rem; border: 1.5px solid #d1d5db; border-radius: 10px;
+    font-size: 0.9375rem; color: #111827; background: #fff; outline: none; font-family: inherit;
+    transition: border-color 0.15s;
+  }
+  .form-input:focus, .form-select:focus {
+    border-color: var(--forge-green); box-shadow: 0 0 0 3px rgba(26,92,53,0.1);
+  }
+  .form-input[type="number"] { font-variant-numeric: tabular-nums; }
+
+  .toggle-group { display: flex; gap: 0; border: 1.5px solid #d1d5db; border-radius: 10px; overflow: hidden; }
+  .toggle-btn {
+    flex: 1; padding: 0.625rem 0.5rem; text-align: center; font-weight: 600; font-size: 0.875rem;
+    cursor: pointer; border: none; background: #fff; color: #6b7280; transition: all 0.15s; border-right: 1px solid #e5e7eb;
+  }
+  .toggle-btn:last-child { border-right: none; }
+  .toggle-btn.active { background: var(--forge-green); color: #fff; }
+  .toggle-btn:hover:not(.active) { background: var(--forge-green-light); color: var(--forge-green); }
+
+  .rf-btn-primary {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: var(--forge-green); color: #fff; padding: 0.875rem 2rem;
+    border-radius: 10px; font-weight: 600; font-size: 1rem; cursor: pointer; border: none;
+    transition: background 0.18s; width: 100%; justify-content: center;
+  }
+  .rf-btn-primary:hover { background: var(--forge-green-dark); }
+
+  .rf-btn-amber {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: var(--rev-amber); color: #fff; padding: 0.75rem 1.5rem;
+    border-radius: 10px; font-weight: 600; font-size: 0.9375rem;
+    cursor: pointer; border: none; transition: background 0.18s; text-decoration: none;
+  }
+  .rf-btn-amber:hover { background: #b45309; color: #fff; }
+
+  /* Score ring */
+  .score-ring-wrap { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 140px; height: 140px; }
+  .score-ring-svg { transform: rotate(-90deg); position: absolute; }
+  .score-ring-track { fill: none; stroke: #e5e7eb; stroke-width: 10; }
+  .score-ring-fill { fill: none; stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 0.9s cubic-bezier(.4,0,.2,1); }
+  .score-ring-text { position: relative; text-align: center; }
+
+  /* Category scores */
+  .cat-bar-track { height: 8px; background: #f3f4f6; border-radius: 100px; overflow: hidden; flex: 1; }
+  .cat-bar-fill { height: 100%; border-radius: 100px; transition: width 0.7s cubic-bezier(.4,0,.2,1); }
+
+  /* Red flags */
+  .red-flag { display: flex; gap: 0.75rem; padding: 0.875rem; background: #fef2f2; border: 1px solid #fca5a5; border-radius: 10px; }
+  .green-flag { display: flex; gap: 0.75rem; padding: 0.875rem; background: var(--forge-green-light); border: 1px solid #a7f3c4; border-radius: 10px; }
+  .amber-flag { display: flex; gap: 0.75rem; padding: 0.875rem; background: var(--rev-amber-light); border: 1px solid #fde68a; border-radius: 10px; }
+
+  /* Action items */
+  .action-item { display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.75rem 0; border-bottom: 1px solid #f3f4f6; }
+  .action-item:last-child { border-bottom: none; }
+  .priority-badge {
+    padding: 0.125rem 0.625rem; border-radius: 100px; font-size: 0.75rem; font-weight: 700; white-space: nowrap; flex-shrink: 0;
+  }
+  .priority-high  { background: #fee2e2; color: #991b1b; }
+  .priority-med   { background: #fef3c7; color: #92400e; }
+  .priority-low   { background: var(--forge-green-light); color: var(--forge-green); }
+
+  /* Hierarchy diagram */
+  .hierarchy { font-family: 'Courier New', monospace; font-size: 0.8125rem; line-height: 1.8; color: #374151; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 1.25rem; overflow-x: auto; }
+  .hier-campaign { color: var(--forge-green); font-weight: 700; }
+  .hier-adgroup  { color: var(--prec-blue); font-weight: 600; }
+  .hier-keyword  { color: #6b7280; }
+  .hier-indent1  { padding-left: 1.5rem; }
+  .hier-indent2  { padding-left: 3rem; }
+  .hier-indent3  { padding-left: 4.5rem; }
+
+  .cta-section {
+    background: linear-gradient(135deg, var(--forge-green) 0%, var(--forge-green-dark) 100%);
+    border-radius: 20px; color: #fff; padding: 3rem 2rem; text-align: center;
+  }
+
+  .also-try-link {
+    display: inline-flex; align-items: center; gap: 0.375rem;
+    color: var(--forge-green); font-weight: 600; font-size: 0.875rem;
+    padding: 0.5rem 1rem; border: 1.5px solid #a7f3c4; border-radius: 8px;
+    text-decoration: none; transition: background 0.15s;
+  }
+  .also-try-link:hover { background: var(--forge-green-light); }
+
+  #resultsPanel { display: none; }
+
+  .benchmark-row { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6; }
+  .benchmark-row:last-child { border-bottom: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<section class="tool-hero py-12 lg:py-16">
+  <div class="container-lg">
+    <div class="max-w-3xl">
+      <div class="inline-flex items-center gap-2 text-sm font-semibold px-3 py-1 rounded-full mb-4"
+           style="background: #f0fdf4; color: var(--forge-green);">
+        <i class="fa-solid fa-screwdriver-wrench"></i> Free Tool
+      </div>
+      <h1 class="text-3xl lg:text-4xl font-extrabold text-gray-900 mb-4" style="text-wrap: balance;">
+        Google Ads Campaign Structure Grader<br>for Trade Contractors
+      </h1>
+      <p class="text-lg text-gray-600 mb-3" style="max-width: 60ch;">
+        Answer 8 quick questions about your Google Ads setup and get an instant score, red flags, and the ideal campaign structure for your specific trade.
+      </p>
+      <p class="text-sm text-gray-500">No access to your account needed. No sign-up required.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Tool -->
+<section class="py-10 bg-gray-50">
+  <div class="container-lg">
+    <div class="grid lg:grid-cols-5 gap-8">
+
+      <!-- Form -->
+      <div class="lg:col-span-2">
+        <div class="tool-card p-6 space-y-5">
+          <h2 class="text-lg font-bold text-gray-900">
+            <i class="fa-solid fa-sitemap mr-2" style="color: var(--forge-green);"></i>Your Account Structure
+          </h2>
+
+          <div>
+            <label class="form-label" for="tradeType">Trade Type</label>
+            <select class="form-select" id="tradeType">
+              <option value="hvac">HVAC</option>
+              <option value="plumbing">Plumbing</option>
+              <option value="electrical">Electrical</option>
+              <option value="roofing">Roofing</option>
+              <option value="pest">Pest Control</option>
+              <option value="landscaping">Landscaping</option>
+              <option value="garage">Garage Door</option>
+              <option value="pool">Pool Service</option>
+              <option value="solar">Solar</option>
+              <option value="general">General Contractor</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="form-label" for="numCampaigns">Active Campaigns <span class="hint">(#)</span></label>
+              <input type="number" class="form-input" id="numCampaigns" min="0" max="200" placeholder="e.g. 3" value="">
+            </div>
+            <div>
+              <label class="form-label" for="numAdGroups">Total Ad Groups <span class="hint">(#)</span></label>
+              <input type="number" class="form-input" id="numAdGroups" min="0" max="500" placeholder="e.g. 12" value="">
+            </div>
+          </div>
+
+          <div>
+            <label class="form-label" for="numKeywords">Total Keywords <span class="hint">(all ad groups)</span></label>
+            <input type="number" class="form-input" id="numKeywords" min="0" max="10000" placeholder="e.g. 85" value="">
+          </div>
+
+          <div>
+            <label class="form-label mb-2">Separate campaign for <strong>branded terms?</strong></label>
+            <div class="toggle-group" id="branded-toggle">
+              <button class="toggle-btn" data-val="yes" onclick="setToggle('branded',this)">Yes</button>
+              <button class="toggle-btn" data-val="no" onclick="setToggle('branded',this)">No</button>
+              <button class="toggle-btn active" data-val="unsure" onclick="setToggle('branded',this)">Not sure</button>
+            </div>
+          </div>
+
+          <div>
+            <label class="form-label mb-2">Separate campaign for <strong>competitor terms?</strong></label>
+            <div class="toggle-group" id="competitor-toggle">
+              <button class="toggle-btn" data-val="yes" onclick="setToggle('competitor',this)">Yes</button>
+              <button class="toggle-btn" data-val="no" onclick="setToggle('competitor',this)">No</button>
+              <button class="toggle-btn active" data-val="unsure" onclick="setToggle('competitor',this)">Not sure</button>
+            </div>
+          </div>
+
+          <div>
+            <label class="form-label mb-2">Separate campaign for <strong>emergency / 24-hr services?</strong></label>
+            <div class="toggle-group" id="emergency-toggle">
+              <button class="toggle-btn" data-val="yes" onclick="setToggle('emergency',this)">Yes</button>
+              <button class="toggle-btn" data-val="no" onclick="setToggle('emergency',this)">No</button>
+              <button class="toggle-btn active" data-val="unsure" onclick="setToggle('emergency',this)">Not sure</button>
+              <button class="toggle-btn" data-val="na" onclick="setToggle('emergency',this)">N/A</button>
+            </div>
+          </div>
+
+          <div>
+            <label class="form-label mb-2">Separate campaign for <strong>seasonal services?</strong></label>
+            <div class="toggle-group" id="seasonal-toggle">
+              <button class="toggle-btn" data-val="yes" onclick="setToggle('seasonal',this)">Yes</button>
+              <button class="toggle-btn" data-val="no" onclick="setToggle('seasonal',this)">No</button>
+              <button class="toggle-btn active" data-val="unsure" onclick="setToggle('seasonal',this)">Not sure</button>
+              <button class="toggle-btn" data-val="na" onclick="setToggle('seasonal',this)">N/A</button>
+            </div>
+          </div>
+
+          <div>
+            <label class="form-label mb-2">Average ads per ad group?</label>
+            <div class="toggle-group" id="adsperag-toggle">
+              <button class="toggle-btn" data-val="1" onclick="setToggle('adsperag',this)">1</button>
+              <button class="toggle-btn" data-val="2" onclick="setToggle('adsperag',this)">2</button>
+              <button class="toggle-btn active" data-val="3+" onclick="setToggle('adsperag',this)">3+</button>
+            </div>
+          </div>
+
+          <div>
+            <label class="form-label mb-2">Using <strong>RSAs</strong> (Responsive Search Ads)?</label>
+            <div class="toggle-group" id="rsa-toggle">
+              <button class="toggle-btn" data-val="yes" onclick="setToggle('rsa',this)">Yes</button>
+              <button class="toggle-btn" data-val="no" onclick="setToggle('rsa',this)">No</button>
+              <button class="toggle-btn active" data-val="unsure" onclick="setToggle('rsa',this)">Not sure</button>
+            </div>
+          </div>
+
+          <div>
+            <label class="form-label mb-2">Separate landing page per service?</label>
+            <div class="toggle-group" id="landingpage-toggle">
+              <button class="toggle-btn" data-val="yes" onclick="setToggle('landingpage',this)">Yes</button>
+              <button class="toggle-btn" data-val="some" onclick="setToggle('landingpage',this)">Some</button>
+              <button class="toggle-btn active" data-val="no" onclick="setToggle('landingpage',this)">No / Same page</button>
+            </div>
+          </div>
+
+          <button class="rf-btn-primary" onclick="gradeStructure()">
+            <i class="fa-solid fa-bolt"></i> Grade My Campaign Structure
+          </button>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div class="lg:col-span-3 space-y-6" id="resultsPanel">
+
+        <!-- Score -->
+        <div class="tool-card p-6">
+          <div class="flex flex-wrap items-center gap-6">
+            <div class="score-ring-wrap">
+              <svg class="score-ring-svg" width="140" height="140" viewBox="0 0 140 140">
+                <circle class="score-ring-track" cx="70" cy="70" r="58"/>
+                <circle class="score-ring-fill" id="scoreRing" cx="70" cy="70" r="58"
+                  stroke="#1A5C35" stroke-dasharray="364" stroke-dashoffset="364"/>
+              </svg>
+              <div class="score-ring-text">
+                <div id="scoreNum" class="text-4xl font-black text-gray-900">—</div>
+                <div class="text-xs font-semibold text-gray-400">/ 100</div>
+              </div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-3 mb-1">
+                <span id="gradeBadge" class="text-2xl font-black" style="color:var(--forge-green);">—</span>
+                <span id="gradeLabel" class="font-bold text-gray-900 text-lg">Run the grader to see your score</span>
+              </div>
+              <p id="gradeDesc" class="text-sm text-gray-600">Enter your campaign details on the left and click Grade.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category breakdown -->
+        <div class="tool-card p-6">
+          <h3 class="font-bold text-gray-900 mb-4">Score Breakdown</h3>
+          <div class="space-y-4" id="categoryBreakdown">
+            <div class="text-center py-6 text-gray-400">
+              <i class="fa-solid fa-sitemap text-3xl mb-2 block"></i>
+              Results will appear here after grading
+            </div>
+          </div>
+        </div>
+
+        <!-- Red flags & wins -->
+        <div class="tool-card p-6">
+          <h3 class="font-bold text-gray-900 mb-4">Flags &amp; Findings</h3>
+          <div class="space-y-3" id="flagsList">
+            <div class="text-center py-6 text-gray-400">Run the grader to see your findings</div>
+          </div>
+        </div>
+
+        <!-- Action items -->
+        <div class="tool-card p-6">
+          <h3 class="font-bold text-gray-900 mb-1">Recommended Action Items</h3>
+          <p class="text-sm text-gray-500 mb-4">Ranked by estimated impact on lead volume and cost</p>
+          <div id="actionItems">
+            <div class="text-center py-6 text-gray-400">Action items will appear after grading</div>
+          </div>
+        </div>
+
+        <!-- Hierarchy diagram -->
+        <div class="tool-card p-6">
+          <h3 class="font-bold text-gray-900 mb-1" id="hierarchyTitle">Ideal Structure for Your Trade</h3>
+          <p class="text-sm text-gray-500 mb-4">The recommended campaign hierarchy for a well-structured trade account</p>
+          <div class="hierarchy" id="hierarchyDiagram"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Benchmark reference -->
+    <div class="mt-8 tool-card p-6">
+      <h2 class="font-bold text-gray-900 mb-4">Benchmark: Ideal Structure for a Trade Business</h2>
+      <div class="grid md:grid-cols-3 gap-6">
+        <div>
+          <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Campaigns</p>
+          <div class="space-y-1">
+            <div class="benchmark-row"><span class="text-sm text-gray-700">Total active campaigns</span><span class="text-sm font-bold" style="color:var(--forge-green);">3–8</span></div>
+            <div class="benchmark-row"><span class="text-sm text-gray-700">Branded campaign</span><span class="text-sm font-bold" style="color:var(--forge-green);">Always</span></div>
+            <div class="benchmark-row"><span class="text-sm text-gray-700">Emergency campaign (HVAC/Plumbing/Elec)</span><span class="text-sm font-bold" style="color:var(--forge-green);">Strongly recommended</span></div>
+            <div class="benchmark-row"><span class="text-sm text-gray-700">Competitor campaign</span><span class="text-sm font-bold" style="color:var(--rev-amber);">Optional but smart</span></div>
+          </div>
+        </div>
+        <div>
+          <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Ad Groups</p>
+          <div class="space-y-1">
+            <div class="benchmark-row"><span class="text-sm text-gray-700">Ad groups per campaign</span><span class="text-sm font-bold" style="color:var(--forge-green);">2–5</span></div>
+            <div class="benchmark-row"><span class="text-sm text-gray-700">Keywords per ad group</span><span class="text-sm font-bold" style="color:var(--forge-green);">10–25</span></div>
+            <div class="benchmark-row"><span class="text-sm text-gray-700">Max keywords per ad group</span><span class="text-sm font-bold" style="color:#dc2626);">Never &gt;50</span></div>
+            <div class="benchmark-row"><span class="text-sm text-gray-700">1 theme per ad group</span><span class="text-sm font-bold" style="color:var(--forge-green);">Always</span></div>
+          </div>
+        </div>
+        <div>
+          <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Ads & Landing Pages</p>
+          <div class="space-y-1">
+            <div class="benchmark-row"><span class="text-sm text-gray-700">RSAs per ad group</span><span class="text-sm font-bold" style="color:var(--forge-green);">At least 1, ideally 3</span></div>
+            <div class="benchmark-row"><span class="text-sm text-gray-700">Headlines per RSA</span><span class="text-sm font-bold" style="color:var(--forge-green);">12–15</span></div>
+            <div class="benchmark-row"><span class="text-sm text-gray-700">Landing page per service</span><span class="text-sm font-bold" style="color:var(--forge-green);">Yes — one per campaign</span></div>
+            <div class="benchmark-row"><span class="text-sm text-gray-700">Negative keyword list</span><span class="text-sm font-bold" style="color:var(--forge-green);">Always applied</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="py-12 bg-white">
+  <div class="container-lg">
+    <div class="cta-section">
+      <div class="inline-flex items-center gap-2 text-sm font-semibold px-3 py-1 rounded-full mb-4"
+           style="background: rgba(255,255,255,0.15); color: #fff;">
+        <i class="fa-solid fa-bolt"></i> RevForge AI
+      </div>
+      <h2 class="text-2xl lg:text-3xl font-extrabold mb-3">RevForge builds and maintains the ideal campaign structure for your trade automatically.</h2>
+      <p class="text-green-100 mb-6 max-w-xl mx-auto">
+        No PPC expertise required. RevForge builds a properly structured account from day one — branded campaigns, service-level ad groups, trade-specific negatives, and RSAs — then continuously optimizes it.
+      </p>
+      <a href="/signup" class="rf-btn-amber text-base px-8 py-3">
+        See RevForge in Action <i class="fa-solid fa-arrow-right"></i>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Also try -->
+<section class="py-10 border-t border-gray-100 bg-gray-50">
+  <div class="container-lg">
+    <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Also Try</p>
+    <div class="flex flex-wrap gap-3">
+      <a href="/free-tools/ad-schedule-optimizer" class="also-try-link">
+        <i class="fa-solid fa-calendar-check"></i> Ad Schedule Optimizer
+      </a>
+      <a href="/free-tools/ad-copy-analyzer" class="also-try-link">
+        <i class="fa-solid fa-magnifying-glass"></i> Ad Copy Analyzer
+      </a>
+      <a href="/free-tools/negative-keywords" class="also-try-link">
+        <i class="fa-solid fa-ban"></i> Negative Keyword Lists
+      </a>
+      <a href="/free-tools/lsa-eligibility" class="also-try-link">
+        <i class="fa-solid fa-shield-check"></i> LSA Eligibility Checker
+      </a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block body_extra %}
+<script nonce="{{ g.csp_nonce }}">
+(function() {
+  // Toggle state
+  const toggleState = {
+    branded: 'unsure', competitor: 'unsure', emergency: 'unsure',
+    seasonal: 'unsure', adsperag: '3+', rsa: 'unsure', landingpage: 'no'
+  };
+
+  window.setToggle = function(key, btn) {
+    toggleState[key] = btn.dataset.val;
+    const group = btn.closest('.toggle-group');
+    group.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  };
+
+  const TRADE_LABELS = {
+    hvac:'HVAC', plumbing:'Plumbing', electrical:'Electrical', roofing:'Roofing',
+    pest:'Pest Control', landscaping:'Landscaping', garage:'Garage Door', pool:'Pool Service',
+    solar:'Solar', general:'General Contractor'
+  };
+
+  // Trades that strongly benefit from emergency campaign
+  const EMERGENCY_TRADES = ['hvac','plumbing','electrical','garage','locksmith'];
+
+  const IDEAL_STRUCTURES = {
+    hvac: [
+      {campaign:'Core Services', groups:['AC Repair','AC Installation','Furnace Repair','HVAC Tune-Up'],
+       kws:['ac repair','air conditioner repair near me','hvac repair']},
+      {campaign:'Emergency HVAC', groups:['No AC Emergency','No Heat Emergency'],
+       kws:['ac not working','no heat emergency','hvac emergency']},
+      {campaign:'Seasonal – AC Season', groups:['AC Tune-Up','Air Filter Service','AC Check-Up'],
+       kws:['ac tune up','spring ac service','air conditioner checkup']},
+      {campaign:'Branded', groups:['[Your Company Name]'],
+       kws:['[company name]','[company name] hvac','[company name] ac repair']},
+      {campaign:'Competitor', groups:['vs. Competitors'],
+       kws:['[competitor name] alternative','best hvac company near [competitor]']}
+    ],
+    plumbing: [
+      {campaign:'Core Services', groups:['Drain Cleaning','Water Heater','Leak Repair','General Plumbing'],
+       kws:['plumber near me','plumbing repair','drain cleaning']},
+      {campaign:'Emergency Plumbing', groups:['Burst Pipe','Toilet Overflow','Major Leak'],
+       kws:['emergency plumber','burst pipe repair','24 hour plumber']},
+      {campaign:'Specialty Services', groups:['Repiping','Sewer Line','Hydrojetting'],
+       kws:['sewer repair','repiping service','hydrojetting']},
+      {campaign:'Branded', groups:['[Your Company Name]'],
+       kws:['[company name]','[company name] plumbing']}
+    ],
+    electrical: [
+      {campaign:'Core Services', groups:['Panel Upgrade','Outlet/Switch Repair','Wiring','Lighting'],
+       kws:['electrician near me','electrical repair','panel upgrade']},
+      {campaign:'Emergency Electrical', groups:['Power Outage Help','Electrical Emergency'],
+       kws:['emergency electrician','no power','electrical emergency']},
+      {campaign:'Specialty – EV & Solar', groups:['EV Charger Install','Home Battery'],
+       kws:['ev charger installation','electric vehicle charger','home battery backup']},
+      {campaign:'Branded', groups:['[Your Company Name]'],
+       kws:['[company name]','[company name] electrical']}
+    ],
+    roofing: [
+      {campaign:'Core Services', groups:['Roof Replacement','Roof Repair','New Roof Installation'],
+       kws:['roofing company near me','roof replacement','roof repair']},
+      {campaign:'Storm Damage', groups:['Hail Damage','Storm Repair','Emergency Tarping'],
+       kws:['storm damage roof','hail damage roof repair','emergency roof tarp']},
+      {campaign:'Specialty', groups:['Metal Roofing','Flat Roof','Gutters'],
+       kws:['metal roof installation','flat roof repair','gutter replacement']},
+      {campaign:'Branded', groups:['[Your Company Name]'],
+       kws:['[company name]','[company name] roofing']}
+    ],
+    pest: [
+      {campaign:'Core Pest Control', groups:['General Pest','Ants','Cockroaches','Spiders'],
+       kws:['pest control near me','exterminator','bug control']},
+      {campaign:'Specialty Pests', groups:['Termites','Bed Bugs','Rodents','Mosquitoes'],
+       kws:['termite treatment','bed bug exterminator','mouse removal']},
+      {campaign:'Branded', groups:['[Your Company Name]'],
+       kws:['[company name]','[company name] pest control']}
+    ],
+    landscaping: [
+      {campaign:'Lawn Maintenance', groups:['Mowing Service','Fertilization','Weed Control','Edging'],
+       kws:['lawn care service','lawn mowing near me','lawn maintenance']},
+      {campaign:'Landscape Design & Install', groups:['New Landscape','Hardscape','Planting'],
+       kws:['landscaping company','landscape design','hardscape installation']},
+      {campaign:'Irrigation', groups:['Sprinkler Install','Sprinkler Repair','Drip Systems'],
+       kws:['sprinkler system installation','irrigation repair']},
+      {campaign:'Branded', groups:['[Your Company Name]'],
+       kws:['[company name]','[company name] landscaping']}
+    ],
+    garage: [
+      {campaign:'Repair Services', groups:['Spring Replacement','Opener Repair','Cable Repair'],
+       kws:['garage door repair near me','garage door spring replacement']},
+      {campaign:'Emergency Garage', groups:['Stuck Garage Door','Broken Spring Emergency'],
+       kws:['garage door stuck','emergency garage door repair','garage door wont open']},
+      {campaign:'New Doors & Openers', groups:['New Garage Door','Opener Installation'],
+       kws:['new garage door installation','garage door opener install']},
+      {campaign:'Branded', groups:['[Your Company Name]'],
+       kws:['[company name]','[company name] garage door']}
+    ],
+    pool: [
+      {campaign:'Pool Cleaning', groups:['Weekly Service','Pool Opening','Pool Closing','Algae Treatment'],
+       kws:['pool cleaning service','pool maintenance near me']},
+      {campaign:'Pool Repair', groups:['Pump Repair','Filter Repair','Heater Repair','Leak Detection'],
+       kws:['pool pump repair','pool repair near me']},
+      {campaign:'Branded', groups:['[Your Company Name]'],
+       kws:['[company name]','[company name] pool service']}
+    ],
+    solar: [
+      {campaign:'Residential Solar', groups:['Solar Installation','Solar Quote','Save on Bills'],
+       kws:['solar installation near me','home solar panels','solar company']},
+      {campaign:'Battery Storage', groups:['Home Battery','Solar + Battery'],
+       kws:['home battery storage','solar battery backup']},
+      {campaign:'Branded', groups:['[Your Company Name]'],
+       kws:['[company name]','[company name] solar']}
+    ],
+    general: [
+      {campaign:'Core Services', groups:['Home Repairs','Remodeling','Maintenance'],
+       kws:['contractor near me','home improvement','handyman service']},
+      {campaign:'Specialty Projects', groups:['Kitchen Remodel','Bathroom Remodel','Additions'],
+       kws:['kitchen remodel','bathroom renovation','home addition']},
+      {campaign:'Branded', groups:['[Your Company Name]'],
+       kws:['[company name]','[company name] contractor']}
+    ]
+  };
+
+  function gradeStructure() {
+    const trade = document.getElementById('tradeType').value;
+    const numCampaigns = parseInt(document.getElementById('numCampaigns').value) || 0;
+    const numAdGroups = parseInt(document.getElementById('numAdGroups').value) || 0;
+    const numKeywords = parseInt(document.getElementById('numKeywords').value) || 0;
+
+    if (!numCampaigns && !numAdGroups && !numKeywords) {
+      alert('Please enter at least your campaign count to grade your structure.');
+      return;
+    }
+
+    const branded = toggleState.branded;
+    const competitor = toggleState.competitor;
+    const emergency = toggleState.emergency;
+    const seasonal = toggleState.seasonal;
+    const adsPerAg = toggleState.adsperag;
+    const rsa = toggleState.rsa;
+    const landingPage = toggleState.landingpage;
+
+    const isEmergencyTrade = EMERGENCY_TRADES.includes(trade);
+    const avgKwPerAg = numAdGroups > 0 ? numKeywords / numAdGroups : 0;
+    const agPerCampaign = numCampaigns > 0 ? numAdGroups / numCampaigns : 0;
+
+    // ---- SCORING ----
+
+    // 1. Campaign count (0-15)
+    let campaignScore, campaignDetail;
+    if (numCampaigns >= 3 && numCampaigns <= 8) {
+      campaignScore = 15; campaignDetail = 'Great — ' + numCampaigns + ' campaigns is in the ideal range (3–8).';
+    } else if (numCampaigns === 2) {
+      campaignScore = 10; campaignDetail = 'Only 2 campaigns — consider splitting by service type. Aim for 3–8.';
+    } else if (numCampaigns === 1) {
+      campaignScore = 3; campaignDetail = 'Single-campaign setup. This is a major red flag — everything competing at once.';
+    } else if (numCampaigns > 8 && numCampaigns <= 15) {
+      campaignScore = 10; campaignDetail = numCampaigns + ' campaigns — slightly high. Check for duplicates or merge similar services.';
+    } else if (numCampaigns > 15) {
+      campaignScore = 5; campaignDetail = numCampaigns + ' campaigns is excessive for a trade business. Consolidate to 3–8 focused campaigns.';
+    } else {
+      campaignScore = 0; campaignDetail = 'No active campaigns entered.';
+    }
+
+    // 2. Ad group density (0-15)
+    let agScore, agDetail;
+    if (numCampaigns === 0) { agScore = 0; agDetail = 'Enter campaign count to score ad groups.'; }
+    else if (agPerCampaign >= 2 && agPerCampaign <= 6) {
+      agScore = 15; agDetail = Math.round(agPerCampaign*10)/10 + ' ad groups per campaign — ideal range (2–5).';
+    } else if (agPerCampaign < 2) {
+      agScore = 8; agDetail = 'Fewer than 2 ad groups per campaign. Each service needs its own ad group.';
+    } else if (agPerCampaign > 6 && agPerCampaign <= 10) {
+      agScore = 10; agDetail = Math.round(agPerCampaign*10)/10 + ' ad groups/campaign — slightly high. Consider consolidating similar themes.';
+    } else {
+      agScore = 5; agDetail = Math.round(agPerCampaign*10)/10 + ' ad groups/campaign — too many. This spreads your data too thin.';
+    }
+
+    // 3. Keyword density (0-20)
+    let kwScore, kwDetail;
+    if (avgKwPerAg === 0) { kwScore = 0; kwDetail = 'Enter keyword count to score.'; }
+    else if (avgKwPerAg >= 10 && avgKwPerAg <= 25) {
+      kwScore = 20; kwDetail = Math.round(avgKwPerAg) + ' keywords/ad group — perfect (10–25 is ideal).';
+    } else if (avgKwPerAg < 10 && avgKwPerAg >= 5) {
+      kwScore = 13; kwDetail = Math.round(avgKwPerAg) + ' keywords/ad group — on the low side. Add more theme-relevant variations.';
+    } else if (avgKwPerAg < 5) {
+      kwScore = 7; kwDetail = 'Only ' + Math.round(avgKwPerAg) + ' keywords/ad group. Add more match types and service variations.';
+    } else if (avgKwPerAg > 25 && avgKwPerAg <= 50) {
+      kwScore = 12; kwDetail = Math.round(avgKwPerAg) + ' keywords/ad group — high. Consider splitting by match type or service variation.';
+    } else {
+      kwScore = 3; kwDetail = Math.round(avgKwPerAg) + ' keywords/ad group — far too many. Split ad groups by service/theme.';
+    }
+
+    // 4. Campaign segmentation (0-25)
+    let segScore = 0, segDetail = '';
+    if (branded === 'yes') segScore += 10;
+    else if (branded === 'no') { /* 0 points */ }
+    else segScore += 3; // unsure
+
+    if (competitor === 'yes') segScore += 5;
+    else if (competitor === 'unsure') segScore += 2;
+
+    if (isEmergencyTrade) {
+      if (emergency === 'yes') segScore += 8;
+      else if (emergency === 'no') { /* 0 */ }
+      else if (emergency === 'unsure') segScore += 2;
+    } else {
+      segScore += 4; // not applicable
+    }
+
+    if (seasonal === 'yes') segScore += 2;
+    else if (seasonal === 'na') segScore += 2;
+
+    segScore = Math.min(25, segScore);
+    const segDetails = [];
+    if (branded!=='yes') segDetails.push('No branded campaign (highest ROI campaign type)');
+    if (isEmergencyTrade && emergency==='no') segDetails.push('No emergency/24-hr campaign (major gap for ' + TRADE_LABELS[trade] + ')');
+    if (competitor==='no') segDetails.push('No competitor campaign (missed targeting opportunity)');
+    segDetail = segDetails.length > 0 ? 'Missing: ' + segDetails.join('; ') + '.' :
+      branded==='yes' && (emergency==='yes'||!isEmergencyTrade) ? 'Good campaign segmentation.' : 'Partial segmentation — see flags below.';
+
+    // 5. Ads & landing pages (0-25)
+    let adsLpScore = 0, adsLpDetail = '';
+    if (adsPerAg === '3+') adsLpScore += 10;
+    else if (adsPerAg === '2') adsLpScore += 7;
+    else adsLpScore += 2;
+
+    if (rsa === 'yes') adsLpScore += 8;
+    else if (rsa === 'no') { /* 0 */ }
+    else adsLpScore += 3;
+
+    if (landingPage === 'yes') adsLpScore += 7;
+    else if (landingPage === 'some') adsLpScore += 4;
+    else adsLpScore += 0;
+
+    adsLpScore = Math.min(25, adsLpScore);
+    const adsDetails = [];
+    if (adsPerAg === '1') adsDetails.push('Only 1 ad per ad group — Google can\'t test variations');
+    if (rsa === 'no') adsDetails.push('Not using RSAs — you\'re missing Google\'s AI testing');
+    if (landingPage === 'no') adsDetails.push('Sending all traffic to one landing page (lower quality scores)');
+    adsLpDetail = adsDetails.length > 0 ? adsDetails.join('; ') + '.' : 'Good ad and landing page setup.';
+
+    const total = campaignScore + agScore + kwScore + segScore + adsLpScore;
+
+    // Render
+    renderScore(total);
+    renderCategories([
+      {name:'Campaign Count', icon:'fa-flag', score:campaignScore, max:15, detail:campaignDetail},
+      {name:'Ad Group Structure', icon:'fa-layer-group', score:agScore, max:15, detail:agDetail},
+      {name:'Keyword Density', icon:'fa-key', score:kwScore, max:20, detail:kwDetail},
+      {name:'Campaign Segmentation', icon:'fa-sitemap', score:segScore, max:25, detail:segDetail},
+      {name:'Ads & Landing Pages', icon:'fa-file-lines', score:adsLpScore, max:25, detail:adsLpDetail}
+    ]);
+    renderFlags(trade, numCampaigns, avgKwPerAg, branded, emergency, rsa, landingPage, isEmergencyTrade);
+    renderActions(trade, numCampaigns, avgKwPerAg, branded, competitor, emergency, rsa, landingPage, isEmergencyTrade);
+    renderHierarchy(trade);
+
+    document.getElementById('resultsPanel').style.display = 'block';
+    document.getElementById('resultsPanel').scrollIntoView({behavior:'smooth', block:'start'});
+  }
+
+  function renderScore(total) {
+    const grades = [
+      {min:90,grade:'A',color:'var(--forge-green)',label:'Excellent Structure'},
+      {min:75,grade:'B',color:'var(--prec-blue)',label:'Good Structure'},
+      {min:60,grade:'C',color:'var(--rev-amber)',label:'Average Structure'},
+      {min:45,grade:'D',color:'#dc2626',label:'Below Average'},
+      {min:0, grade:'F',color:'#991b1b',label:'Needs Full Rebuild'}
+    ];
+    const g = grades.find(x => total >= x.min) || grades[grades.length-1];
+
+    document.getElementById('scoreNum').textContent = total;
+    const ring = document.getElementById('scoreRing');
+    ring.style.stroke = g.color;
+    const circum = 364;
+    ring.style.strokeDashoffset = circum - (total/100)*circum;
+
+    document.getElementById('gradeBadge').textContent = 'Grade: ' + g.grade;
+    document.getElementById('gradeBadge').style.color = g.color;
+    document.getElementById('gradeLabel').textContent = g.label + ' — ' + total + '/100';
+    const descs = {A:'Your account structure is well-optimized. Focus on continuous testing.',B:'Good foundation. A few structural improvements could meaningfully lower your CPL.',C:'Functional but leaving money on the table. Fix the action items below.',D:'Significant structural issues are likely driving up your cost per lead.',F:'Your account structure is causing wasted spend. A rebuild will have immediate impact.'};
+    document.getElementById('gradeDesc').textContent = descs[g.grade] || '';
+  }
+
+  function renderCategories(cats) {
+    document.getElementById('categoryBreakdown').innerHTML = cats.map(c => {
+      const pct = Math.round((c.score/c.max)*100);
+      const color = pct>=75?'var(--forge-green)': pct>=55?'var(--prec-blue)': pct>=35?'var(--rev-amber)': '#dc2626';
+      return `<div>
+        <div class="flex items-center gap-3 mb-1">
+          <i class="fa-solid ${c.icon} w-4" style="color:${color};"></i>
+          <span class="font-semibold text-sm text-gray-900 flex-1">${c.name}</span>
+          <span class="font-bold text-sm tabular-nums" style="color:${color}">${c.score}<span class="text-gray-400 font-normal">/${c.max}</span></span>
+        </div>
+        <div class="flex items-center gap-3">
+          <div style="width:1.5rem"></div>
+          <div class="cat-bar-track">
+            <div class="cat-bar-fill" style="width:${pct}%; background:${color};"></div>
+          </div>
+        </div>
+        <p class="text-xs text-gray-500 mt-1 ml-7">${c.detail}</p>
+      </div>`;
+    }).join('');
+  }
+
+  function renderFlags(trade, numCampaigns, avgKw, branded, emergency, rsa, lp, isEmTrade) {
+    const flags = [];
+    if (numCampaigns === 1) flags.push({type:'red', icon:'fa-circle-exclamation', text:'Single-campaign setup: everything from branded to service terms competing in one campaign — Google can\'t optimize bidding properly.'});
+    if (avgKw > 50) flags.push({type:'red', icon:'fa-circle-exclamation', text:'Over 50 keywords per ad group: your ad copy can\'t match all these themes. Split by service type.'});
+    if (branded === 'no') flags.push({type:'red', icon:'fa-circle-exclamation', text:'No branded campaign: competitors are likely bidding on your name, and you\'re losing the cheapest clicks available ($0.20–0.50 CPCs).'});
+    if (isEmTrade && emergency === 'no') flags.push({type:'red', icon:'fa-circle-exclamation', text:'No emergency/24-hr campaign: emergency ' + TRADE_LABELS[trade] + ' searches convert at 2–3x normal rates and deserve separate budget and higher bids.'});
+    if (rsa === 'no') flags.push({type:'amber', icon:'fa-triangle-exclamation', text:'Not using RSAs: Google\'s AI A/B tests headline combinations for you. Running ETAs only leaves performance on the table.'});
+    if (lp === 'no') flags.push({type:'amber', icon:'fa-triangle-exclamation', text:'Same landing page for all services: sending AC Repair traffic to a generic homepage lowers Quality Score and conversion rate.'});
+    if (avgKw > 25 && avgKw <= 50) flags.push({type:'amber', icon:'fa-triangle-exclamation', text:'Keywords per ad group slightly high (' + Math.round(avgKw) + '). Keep under 25 for tighter relevance matching.'});
+    // Wins
+    if (branded === 'yes') flags.push({type:'green', icon:'fa-circle-check', text:'Branded campaign: correctly separated for lowest CPC and highest ROI.'});
+    if (isEmTrade && emergency === 'yes') flags.push({type:'green', icon:'fa-circle-check', text:'Emergency campaign: correctly segmented for high-intent, high-value service calls.'});
+    if (rsa === 'yes') flags.push({type:'green', icon:'fa-circle-check', text:'Using RSAs: Google\'s machine learning is testing headline combos for you.'});
+    if (lp === 'yes') flags.push({type:'green', icon:'fa-circle-check', text:'Separate landing pages: matching ad-to-page relevance improves Quality Score and conversion rate.'});
+    if (avgKw >= 10 && avgKw <= 25) flags.push({type:'green', icon:'fa-circle-check', text:Math.round(avgKw) + ' keywords/ad group: in the ideal range for relevance and coverage.'});
+
+    const el = document.getElementById('flagsList');
+    if (flags.length === 0) {
+      el.innerHTML = '<p class="text-gray-500 text-sm">No specific flags — review your score details above.</p>';
+    } else {
+      el.innerHTML = flags.map(f => `
+        <div class="${f.type}-flag">
+          <i class="fa-solid ${f.icon} mt-0.5 flex-shrink-0" style="color:${f.type==='red'?'#dc2626':f.type==='amber'?'var(--rev-amber)':'var(--forge-green)'}"></i>
+          <p class="text-sm text-gray-700">${f.text}</p>
+        </div>`).join('');
+    }
+  }
+
+  function renderActions(trade, numCampaigns, avgKw, branded, comp, emergency, rsa, lp, isEmTrade) {
+    const actions = [];
+    if (branded==='no') actions.push({p:'high', text:'Create a branded campaign for your company name. Budget $100–200/month — CPCs are $0.20–0.50 and conversion rate is 5–10x your generic campaigns.'});
+    if (isEmTrade && emergency==='no') actions.push({p:'high', text:'Create a dedicated Emergency / 24-Hour ' + TRADE_LABELS[trade] + ' campaign with its own budget and +30% bid modifier on nights/weekends.'});
+    if (numCampaigns===1) actions.push({p:'high', text:'Split your one campaign by service type: one campaign per major service (e.g., AC Repair, Furnace Repair, AC Install). This unlocks service-specific budgets and bids.'});
+    if (avgKw>50) actions.push({p:'high', text:'Your ad groups have ' + Math.round(avgKw) + ' keywords each — split each ad group by service variation until you\'re under 25 keywords per group.'});
+    if (rsa==='no') actions.push({p:'med', text:'Switch to RSAs immediately: add 15 headlines and 4 descriptions per ad group. Google will find the best combinations — ETAs are no longer supported for new ads.'});
+    if (lp==='no') actions.push({p:'med', text:'Build a dedicated landing page for each major service. AC Repair ads should point to an AC Repair page — not your homepage.'});
+    if (comp==='no') actions.push({p:'med', text:'Create a competitor campaign targeting your top 3 local competitors. Use brand name + service modifier keywords (e.g., "[Competitor] alternative"). Budget $150–300/month.'});
+    if (lp==='some') actions.push({p:'low', text:'Complete your landing page coverage — every ad group should have a matching landing page.'});
+    if (actions.length === 0) actions.push({p:'low', text:'Your structure looks solid. Focus on weekly negative keyword reviews and expanding ad groups for new service offerings.'});
+
+    const el = document.getElementById('actionItems');
+    el.innerHTML = actions.map(a => `
+      <div class="action-item">
+        <span class="priority-badge priority-${a.p}">${a.p==='high'?'High Impact':a.p==='med'?'Medium':'Quick Win'}</span>
+        <p class="text-sm text-gray-700">${a.text}</p>
+      </div>`).join('');
+  }
+
+  function renderHierarchy(trade) {
+    const struct = IDEAL_STRUCTURES[trade] || IDEAL_STRUCTURES.general;
+    const label = TRADE_LABELS[trade] || 'Trade';
+    document.getElementById('hierarchyTitle').textContent = 'Ideal Structure for a ' + label + ' Account';
+
+    let html = '<div class="hier-campaign">Google Ads Account</div>\n';
+    struct.forEach(camp => {
+      html += '<div class="hier-indent1 hier-campaign">📁 Campaign: ' + camp.campaign + '</div>\n';
+      camp.groups.forEach(ag => {
+        html += '<div class="hier-indent2 hier-adgroup">└─ Ad Group: ' + ag + '</div>\n';
+        html += '<div class="hier-indent3 hier-keyword">  ├─ RSA (15 headlines, 4 descriptions)</div>\n';
+        html += '<div class="hier-indent3 hier-keyword">  ├─ 10–20 keywords (exact + phrase)</div>\n';
+        html += '<div class="hier-indent3 hier-keyword">  └─ Dedicated landing page</div>\n';
+      });
+    });
+    html += '\n<div style="color:#16a34a;font-weight:700;">✅ Negative keyword list applied to all campaigns</div>';
+
+    document.getElementById('hierarchyDiagram').innerHTML = html;
+  }
+
+  window.gradeStructure = gradeStructure;
+})();
+</script>
+{% endblock %}

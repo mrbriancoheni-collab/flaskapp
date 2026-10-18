@@ -60,6 +60,11 @@ def spend_when_open():
 def see_what_works():
     return render_template("see_what_works.html")
 
+
+@public_bp.route("/solutions/crm-sync", endpoint="crm_sync")
+def crm_sync():
+    return render_template("crm_sync.html")
+
 @public_bp.route("/podcast", endpoint="podcast")
 def podcast():
     return render_template("public/podcast.html")
@@ -68,6 +73,66 @@ def podcast():
 @public_bp.route("/free-tools", endpoint="free_tools")
 def free_tools():
     return render_template("free_tools.html")
+
+
+@public_bp.route("/free-tools/meta-creative-audit", endpoint="meta_creative_audit")
+def meta_creative_audit():
+    return render_template("meta_creative_audit.html")
+
+
+@public_bp.route("/free-tools/budget-calculator", endpoint="budget_calculator")
+def budget_calculator():
+    return render_template("budget_calculator.html")
+
+
+@public_bp.route("/free-tools/wasted-spend-estimator", endpoint="wasted_spend_estimator")
+def wasted_spend_estimator():
+    return render_template("wasted_spend_estimator.html")
+
+
+@public_bp.route("/free-tools/quality-score-calculator", endpoint="quality_score_calculator")
+def quality_score_calculator():
+    return render_template("quality_score_calculator.html")
+
+
+@public_bp.route("/free-tools/seasonal-budget-planner", endpoint="seasonal_budget_planner")
+def seasonal_budget_planner():
+    return render_template("seasonal_budget_planner.html")
+
+
+@public_bp.route("/free-tools/ad-schedule-optimizer", endpoint="ad_schedule_optimizer")
+def ad_schedule_optimizer():
+    return render_template("ad_schedule_optimizer.html")
+
+
+@public_bp.route("/free-tools/ad-copy-analyzer", endpoint="ad_copy_analyzer")
+def ad_copy_analyzer():
+    return render_template("ad_copy_analyzer.html")
+
+
+@public_bp.route("/free-tools/negative-keywords", endpoint="negative_keywords")
+def negative_keywords():
+    return render_template("negative_keywords.html")
+
+
+@public_bp.route("/free-tools/lsa-eligibility", endpoint="lsa_eligibility")
+def lsa_eligibility():
+    return render_template("lsa_eligibility.html")
+
+
+@public_bp.route("/free-tools/campaign-structure-grader", endpoint="campaign_structure_grader")
+def campaign_structure_grader():
+    return render_template("campaign_structure_grader.html")
+
+
+@public_bp.route("/solutions/local-services-ads", endpoint="local_services_ads")
+def local_services_ads():
+    return render_template("solutions/local_services_ads.html")
+
+
+@public_bp.route("/results/hvac", endpoint="results_hvac")
+def results_hvac():
+    return render_template("results/hvac_case_study.html")
 
 
 @public_bp.route("/roadmap", endpoint="roadmap")
@@ -131,25 +196,85 @@ def industry_solar():
     return render_template("industries/solar.html")
 
 
-@public_bp.route("/industries/<trade>/<channel>", endpoint="industry_sub")
-def industry_sub(trade, channel):
-    from flask import abort
-    try:
-        return render_template(f"industries/{trade}-{channel}.html")
-    except Exception:
-        abort(404)
+@public_bp.route("/industries/concrete", endpoint="industry_concrete")
+def industry_concrete():
+    return render_template("industries/concrete.html")
+
+
+@public_bp.route("/industries/fencing", endpoint="industry_fencing")
+def industry_fencing():
+    return render_template("industries/fencing.html")
+
+
+@public_bp.route("/industries/irrigation", endpoint="industry_irrigation")
+def industry_irrigation():
+    return render_template("industries/irrigation.html")
+
+
+@public_bp.route("/industries/lawn-care", endpoint="industry_lawn_care")
+def industry_lawn_care():
+    return render_template("industries/lawn-care.html")
+
+
+@public_bp.route("/industries/restoration", endpoint="industry_restoration")
+def industry_restoration():
+    return render_template("industries/restoration.html")
+
+
+@public_bp.route("/industries/windows-doors", endpoint="industry_windows_doors")
+def industry_windows_doors():
+    return render_template("industries/windows-doors.html")
+
+
+@public_bp.route("/industries/painting", endpoint="industry_painting")
+def industry_painting():
+    return render_template("industries/painting.html")
+
+
+@public_bp.route("/industries/cleaning", endpoint="industry_cleaning")
+def industry_cleaning():
+    return render_template("industries/cleaning.html")
+
+
+@public_bp.route("/industries/general-contracting", endpoint="industry_general_contracting")
+def industry_general_contracting():
+    return render_template("industries/general_contracting.html")
+
+
+@public_bp.route("/industries/flooring", endpoint="industry_flooring")
+def industry_flooring():
+    return render_template("industries/flooring.html")
 
 
 _INDUSTRY_TEMPLATE_OVERRIDES = {
+    # electricians → electrical-*.html
     'electricians-google-ads':        'industries/electrical-google-ads.html',
     'electricians-local-service-ads': 'industries/electrical-local-service-ads.html',
     'electricians-meta-ads':          'industries/electrical-meta-ads.html',
     'electricians-website-cro':       'industries/electrical-website-cro.html',
+    'electricians-lead-generation':   'industries/electrical-lead-generation.html',
+    'electricians-local-seo':         'industries/electrical-local-seo.html',
+    'electricians-gbp':               'industries/electrical-gbp.html',
+    # pool-service → pools-*.html
     'pool-service-google-ads':        'industries/pools-google-ads.html',
     'pool-service-local-service-ads': 'industries/pools-local-service-ads.html',
     'pool-service-meta-ads':          'industries/pools-meta-ads.html',
     'pool-service-website-cro':       'industries/pools-website-cro.html',
+    'pool-service-lead-generation':   'industries/pools-lead-generation.html',
+    'pool-service-local-seo':         'industries/pools-local-seo.html',
+    'pool-service-gbp':               'industries/pools-gbp.html',
 }
+
+
+@public_bp.route("/industries/<trade>/<channel>", endpoint="industry_sub")
+def industry_sub(trade, channel):
+    from flask import abort
+    slug = f"{trade}-{channel}"
+    template = _INDUSTRY_TEMPLATE_OVERRIDES.get(slug, f"industries/{slug}.html")
+    try:
+        return render_template(template)
+    except Exception:
+        abort(404)
 
 
 @public_bp.route("/industries/<slug>", endpoint="industry_subpage")

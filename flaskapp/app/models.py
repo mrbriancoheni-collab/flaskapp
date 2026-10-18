@@ -157,6 +157,12 @@ class User(UserMixin, db.Model):
     email_verified = db.Column(Boolean, nullable=False, server_default="0")
     email_verified_at = db.Column(DateTime, nullable=True)
 
+    # SMS notifications
+    phone_number = db.Column(db.String(20), nullable=True)
+    sms_opt_in = db.Column(Boolean, nullable=False, server_default="0")
+    phone_verified = db.Column(Boolean, nullable=False, server_default="0")
+    phone_verified_at = db.Column(DateTime, nullable=True)
+
     created_at = db.Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = db.Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 

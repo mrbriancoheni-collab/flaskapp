@@ -12,8 +12,8 @@ Usage:
 
 Environment Variables Required:
     BREVO_API_KEY - Your Brevo API key
-    BREVO_FROM_EMAIL - Sender email address (default: noreply@fieldsprout.io)
-    BREVO_FROM_NAME - Sender name (default: FieldSprout)
+    BREVO_FROM_EMAIL - Sender email address (default: noreply@getrevforge.io)
+    BREVO_FROM_NAME - Sender name (default: RevForge)
 """
 
 import argparse
@@ -51,8 +51,8 @@ class BrevoEmailTester:
 
     def __init__(self):
         self.api_key = os.getenv('BREVO_API_KEY') or os.getenv('SENDINBLUE_API_KEY')
-        self.from_email = os.getenv('BREVO_FROM_EMAIL', 'noreply@fieldsprout.io')
-        self.from_name = os.getenv('BREVO_FROM_NAME', 'FieldSprout')
+        self.from_email = os.getenv('BREVO_FROM_EMAIL', 'noreply@getrevforge.io')
+        self.from_name = os.getenv('BREVO_FROM_NAME', 'RevForge')
         self.base_url = "https://api.brevo.com/v3"
 
     def check_config(self):
@@ -249,7 +249,7 @@ def get_default_test_html():
         </div>
         <div class="content">
             <h2>Email System Test</h2>
-            <p>This is a test email from the FieldSprout email system.</p>
+            <p>This is a test email from the RevForge email system.</p>
             <p>If you received this message, it means:</p>
             <ul>
                 <li>✓ Your Brevo API key is working</li>
@@ -257,12 +257,12 @@ def get_default_test_html():
                 <li>✓ The sender email is configured correctly</li>
             </ul>
             <p>
-                <a href="https://fieldsprout.io" class="button">Visit FieldSprout</a>
+                <a href="https://getrevforge.io" class="button">Visit RevForge</a>
             </p>
             <p><strong>Sent at:</strong> """ + datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC') + """</p>
         </div>
         <div class="footer">
-            <p>This is an automated test email from FieldSprout.</p>
+            <p>This is an automated test email from RevForge.</p>
         </div>
     </div>
 </body>
@@ -296,7 +296,7 @@ Examples:
     parser.add_argument('--to-name', type=str,
                         help='Recipient name (optional)')
     parser.add_argument('--subject', type=str,
-                        default='Test Email from FieldSprout',
+                        default='Test Email from RevForge',
                         help='Email subject line')
     parser.add_argument('--body', type=str,
                         help='Custom HTML body (uses default test template if not provided)')

@@ -117,7 +117,7 @@ class GoogleAdsGraderReport(db.Model):
 
     @classmethod
     def get_for_account(cls, account_id: int, limit: int = 10):
-        """Get reports for a FieldSprout account."""
+        """Get reports for a RevForge account."""
         return cls.query.filter_by(
             account_id=account_id
         ).order_by(cls.created_at.desc()).limit(limit).all()

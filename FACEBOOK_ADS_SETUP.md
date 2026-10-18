@@ -10,7 +10,7 @@ Meta App and three environment variables in the root `.env` file.
 3. Under **Add Products**, add **Facebook Login** and **Marketing API**
 4. In **Facebook Login → Settings**, add your callback to
    **Valid OAuth Redirect URIs**:
-   `https://fieldsprout.io/account/fbads/callback`
+   `https://getrevforge.io/account/fbads/callback`
 5. In **App Review → Permissions and Features**, request advanced access for:
    - `ads_management`
    - `ads_read`
@@ -26,7 +26,7 @@ Add to the root `.env` file (same directory as `run_job.py`):
 ```bash
 FB_APP_ID=your_app_id_from_meta_dashboard
 FB_APP_SECRET=your_app_secret_from_meta_dashboard
-# Optional — defaults to https://fieldsprout.io/account/fbads/callback
+# Optional — defaults to https://getrevforge.io/account/fbads/callback
 # FB_REDIRECT_URI=https://staging.example.com/account/fbads/callback
 ```
 
@@ -47,7 +47,7 @@ prompts the user to reconnect.
 Campaigns, ad sets, ads, and 30-day insights sync nightly. Add to crontab:
 
 ```bash
-30 3 * * * cd /home/fieldsprout/flaskapp && python run_job.py sync_fb_all_accounts >> logs/cron.log 2>&1
+30 3 * * * cd /home/revforge/flaskapp && python run_job.py sync_fb_all_accounts >> logs/cron.log 2>&1
 ```
 
 Or run once manually to verify the connection end to end:

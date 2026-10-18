@@ -217,6 +217,19 @@ def generate_weekly_digest(account_id: int) -> Dict[str, Any]:
         "generated_at": datetime.utcnow().isoformat(),
     }
 
+    # Campaign triage — surfaces per-campaign action items for the digest
+    try:
+        from app.campaign_health.triage import run_triage, triage_summary_text
+        triage = run_triage(account_id)
+        digest["campaign_triage"] = {
+            "needs_action": triage["summary"]["needs_action"],
+            "total":        triage["summary"]["total"],
+            "actions_needed": triage["actions_needed"][:5],
+            "summary_text": triage_summary_text(triage),
+        }
+    except Exception:
+        logger.warning("campaign triage failed for account %s — skipping", account_id, exc_info=True)
+
     _store_digest(account_id, week_start, digest)
     return digest
 
@@ -434,9 +447,16 @@ def render_digest_text(digest: Dict[str, Any]) -> Dict[str, Any]:
         if line:
             next_steps.append(line)
 
+    # Campaign triage lines
+    triage_lines: List[str] = []
+    triage = digest.get("campaign_triage") or {}
+    if triage.get("needs_action", 0) > 0:
+        triage_lines.append(triage.get("summary_text", ""))
+
     return {
         "headline": headline,
         "summary_lines": summary_lines,
         "agent_lines": agent_lines,
         "next_steps": next_steps,
+        "triage_lines": triage_lines,
     }

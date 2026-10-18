@@ -22,8 +22,8 @@
         crossorigin="anonymous" referrerpolicy="no-referrer" />
 
   <link rel="icon" href="{{ url_for('static', filename='brand/favicon.ico') }}" sizes="any">
-  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='brand/icons/fieldsprout-icon-32.png') }}">
-  <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='brand/icons/fieldsprout-icon-16.png') }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='brand/icons/revforge-icon-32.png') }}">
+  <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='brand/icons/revforge-icon-16.png') }}">
   <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='brand/icons/apple-touch-icon.png') }}">
   <link rel="manifest" href="{{ url_for('static', filename='brand/site.webmanifest') }}">
   <meta name="theme-color" content="#7c3aed">
@@ -190,7 +190,7 @@
   <header class="md:hidden bg-white border-b border-gray-200">
     <div class="h-14 px-4 flex items-center justify-between">
       <a href="{{ url_for(ep('home')) }}" class="flex items-center space-x-2 font-semibold">
-        <img src="{{ url_for('static', filename='brand/logos/fieldsprout-wordmark.svg') }}" alt="FieldSprout" style="height:36px;width:auto;">
+        <img src="{{ url_for('static', filename='brand/logos/revforge-wordmark.svg') }}" alt="RevForge" style="height:36px;width:auto;">
       </a>
       <div class="flex items-center gap-2">
         {% if not is_paid and has_endpoint('pricing') %}
@@ -665,7 +665,7 @@
 
     <!-- Mobile support bar (fixed at bottom with proper z-index) -->
     <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t px-4 py-3 text-sm text-gray-700 z-30">
-      Need support?<br/><a href="mailto:cs@fieldsprout.io" class="text-primary-600 hover:text-primary-700">cs@fieldsprout.io</a>
+      Need support?<br/><a href="mailto:cs@getrevforge.io" class="text-primary-600 hover:text-primary-700">cs@getrevforge.io</a>
     </div>
   </header>
 
@@ -674,7 +674,7 @@
     <!-- PRIMARY SIDEBAR (icons only) -->
     <aside class="w-16 bg-gray-900 text-white flex flex-col items-center py-2 space-y-2 overflow-y-auto">
       <a href="{{ url_for(ep('home')) }}" class="mb-2" title="{{ app_name }}">
-        <img src="{{ url_for('static', filename='brand/icons/fieldsprout-icon-32.png') }}" alt="FS" class="w-8 h-8">
+        <img src="{{ url_for('static', filename='brand/icons/revforge-icon-32.png') }}" alt="FS" class="w-8 h-8">
       </a>
 
       {# <a href="{{ url_for('strategy_bp.index') }}" class="primary-btn {% if SECTION=='strategy' %}active{% endif %}" title="Strategy"><i class="fa-solid fa-lightbulb"></i></a> #}
@@ -760,7 +760,7 @@
     <!-- SECONDARY SIDEBAR (contextual menu) -->
     <aside class="w-64 bg-white border-r px-3 py-4 overflow-y-auto flex flex-col">
       <a href="{{ url_for(ep('home')) }}" class="hidden lg:flex items-center gap-2 px-2 py-2 mb-2 hover:text-indigo-600">
-        <img src="{{ url_for('static', filename='brand/logos/fieldsprout-wordmark.svg') }}" alt="FieldSprout" style="height:28px;width:auto;">
+        <img src="{{ url_for('static', filename='brand/logos/revforge-wordmark.svg') }}" alt="RevForge" style="height:28px;width:auto;">
       </a>
 
       {# Finish Setup Section - Commented out, will bring back later
@@ -1143,7 +1143,7 @@
       <!-- Secondary desktop nav sticky bottom support -->
       <div class="mt-auto sticky bottom-0 bg-white pt-3">
         <div class="border-t pt-3 text-sm text-gray-700">
-          Need support<br/>cs@fieldsprout.io
+          Need support<br/>cs@getrevforge.io
         </div>
       </div>
     </aside>
@@ -1256,10 +1256,10 @@
 
   <footer class="bg-white border-t mt-8">
     <div class="max-w-6xl mx-auto px-6 py-4 flex flex-col md:flex-row items-center justify-between text-sm text-gray-600">
-      <div>&copy; {{ current_year or "2025" }} FieldSprout. All rights reserved.</div>
+      <div>&copy; {{ current_year or "2025" }} RevForge. All rights reserved.</div>
       <div class="flex space-x-4 mt-2 md:mt-0">
-        <a href="https://fieldsprout.io/privacy-policy" target="_blank" rel="noopener" class="hover:text-indigo-600">Privacy Policy</a>
-        <a href="https://fieldsprout.io/terms-of-service" target="_blank" rel="noopener" class="hover:text-indigo-600">Terms of Service</a>
+        <a href="https://getrevforge.io/privacy-policy" target="_blank" rel="noopener" class="hover:text-indigo-600">Privacy Policy</a>
+        <a href="https://getrevforge.io/terms-of-service" target="_blank" rel="noopener" class="hover:text-indigo-600">Terms of Service</a>
       </div>
     </div>
   </footer>
@@ -1653,7 +1653,7 @@
             <div class="flex items-center gap-3">
               <i class="fa-solid fa-download text-2xl"></i>
               <div>
-                <div class="font-semibold">Install FieldSprout</div>
+                <div class="font-semibold">Install RevForge</div>
                 <div class="text-sm text-white/80">Quick access from your home screen</div>
               </div>
             </div>
@@ -1693,7 +1693,7 @@
         const banner = document.getElementById('pwa-install-banner');
         if (banner) banner.remove();
         if (window.toast) {
-          window.toast.success('FieldSprout installed successfully!');
+          window.toast.success('RevForge installed successfully!');
         }
       });
     })();

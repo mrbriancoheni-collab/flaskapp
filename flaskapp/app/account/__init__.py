@@ -643,6 +643,78 @@ def _fetch_ads_kpis(aid: int) -> dict:
 
 # --------------------------- routes ---------------------------
 
+@account_bp.route("/profile", methods=["GET", "POST"], endpoint="profile")
+@login_required
+def profile():
+    """User profile and notification settings, including SMS opt-in."""
+    from app.models import User
+    user = g.user
+
+    if request.method == "POST":
+        action = request.form.get("action")
+
+        if action == "save_profile":
+            name = request.form.get("name", "").strip()
+            if name:
+                user.name = name
+
+        elif action == "save_sms":
+            raw_phone = request.form.get("phone_number", "").strip()
+            opt_in = request.form.get("sms_opt_in") == "1"
+
+            # Basic E.164-ish normalization: digits only, prepend +1 for 10-digit US
+            import re
+            digits = re.sub(r"\D", "", raw_phone)
+            if len(digits) == 10:
+                digits = "1" + digits
+            phone = ("+" + digits) if digits else None
+
+            if phone and len(digits) not in (11,):
+                flash("Enter a valid 10-digit US phone number.", "error")
+            else:
+                user.phone_number = phone
+                user.sms_opt_in = opt_in and bool(phone)
+                if phone != getattr(user, "_prev_phone", phone):
+                    user.phone_verified = False
+                    user.phone_verified_at = None
+
+        db.session.commit()
+        flash("Settings saved.", "success")
+        return redirect(url_for("account_bp.profile"))
+
+    return render_template("account/profile.html", user=user)
+
+
+@account_bp.route("/sms/webhook", methods=["POST"], endpoint="sms_webhook")
+def sms_webhook():
+    """
+    Twilio inbound SMS webhook. Handles STOP/UNSTOP for TCPA compliance.
+    Twilio sends form-encoded POST with From, Body, etc.
+    """
+    from app.models import User
+    body = (request.form.get("Body") or "").strip().upper()
+    from_number = request.form.get("From", "").strip()
+
+    if not from_number:
+        return "", 204
+
+    if body in ("STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL", "END", "QUIT"):
+        user = User.query.filter_by(phone_number=from_number).first()
+        if user:
+            user.sms_opt_in = False
+            db.session.commit()
+            current_app.logger.info("SMS opt-out: %s", from_number)
+    elif body in ("START", "UNSTOP", "YES"):
+        user = User.query.filter_by(phone_number=from_number).first()
+        if user:
+            user.sms_opt_in = True
+            db.session.commit()
+            current_app.logger.info("SMS opt-in: %s", from_number)
+
+    # Return empty TwiML so Twilio doesn't send an auto-reply
+    return '<Response></Response>', 200, {"Content-Type": "text/xml"}
+
+
 @account_bp.route("/", methods=["GET"], endpoint="account_index")
 @login_required
 def account_index():

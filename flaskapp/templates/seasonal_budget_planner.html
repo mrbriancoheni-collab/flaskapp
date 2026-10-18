@@ -1,0 +1,436 @@
+{% extends "base_public.html" %}
+{% block title %}Google Ads Seasonal Budget Planner for Trade Contractors — Free Tool | RevForge{% endblock %}
+{% block meta_description %}Plan your 12-month Google Ads budget for HVAC, plumbing, roofing, landscaping, and other trade businesses. Get a month-by-month allocation chart based on your trade's seasonal demand patterns — with CSV download.{% endblock %}
+{% block og_title %}Google Ads Seasonal Budget Planner for Trade Contractors — RevForge{% endblock %}
+{% block og_description %}Stop spending the same amount every month. Get a data-driven 12-month ad budget calendar based on your trade type and climate — free, no login required.{% endblock %}
+
+{% block head_extra %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Google Ads Seasonal Budget Planner for Trade Contractors",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Web",
+  "description": "Plan your 12-month Google Ads budget around seasonal demand for HVAC, plumbing, roofing, landscaping, and other trades. Outputs a month-by-month budget allocation with a downloadable CSV.",
+  "url": "https://getrevforge.io/free-tools/seasonal-budget-planner",
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+  "provider": {"@type": "Organization", "name": "RevForge", "url": "https://getrevforge.io"}
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="bg-gradient-to-b from-gray-50 to-white pt-12 pb-8">
+  <div class="container-lg">
+    <nav class="text-sm text-gray-500 mb-6" aria-label="Breadcrumb">
+      <ol class="flex items-center gap-2">
+        <li><a href="/" class="hover:text-gray-700 transition">Home</a></li>
+        <li><span class="text-gray-300">/</span></li>
+        <li><a href="/free-tools" class="hover:text-gray-700 transition">Free Tools</a></li>
+        <li><span class="text-gray-300">/</span></li>
+        <li class="text-gray-700 font-medium">Seasonal Budget Planner</li>
+      </ol>
+    </nav>
+
+    <div class="max-w-3xl mb-10">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-4" style="background:#f0fdf4;color:#1A5C35;border:1px solid #bbf7d0;">
+        <i class="fa-solid fa-calendar-days"></i> FREE TOOL — No login required
+      </div>
+      <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-900 leading-tight mb-4">
+        Google Ads Seasonal Budget Planner<br class="hidden sm:block">
+        <span style="color:#1A5C35;">for Trade Contractors</span>
+      </h1>
+      <p class="text-lg text-gray-600 leading-relaxed">
+        Spending the same amount every month means over-spending in slow months and under-spending in peak season. Get a 12-month budget allocation based on your trade's real demand curve.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- Tool -->
+<section class="py-10">
+  <div class="container-lg">
+    <div class="grid lg:grid-cols-3 gap-8 items-start">
+
+      <!-- Inputs -->
+      <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 sticky top-24">
+        <h2 class="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+          <span class="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold" style="background:#1A5C35;">1</span>
+          Your Details
+        </h2>
+
+        <div class="space-y-5">
+          <!-- Trade Type -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2" for="trade-type-s">Trade Type</label>
+            <select id="trade-type-s" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-gray-50 focus:bg-white focus:border-gray-400 focus:outline-none transition text-sm">
+              <option value="hvac">HVAC</option>
+              <option value="plumbing">Plumbing</option>
+              <option value="roofing">Roofing</option>
+              <option value="electrical">Electrical</option>
+              <option value="landscaping">Landscaping</option>
+              <option value="pest-control">Pest Control</option>
+              <option value="garage-door">Garage Door</option>
+              <option value="pool-service">Pool Service</option>
+              <option value="solar">Solar</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <!-- Annual Budget -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2" for="annual-budget">Annual Google Ads Budget ($)</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">$</span>
+              <input type="number" id="annual-budget" value="24000" min="1000" max="500000" step="1000"
+                class="w-full border border-gray-200 rounded-xl pl-8 pr-4 py-3 text-gray-800 bg-gray-50 focus:bg-white focus:border-gray-400 focus:outline-none transition text-sm">
+            </div>
+            <p class="text-xs text-gray-400 mt-1">$24,000 = $2,000/month average</p>
+          </div>
+
+          <!-- Climate -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2" for="climate">Region Climate</label>
+            <select id="climate" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-gray-50 focus:bg-white focus:border-gray-400 focus:outline-none transition text-sm">
+              <option value="warm">Southern / Warm climate (FL, TX, AZ, CA, GA)</option>
+              <option value="cold">Northern / Cold climate (MN, MI, OH, NY, PA)</option>
+              <option value="mixed" selected>Mixed / Moderate (CO, VA, IL, OR, NC)</option>
+            </select>
+          </div>
+
+          <button id="download-csv" class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold border transition" style="border-color:#1A5C35;color:#1A5C35;" onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='white'">
+            <i class="fa-solid fa-download"></i> Download as CSV
+          </button>
+        </div>
+
+        <!-- Peak Months Callout -->
+        <div id="peak-callout" class="mt-5 rounded-xl p-4" style="background:#f0fdf4;border:1px solid #bbf7d0;">
+          <p class="text-xs font-bold mb-2" style="color:#1A5C35;">
+            <i class="fa-solid fa-fire-flame-curved mr-1"></i> Your 3 Peak Months
+          </p>
+          <div id="peak-months" class="space-y-1"></div>
+          <p class="text-xs text-gray-500 mt-2">Make sure your crews, dispatch, and follow-up are ready before these months hit.</p>
+        </div>
+      </div>
+
+      <!-- Chart + Table -->
+      <div class="lg:col-span-2 space-y-6">
+
+        <!-- Chart -->
+        <div class="bg-white rounded-2xl border border-gray-200 p-6">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-base font-bold text-gray-900">12-Month Budget Allocation</h3>
+              <p class="text-xs text-gray-400 mt-0.5">Budget automatically scaled to seasonal demand for your trade</p>
+            </div>
+            <div class="text-right">
+              <p class="text-xs text-gray-400">Annual total</p>
+              <p class="text-base font-extrabold" style="color:#1A5C35;" id="annual-total-display">$24,000</p>
+            </div>
+          </div>
+          <canvas id="seasonal-chart" height="220"></canvas>
+        </div>
+
+        <!-- Table -->
+        <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-100">
+            <h3 class="text-base font-bold text-gray-900">Month-by-Month Breakdown</h3>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50 border-b border-gray-100">
+                <tr>
+                  <th class="text-left text-xs font-semibold text-gray-400 px-4 py-3">Month</th>
+                  <th class="text-right text-xs font-semibold text-gray-400 px-4 py-3">Index</th>
+                  <th class="text-right text-xs font-semibold text-gray-400 px-4 py-3">Budget</th>
+                  <th class="text-left text-xs font-semibold text-gray-400 px-4 py-3 hidden sm:table-cell">Why</th>
+                </tr>
+              </thead>
+              <tbody id="budget-table" class="divide-y divide-gray-50"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="py-12">
+  <div class="container-lg">
+    <div class="rounded-2xl p-8 sm:p-10 text-white" style="background:linear-gradient(135deg,#1A5C35,#166534);">
+      <div class="max-w-xl">
+        <h2 class="text-2xl sm:text-3xl font-extrabold mb-3">RevForge adjusts your budget automatically</h2>
+        <p class="text-green-100 mb-6">You shouldn't have to manually change your ad budget every month. RevForge's AI uses your trade's seasonal demand calendar — plus your real booking data — to adjust spend automatically, so you're always in market at the right intensity.</p>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <a href="/pricing" class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition" style="background:#D97706;color:white;" onmouseover="this.style.background='#b45309'" onmouseout="this.style.background='#D97706'">
+            <i class="fa-solid fa-rocket"></i> See RevForge Plans
+          </a>
+          <a href="/signup" class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm bg-white/10 text-white border border-white/30 hover:bg-white/20 transition">
+            <i class="fa-solid fa-play"></i> Start Free
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Also Try -->
+<section class="py-8 bg-gray-50 border-t border-gray-100">
+  <div class="container-lg">
+    <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Also try these free tools</h3>
+    <div class="grid sm:grid-cols-3 gap-4">
+      <a href="/free-tools/budget-calculator" class="bg-white rounded-xl border border-gray-200 p-4 hover:border-gray-300 hover:shadow-sm transition group">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm" style="background:#1A5C35;">
+            <i class="fa-solid fa-calculator"></i>
+          </div>
+          <p class="font-semibold text-gray-900 text-sm">Budget Calculator</p>
+        </div>
+        <p class="text-xs text-gray-500">Find the right monthly spend for your lead goals</p>
+      </a>
+      <a href="/free-tools/wasted-spend-estimator" class="bg-white rounded-xl border border-gray-200 p-4 hover:border-gray-300 hover:shadow-sm transition group">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm" style="background:#D97706;">
+            <i class="fa-solid fa-fire"></i>
+          </div>
+          <p class="font-semibold text-gray-900 text-sm">Wasted Spend Estimator</p>
+        </div>
+        <p class="text-xs text-gray-500">Find out how much of your budget is being thrown away</p>
+      </a>
+      <a href="/free-tools/quality-score-calculator" class="bg-white rounded-xl border border-gray-200 p-4 hover:border-gray-300 hover:shadow-sm transition group">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm" style="background:#1E5FA8;">
+            <i class="fa-solid fa-star-half-stroke"></i>
+          </div>
+          <p class="font-semibold text-gray-900 text-sm">Quality Score Calculator</p>
+        </div>
+        <p class="text-xs text-gray-500">See how improving QS saves money on every click</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Methodology -->
+<section class="py-10 border-t border-gray-100">
+  <div class="container-md">
+    <h3 class="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
+      <i class="fa-solid fa-circle-info" style="color:#1A5C35;"></i> How This Planner Works
+    </h3>
+    <div class="text-sm text-gray-500 space-y-2 leading-relaxed">
+      <p>Monthly multipliers represent relative demand for each trade by climate region, based on Google Trends seasonal patterns and aggregate RevForge account data. A multiplier of 1.5 means demand is 50% higher than the annual average that month; 0.7 means 30% below average.</p>
+      <p>Budget allocation: each month's share = its multiplier ÷ sum of all 12 multipliers × annual budget. This ensures exact totals. For trades without specific multiplier data (Pest Control, Garage Door, Pool Service, Solar, Other), plumbing multipliers are used as a conservative baseline — these trades tend to be more demand-flat year-round.</p>
+      <p>Climate regions: <strong>Southern/Warm</strong> (FL, TX, AZ, CA, GA, NV) — peak HVAC in summer; <strong>Northern/Cold</strong> (MN, WI, MI, NY, OH) — peak in heating season; <strong>Mixed/Moderate</strong> (CO, NC, VA, OR, IL) — balanced demand curves. If your market spans both, use Mixed as a starting point.</p>
+    </div>
+  </div>
+</section>
+
+<script nonce="{{ g.csp_nonce }}">
+(function() {
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  const SEASONAL = {
+    hvac: {
+      warm:  [0.7, 0.7, 0.9, 1.1, 1.4, 1.5, 1.5, 1.3, 1.1, 0.9, 0.8, 0.7],
+      cold:  [1.2, 1.0, 0.9, 0.9, 1.1, 1.3, 1.4, 1.4, 1.2, 1.1, 1.0, 1.2],
+      mixed: [0.9, 0.8, 0.9, 1.0, 1.2, 1.4, 1.5, 1.4, 1.1, 1.0, 0.9, 0.9],
+    },
+    plumbing: {
+      warm:  [1.0, 1.0, 1.0, 1.0, 1.0, 1.1, 1.1, 1.1, 1.0, 1.0, 1.0, 1.0],
+      cold:  [1.3, 1.2, 1.0, 0.9, 0.9, 0.9, 0.9, 0.9, 1.0, 1.0, 1.1, 1.3],
+      mixed: [1.1, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.1],
+    },
+    roofing: {
+      warm:  [0.7, 0.7, 0.9, 1.1, 1.2, 1.2, 1.2, 1.2, 1.3, 1.4, 1.0, 0.7],
+      cold:  [0.6, 0.6, 0.8, 1.1, 1.3, 1.2, 1.1, 1.1, 1.3, 1.4, 1.1, 0.7],
+      mixed: [0.7, 0.7, 0.9, 1.1, 1.2, 1.2, 1.2, 1.2, 1.3, 1.4, 1.0, 0.7],
+    },
+    electrical: {
+      warm:  [1.0, 1.0, 1.0, 1.0, 1.1, 1.1, 1.1, 1.1, 1.0, 1.0, 1.0, 1.0],
+      cold:  [1.0, 1.0, 1.0, 1.0, 1.1, 1.1, 1.1, 1.1, 1.0, 1.0, 1.0, 1.0],
+      mixed: [1.0, 1.0, 1.0, 1.0, 1.1, 1.1, 1.1, 1.1, 1.0, 1.0, 1.0, 1.0],
+    },
+    landscaping: {
+      warm:  [0.8, 0.9, 1.3, 1.4, 1.4, 1.2, 1.0, 1.0, 1.1, 1.3, 1.0, 0.7],
+      cold:  [0.4, 0.4, 0.8, 1.3, 1.5, 1.4, 1.3, 1.2, 1.2, 1.3, 0.7, 0.4],
+      mixed: [0.6, 0.7, 1.1, 1.4, 1.4, 1.3, 1.1, 1.1, 1.2, 1.3, 0.9, 0.6],
+    },
+  };
+
+  // Seasonal reasons per trade (by month index 0-11)
+  const REASONS = {
+    hvac: {
+      warm:  ['Post-holiday lull','Winter end, pre-spring','Spring prep, filter tune-ups','AC season approaching','AC demand building','Peak cooling season','Peak cooling season','Cooling stays strong','AC maintenance wave','Fall efficiency checks','Heating prep begins','Holiday slow down'],
+      cold:  ['Frozen pipes, heating emergencies','Heating demand still high','Spring prep begins','Shoulder season','AC startup tune-ups','Cooling season opens','Peak cooling','Peak cooling continues','Fall tune-up season','Heating season prep','Heating season active','Heating emergencies peak'],
+      mixed: ['Slow season','Slow season','Shoulder — HVAC checks','Shoulder season','AC demand builds','Peak cooling','Peak cooling','Cooling demand high','Fall tune-ups','Heating prep','Heating season','Slower holiday period'],
+    },
+    plumbing: {
+      warm:  ['Steady baseline','Steady baseline','Steady baseline','Steady baseline','Steady baseline','Outdoor projects','Outdoor projects','Outdoor projects','Steady baseline','Steady baseline','Steady baseline','Steady baseline'],
+      cold:  ['Frozen pipe emergencies','Freeze events winding down','Thaw and repair season','Slower shoulder season','Slower shoulder season','Steady summer','Steady summer','Steady summer','Fall prep','Fall prep','Pre-freeze checks','Freeze season begins'],
+      mixed: ['Slightly above baseline','Baseline','Baseline','Baseline','Baseline','Steady summer','Steady summer','Steady summer','Baseline','Baseline','Baseline','Slightly above baseline'],
+    },
+    roofing: {
+      warm:  ['Slow season','Slow season','Spring inspection season','Storm season starts','Pre-summer push','Insurance claim season','Insurance claim season','End-of-summer push','Back to school, storm season','Peak storm damage season','Year-end close-outs','Slow season'],
+      cold:  ['Slow — too cold','Slow — frozen','Weather improving','Spring storm season','Peak roofing weather','Active season','Active season','Active season','High-demand fall','Storm damage peak','Final push before freeze','Very slow'],
+      mixed: ['Slow','Slow','Awakening season','Spring storms','Active season','Active season','Active season','Active season','Peak storm damage','Peak damage repairs','Winding down','Slow'],
+    },
+    electrical: {
+      warm:  ['Steady','Steady','Steady','Steady','Home projects pick up','Summer remodels','Summer remodels','Summer remodels','Steady','Steady','Steady','Steady'],
+      cold:  ['Steady','Steady','Steady','Steady','Spring remodels','Remodel season','Remodel season','Remodel season','Steady','Steady','Steady','Steady'],
+      mixed: ['Steady','Steady','Steady','Steady','Project season starts','Peak project season','Peak project season','Peak project season','Steady','Steady','Steady','Steady'],
+    },
+    landscaping: {
+      warm:  ['Winter cleanup demand','Late winter prep','Spring prep rush','Spring installs peak','Spring peak','Summer heat, maintenance','Maintenance steady','Maintenance steady','Fall cleanup begins','Leaf season, big projects','Year-end cleanup','Slow season'],
+      cold:  ['Very slow — dormant','Very slow','Thaw — early cleanups','Spring burst','Peak installation season','Active season','Maintenance peak','Maintenance continues','Fall cleanup rush','Leaf season peak','Last push before freeze','Dormant'],
+      mixed: ['Slow','Slowly waking','Spring prep begins','Peak planting season','Peak season','Active season','Maintenance','Maintenance','Fall cleanup season','Leaf season','Winding down','Slow'],
+    },
+  };
+
+  // Fallback for unmapped trades
+  function getMultipliers(trade, climate) {
+    const map = SEASONAL[trade] || SEASONAL['plumbing'];
+    return map[climate] || map['mixed'];
+  }
+
+  function getReasons(trade, climate, monthIdx) {
+    const r = REASONS[trade] || REASONS['plumbing'];
+    const c = r[climate] || r['mixed'];
+    return c ? c[monthIdx] : 'Demand based on regional seasonal patterns';
+  }
+
+  const fmtInt = (n) => '$' + Math.round(n).toLocaleString('en-US');
+
+  let chartInstance = null;
+  let currentBudgets = [];
+  let currentTrade = 'hvac';
+  let currentClimate = 'mixed';
+  let currentAnnual = 24000;
+
+  function calculate() {
+    currentTrade   = document.getElementById('trade-type-s').value;
+    currentClimate = document.getElementById('climate').value;
+    currentAnnual  = parseFloat(document.getElementById('annual-budget').value) || 24000;
+
+    const mult = getMultipliers(currentTrade, currentClimate);
+    const total = mult.reduce(function(a, b) { return a + b; }, 0);
+
+    currentBudgets = mult.map(function(m) { return currentAnnual * m / total; });
+
+    document.getElementById('annual-total-display').textContent = fmtInt(currentAnnual);
+
+    // Find top 3 peak months
+    const indexed = mult.map(function(v, i) { return { v: v, i: i }; });
+    indexed.sort(function(a, b) { return b.v - a.v; });
+    const top3 = indexed.slice(0, 3);
+
+    const peakEl = document.getElementById('peak-months');
+    peakEl.innerHTML = top3.map(function(p, rank) {
+      const colors = ['#D97706','#f59e0b','#fbbf24'];
+      return '<div class="flex items-center justify-between">' +
+        '<div class="flex items-center gap-2">' +
+          '<span class="w-5 h-5 rounded text-xs font-bold flex items-center justify-center text-white" style="background:' + colors[rank] + ';">' + (rank+1) + '</span>' +
+          '<span class="text-sm font-semibold text-gray-800">' + MONTHS[p.i] + '</span>' +
+        '</div>' +
+        '<span class="text-sm font-bold" style="color:#1A5C35;">' + fmtInt(currentBudgets[p.i]) + '</span>' +
+      '</div>';
+    }).join('');
+
+    // Chart
+    const barColors = currentBudgets.map(function(b) {
+      const ratio = b / Math.max.apply(null, currentBudgets);
+      if (ratio >= 0.85) return '#1A5C35';
+      if (ratio >= 0.65) return '#2d7a4f';
+      if (ratio >= 0.45) return '#3d9e6a';
+      return '#86efac';
+    });
+
+    const ctx = document.getElementById('seasonal-chart').getContext('2d');
+    if (chartInstance) chartInstance.destroy();
+    chartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: MONTHS,
+        datasets: [{
+          label: 'Monthly Budget',
+          data: currentBudgets.map(function(b) { return Math.round(b); }),
+          backgroundColor: barColors,
+          borderRadius: 6,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) { return ' ' + fmtInt(ctx.raw) + ' (index: ' + mult[ctx.dataIndex].toFixed(2) + ')'; },
+              afterLabel: function(ctx) { return ' ' + getReasons(currentTrade, currentClimate, ctx.dataIndex); }
+            }
+          }
+        },
+        scales: {
+          y: {
+            ticks: { callback: function(v) { return '$' + (v >= 1000 ? (v/1000).toFixed(1) + 'k' : v); } },
+            grid: { color: '#f3f4f6' }
+          },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+
+    // Table
+    const tableEl = document.getElementById('budget-table');
+    tableEl.innerHTML = currentBudgets.map(function(b, i) {
+      const isTop3 = top3.some(function(p) { return p.i === i; });
+      const rowClass = isTop3 ? 'bg-green-50/50' : '';
+      return '<tr class="' + rowClass + '">' +
+        '<td class="px-4 py-2.5 font-semibold text-gray-900">' +
+          (isTop3 ? '<span class="inline-flex items-center gap-1"><i class="fa-solid fa-fire text-xs" style="color:#D97706;"></i>' + MONTHS[i] + '</span>' : MONTHS[i]) +
+        '</td>' +
+        '<td class="px-4 py-2.5 text-right font-mono text-sm ' + (mult[i] >= 1.2 ? 'font-bold' : 'text-gray-500') + '" style="' + (mult[i] >= 1.2 ? 'color:#1A5C35;' : '') + '">' + mult[i].toFixed(2) + 'x</td>' +
+        '<td class="px-4 py-2.5 text-right font-bold ' + (isTop3 ? '' : 'text-gray-700') + '" style="' + (isTop3 ? 'color:#1A5C35;' : '') + '">' + fmtInt(b) + '</td>' +
+        '<td class="px-4 py-2.5 text-xs text-gray-400 hidden sm:table-cell">' + getReasons(currentTrade, currentClimate, i) + '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  // CSV download
+  document.getElementById('download-csv').addEventListener('click', function() {
+    const mult = getMultipliers(currentTrade, currentClimate);
+    const rows = [['Month','Multiplier','Recommended Budget ($)','Reason']];
+    MONTHS.forEach(function(m, i) {
+      rows.push([m, mult[i].toFixed(2), Math.round(currentBudgets[i]), getReasons(currentTrade, currentClimate, i)]);
+    });
+    rows.push(['TOTAL','','$' + Math.round(currentAnnual),'Annual budget']);
+
+    const csv = rows.map(function(r) {
+      return r.map(function(cell) {
+        const s = String(cell);
+        return s.includes(',') || s.includes('"') ? '"' + s.replace(/"/g,'""') + '"' : s;
+      }).join(',');
+    }).join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'revforge-seasonal-budget-' + currentTrade + '-' + currentClimate + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  ['trade-type-s','climate','annual-budget'].forEach(function(id) {
+    document.getElementById(id).addEventListener('input', calculate);
+    document.getElementById(id).addEventListener('change', calculate);
+  });
+
+  calculate();
+})();
+</script>
+{% endblock %}

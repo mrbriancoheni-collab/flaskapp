@@ -156,6 +156,12 @@ def run_daily(app, db):
     except Exception:
         app.logger.exception("[CRON] AI actions digest failed")
 
+    # Weekly SMS performance digest (runs on Mondays)
+    try:
+        _run_weekly_sms_digest(app)
+    except Exception:
+        app.logger.exception("[CRON] Weekly SMS digest failed")
+
     # Weekly SEO AI agents (content recommendations, freshness plan, roadmap)
     try:
         _run_weekly_seo_ai_agents(app)
@@ -197,6 +203,12 @@ def run_daily(app, db):
         app.logger.info("[CRON] Auto review requests: sent %d request(s) across %d account(s)", total_sent, len(accounts))
     except Exception:
         app.logger.exception("[CRON] Auto review requests failed")
+
+    # Social listening: crawl → score → draft → email for each enabled user
+    try:
+        _run_daily_social_listen(app)
+    except Exception:
+        app.logger.exception("[CRON] Social listen run failed")
 
 
 # =========================
@@ -563,7 +575,7 @@ def _generate_google_ads_optimizations_for_account(app, aid: int) -> bool:
     total_monthly_value = total_savings + total_lead_value
 
     # 5) Generate opportunities URL
-    base_url = app.config.get("BASE_URL", "https://fieldsprout.io")
+    base_url = app.config.get("BASE_URL", "https://getrevforge.io")
     opportunities_url = f"{base_url}/account/google/ads/opportunities"
 
     # 6) Send email notification
@@ -721,7 +733,7 @@ def _run_monthly_google_ads_performance_emails(app) -> None:
                 to=user_email,
                 subject=f"📊 Google Ads Monthly Performance Report - {analysis.get('grade', 'N/A')} Grade",
                 html_body=email_html,
-                from_name="FieldSprout Google Ads AI"
+                from_name="RevForge Google Ads AI"
             )
 
             if success:
@@ -1019,15 +1031,15 @@ def _run_weekly_ai_actions_digest(app):
                     if not user or not user.email:
                         continue
 
-                    subject = f"FieldSprout AI: {row.total} actions this week"
+                    subject = f"RevForge AI: {row.total} actions this week"
                     body = (
                         f"Hi {user.first_name or 'there'},\n\n"
-                        f"Your FieldSprout AI made {row.total} change(s) to your Google Ads this week:\n"
+                        f"Your RevForge AI made {row.total} change(s) to your Google Ads this week:\n"
                         f"  • {row.executed or 0} executed\n"
                         f"  • {row.pending or 0} pending review\n\n"
                         f"Log in to review, approve, or undo any changes:\n"
-                        f"https://fieldsprout.io/account/google/ads/ai-actions\n\n"
-                        f"— The FieldSprout Team"
+                        f"https://getrevforge.io/account/google/ads/ai-actions\n\n"
+                        f"— The RevForge Team"
                     )
                     send_email(to=user.email, subject=subject, body=body)
                     sent += 1
@@ -1038,6 +1050,117 @@ def _run_weekly_ai_actions_digest(app):
 
         except Exception as e:
             app.logger.exception(f"[CRON] AI actions digest error: {e}")
+
+
+# =========================
+# Weekly SMS Digest
+# =========================
+
+def _run_weekly_sms_digest(app) -> None:
+    """
+    Send a short weekly SMS to users who have opted in.
+    Runs every Monday. Message: leads, CPL, top campaign.
+    """
+    if datetime.utcnow().weekday() != 0:  # Monday only
+        return
+
+    app.logger.info("[CRON] Starting weekly SMS digest")
+
+    with app.app_context():
+        try:
+            from app.models import User, Account
+            from app.lead_intake import _send_sms
+            from sqlalchemy import text as _text
+
+            # Pull users opted in with a verified phone
+            opted_in = (
+                User.query
+                .filter(
+                    User.sms_opt_in == True,
+                    User.phone_number.isnot(None),
+                )
+                .all()
+            )
+
+            if not opted_in:
+                app.logger.info("[CRON] No SMS opt-in users, skipping digest")
+                return
+
+            cutoff = datetime.utcnow() - timedelta(days=7)
+            sent = 0
+            errors = 0
+
+            for user in opted_in:
+                try:
+                    account = user.account
+                    if not account:
+                        continue
+
+                    # Pull weekly lead count from LeadIngest if available
+                    leads_this_week = 0
+                    cpl_str = "N/A"
+                    top_campaign = None
+                    try:
+                        from app.models import LeadIngest
+                        leads_this_week = LeadIngest.query.filter(
+                            LeadIngest.account_id == account.id,
+                            LeadIngest.created_at >= cutoff,
+                        ).count()
+                    except Exception:
+                        pass
+
+                    # Pull CPL from Google Ads spend / leads if available
+                    try:
+                        from app.models import GoogleAdsMetric
+                        row = db.session.execute(
+                            _text(
+                                "SELECT SUM(cost_micros)/1000000.0 as spend "
+                                "FROM google_ads_metrics "
+                                "WHERE account_id = :aid AND date >= :cutoff"
+                            ),
+                            {"aid": account.id, "cutoff": cutoff.date()},
+                        ).fetchone()
+                        if row and row.spend and leads_this_week:
+                            cpl = row.spend / leads_this_week
+                            cpl_str = f"${cpl:.0f}"
+                    except Exception:
+                        pass
+
+                    # Top campaign by impressions this week
+                    try:
+                        top_row = db.session.execute(
+                            _text(
+                                "SELECT campaign_name FROM google_ads_metrics "
+                                "WHERE account_id = :aid AND date >= :cutoff "
+                                "GROUP BY campaign_name ORDER BY SUM(impressions) DESC LIMIT 1"
+                            ),
+                            {"aid": account.id, "cutoff": cutoff.date()},
+                        ).fetchone()
+                        if top_row:
+                            top_campaign = top_row[0]
+                    except Exception:
+                        pass
+
+                    account_name = (account.name or "Your account").split()[0]
+                    lines = [f"RevForge weekly · {account_name}"]
+                    lines.append(f"Leads: {leads_this_week}  |  CPL: {cpl_str}")
+                    if top_campaign:
+                        lines.append(f"Top: {top_campaign[:40]}")
+                    lines.append("Reply STOP to unsubscribe.")
+                    message = "\n".join(lines)
+
+                    _send_sms(user.phone_number, message)
+                    sent += 1
+                    app.logger.info("[CRON] SMS digest sent to user %s", user.id)
+
+                except Exception as e:
+                    errors += 1
+                    app.logger.exception("[CRON] SMS digest failed for user %s: %s", user.id, e)
+
+            app.logger.info("[CRON] Weekly SMS digest done: %d sent, %d errors", sent, errors)
+
+        except Exception as e:
+            app.logger.exception("[CRON] Weekly SMS digest top-level error: %s", e)
 
 
 # =========================
@@ -1427,3 +1550,99 @@ def _run_daily_knowledge_refresh(app):
             )
         except Exception:
             app.logger.exception("[CRON] _run_daily_knowledge_refresh outer failure")
+
+
+# =========================
+# Social Listening
+# =========================
+
+def _run_daily_social_listen(app):
+    """
+    For each user with social_listen_config.enabled=1 and schedule='daily':
+      crawl → score → draft → store → send email digest.
+    """
+    import json as _json
+    from sqlalchemy import text as _text
+
+    with app.app_context():
+        from app import db
+
+        try:
+            rows = db.session.execute(_text("""
+                SELECT slc.user_id, slc.topics, slc.sources, slc.email_recipient
+                FROM social_listen_config slc
+                WHERE slc.enabled = 1 AND slc.schedule = 'daily'
+            """)).mappings().all()
+        except Exception:
+            app.logger.exception("[CRON] social_listen: could not query config table")
+            return
+
+        for row in rows:
+            user_id = row["user_id"]
+            try:
+                topics = _json.loads(row["topics"] or "[]")
+                sources = _json.loads(row["sources"] or "[]")
+                email_recipient = (row["email_recipient"] or "").strip()
+
+                if not topics:
+                    topics = ["demand generation", "B2B marketing"]
+                if not sources:
+                    sources = ["google_news", "google_search", "reddit"]
+
+                from app.social_listen.crawler import crawl_opportunities
+                from app.social_listen.scorer import score_and_filter
+                from app.social_listen.drafter import draft_content
+                from app.social_listen.emailer import generate_tokens, send_opportunity_digest
+
+                raw = crawl_opportunities(topics, sources)
+                scored = score_and_filter(raw)
+                drafted = [draft_content(item) for item in scored]
+                drafted = generate_tokens(drafted)
+
+                stored = []
+                for item in drafted:
+                    db.session.execute(_text("""
+                        INSERT INTO social_opportunities
+                            (user_id, source, source_url, author, original_content, topic,
+                             ai_score, ai_reason, draft_comment, draft_post,
+                             status, email_token, created_at)
+                        VALUES
+                            (:uid, :source, :source_url, :author, :content, :topic,
+                             :score, :reason, :comment, :post,
+                             'new', :token, NOW())
+                        ON DUPLICATE KEY UPDATE status = 'new'
+                    """), {
+                        "uid": user_id,
+                        "source": item.get("source", ""),
+                        "source_url": (item.get("source_url") or "")[:1000],
+                        "author": (item.get("author") or "")[:200],
+                        "content": item.get("original_content") or "",
+                        "topic": (item.get("topic") or "")[:200],
+                        "score": item.get("ai_score", 5.0),
+                        "reason": item.get("ai_reason") or "",
+                        "comment": item.get("draft_comment") or "",
+                        "post": item.get("draft_post") or "",
+                        "token": item["email_token"],
+                    })
+                    stored.append(item)
+                db.session.commit()
+
+                if email_recipient and stored:
+                    for item in stored:
+                        db.session.execute(_text(
+                            "UPDATE social_opportunities SET status='emailed' WHERE email_token=:tok"
+                        ), {"tok": item["email_token"]})
+                    db.session.commit()
+                    base_url = app.config.get("BASE_URL", "").rstrip("/")
+                    send_opportunity_digest(email_recipient, stored, base_url)
+                    app.logger.info(
+                        "[CRON] social_listen: sent %d opps to %s (user %s)",
+                        len(stored), email_recipient, user_id,
+                    )
+                else:
+                    app.logger.info(
+                        "[CRON] social_listen: stored %d opps for user %s (no email)",
+                        len(stored), user_id,
+                    )
+            except Exception:
+                app.logger.exception("[CRON] social_listen failed for user %s", user_id)

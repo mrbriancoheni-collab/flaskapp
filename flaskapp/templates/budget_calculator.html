@@ -1,0 +1,374 @@
+{% extends "base_public.html" %}
+{% block title %}Google Ads Budget Calculator for Trade Contractors — Free Tool | RevForge{% endblock %}
+{% block meta_description %}Calculate your ideal Google Ads budget for HVAC, plumbing, electrical, roofing, and other trade businesses. Enter your trade, market size, and lead goals — get a recommended monthly budget, expected CPL, and projected ROI instantly.{% endblock %}
+{% block og_title %}Google Ads Budget Calculator for Trade Contractors — RevForge{% endblock %}
+{% block og_description %}Find your ideal Google Ads budget in 60 seconds. Industry CPL benchmarks for HVAC, plumbing, electrical, roofing, and more — no login required.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Google Ads Budget Calculator for Trade Contractors",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Web",
+  "description": "Calculate the right Google Ads monthly budget for your trade business. Enter your trade type, market size, and lead goals to get a data-driven budget recommendation with expected CPL and ROI.",
+  "url": "https://getrevforge.io/free-tools/budget-calculator",
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+  "provider": {"@type": "Organization", "name": "RevForge", "url": "https://getrevforge.io"}
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How much should an HVAC company spend on Google Ads per month?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Most HVAC contractors spend $1,500–$5,000/month on Google Ads depending on market size. In a small market (<200k population), a cost per lead of ~$85 is typical; in large metros (1M+), expect $150–$175. To get 30 leads/month in a medium market, budget around $3,600/month."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is a good cost per lead (CPL) for trade contractors on Google Ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "CPL benchmarks vary significantly by trade and market. Landscaping runs $45–$90, plumbing $70–$130, HVAC $85–$165, roofing $110–$200, and solar $180–$380. Larger metropolitan markets command higher CPLs due to increased competition."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I calculate ROI on Google Ads for my trade business?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ROI = (Revenue from Ads − Ad Spend) ÷ Ad Spend × 100. For example: if you spend $3,000/month, generate 30 leads, close 35% (10.5 jobs), at an average job value of $600, your revenue is $6,300. ROI = ($6,300 − $3,000) ÷ $3,000 = 110%. A healthy ROI for trade contractors is typically 200–400%."
+      }
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="bg-gradient-to-b from-gray-50 to-white pt-12 pb-8">
+  <div class="container-lg">
+    <!-- Breadcrumb -->
+    <nav class="text-sm text-gray-500 mb-6" aria-label="Breadcrumb">
+      <ol class="flex items-center gap-2">
+        <li><a href="/" class="hover:text-gray-700 transition">Home</a></li>
+        <li><span class="text-gray-300">/</span></li>
+        <li><a href="/free-tools" class="hover:text-gray-700 transition">Free Tools</a></li>
+        <li><span class="text-gray-300">/</span></li>
+        <li class="text-gray-700 font-medium">Budget Calculator</li>
+      </ol>
+    </nav>
+
+    <!-- Hero -->
+    <div class="max-w-3xl mb-10">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-4" style="background:#f0fdf4;color:#1A5C35;border:1px solid #bbf7d0;">
+        <i class="fa-solid fa-calculator"></i> FREE TOOL — No login required
+      </div>
+      <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-900 leading-tight mb-4">
+        Google Ads Budget Calculator<br class="hidden sm:block">
+        <span style="color:#1A5C35;">for Trade Contractors</span>
+      </h1>
+      <p class="text-lg text-gray-600 leading-relaxed">
+        Stop guessing how much to spend on Google Ads. Enter your trade, market, and lead goals — get a data-driven budget recommendation with expected CPL, booked jobs, and ROI in real time.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- Main Tool -->
+<section class="py-10">
+  <div class="container-lg">
+    <div class="grid lg:grid-cols-2 gap-8 items-start">
+
+      <!-- Inputs Card -->
+      <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 sm:p-8 sticky top-24">
+        <h2 class="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+          <span class="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold" style="background:#1A5C35;">1</span>
+          Your Campaign Details
+        </h2>
+
+        <div class="space-y-6">
+          <!-- Trade Type -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2" for="trade-type">Trade Type</label>
+            <select id="trade-type" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-gray-50 focus:bg-white focus:border-gray-400 focus:outline-none transition text-sm">
+              <option value="hvac">HVAC</option>
+              <option value="plumbing">Plumbing</option>
+              <option value="electrical">Electrical</option>
+              <option value="roofing">Roofing</option>
+              <option value="pest-control">Pest Control</option>
+              <option value="landscaping">Landscaping</option>
+              <option value="garage-door">Garage Door</option>
+              <option value="pool-service">Pool Service</option>
+              <option value="solar">Solar</option>
+              <option value="other">Other / General Contractor</option>
+            </select>
+          </div>
+
+          <!-- Market Size -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2" for="market-size">City Market Size</label>
+            <select id="market-size" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-gray-50 focus:bg-white focus:border-gray-400 focus:outline-none transition text-sm">
+              <option value="small">Small market — under 200k population</option>
+              <option value="medium" selected>Medium market — 200k–1M population</option>
+              <option value="large">Large market — 1M+ population</option>
+            </select>
+          </div>
+
+          <!-- Leads / Month -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1" for="leads-slider">
+              Leads per month you want:
+              <span id="leads-display" class="font-extrabold ml-1" style="color:#1A5C35;">30</span>
+            </label>
+            <input type="range" id="leads-slider" min="10" max="200" step="5" value="30"
+              class="w-full h-2 rounded-full appearance-none cursor-pointer" style="accent-color:#1A5C35;">
+            <div class="flex justify-between text-xs text-gray-400 mt-1"><span>10</span><span>200</span></div>
+          </div>
+
+          <!-- Average Job Value -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2" for="job-value">Average Job Value ($)</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">$</span>
+              <input type="number" id="job-value" value="350" min="50" max="50000" step="50"
+                class="w-full border border-gray-200 rounded-xl pl-8 pr-4 py-3 text-gray-800 bg-gray-50 focus:bg-white focus:border-gray-400 focus:outline-none transition text-sm">
+            </div>
+          </div>
+
+          <!-- Close Rate -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1" for="close-rate-slider">
+              Close rate from ads:
+              <span id="close-rate-display" class="font-extrabold ml-1" style="color:#1A5C35;">35%</span>
+            </label>
+            <input type="range" id="close-rate-slider" min="10" max="80" step="5" value="35"
+              class="w-full h-2 rounded-full appearance-none cursor-pointer" style="accent-color:#1A5C35;">
+            <div class="flex justify-between text-xs text-gray-400 mt-1"><span>10%</span><span>80%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results Panel -->
+      <div class="space-y-4" id="results-panel">
+
+        <!-- Budget Card (Amber) -->
+        <div class="rounded-2xl p-6" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fcd34d;">
+          <div class="flex items-start justify-between mb-3">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wider" style="color:#92400e;">Recommended Monthly Budget</p>
+              <p class="text-3xl font-extrabold mt-1" style="color:#D97706;" id="budget-range">$2,125 – $2,785</p>
+            </div>
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center" style="background:#D97706;">
+              <i class="fa-solid fa-wallet text-white"></i>
+            </div>
+          </div>
+          <p class="text-sm" style="color:#78350f;">Based on <strong id="cpl-display">$95</strong> CPL for your trade and market</p>
+        </div>
+
+        <!-- Lead Projection Card (Blue) -->
+        <div class="rounded-2xl p-6" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #93c5fd;">
+          <div class="flex items-start justify-between mb-3">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wider" style="color:#1e40af;">Lead &amp; Job Projection</p>
+              <p class="text-3xl font-extrabold mt-1" style="color:#1E5FA8;" id="booked-jobs-display">10.5 jobs/mo</p>
+            </div>
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center" style="background:#1E5FA8;">
+              <i class="fa-solid fa-calendar-check text-white"></i>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3 mt-3">
+            <div class="bg-white/70 rounded-xl p-3 text-center">
+              <p class="text-xs text-gray-500 font-medium">Leads / mo</p>
+              <p class="text-xl font-extrabold" style="color:#1E5FA8;" id="leads-result">30</p>
+            </div>
+            <div class="bg-white/70 rounded-xl p-3 text-center">
+              <p class="text-xs text-gray-500 font-medium">Close rate</p>
+              <p class="text-xl font-extrabold" style="color:#1E5FA8;" id="close-rate-result">35%</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Revenue & ROI Card (Green) -->
+        <div class="rounded-2xl p-6" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;">
+          <div class="flex items-start justify-between mb-3">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wider" style="color:#14532d;">Revenue &amp; ROI</p>
+              <p class="text-3xl font-extrabold mt-1" style="color:#1A5C35;" id="roi-display">174% ROI</p>
+            </div>
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center" style="background:#1A5C35;">
+              <i class="fa-solid fa-chart-line text-white"></i>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3 mt-3">
+            <div class="bg-white/70 rounded-xl p-3 text-center">
+              <p class="text-xs text-gray-500 font-medium">Monthly revenue</p>
+              <p class="text-xl font-extrabold" style="color:#1A5C35;" id="revenue-display">$3,675</p>
+            </div>
+            <div class="bg-white/70 rounded-xl p-3 text-center">
+              <p class="text-xs text-gray-500 font-medium">Annual revenue</p>
+              <p class="text-xl font-extrabold" style="color:#1A5C35;" id="annual-revenue-display">$44,100</p>
+            </div>
+          </div>
+          <div class="mt-3 bg-white/70 rounded-xl p-3">
+            <p class="text-xs text-gray-500 font-medium text-center mb-1">For every $1 you spend in ads</p>
+            <p class="text-center text-2xl font-extrabold" style="color:#1A5C35;" id="roas-display">you get $2.74 back</p>
+          </div>
+        </div>
+
+        <!-- Benchmark Note -->
+        <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+          <p class="text-xs text-gray-500 flex items-start gap-2">
+            <i class="fa-solid fa-circle-info mt-0.5" style="color:#1A5C35;"></i>
+            <span>CPL benchmarks based on aggregate data from RevForge-managed accounts across US trade contractors. Actual results vary by ad quality, landing page, seasonality, and local competition.</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA Section -->
+<section class="py-12">
+  <div class="container-lg">
+    <div class="rounded-2xl p-8 sm:p-10 text-white text-center" style="background:linear-gradient(135deg,#1A5C35,#166534);">
+      <h2 class="text-2xl sm:text-3xl font-extrabold mb-3">Want RevForge to hit these numbers for you?</h2>
+      <p class="text-green-100 mb-6 max-w-xl mx-auto">Our AI manages your Google Ads budget automatically — cutting wasted spend, adjusting bids in real time, and maximizing your cost per booked job.</p>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center">
+        <a href="/pricing" class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition" style="background:#D97706;color:white;" onmouseover="this.style.background='#b45309'" onmouseout="this.style.background='#D97706'">
+          <i class="fa-solid fa-rocket"></i> See RevForge Plans
+        </a>
+        <a href="/ads-grader" class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm bg-white/10 text-white border border-white/30 hover:bg-white/20 transition">
+          <i class="fa-solid fa-magnifying-glass-chart"></i> Grade My Current Ads
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Also Try -->
+<section class="py-8 bg-gray-50 border-t border-gray-100">
+  <div class="container-lg">
+    <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Also try these free tools</h3>
+    <div class="grid sm:grid-cols-3 gap-4">
+      <a href="/free-tools/wasted-spend-estimator" class="bg-white rounded-xl border border-gray-200 p-4 hover:border-gray-300 hover:shadow-sm transition group">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm" style="background:#D97706;">
+            <i class="fa-solid fa-fire"></i>
+          </div>
+          <p class="font-semibold text-gray-900 text-sm group-hover:text-gray-700">Wasted Spend Estimator</p>
+        </div>
+        <p class="text-xs text-gray-500">Find out how much of your ad budget is being thrown away</p>
+      </a>
+      <a href="/free-tools/quality-score-calculator" class="bg-white rounded-xl border border-gray-200 p-4 hover:border-gray-300 hover:shadow-sm transition group">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm" style="background:#1E5FA8;">
+            <i class="fa-solid fa-star-half-stroke"></i>
+          </div>
+          <p class="font-semibold text-gray-900 text-sm group-hover:text-gray-700">Quality Score Calculator</p>
+        </div>
+        <p class="text-xs text-gray-500">See how improving QS saves you money on every click</p>
+      </a>
+      <a href="/free-tools/seasonal-budget-planner" class="bg-white rounded-xl border border-gray-200 p-4 hover:border-gray-300 hover:shadow-sm transition group">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm" style="background:#1A5C35;">
+            <i class="fa-solid fa-calendar-days"></i>
+          </div>
+          <p class="font-semibold text-gray-900 text-sm group-hover:text-gray-700">Seasonal Budget Planner</p>
+        </div>
+        <p class="text-xs text-gray-500">Plan your 12-month ad budget around demand peaks</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Methodology -->
+<section class="py-10 border-t border-gray-100">
+  <div class="container-md">
+    <h3 class="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
+      <i class="fa-solid fa-circle-info" style="color:#1A5C35;"></i> How This Calculator Works
+    </h3>
+    <div class="text-sm text-gray-500 space-y-2 leading-relaxed">
+      <p>This calculator uses industry cost-per-lead (CPL) benchmarks derived from aggregate Google Ads performance data across hundreds of RevForge-managed trade contractor accounts in the US. CPL benchmarks are segmented by trade type and metro market size (small &lt;200k, medium 200k–1M, large 1M+).</p>
+      <p><strong>Budget recommendation</strong> = your desired leads × CPL benchmark (±15% range reflects normal campaign variance). <strong>Booked jobs</strong> = leads × your close rate. <strong>Revenue</strong> = booked jobs × average job value. <strong>ROI</strong> = (revenue − budget) ÷ budget × 100.</p>
+      <p>Benchmarks are updated periodically. Actual CPLs depend on ad copy quality, landing page conversion rate, bid strategy, Quality Score, and local competitive density. Use this as a planning baseline, not a guarantee.</p>
+    </div>
+  </div>
+</section>
+
+<script nonce="{{ g.csp_nonce }}">
+(function() {
+  const CPL_BENCHMARKS = {
+    hvac:           { small: 85,  medium: 120, large: 165 },
+    plumbing:       { small: 70,  medium: 95,  large: 130 },
+    electrical:     { small: 80,  medium: 110, large: 155 },
+    roofing:        { small: 110, medium: 145, large: 200 },
+    'pest-control': { small: 55,  medium: 75,  large: 100 },
+    landscaping:    { small: 45,  medium: 65,  large: 90  },
+    'garage-door':  { small: 60,  medium: 85,  large: 110 },
+    'pool-service': { small: 65,  medium: 90,  large: 120 },
+    solar:          { small: 180, medium: 250, large: 380 },
+    other:          { small: 75,  medium: 100, large: 140 },
+  };
+
+  const fmt  = (n) => '$' + Math.round(n).toLocaleString('en-US');
+  const fmtK = (n) => (n >= 1000 ? '$' + (n/1000).toFixed(1) + 'k' : '$' + Math.round(n));
+
+  function calculate() {
+    const trade      = document.getElementById('trade-type').value;
+    const market     = document.getElementById('market-size').value;
+    const leads      = parseInt(document.getElementById('leads-slider').value, 10);
+    const jobValue   = parseFloat(document.getElementById('job-value').value) || 350;
+    const closeRate  = parseInt(document.getElementById('close-rate-slider').value, 10);
+
+    const cpl        = CPL_BENCHMARKS[trade]?.[market] || 100;
+    const budgetMid  = leads * cpl;
+    const budgetLow  = Math.round(budgetMid * 0.85);
+    const budgetHigh = Math.round(budgetMid * 1.15);
+    const booked     = leads * (closeRate / 100);
+    const revenue    = booked * jobValue;
+    const roi        = ((revenue - budgetMid) / budgetMid * 100);
+    const roas       = revenue / budgetMid;
+
+    document.getElementById('budget-range').textContent         = fmt(budgetLow) + ' – ' + fmt(budgetHigh);
+    document.getElementById('cpl-display').textContent          = fmt(cpl);
+    document.getElementById('booked-jobs-display').textContent  = booked.toFixed(1) + ' jobs/mo';
+    document.getElementById('leads-result').textContent         = leads;
+    document.getElementById('close-rate-result').textContent    = closeRate + '%';
+    document.getElementById('roi-display').textContent          = Math.round(roi) + '% ROI';
+    document.getElementById('revenue-display').textContent      = fmt(revenue);
+    document.getElementById('annual-revenue-display').textContent = fmt(revenue * 12);
+    document.getElementById('roas-display').textContent         = 'you get ' + fmtK(roas).replace('$','') + 'x back... ';
+
+    // Nicer ROAS text
+    document.getElementById('roas-display').textContent = 'you get ' + fmt(roas) + ' back';
+  }
+
+  // Slider display updaters
+  document.getElementById('leads-slider').addEventListener('input', function() {
+    document.getElementById('leads-display').textContent = this.value;
+    calculate();
+  });
+  document.getElementById('close-rate-slider').addEventListener('input', function() {
+    document.getElementById('close-rate-display').textContent = this.value + '%';
+    calculate();
+  });
+
+  // All other inputs
+  ['trade-type','market-size','job-value'].forEach(function(id) {
+    document.getElementById(id).addEventListener('input', calculate);
+    document.getElementById(id).addEventListener('change', calculate);
+  });
+
+  // Initial calculation
+  calculate();
+})();
+</script>
+{% endblock %}

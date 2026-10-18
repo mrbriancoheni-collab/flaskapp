@@ -1,0 +1,654 @@
+{% extends "base_public.html" %}
+{% block title %}Free Negative Keyword Lists for Trade Contractors | RevForge{% endblock %}
+{% block meta_description %}Free downloadable negative keyword lists for HVAC, plumbing, electrical, roofing, pest control, and landscaping contractors. Stop paying for DIY, job-seeker, and wholesale clicks in Google Ads.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Free Negative Keyword Lists for Trade Contractors",
+  "url": "https://getrevforge.io/free-tools/negative-keywords",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Any",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "description": "Searchable, downloadable negative keyword lists for HVAC, plumbing, electrical, roofing, pest control, and landscaping Google Ads campaigns. Includes match type recommendations.",
+  "provider": { "@type": "Organization", "name": "RevForge", "url": "https://getrevforge.io" }
+}
+</script>
+<style>
+  :root {
+    --forge-green: #1A5C35;
+    --forge-green-dark: #144a2a;
+    --forge-green-light: #e8f5ee;
+    --rev-amber: #D97706;
+    --rev-amber-light: #fef3c7;
+    --prec-blue: #1E5FA8;
+    --prec-blue-light: #eff6ff;
+  }
+
+  .tool-hero {
+    background: linear-gradient(135deg, #fef2f2 0%, #fff 60%, var(--forge-green-light) 100%);
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .tool-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
+  }
+
+  /* Tab nav */
+  .trade-tabs { display: flex; gap: 0.25rem; flex-wrap: wrap; border-bottom: 2px solid #e5e7eb; padding-bottom: 0; margin-bottom: 0; }
+  .trade-tab {
+    padding: 0.625rem 1.125rem; font-weight: 600; font-size: 0.875rem; cursor: pointer;
+    border: none; background: transparent; color: #6b7280; border-radius: 8px 8px 0 0;
+    border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .trade-tab:hover { color: var(--forge-green); background: var(--forge-green-light); }
+  .trade-tab.active { color: var(--forge-green); border-bottom-color: var(--forge-green); background: var(--forge-green-light); }
+
+  /* Search */
+  .search-input {
+    width: 100%; padding: 0.625rem 1rem 0.625rem 2.5rem; border: 1.5px solid #d1d5db; border-radius: 10px;
+    font-size: 0.9375rem; outline: none; font-family: inherit;
+    transition: border-color 0.15s;
+  }
+  .search-input:focus { border-color: var(--forge-green); box-shadow: 0 0 0 3px rgba(26,92,53,0.1); }
+  .search-wrap { position: relative; }
+  .search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: #9ca3af; pointer-events: none; }
+
+  /* Table */
+  .kw-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  .kw-table th { padding: 0.75rem 1rem; text-align: left; font-weight: 600; font-size: 0.75rem;
+    text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+  .kw-table td { padding: 0.625rem 1rem; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
+  .kw-table tr:last-child td { border-bottom: none; }
+  .kw-table tr:hover td { background: #fafafa; }
+
+  .kw-cell { font-family: 'Courier New', monospace; font-size: 0.8125rem; color: #111827; font-weight: 500; }
+  .reason-cell { color: #6b7280; font-size: 0.8125rem; max-width: 300px; }
+
+  .match-badge {
+    display: inline-flex; padding: 0.125rem 0.5rem; border-radius: 100px; font-size: 0.75rem; font-weight: 700;
+    white-space: nowrap;
+  }
+  .match-exact { background: #fee2e2; color: #991b1b; }
+  .match-phrase { background: #fef3c7; color: #92400e; }
+  .match-broad  { background: #eff6ff; color: #1e40af; }
+
+  .rf-btn-green {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: var(--forge-green); color: #fff; padding: 0.625rem 1.125rem;
+    border-radius: 8px; font-weight: 600; font-size: 0.875rem;
+    cursor: pointer; border: none; transition: background 0.18s;
+  }
+  .rf-btn-green:hover { background: var(--forge-green-dark); }
+
+  .rf-btn-outline {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: transparent; color: var(--forge-green); border: 1.5px solid var(--forge-green);
+    padding: 0.625rem 1.125rem; border-radius: 8px; font-weight: 600; font-size: 0.875rem;
+    cursor: pointer; transition: all 0.18s;
+  }
+  .rf-btn-outline:hover { background: var(--forge-green-light); }
+
+  .rf-btn-amber {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: var(--rev-amber); color: #fff; padding: 0.75rem 1.5rem;
+    border-radius: 10px; font-weight: 600; font-size: 0.9375rem;
+    cursor: pointer; border: none; transition: background 0.18s; text-decoration: none;
+  }
+  .rf-btn-amber:hover { background: #b45309; color: #fff; }
+
+  .stat-callout {
+    background: #fef3c7; border: 1px solid #fde68a; border-radius: 12px;
+    padding: 1rem 1.25rem; display: flex; align-items: flex-start; gap: 0.75rem;
+  }
+
+  .cta-section {
+    background: linear-gradient(135deg, var(--forge-green) 0%, var(--forge-green-dark) 100%);
+    border-radius: 20px; color: #fff; padding: 3rem 2rem; text-align: center;
+  }
+
+  .also-try-link {
+    display: inline-flex; align-items: center; gap: 0.375rem;
+    color: var(--forge-green); font-weight: 600; font-size: 0.875rem;
+    padding: 0.5rem 1rem; border: 1.5px solid #a7f3c4; border-radius: 8px;
+    text-decoration: none; transition: background 0.15s;
+  }
+  .also-try-link:hover { background: var(--forge-green-light); }
+
+  .kw-table-wrap { overflow-x: auto; }
+
+  #kw-count { font-weight: 600; color: var(--forge-green); }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<section class="tool-hero py-12 lg:py-16">
+  <div class="container-lg">
+    <div class="max-w-3xl">
+      <div class="inline-flex items-center gap-2 text-sm font-semibold px-3 py-1 rounded-full mb-4"
+           style="background: #fee2e2; color: #991b1b;">
+        <i class="fa-solid fa-ban"></i> Stop Wasting Budget
+      </div>
+      <h1 class="text-3xl lg:text-4xl font-extrabold text-gray-900 mb-4" style="text-wrap: balance;">
+        Free Negative Keyword Lists<br>for Trade Contractors
+      </h1>
+      <p class="text-lg text-gray-600 mb-4" style="max-width: 62ch;">
+        Your Google Ads are paying for clicks from students, DIYers, and job-seekers. These negative keywords stop that — trade-specific, ready to copy or download.
+      </p>
+      <div class="stat-callout" style="max-width: 500px;">
+        <i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5"></i>
+        <p class="text-sm text-amber-900">
+          <strong>HVAC accounts waste an average of $1,240/month</strong> before adding trade-specific negative keywords. Plumbing accounts average $890/month in wasted spend.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Tool -->
+<section class="py-10 bg-gray-50">
+  <div class="container-lg">
+    <div class="tool-card overflow-hidden">
+
+      <!-- Tabs -->
+      <div class="px-6 pt-6">
+        <div class="trade-tabs" id="tradeTabs">
+          <button class="trade-tab active" data-trade="hvac">
+            <i class="fa-solid fa-temperature-half mr-1.5"></i>HVAC
+          </button>
+          <button class="trade-tab" data-trade="plumbing">
+            <i class="fa-solid fa-droplet mr-1.5"></i>Plumbing
+          </button>
+          <button class="trade-tab" data-trade="electrical">
+            <i class="fa-solid fa-bolt mr-1.5"></i>Electrical
+          </button>
+          <button class="trade-tab" data-trade="roofing">
+            <i class="fa-solid fa-house mr-1.5"></i>Roofing
+          </button>
+          <button class="trade-tab" data-trade="pest">
+            <i class="fa-solid fa-bug mr-1.5"></i>Pest Control
+          </button>
+          <button class="trade-tab" data-trade="landscaping">
+            <i class="fa-solid fa-leaf mr-1.5"></i>Landscaping
+          </button>
+          <button class="trade-tab" data-trade="all">
+            <i class="fa-solid fa-layer-group mr-1.5"></i>All Trades
+          </button>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center gap-3">
+        <div class="search-wrap flex-1" style="min-width: 200px; max-width: 360px;">
+          <i class="fa-solid fa-magnifying-glass search-icon text-sm"></i>
+          <input type="text" class="search-input" id="kwSearch" placeholder="Search keywords…" oninput="filterTable()">
+        </div>
+        <div class="ml-auto flex gap-2 flex-wrap">
+          <span class="text-sm text-gray-500 self-center">
+            Showing <span id="kw-count">—</span> keywords
+          </span>
+          <button class="rf-btn-outline" onclick="copyAllKeywords()">
+            <i class="fa-regular fa-copy"></i> Copy All
+          </button>
+          <button class="rf-btn-green" onclick="downloadCSV()">
+            <i class="fa-solid fa-download"></i> Download CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="kw-table-wrap">
+        <table class="kw-table" id="kwTable">
+          <thead>
+            <tr>
+              <th>Negative Keyword</th>
+              <th>Why Exclude It</th>
+              <th>Match Type</th>
+            </tr>
+          </thead>
+          <tbody id="kwTableBody"></tbody>
+        </table>
+      </div>
+
+    </div>
+
+    <!-- Why it matters explainer -->
+    <div class="mt-8 grid md:grid-cols-3 gap-6">
+      <div class="tool-card p-5">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style="background:#fee2e2;">
+          <i class="fa-solid fa-user-graduate" style="color:#dc2626;"></i>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-1 text-sm">Students & Job-Seekers</h3>
+        <p class="text-sm text-gray-600">Terms like "training," "certification," "salary," and "career" attract people looking to enter your trade — not hire you.</p>
+      </div>
+      <div class="tool-card p-5">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style="background:#fef3c7;">
+          <i class="fa-solid fa-screwdriver" style="color:#d97706;"></i>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-1 text-sm">DIYers</h3>
+        <p class="text-sm text-gray-600">"How to fix," "DIY," "YouTube," "repair yourself," and "parts only" searches will never become a service call.</p>
+      </div>
+      <div class="tool-card p-5">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style="background:var(--prec-blue-light);">
+          <i class="fa-solid fa-warehouse" style="color:var(--prec-blue);"></i>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-1 text-sm">Wholesale Buyers</h3>
+        <p class="text-sm text-gray-600">"Wholesale," "bulk," "OEM," "supplier," and "manufacturer" bring commercial buyers who won't pay residential rates.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="py-12 bg-white">
+  <div class="container-lg">
+    <div class="cta-section">
+      <div class="inline-flex items-center gap-2 text-sm font-semibold px-3 py-1 rounded-full mb-4"
+           style="background: rgba(255,255,255,0.15); color: #fff;">
+        <i class="fa-solid fa-bolt"></i> RevForge AI
+      </div>
+      <h2 class="text-2xl lg:text-3xl font-extrabold mb-3">RevForge adds 200+ trade-specific negatives automatically on day one.</h2>
+      <p class="text-green-100 mb-6 max-w-xl mx-auto">
+        Skip the manual setup. RevForge applies this full list — plus 150+ additional negatives we've built from managing millions in trade contractor ad spend — the moment you connect your account.
+      </p>
+      <a href="/signup" class="rf-btn-amber text-base px-8 py-3">
+        Connect Your Account Free <i class="fa-solid fa-arrow-right"></i>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Also try -->
+<section class="py-10 border-t border-gray-100 bg-gray-50">
+  <div class="container-lg">
+    <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Also Try</p>
+    <div class="flex flex-wrap gap-3">
+      <a href="/free-tools/ad-schedule-optimizer" class="also-try-link">
+        <i class="fa-solid fa-calendar-check"></i> Ad Schedule Optimizer
+      </a>
+      <a href="/free-tools/ad-copy-analyzer" class="also-try-link">
+        <i class="fa-solid fa-magnifying-glass"></i> Ad Copy Analyzer
+      </a>
+      <a href="/free-tools/lsa-eligibility" class="also-try-link">
+        <i class="fa-solid fa-shield-check"></i> LSA Eligibility Checker
+      </a>
+      <a href="/free-tools/campaign-structure-grader" class="also-try-link">
+        <i class="fa-solid fa-chart-bar"></i> Campaign Structure Grader
+      </a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block body_extra %}
+<script nonce="{{ g.csp_nonce }}">
+(function() {
+  // Keyword data: [keyword, reason, matchType]
+  // matchType: 'exact' | 'phrase' | 'broad'
+  const KEYWORDS = {
+    hvac: [
+      ['school','Students looking to study HVAC, not hire a tech','phrase'],
+      ['program','HVAC training programs and courses','phrase'],
+      ['certification','Cert exam searchers, not service customers','phrase'],
+      ['course','Online or in-person HVAC courses','phrase'],
+      ['training','Apprentices and vocational students','phrase'],
+      ['degree','HVAC degree programs','phrase'],
+      ['career','Job-seekers looking to enter the trade','phrase'],
+      ['jobs','Employment listings in HVAC','phrase'],
+      ['salary','Researching HVAC tech pay, not hiring','phrase'],
+      ['resume','Job applicants writing a resume','phrase'],
+      ['diy','Do-it-yourself repairs — will not convert','phrase'],
+      ['how to','Research/tutorial searches, not service calls','phrase'],
+      ['repair yourself','Self-service repair intent','phrase'],
+      ['manual','Equipment manual downloads','phrase'],
+      ['youtube','Looking for video tutorials','phrase'],
+      ['parts','Buying parts only, not hiring labor','phrase'],
+      ['freon refill','DIY refrigerant — illegal for unlicensed','phrase'],
+      ['refrigerant diy','Attempting self-service refrigerant work','phrase'],
+      ['free','Government rebates, free trials — not paid service','phrase'],
+      ['government','Utility rebate or program searches','phrase'],
+      ['rebate form','Filling out rebate paperwork, not booking service','phrase'],
+      ['rent','Renters seeking landlord-paid repairs','phrase'],
+      ['apartment','Renters — landlord pays, not the searcher','phrase'],
+      ['landlord','Property managers seeking wholesale rates','phrase'],
+      ['wholesale','Distributors buying equipment at volume','phrase'],
+      ['oem','Manufacturer part lookup, not installation','phrase'],
+      ['supplier','Equipment suppliers, not homeowners','phrase'],
+      ['manufacturer','Brand/manufacturer lookup, not service','phrase'],
+      ['bulk','Commercial bulk purchasing','phrase'],
+      ['commercial only','Strictly commercial — may not match residential pricing','phrase'],
+      ['industrial','Industrial HVAC — different scope and licensing','phrase'],
+      ['data center cooling','Specialized commercial — not residential','phrase'],
+      ['thermostat diy','Self-install thermostat project','phrase'],
+      ['filter change how to','DIY filter replacement tutorial','phrase'],
+      ['apprenticeship','Vocational program enrollment','phrase'],
+      ['hvac school','Trade school enrollment','phrase'],
+      ['used unit','Used equipment buyer, not service customer','phrase'],
+      ['scrap','Metal scrap value searches','phrase'],
+      ['warranty claim','Manufacturer warranty — not a paid service call','phrase']
+    ],
+    plumbing: [
+      ['school','Plumbing school enrollment','phrase'],
+      ['certification','Plumbing license exam prep','phrase'],
+      ['apprenticeship','Trade apprenticeship program','phrase'],
+      ['jobs','Plumbing employment listings','phrase'],
+      ['career','Job-seekers entering the plumbing trade','phrase'],
+      ['salary','Plumbing tech salary research','phrase'],
+      ['resume','Job applicants','phrase'],
+      ['diy','DIY plumbing repairs — not a service call','phrase'],
+      ['how to fix','Tutorial-seeking, not service booking','phrase'],
+      ['snake a drain yourself','DIY drain clearing','phrase'],
+      ['pipe fitting training','Vocational skills training','phrase'],
+      ['wholesale','Plumbing supply wholesale pricing','phrase'],
+      ['supply house','Trade supply stores','phrase'],
+      ['parts only','Parts-only purchase, no labor','phrase'],
+      ['free','Freebie seekers, not paying customers','phrase'],
+      ['government assistance','Low-income utility programs','phrase'],
+      ['landlord','Property managers seeking low-cost labor','phrase'],
+      ['commercial bid','Commercial contractor bidding — different scope','phrase'],
+      ['industrial','Industrial plumbing installs — different licensing','phrase'],
+      ['sewer cleaning equipment rental','Renting equipment to DIY the job','phrase'],
+      ['rent drain snake','Renting tools to DIY','phrase'],
+      ['plumbing code','Building code research, not service','phrase'],
+      ['how to install','DIY installation tutorials','phrase'],
+      ['fix toilet yourself','Self-repair intent','phrase'],
+      ['plumbing training','Vocational training courses','phrase'],
+      ['pipe material','Material comparison research','phrase'],
+      ['pvc fittings','Parts purchase','phrase'],
+      ['copper vs pex','Research, not hiring','phrase'],
+      ['plumbing exam','Licensing exam prep','phrase'],
+      ['sewage smell diy','DIY troubleshooting','phrase'],
+      ['grease trap cleaning diy','Self-service attempt','phrase'],
+      ['backflow preventer diy','Self-install attempt','phrase'],
+      ['plumbing permit','Permit-only searches','phrase'],
+      ['water pressure calculator','Research tool, not booking','phrase'],
+      ['plumbing rough in','Construction planning research','phrase']
+    ],
+    electrical: [
+      ['school','Electrical trade school enrollment','phrase'],
+      ['program','Electrical apprenticeship programs','phrase'],
+      ['apprenticeship','Trade program enrollment','phrase'],
+      ['training','Vocational electrical training','phrase'],
+      ['certification','Electrician cert exam prep','phrase'],
+      ['exam','Licensing exam searches','phrase'],
+      ['jobs','Electrical job listings','phrase'],
+      ['salary','Electrician pay research','phrase'],
+      ['resume','Job applicants','phrase'],
+      ['diy','DIY wiring — dangerous and a non-customer','phrase'],
+      ['wire yourself','Self-wiring intent','phrase'],
+      ['how to install','Tutorial searches','phrase'],
+      ['materials only','Supplies without labor','phrase'],
+      ['wholesale','Electrical supply wholesale pricing','phrase'],
+      ['supply','Trade electrical supply stores','phrase'],
+      ['components','Electronic component purchases','phrase'],
+      ['panel parts','Parts-only search','phrase'],
+      ['contractor supply','Supply house pricing, not service','phrase'],
+      ['government rebate','Incentive program searches','phrase'],
+      ['commercial only','Commercial-only electrical','phrase'],
+      ['wire gauge calculator','Research tool','phrase'],
+      ['voltage drop calculator','Technical research','phrase'],
+      ['electrical code','NEC code research','phrase'],
+      ['arduino','Electronics hobbyist — not a customer','phrase'],
+      ['circuit diagram','Technical documentation','phrase'],
+      ['wiring diagram','DIY reference material','phrase'],
+      ['how to wire','Tutorial intent','phrase'],
+      ['breaker diy','Self-install attempt','phrase'],
+      ['electrical exam prep','Licensing study','phrase'],
+      ['nec code book','Professional reference, not service booking','phrase'],
+      ['solar diy','DIY solar project','phrase'],
+      ['outlet repair diy','Self-repair intent','phrase'],
+      ['fixture install yourself','DIY intent','phrase'],
+      ['electrical internship','Career development searches','phrase'],
+      ['journeyman exam','Licensing exam research','phrase']
+    ],
+    roofing: [
+      ['school','Roofing training program enrollment','phrase'],
+      ['training','Vocational skills training','phrase'],
+      ['apprenticeship','Trade program searches','phrase'],
+      ['jobs','Roofing employment listings','phrase'],
+      ['career','Job-seekers in roofing','phrase'],
+      ['materials','Buying roofing materials only','phrase'],
+      ['shingles wholesale','Wholesale material purchase','phrase'],
+      ['diy roof','Self-roof install — not a customer','phrase'],
+      ['how to roof','Tutorial searches','phrase'],
+      ['roofing supply','Supply house pricing','phrase'],
+      ['manufacturer','Shingle manufacturer brand lookup','phrase'],
+      ['builder supply','Construction supply stores','phrase'],
+      ['insurance adjuster','Claims-only searches — not booking a roofer','phrase'],
+      ['commercial bid only','Commercial-only RFP searches','phrase'],
+      ['metal roofing diy','DIY install intent','phrase'],
+      ['install shingles yourself','DIY roofing','phrase'],
+      ['roofing nails wholesale','Material-only purchase','phrase'],
+      ['underlayment cost','Materials research only','phrase'],
+      ['pitch calculator','DIY planning tool','phrase'],
+      ['roofing calculator','DIY estimate tool, not booking','phrase'],
+      ['how to fix a leak yourself','DIY repair','phrase'],
+      ['tar patch','DIY leak patching','phrase'],
+      ['roof coating diy','Self-application products','phrase'],
+      ['gutter diy','DIY gutter install','phrase'],
+      ['gutter guard install yourself','Self-install intent','phrase'],
+      ['apprentice roofer','Trade job listing','phrase'],
+      ['cheap shingles','Material deal-hunting','phrase'],
+      ['used roofing materials','Used material buyer','phrase'],
+      ['roofing permit','Permit-only searches','phrase'],
+      ['flat roof diy','Commercial/DIY self-install','phrase'],
+      ['how long do shingles last','Research, not booking','phrase'],
+      ['owens corning vs gaf','Brand comparison research','phrase'],
+      ['roofing salary','Employment research','phrase'],
+      ['hail damage claim','Insurance-only search','phrase'],
+      ['public adjuster','Insurance adjuster services, not roofing','phrase']
+    ],
+    pest: [
+      ['school','Pest control certification programs','phrase'],
+      ['certification','Licensing exam searches','phrase'],
+      ['training','Vocational pest control training','phrase'],
+      ['jobs','Exterminator employment listings','phrase'],
+      ['career','Job-seekers entering pest control','phrase'],
+      ['salary','Pest control tech salary research','phrase'],
+      ['resume','Job applicants','phrase'],
+      ['diy','DIY pest control products','phrase'],
+      ['how to get rid of yourself','Self-treatment intent','phrase'],
+      ['home remedy','Natural home treatment searches','phrase'],
+      ['boric acid','DIY product purchase','phrase'],
+      ['diatomaceous earth','DIY treatment product','phrase'],
+      ['raid','Consumer pesticide brand — not a service','phrase'],
+      ['ortho','Consumer pesticide brand','phrase'],
+      ['hot shot','Consumer pesticide brand','phrase'],
+      ['trap','DIY trap purchase','phrase'],
+      ['bait station','DIY bait product','phrase'],
+      ['wholesale','Pesticide wholesale distributors','phrase'],
+      ['supply','Pest control supply companies','phrase'],
+      ['commercial license','Applicator license exam','phrase'],
+      ['rentokil','Competitor brand search','phrase'],
+      ['terminix','Competitor brand search','exact'],
+      ['orkin','Competitor brand search — may want to bid or exclude','exact'],
+      ['presto-x','Competitor brand','phrase'],
+      ['bed bug spray','Product purchase, not service','phrase'],
+      ['kill mice yourself','DIY rodent control','phrase'],
+      ['cockroach bomb','Consumer bomb product','phrase'],
+      ['fogger','DIY fogging product','phrase'],
+      ['identification','Pest ID research, not booking','phrase'],
+      ['what kind of bug','Research/identification','phrase'],
+      ['free inspection','Could be competitor-generated or freebie-seekers','phrase'],
+      ['certification exam','License exam prep','phrase'],
+      ['pesticide handling','Safety training course','phrase'],
+      ['applicator license','Licensing research','phrase'],
+      ['ipm training','Integrated pest management training','phrase']
+    ],
+    landscaping: [
+      ['school','Horticulture or landscaping school enrollment','phrase'],
+      ['program','Landscaping degree programs','phrase'],
+      ['certification','Landscaping/horticulture cert exams','phrase'],
+      ['training','Vocational landscaping training','phrase'],
+      ['degree','Horticulture degree programs','phrase'],
+      ['jobs','Landscaping employment listings','phrase'],
+      ['career','Job-seekers in landscaping','phrase'],
+      ['salary','Landscaper pay research','phrase'],
+      ['resume','Job applicants','phrase'],
+      ['apprenticeship','Trade program searches','phrase'],
+      ['diy landscape','DIY homeowner project','phrase'],
+      ['how to lay sod yourself','Self-install tutorial','phrase'],
+      ['plant nursery','Plant purchases — no labor needed','phrase'],
+      ['wholesale plants','Wholesale plant purchasing','phrase'],
+      ['bulk mulch','Material-only purchase','phrase'],
+      ['bulk topsoil','Material purchase without labor','phrase'],
+      ['landscaping tools','Equipment/tool purchase','phrase'],
+      ['rent lawn mower','Equipment rental — DIY mowing','phrase'],
+      ['rent aerator','Equipment rental for DIY aeration','phrase'],
+      ['fertilizer','Fertilizer product purchase','phrase'],
+      ['weed killer','Herbicide product purchase','phrase'],
+      ['roundup','Consumer herbicide brand','phrase'],
+      ['seed','Grass seed purchase','phrase'],
+      ['landscape fabric','Material-only purchase','phrase'],
+      ['irrigation parts','DIY irrigation parts','phrase'],
+      ['hose bib','Plumbing part purchase','phrase'],
+      ['free landscaping design','Freebie seekers','phrase'],
+      ['commercial property management','Commercial/HOA bids — different scope','phrase'],
+      ['hoa landscaping contract','Large-scope commercial bids','phrase'],
+      ['landscape architecture','Design-only professional service','phrase'],
+      ['arborist certificate','Tree certification program','phrase'],
+      ['horticulture exam','Exam prep searches','phrase'],
+      ['plant identification','Research, not service booking','phrase'],
+      ['lawn care diy','DIY lawn maintenance','phrase'],
+      ['how to trim hedges','Tutorial searches','phrase'],
+      ['snow blower','Consumer snow equipment purchase','phrase']
+    ],
+    all: [
+      ['free','Freebie-seekers, not paying customers','phrase'],
+      ['diy','Do-it-yourself intent — will not convert','phrase'],
+      ['how to','Tutorial and research intent','phrase'],
+      ['jobs','Employment listings','phrase'],
+      ['career','Job-seeker research','phrase'],
+      ['salary','Pay research, not service booking','phrase'],
+      ['training','Vocational training programs','phrase'],
+      ['school','Trade school enrollment','phrase'],
+      ['course','Online/classroom course searches','phrase'],
+      ['certification','Licensing exam prep','phrase'],
+      ['apprenticeship','Trade program enrollment','phrase'],
+      ['wholesale','Bulk/wholesale pricing','phrase'],
+      ['supply','Trade supply house searches','phrase'],
+      ['parts only','Parts purchase without labor','phrase'],
+      ['manufacturer','Brand/manufacturer lookup','phrase'],
+      ['resume','Job applicant searches','phrase'],
+      ['government program','Utility or subsidy program searches','phrase'],
+      ['landlord','Property manager seeking low-cost service','phrase'],
+      ['commercial bid','Large commercial project bidding','phrase'],
+      ['industrial','Industrial-scale projects','phrase'],
+      ['used','Used equipment purchase intent','phrase'],
+      ['rent','Equipment or service rental','phrase'],
+      ['youtube','Video tutorial searches','phrase'],
+      ['insurance claim','Claims-only — no service booked','phrase'],
+      ['rebate','Rebate/incentive program searches','phrase'],
+      ['calculator','Research tools, DIY estimating','phrase'],
+      ['diagram','Technical reference, not service','phrase'],
+      ['permit','Permit-only searches','phrase'],
+      ['code','Building/electrical/plumbing code research','phrase'],
+      ['association','Trade association searches','phrase']
+    ]
+  };
+
+  let currentTrade = 'hvac';
+
+  function getActiveKeywords() {
+    let kws = [];
+    if (currentTrade === 'all') {
+      Object.keys(KEYWORDS).forEach(t => {
+        if (t !== 'all') {
+          KEYWORDS[t].forEach(k => kws.push([k[0], k[1], k[2], t]));
+        }
+      });
+      // Deduplicate by keyword
+      const seen = new Set();
+      kws = kws.filter(k => { if (seen.has(k[0])) return false; seen.add(k[0]); return true; });
+    } else {
+      kws = (KEYWORDS[currentTrade] || []).map(k => [k[0], k[1], k[2], currentTrade]);
+    }
+    return kws;
+  }
+
+  function renderTable() {
+    const search = (document.getElementById('kwSearch').value||'').toLowerCase();
+    let kws = getActiveKeywords();
+    if (search) kws = kws.filter(k => k[0].toLowerCase().includes(search) || k[1].toLowerCase().includes(search));
+
+    document.getElementById('kw-count').textContent = kws.length;
+
+    const tbody = document.getElementById('kwTableBody');
+    if (kws.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="3" class="py-8 text-center text-gray-400">No keywords match your search.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = kws.map(k => {
+      const matchClass = k[2]==='exact'?'match-exact': k[2]==='phrase'?'match-phrase':'match-broad';
+      return `<tr>
+        <td class="kw-cell">[${k[0]}]</td>
+        <td class="reason-cell">${k[1]}</td>
+        <td><span class="match-badge ${matchClass}">${k[2].charAt(0).toUpperCase()+k[2].slice(1)}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function filterTable() { renderTable(); }
+
+  window.copyAllKeywords = function() {
+    const kws = getActiveKeywords();
+    const search = (document.getElementById('kwSearch').value||'').toLowerCase();
+    const filtered = search ? kws.filter(k => k[0].toLowerCase().includes(search) || k[1].toLowerCase().includes(search)) : kws;
+    const text = filtered.map(k => {
+      const wrap = k[2]==='exact'?'['+k[0]+']': k[2]==='phrase'?'"'+k[0]+'"': k[0];
+      return wrap;
+    }).join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.querySelector('[onclick="copyAllKeywords()"]');
+      const orig = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied ' + filtered.length + ' keywords!';
+      setTimeout(() => { btn.innerHTML = orig; }, 2000);
+    }).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    });
+  };
+
+  window.downloadCSV = function() {
+    const kws = getActiveKeywords();
+    let csv = 'Keyword,Formatted,Reason,Match Type\n';
+    kws.forEach(k => {
+      const formatted = k[2]==='exact'?'['+k[0]+']': k[2]==='phrase'?'"'+k[0]+'"': k[0];
+      csv += '"'+k[0]+'","'+formatted+'","'+k[1].replace(/"/g,'""')+'","'+k[2]+'"\n';
+    });
+    csv += '\n"Generated by RevForge — getrevforge.io"\n';
+
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'revforge-negative-keywords-' + currentTrade + '.csv';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  // Tab switching
+  document.getElementById('tradeTabs').addEventListener('click', function(e) {
+    const btn = e.target.closest('[data-trade]');
+    if (!btn) return;
+    document.querySelectorAll('.trade-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    currentTrade = btn.dataset.trade;
+    document.getElementById('kwSearch').value = '';
+    renderTable();
+  });
+
+  window.filterTable = filterTable;
+
+  // Initial render
+  renderTable();
+})();
+</script>
+{% endblock %}

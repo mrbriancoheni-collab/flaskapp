@@ -18,7 +18,7 @@ from app.auth.utils import login_required
 # We keep explicit endpoint names so URLs stay 'home', 'chatgpt', etc.
 main_bp = Blueprint("main_bp", __name__, template_folder="../templates")
 
-APP_NAME = "FieldSprout"
+APP_NAME = "RevForge"
 
 # ---------------------------------------------------------------------
 # Pass through the app-wide helpers so we DON'T shadow them here.
@@ -54,8 +54,8 @@ def home():
         return render_template("home.html")
     except Exception:
         return (
-            "<!doctype html><html><head><title>FieldSprout</title></head>"
-            "<body><h1>FieldSprout</h1><p>Server is running.</p>"
+            "<!doctype html><html><head><title>RevForge</title></head>"
+            "<body><h1>RevForge</h1><p>Server is running.</p>"
             "<p><a href='/_deploy_check'>/_deploy_check</a></p></body></html>"
         ), 200
 
@@ -149,7 +149,7 @@ Allow: /
 User-agent: Googlebot
 Allow: /
 
-Sitemap: https://fieldsprout.io/sitemap.xml
+Sitemap: https://getrevforge.io/sitemap.xml
 """
     from flask import Response
     return Response(content, mimetype="text/plain")
@@ -168,6 +168,9 @@ def sitemap_xml():
         "-local-service-ads",
         "-meta-ads",
         "-website-cro",
+        "-lead-generation",
+        "-local-seo",
+        "-gbp",
     ]
 
     # Main 9 industries (already in sitemap) — add sub-routes
@@ -183,73 +186,104 @@ def sitemap_xml():
     ]
 
     pages = [
-        ("https://fieldsprout.io/", "1.0", "weekly"),
-        ("https://fieldsprout.io/pricing", "0.9", "monthly"),
-        ("https://fieldsprout.io/about", "0.7", "monthly"),
-        ("https://fieldsprout.io/contact", "0.7", "monthly"),
-        ("https://fieldsprout.io/free-tools", "0.9", "weekly"),
-        ("https://fieldsprout.io/vs-agency", "0.8", "monthly"),
-        ("https://fieldsprout.io/roadmap", "0.5", "monthly"),
-        ("https://fieldsprout.io/products/ads-demo", "0.8", "monthly"),
+        ("https://getrevforge.io/", "1.0", "weekly"),
+        ("https://getrevforge.io/pricing", "0.9", "monthly"),
+        ("https://getrevforge.io/about", "0.7", "monthly"),
+        ("https://getrevforge.io/contact", "0.7", "monthly"),
+        ("https://getrevforge.io/free-tools", "0.9", "weekly"),
+        ("https://getrevforge.io/free-tools/meta-creative-audit", "0.8", "weekly"),
+        ("https://getrevforge.io/free-tools/budget-calculator", "0.8", "weekly"),
+        ("https://getrevforge.io/free-tools/wasted-spend-estimator", "0.8", "weekly"),
+        ("https://getrevforge.io/free-tools/quality-score-calculator", "0.8", "weekly"),
+        ("https://getrevforge.io/free-tools/seasonal-budget-planner", "0.8", "weekly"),
+        ("https://getrevforge.io/free-tools/ad-schedule-optimizer", "0.8", "weekly"),
+        ("https://getrevforge.io/free-tools/ad-copy-analyzer", "0.8", "weekly"),
+        ("https://getrevforge.io/free-tools/negative-keywords", "0.8", "weekly"),
+        ("https://getrevforge.io/free-tools/lsa-eligibility", "0.8", "weekly"),
+        ("https://getrevforge.io/free-tools/campaign-structure-grader", "0.8", "weekly"),
+        ("https://getrevforge.io/vs-agency", "0.8", "monthly"),
+        ("https://getrevforge.io/roadmap", "0.5", "monthly"),
+        ("https://getrevforge.io/products/ads-demo", "0.8", "monthly"),
         # Main industry pages (existing)
-        ("https://fieldsprout.io/industries/hvac", "0.9", "monthly"),
-        ("https://fieldsprout.io/industries/plumbing", "0.9", "monthly"),
-        ("https://fieldsprout.io/industries/electricians", "0.9", "monthly"),
-        ("https://fieldsprout.io/industries/roofing", "0.9", "monthly"),
-        ("https://fieldsprout.io/industries/pest-control", "0.9", "monthly"),
-        ("https://fieldsprout.io/industries/landscaping", "0.9", "monthly"),
-        ("https://fieldsprout.io/industries/garage-door", "0.8", "monthly"),
-        ("https://fieldsprout.io/industries/pool-service", "0.8", "monthly"),
-        ("https://fieldsprout.io/industries/solar", "0.8", "monthly"),
+        ("https://getrevforge.io/industries/hvac", "0.9", "monthly"),
+        ("https://getrevforge.io/industries/plumbing", "0.9", "monthly"),
+        ("https://getrevforge.io/industries/electricians", "0.9", "monthly"),
+        ("https://getrevforge.io/industries/roofing", "0.9", "monthly"),
+        ("https://getrevforge.io/industries/pest-control", "0.9", "monthly"),
+        ("https://getrevforge.io/industries/landscaping", "0.9", "monthly"),
+        ("https://getrevforge.io/industries/garage-door", "0.8", "monthly"),
+        ("https://getrevforge.io/industries/pool-service", "0.8", "monthly"),
+        ("https://getrevforge.io/industries/solar", "0.8", "monthly"),
+        # Additional industry hub pages (new)
+        ("https://getrevforge.io/industries/concrete", "0.9", "monthly"),
+        ("https://getrevforge.io/industries/fencing", "0.9", "monthly"),
+        ("https://getrevforge.io/industries/irrigation", "0.9", "monthly"),
+        ("https://getrevforge.io/industries/lawn-care", "0.9", "monthly"),
+        ("https://getrevforge.io/industries/restoration", "0.9", "monthly"),
+        ("https://getrevforge.io/industries/windows-doors", "0.9", "monthly"),
+        ("https://getrevforge.io/industries/painting", "0.8", "monthly"),
+        ("https://getrevforge.io/industries/cleaning", "0.8", "monthly"),
+        ("https://getrevforge.io/industries/general-contracting", "0.8", "monthly"),
+        ("https://getrevforge.io/industries/flooring", "0.8", "monthly"),
         # Product pages
-        ("https://fieldsprout.io/products/ads", "0.8", "monthly"),
-        ("https://fieldsprout.io/products/glsa", "0.8", "monthly"),
-        ("https://fieldsprout.io/products/gbp", "0.8", "monthly"),
-        ("https://fieldsprout.io/products/facebook-ads", "0.8", "monthly"),
-        ("https://fieldsprout.io/products/reviews", "0.8", "monthly"),
-        ("https://fieldsprout.io/products/listings", "0.8", "monthly"),
-        ("https://fieldsprout.io/products/forms-chat", "0.7", "monthly"),
+        ("https://getrevforge.io/products/ads", "0.8", "monthly"),
+        ("https://getrevforge.io/products/glsa", "0.8", "monthly"),
+        ("https://getrevforge.io/products/gbp", "0.8", "monthly"),
+        ("https://getrevforge.io/products/facebook-ads", "0.8", "monthly"),
+        ("https://getrevforge.io/products/reviews", "0.8", "monthly"),
+        ("https://getrevforge.io/products/listings", "0.8", "monthly"),
+        ("https://getrevforge.io/products/forms-chat", "0.7", "monthly"),
         # Solution pages
-        ("https://fieldsprout.io/solutions/lead-generation", "0.8", "monthly"),
-        ("https://fieldsprout.io/solutions/multi-location", "0.8", "monthly"),
-        ("https://fieldsprout.io/solutions/lower-ad-cost", "0.8", "monthly"),
-        ("https://fieldsprout.io/solutions/get-more-reviews", "0.7", "monthly"),
-        ("https://fieldsprout.io/solutions/spend-when-open", "0.7", "monthly"),
-        ("https://fieldsprout.io/solutions/see-what-works", "0.7", "monthly"),
+        ("https://getrevforge.io/solutions/lead-generation", "0.8", "monthly"),
+        ("https://getrevforge.io/solutions/multi-location", "0.8", "monthly"),
+        ("https://getrevforge.io/solutions/lower-ad-cost", "0.8", "monthly"),
+        ("https://getrevforge.io/solutions/get-more-reviews", "0.7", "monthly"),
+        ("https://getrevforge.io/solutions/spend-when-open", "0.7", "monthly"),
+        ("https://getrevforge.io/solutions/see-what-works", "0.7", "monthly"),
+        ("https://getrevforge.io/solutions/crm-sync", "0.8", "monthly"),
+        ("https://getrevforge.io/solutions/local-services-ads", "0.8", "monthly"),
+        ("https://getrevforge.io/results/hvac", "0.8", "monthly"),
         # Tools & graders
-        ("https://fieldsprout.io/ads-grader", "0.9", "weekly"),
-        ("https://fieldsprout.io/ga4-audit", "0.9", "weekly"),
-        ("https://fieldsprout.io/blog/", "0.8", "weekly"),
-        ("https://fieldsprout.io/maps-audit", "0.9", "weekly"),
-        ("https://fieldsprout.io/lsa-estimator", "0.9", "weekly"),
+        ("https://getrevforge.io/ads-grader", "0.9", "weekly"),
+        ("https://getrevforge.io/ga4-audit", "0.9", "weekly"),
+        ("https://getrevforge.io/blog/", "0.8", "weekly"),
+        ("https://getrevforge.io/maps-audit", "0.9", "weekly"),
+        ("https://getrevforge.io/lsa-estimator", "0.9", "weekly"),
         # Legal
-        ("https://fieldsprout.io/privacy-policy", "0.3", "yearly"),
-        ("https://fieldsprout.io/terms-of-service", "0.3", "yearly"),
-        ("https://fieldsprout.io/security", "0.4", "yearly"),
+        ("https://getrevforge.io/privacy-policy", "0.3", "yearly"),
+        ("https://getrevforge.io/terms-of-service", "0.3", "yearly"),
+        ("https://getrevforge.io/security", "0.4", "yearly"),
         # llms.txt
-        ("https://fieldsprout.io/llms.txt", "0.3", "monthly"),
+        ("https://getrevforge.io/llms.txt", "0.3", "monthly"),
     ]
     # Industry sub-pages (trade/channel combinations — two-segment URL style)
+    # Use canonical URL-format trade names; _INDUSTRY_TEMPLATE_OVERRIDES in
+    # public/__init__.py maps electricians→electrical and pool-service→pools.
+    _all_channels = [
+        "google-ads", "local-service-ads", "meta-ads", "website-cro",
+        "lead-generation", "local-seo", "gbp",
+    ]
     _industry_subs = [
-        ("hvac", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
-        ("plumbing", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
-        ("electrical", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
-        ("roofing", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
-        ("pest-control", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
-        ("lawn-care", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
-        ("garage-door", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
-        ("solar", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
-        ("pools", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
-        ("concrete", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
-        ("fencing", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
-        ("irrigation", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
-        ("windows-doors", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
-        ("restoration", ["google-ads", "local-service-ads", "meta-ads", "website-cro"]),
+        ("hvac", _all_channels),
+        ("plumbing", _all_channels),
+        ("electricians", _all_channels),
+        ("roofing", _all_channels),
+        ("pest-control", _all_channels),
+        ("landscaping", _all_channels),
+        ("garage-door", _all_channels),
+        ("pool-service", _all_channels),
+        ("solar", _all_channels),
+        ("concrete", _all_channels),
+        ("fencing", _all_channels),
+        ("irrigation", _all_channels),
+        ("lawn-care", _all_channels),
+        ("restoration", _all_channels),
+        ("windows-doors", _all_channels),
     ]
     for trade, channels in _industry_subs:
         for channel in channels:
             pages.append((
-                f"https://fieldsprout.io/industries/{trade}/{channel}",
+                f"https://getrevforge.io/industries/{trade}/{channel}",
                 "0.7",
                 "monthly",
             ))
@@ -257,17 +291,17 @@ def sitemap_xml():
     # Add sub-routes for main 9 industries (single-segment slug style)
     for industry in main_industries:
         for sub in industry_sub_routes:
-            pages.append((f"https://fieldsprout.io/industries/{industry}{sub}", "0.7", "monthly"))
+            pages.append((f"https://getrevforge.io/industries/{industry}{sub}", "0.7", "monthly"))
 
     # Add sub-routes only for additional industries (no main-page template yet)
     for industry in additional_industries:
         for sub in industry_sub_routes:
-            pages.append((f"https://fieldsprout.io/industries/{industry}{sub}", "0.7", "monthly"))
+            pages.append((f"https://getrevforge.io/industries/{industry}{sub}", "0.7", "monthly"))
 
     # Dynamically include all blog posts
     for post in POSTS:
         pages.append((
-            f"https://fieldsprout.io/blog/{post['slug']}",
+            f"https://getrevforge.io/blog/{post['slug']}",
             "0.8",
             "monthly",
         ))
@@ -298,12 +332,12 @@ def llms_txt():
     from flask import Response
     from app.blog_data import POSTS
     blog_lines = "\n".join(
-        f"- [{p['title']}](https://fieldsprout.io/blog/{p['slug']}): {p['excerpt']}"
+        f"- [{p['title']}](https://getrevforge.io/blog/{p['slug']}): {p['excerpt']}"
         for p in POSTS
     )
-    body = f"""# FieldSprout
+    body = f"""# RevForge
 
-> FieldSprout is a full-service AI marketing platform built specifically for trade and field service businesses (HVAC, plumbing, electrical, roofing, landscaping, pest control, and more). Autonomous AI agents manage Google Ads, Meta Ads, Local Services Ads, SEO, Google Business Profile, reputation management, and lead follow-up 24/7 — no marketing expertise or dedicated marketing team required. Works for both residential (B2C) and commercial (B2B) trade businesses across the United States.
+> RevForge is a full-service AI marketing platform built specifically for trade and field service businesses (HVAC, plumbing, electrical, roofing, landscaping, pest control, and more). Autonomous AI agents manage Google Ads, Meta Ads, Local Services Ads, SEO, Google Business Profile, reputation management, and lead follow-up 24/7 — no marketing expertise or dedicated marketing team required. Works for both residential (B2C) and commercial (B2B) trade businesses across the United States.
 
 ## Key Facts
 
@@ -316,47 +350,47 @@ def llms_txt():
 
 ## Product
 
-- [Home](https://fieldsprout.io/): Overview and platform capabilities
-- [Pricing](https://fieldsprout.io/pricing): Plans starting at $250/month; annual plan at $200/month
-- [About](https://fieldsprout.io/about): Company mission — marketing firepower for trade business owners without needing a marketing team
-- [Contact](https://fieldsprout.io/contact): Support and sales contact
-- [Free Tools](https://fieldsprout.io/free-tools): Free Google Ads Grader and GA4 Audit tool
+- [Home](https://getrevforge.io/): Overview and platform capabilities
+- [Pricing](https://getrevforge.io/pricing): Plans starting at $250/month; annual plan at $200/month
+- [About](https://getrevforge.io/about): Company mission — marketing firepower for trade business owners without needing a marketing team
+- [Contact](https://getrevforge.io/contact): Support and sales contact
+- [Free Tools](https://getrevforge.io/free-tools): Free Google Ads Grader and GA4 Audit tool
 
 ## Core Features
 
-- [Google Ads Management](https://fieldsprout.io/products/ads): AI optimizes keywords, bids, and ad copy 24/7
-- [Google Local Services Ads](https://fieldsprout.io/products/glsa): Google Guaranteed badge management
-- [Google Business Profile](https://fieldsprout.io/products/gbp): Automated posts, Q&A, and profile optimization
-- [Meta (Facebook/Instagram) Ads](https://fieldsprout.io/products/facebook-ads): AI-managed social advertising
-- [Reputation & Reviews](https://fieldsprout.io/products/reviews): Automated review request system after every job
-- [Listings Management](https://fieldsprout.io/products/listings): Citation consistency across 50+ directories
-- [Forms & Chat](https://fieldsprout.io/products/forms-chat): Lead capture and automated follow-up
+- [Google Ads Management](https://getrevforge.io/products/ads): AI optimizes keywords, bids, and ad copy 24/7
+- [Google Local Services Ads](https://getrevforge.io/products/glsa): Google Guaranteed badge management
+- [Google Business Profile](https://getrevforge.io/products/gbp): Automated posts, Q&A, and profile optimization
+- [Meta (Facebook/Instagram) Ads](https://getrevforge.io/products/facebook-ads): AI-managed social advertising
+- [Reputation & Reviews](https://getrevforge.io/products/reviews): Automated review request system after every job
+- [Listings Management](https://getrevforge.io/products/listings): Citation consistency across 50+ directories
+- [Forms & Chat](https://getrevforge.io/products/forms-chat): Lead capture and automated follow-up
 
 ## Solutions
 
-- [Lower Ad Cost](https://fieldsprout.io/solutions/lower-ad-cost): Reduce cost per lead through AI optimization
-- [Get More Reviews](https://fieldsprout.io/solutions/get-more-reviews): Systematic review generation for trade businesses
-- [Spend When Open](https://fieldsprout.io/solutions/spend-when-open): Smart ad scheduling to match business hours
-- [See What Works](https://fieldsprout.io/solutions/see-what-works): Unified analytics and attribution reporting
-- [Lead Generation](https://fieldsprout.io/solutions/lead-generation): End-to-end lead generation for home service companies
-- [Multi-Location](https://fieldsprout.io/solutions/multi-location): Marketing management across multiple business locations
+- [Lower Ad Cost](https://getrevforge.io/solutions/lower-ad-cost): Reduce cost per lead through AI optimization
+- [Get More Reviews](https://getrevforge.io/solutions/get-more-reviews): Systematic review generation for trade businesses
+- [Spend When Open](https://getrevforge.io/solutions/spend-when-open): Smart ad scheduling to match business hours
+- [See What Works](https://getrevforge.io/solutions/see-what-works): Unified analytics and attribution reporting
+- [Lead Generation](https://getrevforge.io/solutions/lead-generation): End-to-end lead generation for trade contractors
+- [Multi-Location](https://getrevforge.io/solutions/multi-location): Marketing management across multiple business locations
 
 ## Industries
 
-- [HVAC](https://fieldsprout.io/industries/hvac): Google Ads and marketing automation for HVAC companies — tune-ups, repairs, installations
-- [Plumbing](https://fieldsprout.io/industries/plumbing): Emergency and residential plumbing marketing, review automation
-- [Electrical](https://fieldsprout.io/industries/electricians): Marketing for electricians — residential, commercial, EV chargers
-- [Roofing](https://fieldsprout.io/industries/roofing): Storm damage leads, replacement campaigns, reputation management
-- [Pest Control](https://fieldsprout.io/industries/pest-control): Seasonal and recurring pest control marketing
-- [Landscaping](https://fieldsprout.io/industries/landscaping): Lawn care, landscape design, and recurring contract marketing
-- [Garage Door](https://fieldsprout.io/industries/garage-door): Repair and installation marketing for garage door companies
-- [Solar](https://fieldsprout.io/industries/solar): Lead generation for residential solar installers
-- [Pool Service](https://fieldsprout.io/industries/pool-service): Maintenance and renovation marketing for pool companies
+- [HVAC](https://getrevforge.io/industries/hvac): Google Ads and marketing automation for HVAC companies — tune-ups, repairs, installations
+- [Plumbing](https://getrevforge.io/industries/plumbing): Emergency and residential plumbing marketing, review automation
+- [Electrical](https://getrevforge.io/industries/electricians): Marketing for electricians — residential, commercial, EV chargers
+- [Roofing](https://getrevforge.io/industries/roofing): Storm damage leads, replacement campaigns, reputation management
+- [Pest Control](https://getrevforge.io/industries/pest-control): Seasonal and recurring pest control marketing
+- [Landscaping](https://getrevforge.io/industries/landscaping): Lawn care, landscape design, and recurring contract marketing
+- [Garage Door](https://getrevforge.io/industries/garage-door): Repair and installation marketing for garage door companies
+- [Solar](https://getrevforge.io/industries/solar): Lead generation for residential solar installers
+- [Pool Service](https://getrevforge.io/industries/pool-service): Maintenance and renovation marketing for pool companies
 
 ## Free Tools
 
-- [Google Ads Grader](https://fieldsprout.io/ads-grader): Free audit — grade your Google Ads account in 60 seconds, see wasted spend and top 3 fixes
-- [GA4 Tracking Audit](https://fieldsprout.io/ga4-audit): Free GA4 health check — scores your tracking setup and identifies gaps in conversion data
+- [Google Ads Grader](https://getrevforge.io/ads-grader): Free audit — grade your Google Ads account in 60 seconds, see wasted spend and top 3 fixes
+- [GA4 Tracking Audit](https://getrevforge.io/ga4-audit): Free GA4 health check — scores your tracking setup and identifies gaps in conversion data
 
 ## Blog
 
@@ -364,10 +398,10 @@ def llms_txt():
 
 ## Optional
 
-- [Privacy Policy](https://fieldsprout.io/privacy-policy)
-- [Terms of Service](https://fieldsprout.io/terms-of-service)
-- [Security](https://fieldsprout.io/security)
-- [Sitemap](https://fieldsprout.io/sitemap.xml)
+- [Privacy Policy](https://getrevforge.io/privacy-policy)
+- [Terms of Service](https://getrevforge.io/terms-of-service)
+- [Security](https://getrevforge.io/security)
+- [Sitemap](https://getrevforge.io/sitemap.xml)
 """
     return Response(body, mimetype="text/plain")
 

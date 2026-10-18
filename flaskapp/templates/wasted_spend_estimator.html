@@ -1,0 +1,434 @@
+{% extends "base_public.html" %}
+{% block title %}Google Ads Wasted Spend Estimator for Trade Contractors — Free Tool | RevForge{% endblock %}
+{% block meta_description %}Find out how much of your Google Ads budget is being wasted. Most trade contractor accounts waste 30–45% of their budget. Enter your spend and account details to see your estimated waste — and how to fix it.{% endblock %}
+{% block og_title %}Google Ads Wasted Spend Estimator for Trade Contractors — RevForge{% endblock %}
+{% block og_description %}Diagnose your Google Ads waste in 60 seconds. See how much you're losing to off-hours clicks, keyword mismatches, and missing conversion tracking.{% endblock %}
+
+{% block head_extra %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Google Ads Wasted Spend Estimator for Trade Contractors",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Web",
+  "description": "Estimate how much of your Google Ads budget is being wasted due to missing negative keywords, off-hours bidding, and poor conversion tracking. Built for HVAC, plumbing, roofing, and other trade businesses.",
+  "url": "https://getrevforge.io/free-tools/wasted-spend-estimator",
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+  "provider": {"@type": "Organization", "name": "RevForge", "url": "https://getrevforge.io"}
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="bg-gradient-to-b from-gray-50 to-white pt-12 pb-8">
+  <div class="container-lg">
+    <nav class="text-sm text-gray-500 mb-6" aria-label="Breadcrumb">
+      <ol class="flex items-center gap-2">
+        <li><a href="/" class="hover:text-gray-700 transition">Home</a></li>
+        <li><span class="text-gray-300">/</span></li>
+        <li><a href="/free-tools" class="hover:text-gray-700 transition">Free Tools</a></li>
+        <li><span class="text-gray-300">/</span></li>
+        <li class="text-gray-700 font-medium">Wasted Spend Estimator</li>
+      </ol>
+    </nav>
+
+    <div class="max-w-3xl mb-10">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-4" style="background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;">
+        <i class="fa-solid fa-fire"></i> FREE DIAGNOSTIC — No login required
+      </div>
+      <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-900 leading-tight mb-4">
+        Google Ads Wasted Spend Estimator<br class="hidden sm:block">
+        <span style="color:#D97706;">for Trade Contractors</span>
+      </h1>
+      <p class="text-lg text-gray-600 leading-relaxed mb-4">
+        Most trade Google Ads accounts waste <strong>30–45% of their budget</strong> on clicks that will never book a job. Here's how much yours is likely bleeding — and what's causing it.
+      </p>
+      <!-- Problem callout -->
+      <div class="rounded-xl p-4 border" style="background:#fff7ed;border-color:#fed7aa;">
+        <div class="flex items-start gap-3">
+          <i class="fa-solid fa-triangle-exclamation mt-0.5" style="color:#D97706;"></i>
+          <p class="text-sm" style="color:#78350f;">The average trade contractor running Google Ads without professional management wastes <strong>$8,400–$18,000 per year</strong> on clicks from people who were never going to book. This tool estimates your specific waste rate.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Tool -->
+<section class="py-10">
+  <div class="container-lg">
+    <div class="grid lg:grid-cols-2 gap-8 items-start">
+
+      <!-- Inputs -->
+      <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 sm:p-8 sticky top-24">
+        <h2 class="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+          <span class="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold" style="background:#D97706;">1</span>
+          Your Account Details
+        </h2>
+
+        <div class="space-y-6">
+          <!-- Monthly Spend -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1" for="spend-slider">
+              Monthly Google Ads spend:
+              <span id="spend-display" class="font-extrabold ml-1" style="color:#D97706;">$2,500</span>
+            </label>
+            <input type="range" id="spend-slider" min="500" max="10000" step="100" value="2500"
+              class="w-full h-2 rounded-full appearance-none cursor-pointer" style="accent-color:#D97706;">
+            <div class="flex justify-between text-xs text-gray-400 mt-1"><span>$500</span><span>$10,000</span></div>
+          </div>
+
+          <!-- Trade Type -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2" for="trade-type-w">Trade Type</label>
+            <select id="trade-type-w" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-gray-50 focus:bg-white focus:border-gray-400 focus:outline-none transition text-sm">
+              <option value="hvac">HVAC</option>
+              <option value="plumbing">Plumbing</option>
+              <option value="electrical">Electrical</option>
+              <option value="roofing">Roofing</option>
+              <option value="pest-control">Pest Control</option>
+              <option value="landscaping">Landscaping</option>
+              <option value="garage-door">Garage Door</option>
+              <option value="pool-service">Pool Service</option>
+              <option value="solar">Solar</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <!-- Account Age -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2" for="account-age">Account Age</label>
+            <select id="account-age" class="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-800 bg-gray-50 focus:bg-white focus:border-gray-400 focus:outline-none transition text-sm">
+              <option value="new">Brand new — less than 3 months</option>
+              <option value="3to12" selected>3–12 months old</option>
+              <option value="1to3">1–3 years old</option>
+              <option value="3plus">3+ years old, well-optimized</option>
+            </select>
+          </div>
+
+          <!-- Toggle Group -->
+          <div class="space-y-3">
+            <p class="text-sm font-semibold text-gray-700">Account setup (affects waste rate)</p>
+
+            <!-- Negative Keywords -->
+            <div class="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50">
+              <div>
+                <p class="text-sm font-medium text-gray-800">Negative keyword list set up?</p>
+                <p class="text-xs text-gray-400">Blocks irrelevant searches</p>
+              </div>
+              <div class="flex gap-1 p-1 bg-gray-200 rounded-lg">
+                <button id="neg-kw-yes" class="toggle-btn px-3 py-1.5 rounded-md text-xs font-semibold transition active" onclick="setToggle('neg-kw','yes')">Yes</button>
+                <button id="neg-kw-no"  class="toggle-btn px-3 py-1.5 rounded-md text-xs font-semibold transition" onclick="setToggle('neg-kw','no')">No</button>
+              </div>
+            </div>
+
+            <!-- 24/7 vs Business Hours -->
+            <div class="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50">
+              <div>
+                <p class="text-sm font-medium text-gray-800">Ads running schedule</p>
+                <p class="text-xs text-gray-400">24/7 wastes budget while you're closed</p>
+              </div>
+              <div class="flex gap-1 p-1 bg-gray-200 rounded-lg">
+                <button id="hours-biz"  class="toggle-btn px-3 py-1.5 rounded-md text-xs font-semibold transition active" onclick="setToggle('hours','biz')">Business hrs</button>
+                <button id="hours-247"  class="toggle-btn px-3 py-1.5 rounded-md text-xs font-semibold transition" onclick="setToggle('hours','247')">24/7</button>
+              </div>
+            </div>
+
+            <!-- Conversion Tracking -->
+            <div class="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50">
+              <div>
+                <p class="text-sm font-medium text-gray-800">Conversion tracking set up?</p>
+                <p class="text-xs text-gray-400">Calls, form fills, chats tracked</p>
+              </div>
+              <div class="flex gap-1 p-1 bg-gray-200 rounded-lg">
+                <button id="conv-yes" class="toggle-btn px-3 py-1.5 rounded-md text-xs font-semibold transition active" onclick="setToggle('conv','yes')">Yes</button>
+                <button id="conv-no"  class="toggle-btn px-3 py-1.5 rounded-md text-xs font-semibold transition" onclick="setToggle('conv','no')">No</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div class="space-y-5">
+
+        <!-- Waste Numbers -->
+        <div class="rounded-2xl p-6" style="background:linear-gradient(135deg,#fff7ed,#fed7aa55);border:2px solid #D97706;">
+          <p class="text-xs font-semibold uppercase tracking-wider mb-2" style="color:#92400e;">Estimated Monthly Waste</p>
+          <div class="flex items-baseline gap-3 mb-1">
+            <span class="text-5xl font-extrabold" style="color:#D97706;" id="monthly-waste">$875</span>
+            <span class="text-base font-semibold text-gray-400">/ month</span>
+          </div>
+          <p class="text-sm text-gray-600 mb-3">That's <strong id="waste-pct" style="color:#D97706;">35%</strong> of your monthly budget going to clicks that won't book.</p>
+          <div class="rounded-xl p-3" style="background:#fff7ed;border:1px solid #fde68a;">
+            <p class="text-sm text-center font-bold" style="color:#92400e;">
+              Annual waste estimate: <span id="annual-waste" style="color:#D97706;">$10,500</span>
+            </p>
+          </div>
+        </div>
+
+        <!-- Donut Chart -->
+        <div class="bg-white rounded-2xl border border-gray-200 p-6">
+          <h3 class="text-sm font-bold text-gray-800 mb-4">Your Budget Breakdown</h3>
+          <div class="flex flex-col sm:flex-row items-center gap-6">
+            <div class="w-44 h-44 flex-shrink-0">
+              <canvas id="waste-chart"></canvas>
+            </div>
+            <div id="chart-legend" class="space-y-2 w-full text-sm"></div>
+          </div>
+        </div>
+
+        <!-- Diagnostic Breakdown -->
+        <div class="bg-white rounded-2xl border border-gray-200 p-6">
+          <h3 class="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-microscope" style="color:#D97706;"></i>
+            Your Waste Breakdown — Line by Line
+          </h3>
+          <div id="waste-items" class="space-y-3"></div>
+        </div>
+
+        <!-- RevForge Fixes -->
+        <div class="rounded-2xl p-6" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;">
+          <h3 class="text-sm font-bold mb-4 flex items-center gap-2" style="color:#14532d;">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            What RevForge Fixes Automatically
+          </h3>
+          <ul id="fixes-list" class="space-y-2 text-sm" style="color:#166534;"></ul>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="py-12">
+  <div class="container-lg">
+    <div class="rounded-2xl p-8 sm:p-10 text-white text-center" style="background:linear-gradient(135deg,#D97706,#b45309);">
+      <h2 class="text-2xl sm:text-3xl font-extrabold mb-3">Connect your account for a free audit</h2>
+      <p class="text-amber-100 mb-6 max-w-xl mx-auto">See your real numbers — exact wasted spend, keyword gaps, and a prioritized fix list. Takes 2 minutes, no credit card.</p>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center">
+        <a href="/ads-grader" class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm bg-white transition hover:bg-amber-50" style="color:#D97706;">
+          <i class="fa-solid fa-magnifying-glass-chart"></i> Free Ads Audit
+        </a>
+        <a href="/signup" class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm bg-black/20 text-white border border-white/30 hover:bg-black/30 transition">
+          <i class="fa-solid fa-rocket"></i> Start Free with RevForge
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Also Try -->
+<section class="py-8 bg-gray-50 border-t border-gray-100">
+  <div class="container-lg">
+    <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Also try these free tools</h3>
+    <div class="grid sm:grid-cols-3 gap-4">
+      <a href="/free-tools/budget-calculator" class="bg-white rounded-xl border border-gray-200 p-4 hover:border-gray-300 hover:shadow-sm transition group">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm" style="background:#1A5C35;">
+            <i class="fa-solid fa-calculator"></i>
+          </div>
+          <p class="font-semibold text-gray-900 text-sm">Budget Calculator</p>
+        </div>
+        <p class="text-xs text-gray-500">Find the right monthly spend for your lead goals</p>
+      </a>
+      <a href="/free-tools/quality-score-calculator" class="bg-white rounded-xl border border-gray-200 p-4 hover:border-gray-300 hover:shadow-sm transition group">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm" style="background:#1E5FA8;">
+            <i class="fa-solid fa-star-half-stroke"></i>
+          </div>
+          <p class="font-semibold text-gray-900 text-sm">Quality Score Calculator</p>
+        </div>
+        <p class="text-xs text-gray-500">See how improving QS saves you money on every click</p>
+      </a>
+      <a href="/free-tools/seasonal-budget-planner" class="bg-white rounded-xl border border-gray-200 p-4 hover:border-gray-300 hover:shadow-sm transition group">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm" style="background:#D97706;">
+            <i class="fa-solid fa-calendar-days"></i>
+          </div>
+          <p class="font-semibold text-gray-900 text-sm">Seasonal Budget Planner</p>
+        </div>
+        <p class="text-xs text-gray-500">Plan 12-month ad spend around demand peaks</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Methodology -->
+<section class="py-10 border-t border-gray-100">
+  <div class="container-md">
+    <h3 class="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
+      <i class="fa-solid fa-circle-info" style="color:#D97706;"></i> How This Estimator Works
+    </h3>
+    <div class="text-sm text-gray-500 space-y-2 leading-relaxed">
+      <p>Waste rates are estimated from industry benchmarks and RevForge account data. <strong>Base waste rate</strong> is determined by account age: new accounts lack historical data for Google's algorithm to optimize (&asymp;42% waste), while mature, well-optimized accounts still carry &asymp;22% structural waste from auction dynamics.</p>
+      <p>Additional waste factors: <strong>Missing negative keywords</strong> (+8%) — without blocking irrelevant searches, trade accounts attract DIY searches, competitor searches, and wrong-service queries. <strong>24/7 bidding</strong> (+7%) — most trade calls happen 7am–7pm; off-hours clicks rarely convert but still cost. <strong>Missing conversion tracking</strong> (+5%) — Google's algorithm optimizes blind, wasting spend on sessions it can't learn from.</p>
+      <p>Waste is capped at 58% (absolute ceiling for any managed account) and floored at 15% (unavoidable market friction). The chart segmentation is a reasonable approximation; exact waste attribution requires real account data from our <a href="/ads-grader" style="color:#D97706;" class="underline">free Ads Grader</a>.</p>
+    </div>
+  </div>
+</section>
+
+<style nonce="{{ g.csp_nonce }}">
+  .toggle-btn { color: #6b7280; }
+  .toggle-btn.active { background: white; color: #1A5C35; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+  .waste-item-bad { background:#fff7ed; border-left:3px solid #D97706; padding:0.75rem 1rem; border-radius:0 0.75rem 0.75rem 0; }
+  .waste-item-ok  { background:#f0fdf4; border-left:3px solid #1A5C35; padding:0.75rem 1rem; border-radius:0 0.75rem 0.75rem 0; }
+</style>
+
+<script nonce="{{ g.csp_nonce }}">
+(function() {
+  // State
+  const state = { negKw: 'yes', hours: 'biz', conv: 'yes' };
+
+  window.setToggle = function(group, val) {
+    state[group === 'neg-kw' ? 'negKw' : group === 'hours' ? 'hours' : 'conv'] = val;
+    // Update button classes
+    const map = { 'neg-kw': ['neg-kw-yes','neg-kw-no'], hours: ['hours-biz','hours-247'], conv: ['conv-yes','conv-no'] };
+    const ids = map[group];
+    ids.forEach(function(id) {
+      const el = document.getElementById(id);
+      const isActive = id.endsWith(val) || id.endsWith(val === 'biz' ? 'biz' : val === '247' ? '247' : val);
+      el.classList.toggle('active', isActive);
+    });
+    calculate();
+  };
+
+  // Fix active state on toggle click
+  function setupToggle(group, ids, vals) {
+    ids.forEach(function(id, i) {
+      document.getElementById(id).addEventListener('click', function() {
+        ids.forEach(function(bid) { document.getElementById(bid).classList.remove('active'); });
+        this.classList.add('active');
+      });
+    });
+  }
+  setupToggle('neg-kw', ['neg-kw-yes','neg-kw-no'], ['yes','no']);
+  setupToggle('hours',  ['hours-biz','hours-247'], ['biz','247']);
+  setupToggle('conv',   ['conv-yes','conv-no'], ['yes','no']);
+
+  const AGE_BASE = { new: 42, '3to12': 35, '1to3': 28, '3plus': 22 };
+  const FIXES = {
+    negKw:  { label: 'Negative keyword list missing', fix: 'RevForge builds and continuously expands your negative keyword list — blocking DIY searchers, wrong-service queries, and competitor brand terms before they cost you a click.' },
+    hours:  { label: 'Running ads 24/7', fix: 'RevForge applies automated ad scheduling based on your business hours and historical conversion data — your budget only runs when people are actually booking.' },
+    conv:   { label: 'No conversion tracking', fix: 'RevForge sets up call tracking, form-submission tracking, and chat lead tracking — giving Google\'s algorithm real conversion signals to optimize bids toward.' },
+    age:    { label: 'Account optimization gaps', fix: 'RevForge audits ad copy, landing page relevance, keyword match types, and bid strategy to close structural waste that accumulates in every account over time.' },
+  };
+
+  let chartInstance = null;
+  const fmt = (n) => '$' + Math.round(n).toLocaleString('en-US');
+
+  function calculate() {
+    const spend     = parseInt(document.getElementById('spend-slider').value, 10);
+    const age       = document.getElementById('account-age').value;
+    const noNegKw   = state.negKw === 'no';
+    const is247     = state.hours === '247';
+    const noConv    = state.conv === 'no';
+
+    let wasteRate   = AGE_BASE[age] || 35;
+    const negKwAdd  = noNegKw ? 8  : 0;
+    const hoursAdd  = is247   ? 7  : 0;
+    const convAdd   = noConv  ? 5  : 0;
+    wasteRate = Math.min(58, Math.max(15, wasteRate + negKwAdd + hoursAdd + convAdd));
+
+    const monthlyWaste = spend * wasteRate / 100;
+    const annualWaste  = monthlyWaste * 12;
+
+    document.getElementById('monthly-waste').textContent = fmt(monthlyWaste);
+    document.getElementById('annual-waste').textContent  = fmt(annualWaste);
+    document.getElementById('waste-pct').textContent     = wasteRate + '%';
+    document.getElementById('spend-display').textContent = fmt(spend);
+
+    // Chart segments (in dollars)
+    const offHours  = is247   ? spend * 0.07 : 0;
+    const nonBuyer  = noNegKw ? spend * 0.08 : 0;
+    const convBlind = noConv  ? spend * 0.05 : 0;
+    const baseWaste = Math.max(0, monthlyWaste - offHours - nonBuyer - convBlind);
+    const effective = spend - monthlyWaste;
+
+    const COLORS = ['#D97706','#f59e0b','#fbbf24','#92400e','#1A5C35'];
+    const segs = [
+      { label: 'Structural waste',       val: baseWaste,  color: '#D97706' },
+      { label: 'Off-hours clicks',        val: offHours,   color: '#f59e0b' },
+      { label: 'Non-buyer searches',      val: nonBuyer,   color: '#fbbf24' },
+      { label: 'Conversion blind spots',  val: convBlind,  color: '#92400e' },
+      { label: 'Used effectively',        val: effective,  color: '#1A5C35' },
+    ].filter(function(s) { return s.val > 0.5; });
+
+    // Chart
+    const ctx = document.getElementById('waste-chart').getContext('2d');
+    if (chartInstance) chartInstance.destroy();
+    chartInstance = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: segs.map(function(s){ return s.label; }),
+        datasets: [{
+          data: segs.map(function(s){ return Math.round(s.val); }),
+          backgroundColor: segs.map(function(s){ return s.color; }),
+          borderWidth: 2,
+          borderColor: '#fff',
+        }]
+      },
+      options: {
+        responsive: true,
+        cutout: '65%',
+        plugins: { legend: { display: false }, tooltip: {
+          callbacks: {
+            label: function(ctx) { return ' ' + fmt(ctx.raw) + ' (' + Math.round(ctx.raw / spend * 100) + '%)'; }
+          }
+        }}
+      }
+    });
+
+    // Legend
+    const legend = document.getElementById('chart-legend');
+    legend.innerHTML = segs.map(function(s) {
+      return '<div class="flex items-center justify-between gap-3"><div class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm flex-shrink-0" style="background:' + s.color + '"></span><span class="text-gray-700">' + s.label + '</span></div><span class="font-semibold text-gray-900">' + fmt(s.val) + '</span></div>';
+    }).join('');
+
+    // Diagnostic line items
+    const items = [];
+    if (AGE_BASE[age] > 22) {
+      items.push({ bad: true, label: 'Account age / optimization', amount: spend * AGE_BASE[age] / 100, desc: 'Campaigns lack the optimization history to avoid low-intent traffic.' });
+    }
+    if (noNegKw) items.push({ bad: true, label: 'Missing negative keywords',   amount: spend * 0.08, desc: 'Ads are showing for DIY, "free", competitor, and wrong-service searches.' });
+    if (is247)   items.push({ bad: true, label: '24/7 bidding (off-hours)',      amount: spend * 0.07, desc: 'Spend is running overnight and on weekends when your phones aren\'t answered.' });
+    if (noConv)  items.push({ bad: true, label: 'No conversion tracking',        amount: spend * 0.05, desc: 'Google can\'t learn which clicks become customers, so it optimizes blindly.' });
+    items.push({ bad: false, label: 'Budget used effectively', amount: effective, desc: 'These clicks are going to in-market searchers with intent to hire.' });
+
+    const itemsEl = document.getElementById('waste-items');
+    itemsEl.innerHTML = items.map(function(item) {
+      return '<div class="' + (item.bad ? 'waste-item-bad' : 'waste-item-ok') + '">' +
+        '<div class="flex items-center justify-between mb-0.5">' +
+          '<span class="font-semibold text-sm text-gray-900">' + item.label + '</span>' +
+          '<span class="font-bold text-sm ' + (item.bad ? 'text-amber-600' : 'text-green-700') + '">' + fmt(item.amount) + '/mo</span>' +
+        '</div>' +
+        '<p class="text-xs text-gray-500">' + item.desc + '</p>' +
+      '</div>';
+    }).join('');
+
+    // Fixes list
+    const fixes = [];
+    fixes.push(FIXES.age);
+    if (noNegKw) fixes.push(FIXES.negKw);
+    if (is247)   fixes.push(FIXES.hours);
+    if (noConv)  fixes.push(FIXES.conv);
+
+    const fixesEl = document.getElementById('fixes-list');
+    fixesEl.innerHTML = fixes.map(function(f) {
+      return '<li class="flex items-start gap-2"><i class="fa-solid fa-check-circle mt-0.5 flex-shrink-0" style="color:#1A5C35;"></i><div><strong class="block text-xs mb-0.5">' + f.label + '</strong>' + f.fix + '</div></li>';
+    }).join('');
+  }
+
+  document.getElementById('spend-slider').addEventListener('input', function() {
+    document.getElementById('spend-display').textContent = '$' + parseInt(this.value).toLocaleString('en-US');
+    calculate();
+  });
+  document.getElementById('account-age').addEventListener('change', calculate);
+
+  calculate();
+})();
+</script>
+{% endblock %}

@@ -525,14 +525,14 @@ class PerformanceMetrics(db.Model):
 class CustomerImpact(db.Model):
     """
     Tracks the cumulative savings and additional leads generated for each customer
-    compared to their pre-FieldSprout baseline.
+    compared to their pre-RevForge baseline.
     """
     __tablename__ = "customer_impact"
 
     id = db.Column(db.BigInteger, primary_key=True)
     account_id = db.Column(db.BigInteger, nullable=False, index=True, unique=True)
 
-    # Baseline metrics (pre-FieldSprout)
+    # Baseline metrics (pre-RevForge)
     baseline_start_date = db.Column(db.Date, nullable=True)
     baseline_end_date = db.Column(db.Date, nullable=True)
     baseline_monthly_spend = db.Column(db.Float, nullable=True, default=0)

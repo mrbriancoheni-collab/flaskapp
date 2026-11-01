@@ -608,7 +608,8 @@ def create_app():
         import app.account.trade_profile_routes        # noqa: F401
         import app.account.performance_timeline_routes # noqa: F401
         import app.account.chat_routes                 # noqa: F401
-        app.logger.info("Extra account routes registered (attribution, capacity, phone, actions, autopilot, trade_profile, timeline, chat)")
+        import app.account.proactive_card_routes       # noqa: F401
+        app.logger.info("Extra account routes registered (attribution, capacity, phone, actions, autopilot, trade_profile, timeline, chat, proactive)")
     except Exception:
         app.logger.exception("Failed to import extra account route modules")
 
@@ -1219,6 +1220,8 @@ def create_app():
             "social_calendar_bp.post_add",
             "social_calendar_bp.post_update",
             "social_calendar_bp.post_delete",
+            # ML event tracking — sendBeacon, no CSRF token
+            "api_bp.track",
             # Market Intelligence AJAX endpoints
             "market_intel_bp.run_research",
             "market_intel_bp.generate_scripts",

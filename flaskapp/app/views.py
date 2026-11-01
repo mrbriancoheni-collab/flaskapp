@@ -192,6 +192,7 @@ def sitemap_xml():
         ("https://getrevforge.io/contact", "0.7", "monthly"),
         ("https://getrevforge.io/free-tools", "0.9", "weekly"),
         ("https://getrevforge.io/free-tools/meta-creative-audit", "0.8", "weekly"),
+        ("https://getrevforge.io/free-tools/audit", "0.9", "weekly"),
         ("https://getrevforge.io/free-tools/budget-calculator", "0.8", "weekly"),
         ("https://getrevforge.io/free-tools/wasted-spend-estimator", "0.8", "weekly"),
         ("https://getrevforge.io/free-tools/quality-score-calculator", "0.8", "weekly"),

@@ -732,6 +732,19 @@ def dashboard():
         flash("We couldn't determine your account. Please log in again.", "error")
         return redirect(url_for("auth_bp.logout"))
 
+    # Redirect new accounts to onboarding if not yet complete
+    try:
+        from sqlalchemy import text as _text
+        with db.engine.connect() as _conn:
+            _row = _conn.execute(
+                _text("SELECT onboarding_complete FROM accounts WHERE id = :aid"),
+                {"aid": aid}
+            ).fetchone()
+            if _row is not None and not _row[0]:
+                return redirect(url_for("onboarding_bp.onboarding_start"))
+    except Exception:
+        pass  # column may not exist yet — don't block dashboard
+
     # Check for cached dashboard data (5-minute TTL)
     force_refresh = request.args.get('refresh') == '1'
     cache_key = f"dashboard_data_{aid}"

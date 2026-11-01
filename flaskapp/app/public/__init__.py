@@ -303,6 +303,8 @@ def lifetime_deal(tier):
 from app.public import maps_audit  # noqa: E402,F401
 # Public LSA lead-cost estimator (registers /lsa-estimator on this blueprint)
 from app.public import lsa_estimator  # noqa: E402,F401
+# Unified free-tools audit entry point + API
+from app.public import audit_routes  # noqa: E402,F401
 
 
 # ---------------------------------------------------------------------------

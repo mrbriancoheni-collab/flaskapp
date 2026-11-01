@@ -1220,8 +1220,9 @@ def create_app():
             "social_calendar_bp.post_add",
             "social_calendar_bp.post_update",
             "social_calendar_bp.post_delete",
-            # ML event tracking — sendBeacon, no CSRF token
+            # ML event tracking + lead capture — sendBeacon / fetch, no CSRF token
             "api_bp.track",
+            "api_bp.capture_email",
             # Market Intelligence AJAX endpoints
             "market_intel_bp.run_research",
             "market_intel_bp.generate_scripts",

@@ -48,6 +48,13 @@ def run_hourly(app, db):
     except Exception:
         app.logger.exception("[CRON] appointment reminders failed")
 
+    try:
+        from app.cron_sms_hook import notify_pending_actions, check_cpl_spikes
+        notify_pending_actions(app, db)
+        check_cpl_spikes(app, db)
+    except Exception:
+        app.logger.exception("[CRON] SMS notifications failed")
+
 
 def run_daily(app, db):
     """

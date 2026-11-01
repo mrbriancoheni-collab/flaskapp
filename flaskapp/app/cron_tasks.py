@@ -639,11 +639,18 @@ def _run_daily_google_ads_intelligence(app) -> None:
 
     for account_id in accounts:
         try:
-            # 1. Mine negative keywords
-            from app.services.google_ads_intelligence import mine_negative_keywords
-            suggestions = mine_negative_keywords(account_id, lookback_days=30)
-            if suggestions:
-                app.logger.info(f"[CRON] Account {account_id}: Found {len(suggestions)} negative keyword suggestions")
+            from app.services.action_generator import _log as _log_decision
+
+            # 1. Negative keyword auto-executor — routes by confidence:
+            #    high-confidence → executes + logs; low-confidence → queues for approval
+            try:
+                from app.services.google_ads_auto_executor import GoogleAdsAutoExecutor
+                executor = GoogleAdsAutoExecutor(account_id)
+                neg_actions = executor.auto_add_negative_keywords(lookback_days=30, dry_run=False)
+                if neg_actions:
+                    app.logger.info(f"[CRON] Account {account_id}: Auto-executor processed {len(neg_actions)} negative keyword actions")
+            except Exception as ex:
+                app.logger.warning(f"[CRON] Account {account_id}: auto_add_negative_keywords failed: {ex}")
 
             # 2. Detect anomalies
             from app.services.google_ads_forecasting import detect_anomalies
@@ -651,22 +658,64 @@ def _run_daily_google_ads_intelligence(app) -> None:
             if anomalies:
                 app.logger.info(f"[CRON] Account {account_id}: Detected {len(anomalies)} anomalies")
 
-            # 3. Run self-healing campaigns (dry run first for safety)
+            # 3. Self-healing campaigns — generate recommendations and queue for approval
             from app.services.google_ads_automation import run_self_healing_campaigns
             result = run_self_healing_campaigns(account_id, dry_run=True)
+            for rec in result.get('recommendations', []):
+                try:
+                    _log_decision({
+                        "account_id":    account_id,
+                        "decision_type": rec.get("action_type", "campaign_change"),
+                        "title":         f"Auto: {rec.get('action_type','change').replace('_',' ').title()} — {rec.get('entity_name','')}"[:120],
+                        "description":   rec.get("reason", ""),
+                        "reasoning":     f"Self-healing rule triggered. Metrics: {rec.get('trigger_metrics', {})}",
+                        "risk_level":    "medium",
+                        "requires_approval": True,
+                        "confidence":    0.80,
+                        "campaign_id":   rec.get("campaign_id"),
+                        "ad_group_id":   rec.get("ad_group_id"),
+                        "customer_id":   None,
+                        "action_data":   str(rec),
+                        "expected_monthly_savings": None,
+                        "expected_monthly_leads":   None,
+                        "expected_improvement_pct": None,
+                    })
+                except Exception:
+                    pass
             if result.get('total_changes', 0) > 0:
-                app.logger.info(f"[CRON] Account {account_id}: Self-healing recommends {result['total_changes']} changes")
+                app.logger.info(f"[CRON] Account {account_id}: Self-healing queued {result['total_changes']} recommendations")
 
-            # 4. Budget reallocation (dry run)
+            # 4. Budget reallocation — queue recommendations for approval
             from app.services.google_ads_automation import reallocate_budgets
             realloc = reallocate_budgets(account_id, dry_run=True)
+            for r in realloc.get('reallocations', []):
+                try:
+                    savings = r.get("estimated_savings") or r.get("expected_savings")
+                    _log_decision({
+                        "account_id":    account_id,
+                        "decision_type": "budget_reallocation",
+                        "title":         f"Budget: Reallocate to {r.get('campaign_name','campaign')}"[:120],
+                        "description":   r.get("reason", ""),
+                        "reasoning":     f"Budget reallocation analysis. Change: {r.get('change_amount')}",
+                        "risk_level":    "low",
+                        "requires_approval": True,
+                        "confidence":    0.85,
+                        "campaign_id":   r.get("campaign_id"),
+                        "ad_group_id":   None,
+                        "customer_id":   None,
+                        "action_data":   str(r),
+                        "expected_monthly_savings": float(savings) if savings else None,
+                        "expected_monthly_leads":   None,
+                        "expected_improvement_pct": None,
+                    })
+                except Exception:
+                    pass
             if realloc.get('reallocations'):
-                app.logger.info(f"[CRON] Account {account_id}: Budget reallocation recommends {len(realloc['reallocations'])} changes")
+                app.logger.info(f"[CRON] Account {account_id}: Budget reallocation queued {len(realloc['reallocations'])} recommendations")
 
             # 5. Seasonal forecasting (weekly)
             if datetime.utcnow().weekday() == 0:  # Monday only
                 from app.services.google_ads_forecasting import forecast_seasonal_demand
-                # Forecast for common service categories
                 for category in ['HVAC', 'Plumbing', 'Roofing', 'Lawn Care']:
                     forecasts = forecast_seasonal_demand(account_id, category, forecast_days=90)
                     if forecasts:

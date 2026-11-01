@@ -1,118 +1,100 @@
-{% extends 'base_app.html' %}
-{% block title %}Performance Timeline – RevForge{% endblock %}
-
-{% block head_extra %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" crossorigin="anonymous"></script>
-{% endblock %}
+{% extends "base_app.html" %}
+{% block title %}Performance Timeline · {{ app_name }}{% endblock %}
 
 {% block content %}
-<div class="w-full max-w-4xl">
+<div class="max-w-4xl mx-auto space-y-6">
 
-  <div class="flex items-center justify-between mb-6">
+  <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-2xl font-semibold text-gray-900">Performance Timeline</h1>
-      <p class="text-sm text-gray-500 mt-1">90-day history of leads, spend, and AI actions.</p>
+      <h1 class="text-2xl font-bold text-gray-900">Performance Timeline</h1>
+      <p class="text-sm text-gray-500 mt-0.5">Cost per lead over the last 90 days.</p>
     </div>
-    <div class="flex gap-2 text-sm">
-      <button onclick="setMetric('leads')" id="btn-leads"
-              class="metric-btn px-3 py-1.5 rounded-lg border font-medium transition bg-green-700 text-white border-green-700">
-        Leads
-      </button>
-      <button onclick="setMetric('spend')" id="btn-spend"
-              class="metric-btn px-3 py-1.5 rounded-lg border font-medium transition text-gray-600 border-gray-300 hover:border-green-500">
-        Spend
-      </button>
-      <button onclick="setMetric('cpl')" id="btn-cpl"
-              class="metric-btn px-3 py-1.5 rounded-lg border font-medium transition text-gray-600 border-gray-300 hover:border-green-500">
-        CPL
-      </button>
-    </div>
+    <a href="{{ url_for('account_bp.dashboard') }}"
+       class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm text-gray-600 hover:bg-gray-50 transition">
+      <i class="fa-solid fa-arrow-left text-xs"></i> Dashboard
+    </a>
   </div>
 
-  <!-- Chart card -->
-  <div class="bg-white border rounded-xl p-6 mb-6">
-    <div id="chart-loading" class="flex items-center justify-center h-48 text-gray-400 text-sm">
-      <svg class="animate-spin h-5 w-5 mr-2 text-green-600" fill="none" viewBox="0 0 24 24">
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-      </svg>
-      Loading data…
+  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+    {% if rows %}
+    <canvas id="cplChart" height="80"></canvas>
+    {% else %}
+    <div class="flex flex-col items-center justify-center py-16 text-center text-gray-400">
+      <i class="fa-solid fa-chart-line text-4xl mb-3 text-gray-200"></i>
+      <p class="font-medium">No performance data yet.</p>
+      <p class="text-sm mt-1">Connect your Google Ads account to start tracking CPL.</p>
+      <a href="{{ url_for('account_bp.dashboard') }}"
+         class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition">
+        Connect Now
+      </a>
     </div>
-    <canvas id="perfChart" class="hidden" height="80"></canvas>
+    {% endif %}
   </div>
 
-  <!-- Summary tiles -->
-  <div class="grid grid-cols-3 gap-4 mb-6" id="summary-tiles">
-    <div class="bg-white border rounded-xl p-4 text-center">
-      <p class="text-xs text-gray-500 mb-1">Total Leads</p>
-      <p class="text-2xl font-bold text-gray-900" id="tile-leads">—</p>
+  {% if rows %}
+  <div class="grid grid-cols-3 gap-4">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 text-center">
+      <div class="text-2xl font-bold text-gray-900" id="avgCpl">—</div>
+      <div class="text-xs text-gray-500 mt-1">Avg CPL (90d)</div>
     </div>
-    <div class="bg-white border rounded-xl p-4 text-center">
-      <p class="text-xs text-gray-500 mb-1">Total Spend</p>
-      <p class="text-2xl font-bold text-gray-900" id="tile-spend">—</p>
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 text-center">
+      <div class="text-2xl font-bold text-gray-900" id="bestCpl">—</div>
+      <div class="text-xs text-gray-500 mt-1">Best CPL</div>
     </div>
-    <div class="bg-white border rounded-xl p-4 text-center">
-      <p class="text-xs text-gray-500 mb-1">Avg CPL</p>
-      <p class="text-2xl font-bold text-gray-900" id="tile-cpl">—</p>
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 text-center">
+      <div class="text-2xl font-bold text-gray-900" id="totalSpend">—</div>
+      <div class="text-xs text-gray-500 mt-1">Total Spend</div>
     </div>
   </div>
+  {% endif %}
 
-  <!-- AI actions log -->
-  <div class="bg-white border rounded-xl p-6">
-    <h2 class="text-base font-semibold text-gray-900 mb-4">AI Actions Applied</h2>
-    <div id="actions-list" class="space-y-3 text-sm text-gray-500 italic">Loading…</div>
-  </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
+{% if rows %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" crossorigin="anonymous"></script>
 <script>
-let allData = null;
-let currentMetric = 'leads';
-let chart = null;
+  const RAW = {{ rows | tojson }};
+  const acctCreated = {{ (account_created | string | tojson) if account_created else 'null' }};
 
-const METRIC_LABELS = { leads: 'Leads', spend: 'Ad Spend ($)', cpl: 'Cost per Lead ($)' };
-const CHART_COLORS = { leads: '#1A5C35', spend: '#D97706', cpl: '#1E5FA8' };
+  const labels = RAW.map(r => r.date);
+  const cpls   = RAW.map(r => r.cpl);
+  const spends = RAW.map(r => r.spend);
 
-async function loadData() {
-  const res = await fetch('/account/performance/data.json');
-  allData = await res.json();
-  renderChart();
-  renderTiles();
-  renderActions();
-  document.getElementById('chart-loading').classList.add('hidden');
-  document.getElementById('perfChart').classList.remove('hidden');
-}
+  // Summary stats
+  const validCpls = cpls.filter(v => v !== null);
+  if (validCpls.length) {
+    const avg  = validCpls.reduce((a,b) => a+b, 0) / validCpls.length;
+    const best = Math.min(...validCpls);
+    document.getElementById('avgCpl').textContent   = '$' + avg.toFixed(0);
+    document.getElementById('bestCpl').textContent  = '$' + best.toFixed(0);
+  }
+  const totalSpend = spends.reduce((a,b) => a+b, 0);
+  document.getElementById('totalSpend').textContent = '$' + totalSpend.toFixed(0);
 
-function setMetric(m) {
-  currentMetric = m;
-  document.querySelectorAll('.metric-btn').forEach(b => {
-    b.classList.remove('bg-green-700','text-white','border-green-700');
-    b.classList.add('text-gray-600','border-gray-300');
-  });
-  const active = document.getElementById('btn-' + m);
-  active.classList.add('bg-green-700','text-white','border-green-700');
-  active.classList.remove('text-gray-600','border-gray-300');
-  if (allData) renderChart();
-}
+  // "Started RevForge" annotation index
+  let startIdx = null;
+  if (acctCreated) {
+    const startDate = acctCreated.slice(0, 10);
+    startIdx = labels.findIndex(l => l >= startDate);
+  }
 
-function renderChart() {
-  const metrics = allData.metrics || [];
-  const labels = metrics.map(d => d.date);
-  const values = metrics.map(d => d[currentMetric]);
-  const color  = CHART_COLORS[currentMetric];
-
-  if (chart) chart.destroy();
-  chart = new Chart(document.getElementById('perfChart'), {
+  const ctx = document.getElementById('cplChart').getContext('2d');
+  new Chart(ctx, {
     type: 'line',
     data: {
       labels,
       datasets: [{
-        label: METRIC_LABELS[currentMetric],
-        data: values,
-        borderColor: color,
-        backgroundColor: color + '18',
-        fill: true,
+        label: 'Cost per Lead ($)',
+        data: cpls,
+        borderColor: '#1A5C35',
+        backgroundColor: 'rgba(26,92,53,0.08)',
+        borderWidth: 2,
         tension: 0.3,
-        pointRadius: 2,
+        fill: true,
+        spanGaps: true,
+        pointRadius: 3,
         pointHoverRadius: 5,
       }]
     },
@@ -120,48 +102,49 @@ function renderChart() {
       responsive: true,
       plugins: {
         legend: { display: false },
-        tooltip: { mode: 'index', intersect: false }
+        tooltip: {
+          callbacks: {
+            label: ctx => ctx.parsed.y !== null ? `$${ctx.parsed.y.toFixed(2)} CPL` : 'No data'
+          }
+        },
+        annotation: startIdx !== null ? {
+          annotations: {
+            startLine: {
+              type: 'line',
+              xMin: startIdx,
+              xMax: startIdx,
+              borderColor: '#D97706',
+              borderWidth: 2,
+              borderDash: [4,3],
+              label: {
+                display: true,
+                content: 'Started RevForge',
+                position: 'start',
+                color: '#D97706',
+                font: { size: 11 },
+              }
+            }
+          }
+        } : {},
       },
       scales: {
-        x: { grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 11 } } },
-        y: { beginAtZero: true, ticks: { font: { size: 11 } } }
+        y: {
+          beginAtZero: false,
+          ticks: {
+            callback: v => '$' + v
+          },
+          grid: { color: 'rgba(0,0,0,0.05)' }
+        },
+        x: {
+          ticks: {
+            maxTicksLimit: 10,
+            maxRotation: 0,
+          },
+          grid: { display: false }
+        }
       }
     }
   });
-}
-
-function renderTiles() {
-  const m = allData.metrics || [];
-  const totalLeads = m.reduce((s, d) => s + d.leads, 0);
-  const totalSpend = m.reduce((s, d) => s + d.spend, 0);
-  const avgCpl     = totalLeads > 0 ? (totalSpend / totalLeads).toFixed(2) : '—';
-  document.getElementById('tile-leads').textContent = totalLeads.toLocaleString();
-  document.getElementById('tile-spend').textContent = '$' + totalSpend.toLocaleString(undefined, {maximumFractionDigits: 0});
-  document.getElementById('tile-cpl').textContent   = avgCpl !== '—' ? '$' + avgCpl : '—';
-}
-
-function renderActions() {
-  const el = document.getElementById('actions-list');
-  const decisions = allData.decisions || [];
-  if (!decisions.length) {
-    el.innerHTML = '<p class="text-gray-400">No AI actions applied in the last 90 days.</p>';
-    return;
-  }
-  el.innerHTML = decisions.map(d => `
-    <div class="flex items-start gap-3 py-2 border-b border-gray-100 last:border-0">
-      <span class="mt-0.5 w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mt-1.5"></span>
-      <div class="flex-1 min-w-0">
-        <div class="flex items-center gap-2 flex-wrap">
-          <span class="font-medium text-gray-800">${d.type.replace(/_/g,' ')}</span>
-          <span class="text-xs text-gray-400">${d.date}</span>
-          <span class="text-xs px-2 py-0.5 rounded-full ${d.status === 'auto_executed' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}">${d.status.replace(/_/g,' ')}</span>
-        </div>
-        ${d.reason ? `<p class="text-xs text-gray-500 mt-0.5 truncate">${d.reason}</p>` : ''}
-      </div>
-    </div>
-  `).join('');
-}
-
-loadData();
 </script>
+{% endif %}
 {% endblock %}

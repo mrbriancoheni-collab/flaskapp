@@ -424,6 +424,11 @@
         <i class="fa-solid fa-chart-line text-blue-500"></i><span>Performance</span>
       </a>
       {% endif %}
+      {% if has_endpoint('account_bp.rsa_generator') %}
+      <a href="{{ url_for('account_bp.rsa_generator') }}" class="block px-3 py-3 rounded nav-link min-h-12 {% if SECTION=='rsa_generator' %}font-semibold text-green-700{% endif %}">
+        <i class="fa-solid fa-wand-magic-sparkles text-purple-500"></i><span>Ad Copy AI</span>
+      </a>
+      {% endif %}
       {% endif %}
 
       <!-- WordPress & Content Section -->

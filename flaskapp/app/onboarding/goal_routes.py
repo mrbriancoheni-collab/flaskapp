@@ -37,6 +37,32 @@ def _upsert(conn, aid: int, key: str, value: str) -> None:
     )
 
 
+@onboarding_bp.route("/preview", methods=["GET"], endpoint="onboarding_preview")
+@login_required
+def onboarding_preview():
+    from app.account import current_account_id
+    aid = current_account_id()
+    trade = ""
+    try:
+        with db.engine.connect() as conn:
+            row = conn.execute(
+                text("SELECT value FROM account_settings WHERE account_id = :aid AND `key` = 'trade_type' LIMIT 1"),
+                {"aid": aid},
+            ).fetchone()
+            if row:
+                trade = row[0]
+    except Exception as e:
+        log.warning("onboarding_preview: could not load trade: %s", e)
+    return render_template("onboard/campaign_preview.html", trade=trade)
+
+
+@onboarding_bp.route("/preview/skip", methods=["POST"], endpoint="onboarding_preview_skip")
+@login_required
+def onboarding_preview_skip():
+    # onboarding_complete was already set in goal_save; just send to dashboard
+    return redirect(url_for("account_bp.dashboard") + "?onboarded=1")
+
+
 @onboarding_bp.route("/goal", methods=["GET"], endpoint="onboarding_goal")
 @login_required
 def onboarding_goal():
@@ -81,4 +107,4 @@ def onboarding_goal_save():
         flash("Could not save. Please try again.", "error")
         return redirect(url_for("onboarding_bp.onboarding_goal"))
 
-    return redirect(url_for("account_bp.dashboard") + "?onboarded=1")
+    return redirect(url_for("onboarding_bp.onboarding_preview"))

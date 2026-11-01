@@ -73,12 +73,21 @@
         First improvements show up within 48 hours.
       </p>
       <div class="flex flex-col sm:flex-row gap-3 justify-center">
-        <a href="/account/connect/google" class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-emerald-800 font-bold rounded-lg hover:bg-emerald-50 transition">
+        {% if has_endpoint('account_bp.connect') %}
+        <a href="{{ url_for('account_bp.connect', provider='ads') }}" class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-emerald-800 font-bold rounded-lg hover:bg-emerald-50 transition">
           <i class="fa-brands fa-google"></i> Connect Google Ads
         </a>
-        <a href="{{ url_for('account_bp.dashboard') }}" class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-500 transition border border-emerald-500">
-          Go to Dashboard →
+        {% else %}
+        <a href="/account/connect/ads" class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-emerald-800 font-bold rounded-lg hover:bg-emerald-50 transition">
+          <i class="fa-brands fa-google"></i> Connect Google Ads
         </a>
+        {% endif %}
+        <form method="post" action="{{ url_for('onboarding_bp.onboarding_preview_skip') }}" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-500 transition border border-emerald-500 w-full sm:w-auto cursor-pointer">
+            Skip for now →
+          </button>
+        </form>
       </div>
     </div>
 
@@ -167,14 +176,21 @@ function buildAdGroupCard(name) {
 }
 
 function renderStructure() {
-  // Try to read detected trade from sessionStorage (set during onboarding)
   let trade = 'default';
-  try {
-    const stored = sessionStorage.getItem('rf_detected_trade');
-    if (stored && TRADE_STRUCTURES[stored]) trade = stored;
-  } catch(e) {}
 
-  // Also try URL param ?trade=hvac
+  // 1. Server-side trade from account_settings (most reliable)
+  const serverTrade = "{{ trade | lower | replace(' ', '_') }}";
+  if (serverTrade && TRADE_STRUCTURES[serverTrade]) trade = serverTrade;
+
+  // 2. sessionStorage fallback (set during onboarding wizard)
+  if (trade === 'default') {
+    try {
+      const stored = sessionStorage.getItem('rf_detected_trade');
+      if (stored && TRADE_STRUCTURES[stored]) trade = stored;
+    } catch(e) {}
+  }
+
+  // 3. URL param ?trade=hvac
   const params = new URLSearchParams(window.location.search);
   const paramTrade = params.get('trade');
   if (paramTrade && TRADE_STRUCTURES[paramTrade]) trade = paramTrade;

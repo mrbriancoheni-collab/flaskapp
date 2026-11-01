@@ -2,365 +2,268 @@
 {% block title %}RSA Ad Copy Generator – RevForge{% endblock %}
 
 {% block content %}
-<style>
-  :root {
-    --forge-green: #1A5C35;
-    --forge-green-dark: #144a2a;
-    --rev-amber: #D97706;
-    --prec-blue: #1E5FA8;
-  }
-  .char-ok   { background: #dcfce7; color: #15803d; }
-  .char-warn { background: #fef9c3; color: #a16207; }
-  .char-over { background: #fee2e2; color: #dc2626; }
-  .headline-chip {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 6px 10px; border-radius: 8px;
-    border: 1px solid #e5e7eb; background: #f9fafb;
-    font-size: 0.8125rem; font-weight: 500; color: #111827;
-    cursor: pointer; transition: background 0.15s;
-  }
-  .headline-chip:hover { background: #f3f4f6; }
-  .desc-card {
-    border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px 16px;
-    background: #f9fafb; cursor: pointer; transition: background 0.15s;
-  }
-  .desc-card:hover { background: #f3f4f6; }
-  .tone-radio input[type=radio] { display: none; }
-  .tone-radio input[type=radio]:checked + label {
-    border-color: var(--forge-green); background: #f0fdf4; color: var(--forge-green); font-weight: 600;
-  }
-  .rf-btn-primary {
-    background: var(--forge-green); color: #fff; font-weight: 700;
-    padding: 10px 24px; border-radius: 8px; border: none; cursor: pointer;
-    display: inline-flex; align-items: center; gap-8px; transition: background 0.15s;
-  }
-  .rf-btn-primary:hover { background: var(--forge-green-dark); }
-  .rf-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
-</style>
+<div class="w-full max-w-5xl">
 
-<div class="w-full max-w-6xl">
-
-  <div class="mb-6 flex items-center justify-between flex-wrap gap-3">
-    <div>
-      <h1 class="text-2xl font-semibold text-gray-900">RSA Ad Copy Generator</h1>
-      <p class="text-sm text-gray-500 mt-1">Generate Google Ads Responsive Search Ad headlines and descriptions instantly using AI.</p>
-    </div>
-    <a href="{{ url_for('account_bp.dashboard') }}" class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
-      <i class="fa-solid fa-arrow-left text-xs"></i> Back to Dashboard
-    </a>
+  <div class="mb-6">
+    <h1 class="text-2xl font-semibold text-gray-900">Google Ads RSA Generator</h1>
+    <p class="text-sm text-gray-500 mt-1">Generate trade-specific headlines and descriptions for Responsive Search Ads using AI.</p>
   </div>
 
-  <div class="flex flex-col lg:flex-row gap-6">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-    <!-- ── Left: Input form ─────────────────────────────────── -->
-    <div class="lg:w-80 flex-shrink-0">
-      <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm sticky top-4">
-        <h2 class="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <i class="fa-solid fa-sliders text-sm" style="color:var(--forge-green);"></i>
-          Your Business Details
-        </h2>
+    <!-- Left: Input form -->
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+      <h2 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+        <i class="fa-solid fa-pen-to-square text-sm" style="color:#1A5C35;"></i> Campaign details
+      </h2>
 
-        <form id="rsaForm" class="space-y-4">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Trade / Industry</label>
+          <select id="rf-trade" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600">
+            <option value="HVAC">HVAC</option>
+            <option value="Plumbing">Plumbing</option>
+            <option value="Electrical">Electrical</option>
+            <option value="Roofing">Roofing</option>
+            <option value="Pest Control">Pest Control</option>
+            <option value="Landscaping">Landscaping</option>
+            <option value="Painting">Painting</option>
+            <option value="Flooring">Flooring</option>
+            <option value="Handyman">Handyman</option>
+            <option value="Pool Service">Pool Service</option>
+            <option value="Garage Doors">Garage Doors</option>
+            <option value="Gutters">Gutters</option>
+          </select>
+        </div>
 
-          <!-- Trade -->
-          <div>
-            <label class="block text-xs font-semibold text-gray-700 mb-1">Trade / Industry <span class="text-red-500">*</span></label>
-            <select name="trade" id="tradeSelect" required
-              class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-600">
-              <option value="">Select your trade…</option>
-              <option value="HVAC">HVAC (Heating & Cooling)</option>
-              <option value="Plumbing">Plumbing</option>
-              <option value="Electrical">Electrical</option>
-              <option value="Roofing">Roofing</option>
-              <option value="Pest Control">Pest Control</option>
-              <option value="Landscaping">Landscaping</option>
-              <option value="Painting">Painting</option>
-              <option value="Flooring">Flooring</option>
-              <option value="Garage Door">Garage Door</option>
-              <option value="Locksmith">Locksmith</option>
-              <option value="Cleaning">Cleaning / Janitorial</option>
-              <option value="Solar">Solar Installation</option>
-              <option value="General Contractor">General Contractor</option>
-            </select>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Specific service <span class="text-gray-400 font-normal">(optional)</span></label>
+          <input id="rf-service" type="text" placeholder="e.g. AC repair, water heater replacement, leak detection"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">City / Service area</label>
+          <input id="rf-location" type="text" placeholder="e.g. Phoenix AZ, Dallas TX"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Unique selling points</label>
+          <input id="rf-usp1" type="text" placeholder="Licensed & Insured, 15+ years"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 mb-2">
+          <input id="rf-usp2" type="text" placeholder="Same-day service available"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 mb-2">
+          <input id="rf-usp3" type="text" placeholder="Free estimates, no hidden fees"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Tone</label>
+          <div class="flex gap-3">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="rf-tone" value="professional" checked class="accent-green-700"> <span class="text-sm">Professional</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="rf-tone" value="urgent" class="accent-green-700"> <span class="text-sm">Urgent</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="rf-tone" value="friendly" class="accent-green-700"> <span class="text-sm">Friendly</span>
+            </label>
           </div>
+        </div>
 
-          <!-- Service -->
-          <div>
-            <label class="block text-xs font-semibold text-gray-700 mb-1">Specific Service</label>
-            <input type="text" name="service" id="serviceInput"
-              placeholder="e.g. AC repair, drain cleaning, panel upgrades…"
-              class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-600">
-          </div>
+        <button id="rf-generate-btn" onclick="rfGenerate()"
+          class="w-full py-3 rounded-lg font-bold text-white text-sm transition flex items-center justify-center gap-2"
+          style="background:#1A5C35;">
+          <i class="fa-solid fa-bolt" id="rf-btn-icon"></i>
+          <span id="rf-btn-text">Generate RSA Copy</span>
+        </button>
 
-          <!-- Location -->
-          <div>
-            <label class="block text-xs font-semibold text-gray-700 mb-1">City / Service Area</label>
-            <input type="text" name="location" id="locationInput"
-              placeholder="e.g. Austin TX, Phoenix Metro…"
-              class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-600">
-          </div>
-
-          <!-- USPs -->
-          <div>
-            <label class="block text-xs font-semibold text-gray-700 mb-1">Unique Selling Points</label>
-            <div class="space-y-2">
-              <input type="text" name="usp1" placeholder="Licensed & Insured 15+ years"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-600">
-              <input type="text" name="usp2" placeholder="Same-day service available"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-600">
-              <input type="text" name="usp3" placeholder="Free estimates, no hidden fees"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-600">
-            </div>
-          </div>
-
-          <!-- Tone -->
-          <div>
-            <label class="block text-xs font-semibold text-gray-700 mb-2">Tone</label>
-            <div class="flex gap-2">
-              <div class="tone-radio flex-1">
-                <input type="radio" name="tone" id="tonePro" value="professional" checked>
-                <label for="tonePro" class="block text-center text-xs border border-gray-300 rounded-lg py-2 cursor-pointer">Professional</label>
-              </div>
-              <div class="tone-radio flex-1">
-                <input type="radio" name="tone" id="toneUrg" value="urgent">
-                <label for="toneUrg" class="block text-center text-xs border border-gray-300 rounded-lg py-2 cursor-pointer">Urgent</label>
-              </div>
-              <div class="tone-radio flex-1">
-                <input type="radio" name="tone" id="toneFri" value="friendly">
-                <label for="toneFri" class="block text-center text-xs border border-gray-300 rounded-lg py-2 cursor-pointer">Friendly</label>
-              </div>
-            </div>
-          </div>
-
-          <button type="submit" id="generateBtn" class="rf-btn-primary w-full justify-center text-sm">
-            <span id="btnText"><i class="fa-solid fa-bolt mr-1.5"></i> Generate Ad Copy</span>
-            <span id="btnSpinner" class="hidden">
-              <svg class="animate-spin h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-              </svg>
-              Generating…
-            </span>
-          </button>
-        </form>
+        <p id="rf-error" class="hidden text-sm text-red-600 text-center"></p>
       </div>
     </div>
 
-    <!-- ── Right: Results ───────────────────────────────────── -->
-    <div class="flex-1 min-w-0">
+    <!-- Right: Results -->
+    <div id="rf-results" class="hidden space-y-4">
 
-      <!-- Empty state -->
-      <div id="emptyState" class="bg-white rounded-xl border border-dashed border-gray-300 p-12 text-center">
-        <div class="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
-          <i class="fa-solid fa-wand-magic-sparkles text-2xl" style="color:var(--forge-green);"></i>
-        </div>
-        <h3 class="font-semibold text-gray-800 mb-2">Ready to generate</h3>
-        <p class="text-sm text-gray-500 max-w-xs mx-auto">Fill in your business details and click Generate to get 15 headlines + 4 descriptions optimized for Google Ads.</p>
-      </div>
-
-      <!-- Results (hidden until generated) -->
-      <div id="resultsPanel" class="hidden space-y-5">
-
-        <!-- Action bar -->
-        <div class="flex items-center justify-between gap-3 flex-wrap">
-          <div class="flex items-center gap-2">
-            <span id="fallbackBadge" class="hidden text-xs px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full font-medium">
-              <i class="fa-solid fa-circle-info mr-1"></i>Sample copy — connect AI for custom results
-            </span>
-          </div>
-          <div class="flex gap-2">
-            <button onclick="copyAll()" class="text-xs px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 font-medium flex items-center gap-1.5">
-              <i class="fa-regular fa-copy"></i> Copy All
-            </button>
-            <button onclick="document.getElementById('rsaForm').dispatchEvent(new Event('submit'))"
-              class="text-xs px-3 py-2 rounded-lg font-medium flex items-center gap-1.5 text-white"
-              style="background:var(--forge-green);">
-              <i class="fa-solid fa-rotate-right"></i> Regenerate
-            </button>
-          </div>
-        </div>
-
-        <!-- Headlines -->
-        <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="font-semibold text-gray-900 text-sm flex items-center gap-2">
-              <i class="fa-solid fa-heading text-xs" style="color:var(--forge-green);"></i>
-              Headlines <span class="text-gray-400 font-normal">(15 of 15)</span>
-            </h3>
-            <span class="text-xs text-gray-400">Max 30 characters each</span>
-          </div>
-          <div id="headlinesList" class="flex flex-wrap gap-2"></div>
-        </div>
-
-        <!-- Descriptions -->
-        <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="font-semibold text-gray-900 text-sm flex items-center gap-2">
-              <i class="fa-solid fa-align-left text-xs" style="color:var(--prec-blue);"></i>
-              Descriptions <span class="text-gray-400 font-normal">(4 of 4)</span>
-            </h3>
-            <span class="text-xs text-gray-400">Max 90 characters each</span>
-          </div>
-          <div id="descriptionsList" class="space-y-3"></div>
-        </div>
-
-        <!-- Quality tips -->
-        <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-          <h3 class="font-semibold text-gray-900 text-sm flex items-center gap-2 mb-3">
-            <i class="fa-solid fa-lightbulb text-xs" style="color:var(--rev-amber);"></i>
-            Quality Tips
+      <!-- Headlines -->
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold text-gray-800 text-sm flex items-center gap-2">
+            <i class="fa-solid fa-heading" style="color:#1A5C35;"></i> Headlines
+            <span class="text-xs text-gray-400 font-normal">(15 · max 30 chars each)</span>
           </h3>
-          <ul id="qualityNotes" class="space-y-2"></ul>
+          <button onclick="rfCopyHeadlines()" class="text-xs font-medium px-2 py-1 rounded border border-gray-200 hover:bg-gray-50 transition flex items-center gap-1">
+            <i class="fa-regular fa-copy"></i> Copy all
+          </button>
         </div>
-
-        <!-- How to use -->
-        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
-          <p class="text-xs font-semibold text-blue-800 mb-1"><i class="fa-solid fa-circle-info mr-1"></i>How to use in Google Ads</p>
-          <p class="text-xs text-blue-700">In your Google Ads account, go to <strong>Ads &amp; assets → New ad → Responsive search ad</strong>. Paste headlines and descriptions one by one. Google will test combinations automatically — aim to pin your top CTA headline to position 1.</p>
-        </div>
-
+        <div id="rf-headlines" class="flex flex-wrap gap-2"></div>
       </div>
 
-      <!-- Error state -->
-      <div id="errorState" class="hidden bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-        <i class="fa-solid fa-circle-exclamation text-2xl text-red-400 mb-3 block"></i>
-        <p class="text-sm font-semibold text-red-700" id="errorMsg">Generation failed — please try again.</p>
-        <button onclick="document.getElementById('errorState').classList.add('hidden'); document.getElementById('emptyState').classList.remove('hidden');"
-          class="mt-3 text-xs text-red-600 underline">Dismiss</button>
+      <!-- Descriptions -->
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold text-gray-800 text-sm flex items-center gap-2">
+            <i class="fa-solid fa-align-left" style="color:#1E5FA8;"></i> Descriptions
+            <span class="text-xs text-gray-400 font-normal">(4 · max 90 chars each)</span>
+          </h3>
+          <button onclick="rfCopyDescriptions()" class="text-xs font-medium px-2 py-1 rounded border border-gray-200 hover:bg-gray-50 transition flex items-center gap-1">
+            <i class="fa-regular fa-copy"></i> Copy all
+          </button>
+        </div>
+        <div id="rf-descriptions" class="space-y-2"></div>
       </div>
 
+      <!-- Quality notes -->
+      <div class="bg-amber-50 rounded-xl border border-amber-100 p-5">
+        <h3 class="font-semibold text-amber-800 text-sm flex items-center gap-2 mb-3">
+          <i class="fa-solid fa-lightbulb" style="color:#D97706;"></i> AI Quality Tips
+        </h3>
+        <ul id="rf-notes" class="space-y-2"></ul>
+      </div>
+
+      <!-- Fallback notice -->
+      <p id="rf-fallback-notice" class="hidden text-xs text-gray-400 text-center">
+        <i class="fa-solid fa-circle-info mr-1"></i> AI unavailable — showing template copy. Connect an AI provider in settings to generate custom copy.
+      </p>
+
+      <!-- Actions -->
+      <div class="flex gap-3">
+        <button onclick="rfGenerate()" class="flex-1 py-2.5 rounded-lg font-semibold text-sm border border-gray-200 hover:bg-gray-50 transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-rotate-right"></i> Regenerate
+        </button>
+        <button onclick="rfCopyAll()" class="flex-1 py-2.5 rounded-lg font-bold text-white text-sm transition flex items-center justify-center gap-2" style="background:#1A5C35;">
+          <i class="fa-regular fa-copy"></i> Copy Everything
+        </button>
+      </div>
     </div>
+
+    <!-- Right placeholder (before first generation) -->
+    <div id="rf-placeholder" class="bg-gray-50 rounded-xl border border-dashed border-gray-300 flex flex-col items-center justify-center p-12 text-center">
+      <div class="w-14 h-14 rounded-full bg-white border border-gray-200 flex items-center justify-center mb-4 shadow-sm">
+        <i class="fa-solid fa-wand-magic-sparkles text-xl" style="color:#1A5C35;"></i>
+      </div>
+      <p class="text-gray-600 font-medium mb-1">Your RSA copy will appear here</p>
+      <p class="text-sm text-gray-400">Fill in the details and click Generate</p>
+    </div>
+
   </div>
 </div>
 
-<script nonce="{{ g.csp_nonce }}">
-(function() {
-  const form = document.getElementById('rsaForm');
-  const btn  = document.getElementById('generateBtn');
-  const btnText    = document.getElementById('btnText');
-  const btnSpinner = document.getElementById('btnSpinner');
+<script>
+let _lastCopy = null;
 
-  form.addEventListener('submit', async function(e) {
-    e.preventDefault();
+async function rfGenerate() {
+  const trade    = document.getElementById('rf-trade').value;
+  const service  = document.getElementById('rf-service').value.trim();
+  const location = document.getElementById('rf-location').value.trim();
+  const usp1     = document.getElementById('rf-usp1').value.trim();
+  const usp2     = document.getElementById('rf-usp2').value.trim();
+  const usp3     = document.getElementById('rf-usp3').value.trim();
+  const tone     = document.querySelector('input[name="rf-tone"]:checked').value;
 
-    const trade = document.getElementById('tradeSelect').value;
-    if (!trade) {
-      document.getElementById('tradeSelect').focus();
-      return;
-    }
-
-    // Loading state
-    btn.disabled = true;
-    btnText.classList.add('hidden');
-    btnSpinner.classList.remove('hidden');
-    document.getElementById('emptyState').classList.add('hidden');
-    document.getElementById('errorState').classList.add('hidden');
-    document.getElementById('resultsPanel').classList.add('hidden');
-
-    const payload = {
-      trade:    trade,
-      service:  document.querySelector('[name=service]').value,
-      location: document.querySelector('[name=location]').value,
-      usp1:     document.querySelector('[name=usp1]').value,
-      usp2:     document.querySelector('[name=usp2]').value,
-      usp3:     document.querySelector('[name=usp3]').value,
-      tone:     document.querySelector('[name=tone]:checked').value,
-    };
-
-    try {
-      const resp = await fetch('/account/ads/rsa-generator', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': document.querySelector('[name=csrf_token]').value,
-        },
-        body: JSON.stringify(payload),
-      });
-      const data = await resp.json();
-
-      if (!data.ok) throw new Error(data.error || 'Unknown error');
-
-      renderResults(data.copy);
-
-    } catch (err) {
-      document.getElementById('errorMsg').textContent = err.message || 'Generation failed — please try again.';
-      document.getElementById('errorState').classList.remove('hidden');
-    } finally {
-      btn.disabled = false;
-      btnText.classList.remove('hidden');
-      btnSpinner.classList.add('hidden');
-    }
-  });
-
-  function charClass(len, max) {
-    if (len <= max) return 'char-ok';
-    if (len <= max + 5) return 'char-warn';
-    return 'char-over';
+  if (!location) {
+    rfShowError('Enter your city or service area first.');
+    return;
   }
 
-  function renderResults(copy) {
-    // Fallback badge
-    const fb = document.getElementById('fallbackBadge');
-    if (copy.fallback) fb.classList.remove('hidden');
-    else fb.classList.add('hidden');
+  rfSetLoading(true);
+  rfHideError();
 
-    // Headlines
-    const hl = document.getElementById('headlinesList');
-    hl.innerHTML = (copy.headlines || []).map((h, i) => {
-      const cls = charClass(h.length, 30);
-      return `<div class="headline-chip" title="Click to copy" onclick="copyText('${h.replace(/'/g,"\\'")}')">
-        <span>${escHtml(h)}</span>
-        <span class="text-xs px-1.5 py-0.5 rounded font-mono ${cls}">${h.length}</span>
-      </div>`;
-    }).join('');
-
-    // Descriptions
-    const dl = document.getElementById('descriptionsList');
-    dl.innerHTML = (copy.descriptions || []).map((d, i) => {
-      const cls = charClass(d.length, 90);
-      return `<div class="desc-card" onclick="copyText('${d.replace(/'/g,"\\'")}')">
-        <div class="flex items-start justify-between gap-3">
-          <p class="text-sm text-gray-800 leading-relaxed">${escHtml(d)}</p>
-          <span class="flex-shrink-0 text-xs px-1.5 py-0.5 rounded font-mono ${cls}">${d.length}/90</span>
-        </div>
-      </div>`;
-    }).join('');
-
-    // Quality notes
-    const qn = document.getElementById('qualityNotes');
-    qn.innerHTML = (copy.quality_notes || []).map(n =>
-      `<li class="flex items-start gap-2 text-sm text-gray-700">
-        <i class="fa-solid fa-circle-check text-xs mt-1 flex-shrink-0" style="color:var(--forge-green);"></i>
-        <span>${escHtml(n)}</span>
-      </li>`
-    ).join('');
-
-    document.getElementById('resultsPanel').classList.remove('hidden');
-  }
-
-  window.copyAll = function() {
-    const headlines = Array.from(document.querySelectorAll('#headlinesList .headline-chip span:first-child'))
-      .map(s => s.textContent.trim());
-    const descriptions = Array.from(document.querySelectorAll('#descriptionsList .desc-card p'))
-      .map(p => p.textContent.trim());
-    const text = 'HEADLINES:\n' + headlines.map((h,i)=>`${i+1}. ${h}`).join('\n') +
-                 '\n\nDESCRIPTIONS:\n' + descriptions.map((d,i)=>`${i+1}. ${d}`).join('\n');
-    navigator.clipboard.writeText(text).then(() => {
-      const btn = event.target.closest('button');
-      const orig = btn.innerHTML;
-      btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
-      setTimeout(() => { btn.innerHTML = orig; }, 2000);
+  try {
+    const resp = await fetch('/account/ads/rsa-generator', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
+      body: JSON.stringify({trade, service, location, usp1, usp2, usp3, tone}),
     });
-  };
-
-  window.copyText = function(text) {
-    navigator.clipboard.writeText(text).catch(() => {});
-  };
-
-  function escHtml(str) {
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const json = await resp.json();
+    if (!json.ok) { rfShowError(json.error || 'Generation failed. Try again.'); return; }
+    _lastCopy = json.copy;
+    rfRenderResults(json.copy);
+  } catch(e) {
+    rfShowError('Network error — please try again.');
+  } finally {
+    rfSetLoading(false);
   }
-})();
+}
+
+function rfRenderResults(copy) {
+  // Headlines
+  const hlEl = document.getElementById('rf-headlines');
+  hlEl.innerHTML = copy.headlines.map(h => {
+    const len = h.length;
+    const over = len > 30;
+    return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border ${over ? 'bg-red-50 border-red-200 text-red-800' : 'bg-green-50 border-green-200 text-gray-800'}" title="${h}">
+      ${escHtml(h)}
+      <span class="font-mono ${over ? 'text-red-600' : 'text-gray-400'}">${len}</span>
+    </span>`;
+  }).join('');
+
+  // Descriptions
+  const descEl = document.getElementById('rf-descriptions');
+  descEl.innerHTML = copy.descriptions.map(d => {
+    const len = d.length;
+    const over = len > 90;
+    return `<div class="p-3 rounded-lg border text-sm ${over ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-100'}">
+      <p class="text-gray-800">${escHtml(d)}</p>
+      <p class="text-xs mt-1 font-mono ${over ? 'text-red-600 font-bold' : 'text-gray-400'}">${len}/90 chars</p>
+    </div>`;
+  }).join('');
+
+  // Quality notes
+  const notesEl = document.getElementById('rf-notes');
+  notesEl.innerHTML = copy.quality_notes.map(n =>
+    `<li class="flex items-start gap-2 text-sm text-amber-900"><i class="fa-solid fa-circle-check text-amber-500 mt-0.5 flex-shrink-0"></i>${escHtml(n)}</li>`
+  ).join('');
+
+  document.getElementById('rf-fallback-notice').classList.toggle('hidden', !copy.fallback);
+  document.getElementById('rf-placeholder').classList.add('hidden');
+  document.getElementById('rf-results').classList.remove('hidden');
+}
+
+function rfCopyHeadlines() {
+  if (!_lastCopy) return;
+  navigator.clipboard.writeText(_lastCopy.headlines.join('\n')).then(() => rfToast('Headlines copied!'));
+}
+function rfCopyDescriptions() {
+  if (!_lastCopy) return;
+  navigator.clipboard.writeText(_lastCopy.descriptions.join('\n')).then(() => rfToast('Descriptions copied!'));
+}
+function rfCopyAll() {
+  if (!_lastCopy) return;
+  const text = 'HEADLINES:\n' + _lastCopy.headlines.join('\n') + '\n\nDESCRIPTIONS:\n' + _lastCopy.descriptions.join('\n');
+  navigator.clipboard.writeText(text).then(() => rfToast('Copied to clipboard!'));
+}
+
+function rfToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'fixed bottom-6 right-6 bg-gray-900 text-white text-sm font-medium px-4 py-2.5 rounded-lg shadow-lg z-50 transition';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2200);
+}
+
+function rfSetLoading(on) {
+  const btn  = document.getElementById('rf-generate-btn');
+  const icon = document.getElementById('rf-btn-icon');
+  const txt  = document.getElementById('rf-btn-text');
+  btn.disabled = on;
+  btn.style.opacity = on ? '0.7' : '1';
+  icon.className = on ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-bolt';
+  txt.textContent = on ? 'Generating…' : 'Generate RSA Copy';
+}
+
+function rfShowError(msg) {
+  const el = document.getElementById('rf-error');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+function rfHideError() {
+  document.getElementById('rf-error').classList.add('hidden');
+}
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 </script>
 {% endblock %}

@@ -81,4 +81,4 @@ def onboarding_goal_save():
         flash("Could not save. Please try again.", "error")
         return redirect(url_for("onboarding_bp.onboarding_goal"))
 
-    return redirect(url_for("account_bp.dashboard"))
+    return redirect(url_for("account_bp.dashboard") + "?onboarded=1")

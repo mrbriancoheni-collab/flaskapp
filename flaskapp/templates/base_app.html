@@ -395,6 +395,37 @@
       </a>
       {% endif %}
 
+      <!-- RevForge Intelligence -->
+      {% if has_endpoint('account_bp.action_queue') or has_endpoint('account_bp.chat') or has_endpoint('account_bp.autopilot_settings') %}
+      <div class="pt-2 text-sm font-semibold text-gray-600 uppercase"><i class="fa-solid fa-robot mr-1 text-green-700"></i>RevForge AI</div>
+      {% if has_endpoint('account_bp.action_queue') %}
+      <a href="{{ url_for('account_bp.action_queue') }}" class="block px-3 py-3 rounded nav-link min-h-12 {% if SECTION=='actions' %}font-semibold text-green-700{% endif %}">
+        <i class="fa-solid fa-bolt text-amber-500"></i><span>Action Queue</span>
+        <span id="nav-action-badge" class="ml-auto hidden text-xs bg-amber-500 text-white rounded-full px-1.5 py-0.5 font-bold"></span>
+      </a>
+      {% endif %}
+      {% if has_endpoint('account_bp.chat') %}
+      <a href="{{ url_for('account_bp.chat') }}" class="block px-3 py-3 rounded nav-link min-h-12 {% if SECTION=='chat' %}font-semibold text-green-700{% endif %}">
+        <i class="fa-solid fa-comments text-green-600"></i><span>AI Assistant</span>
+      </a>
+      {% endif %}
+      {% if has_endpoint('account_bp.autopilot_settings') %}
+      <a href="{{ url_for('account_bp.autopilot_settings') }}" class="block px-3 py-3 rounded nav-link min-h-12 {% if SECTION=='autopilot' %}font-semibold text-green-700{% endif %}">
+        <i class="fa-solid fa-sliders text-blue-600"></i><span>Autopilot</span>
+      </a>
+      {% endif %}
+      {% if has_endpoint('account_bp.trade_profile') %}
+      <a href="{{ url_for('account_bp.trade_profile') }}" class="block px-3 py-3 rounded nav-link min-h-12 {% if SECTION=='trade_profile' %}font-semibold text-green-700{% endif %}">
+        <i class="fa-solid fa-hard-hat text-orange-500"></i><span>Trade Profile</span>
+      </a>
+      {% endif %}
+      {% if has_endpoint('account_bp.performance_timeline') %}
+      <a href="{{ url_for('account_bp.performance_timeline') }}" class="block px-3 py-3 rounded nav-link min-h-12 {% if SECTION=='performance' %}font-semibold text-green-700{% endif %}">
+        <i class="fa-solid fa-chart-line text-blue-500"></i><span>Performance</span>
+      </a>
+      {% endif %}
+      {% endif %}
+
       <!-- WordPress & Content Section -->
       {% if has_endpoint('wp_bp.insights') %}
         <div class="pt-2 text-sm font-semibold text-gray-600 uppercase"><i class="fa-brands fa-wordpress mr-1"></i>WordPress &amp; Content</div>
@@ -2097,6 +2128,19 @@
       }
       return originalFetch.call(window, url, options);
     };
+  </script>
+
+  <script>
+  (function() {
+    const badge = document.getElementById('nav-action-badge');
+    if (!badge) return;
+    fetch('/account/actions/count.json').then(r => r.json()).then(d => {
+      if (d.count > 0) {
+        badge.textContent = d.count;
+        badge.classList.remove('hidden');
+      }
+    }).catch(() => {});
+  })();
   </script>
 
   {% block body_extra %}{% endblock %}

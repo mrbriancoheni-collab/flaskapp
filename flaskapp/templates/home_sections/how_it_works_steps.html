@@ -1,0 +1,53 @@
+<section class="py-16 bg-gray-50">
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center mb-12">
+      <h2 class="text-2xl sm:text-3xl font-extrabold text-gray-900">How RevForge Works</h2>
+      <p class="mt-2 text-gray-500 text-base max-w-xl mx-auto">From zero to optimized in under 48 hours — no agency required.</p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+
+      <div class="flex flex-col items-center text-center gap-3">
+        <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-extrabold text-lg">01</div>
+        <div>
+          <p class="font-semibold text-gray-900">Connect Your Accounts</p>
+          <p class="text-gray-500 text-sm mt-1">Link Google Ads and enter your website. RevForge reads your current setup in seconds.</p>
+        </div>
+      </div>
+
+      <div class="flex flex-col items-center text-center gap-3">
+        <div class="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-extrabold text-lg">02</div>
+        <div>
+          <p class="font-semibold text-gray-900">Set Your Goal</p>
+          <p class="text-gray-500 text-sm mt-1">Tell us your target cost-per-lead and monthly budget. We align every optimization to that number.</p>
+        </div>
+      </div>
+
+      <div class="flex flex-col items-center text-center gap-3">
+        <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-extrabold text-lg">03</div>
+        <div>
+          <p class="font-semibold text-gray-900">Approve Changes</p>
+          <p class="text-gray-500 text-sm mt-1">Our AI surfaces its recommended actions. You approve, skip, or let autopilot handle the low-risk ones.</p>
+        </div>
+      </div>
+
+      <div class="flex flex-col items-center text-center gap-3">
+        <div class="w-12 h-12 rounded-full bg-green-700 flex items-center justify-center text-white font-extrabold text-lg">04</div>
+        <div>
+          <p class="font-semibold text-gray-900">Watch Leads Improve</p>
+          <p class="text-gray-500 text-sm mt-1">RevForge keeps learning from your results, compounding savings every week.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="mt-12 text-center">
+      <a href="{{ url_for('account_bp.register') if 'account_bp' in url_for.__module__ else '/register' }}"
+         onclick="if(window.RevForgeTracker){RevForgeTracker.logCtaClick('how_it_works_start','home')}"
+         class="inline-flex items-center gap-2 px-6 py-3 bg-green-700 hover:bg-green-800 text-white font-semibold rounded-xl text-sm transition-colors">
+        Get Started Free
+        <i class="fas fa-arrow-right"></i>
+      </a>
+    </div>
+  </div>
+</section>

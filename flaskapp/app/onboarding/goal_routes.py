@@ -29,9 +29,9 @@ _GOALS = [
 def _upsert(conn, aid: int, key: str, value: str) -> None:
     conn.execute(
         text("""
-            INSERT INTO account_settings (account_id, key, value)
+            INSERT INTO account_settings (account_id, `key`, value)
             VALUES (:aid, :key, :val)
-            ON CONFLICT (account_id, key) DO UPDATE SET value = EXCLUDED.value
+            ON DUPLICATE KEY UPDATE value = VALUES(value)
         """),
         {"aid": aid, "key": key, "val": value},
     )

@@ -604,9 +604,20 @@ def create_app():
         import app.account.capacity_bidding_routes     # noqa: F401
         import app.account.phone_verification_routes   # noqa: F401
         import app.account.action_routes               # noqa: F401
-        app.logger.info("Extra account routes registered (attribution, capacity, phone, actions)")
+        import app.account.autopilot_routes            # noqa: F401
+        import app.account.trade_profile_routes        # noqa: F401
+        import app.account.performance_timeline_routes # noqa: F401
+        import app.account.chat_routes                 # noqa: F401
+        app.logger.info("Extra account routes registered (attribution, capacity, phone, actions, autopilot, trade_profile, timeline, chat)")
     except Exception:
         app.logger.exception("Failed to import extra account route modules")
+
+    try:
+        from app.api import api_bp
+        app.register_blueprint(api_bp)
+        app.logger.info("api_bp registered")
+    except Exception:
+        app.logger.exception("Failed to import/register api_bp")
 
     try:
         from app.onboarding import onboarding_bp

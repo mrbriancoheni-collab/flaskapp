@@ -118,6 +118,9 @@
   </div>
   {% endif %}
 
+  {# ── Proactive AI action card (loaded async) ─────────────────────────────── #}
+  <div id="proactive-card-slot"></div>
+
   {# ── YOUR CONNECTIONS ─────────────────────────────────────────────────────── #}
   {% if integrations %}
   <div>
@@ -533,4 +536,5 @@ function upgradeToAnnual() {
 }
 function showPricingDetails() { window.location.href = '/#pricing'; }
 </script>
+<script src="/static/js/dashboard-proactive.js" defer></script>
 {% endblock %}

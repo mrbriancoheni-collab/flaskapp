@@ -157,4 +157,7 @@ def onboarding_confirm():
     except Exception as exc:
         logger.exception("onboarding_confirm DB update failed: %s", exc)
 
-    return redirect(url_for("account_bp.dashboard"))
+    return redirect(url_for("onboarding_bp.onboarding_goal"))
+
+
+from app.onboarding import goal_routes  # noqa: E402,F401

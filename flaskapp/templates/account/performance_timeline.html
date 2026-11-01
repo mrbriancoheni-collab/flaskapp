@@ -1,0 +1,167 @@
+{% extends 'base_app.html' %}
+{% block title %}Performance Timeline – RevForge{% endblock %}
+
+{% block head_extra %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" crossorigin="anonymous"></script>
+{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-4xl">
+
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-semibold text-gray-900">Performance Timeline</h1>
+      <p class="text-sm text-gray-500 mt-1">90-day history of leads, spend, and AI actions.</p>
+    </div>
+    <div class="flex gap-2 text-sm">
+      <button onclick="setMetric('leads')" id="btn-leads"
+              class="metric-btn px-3 py-1.5 rounded-lg border font-medium transition bg-green-700 text-white border-green-700">
+        Leads
+      </button>
+      <button onclick="setMetric('spend')" id="btn-spend"
+              class="metric-btn px-3 py-1.5 rounded-lg border font-medium transition text-gray-600 border-gray-300 hover:border-green-500">
+        Spend
+      </button>
+      <button onclick="setMetric('cpl')" id="btn-cpl"
+              class="metric-btn px-3 py-1.5 rounded-lg border font-medium transition text-gray-600 border-gray-300 hover:border-green-500">
+        CPL
+      </button>
+    </div>
+  </div>
+
+  <!-- Chart card -->
+  <div class="bg-white border rounded-xl p-6 mb-6">
+    <div id="chart-loading" class="flex items-center justify-center h-48 text-gray-400 text-sm">
+      <svg class="animate-spin h-5 w-5 mr-2 text-green-600" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+      </svg>
+      Loading data…
+    </div>
+    <canvas id="perfChart" class="hidden" height="80"></canvas>
+  </div>
+
+  <!-- Summary tiles -->
+  <div class="grid grid-cols-3 gap-4 mb-6" id="summary-tiles">
+    <div class="bg-white border rounded-xl p-4 text-center">
+      <p class="text-xs text-gray-500 mb-1">Total Leads</p>
+      <p class="text-2xl font-bold text-gray-900" id="tile-leads">—</p>
+    </div>
+    <div class="bg-white border rounded-xl p-4 text-center">
+      <p class="text-xs text-gray-500 mb-1">Total Spend</p>
+      <p class="text-2xl font-bold text-gray-900" id="tile-spend">—</p>
+    </div>
+    <div class="bg-white border rounded-xl p-4 text-center">
+      <p class="text-xs text-gray-500 mb-1">Avg CPL</p>
+      <p class="text-2xl font-bold text-gray-900" id="tile-cpl">—</p>
+    </div>
+  </div>
+
+  <!-- AI actions log -->
+  <div class="bg-white border rounded-xl p-6">
+    <h2 class="text-base font-semibold text-gray-900 mb-4">AI Actions Applied</h2>
+    <div id="actions-list" class="space-y-3 text-sm text-gray-500 italic">Loading…</div>
+  </div>
+</div>
+
+<script>
+let allData = null;
+let currentMetric = 'leads';
+let chart = null;
+
+const METRIC_LABELS = { leads: 'Leads', spend: 'Ad Spend ($)', cpl: 'Cost per Lead ($)' };
+const CHART_COLORS = { leads: '#1A5C35', spend: '#D97706', cpl: '#1E5FA8' };
+
+async function loadData() {
+  const res = await fetch('/account/performance/data.json');
+  allData = await res.json();
+  renderChart();
+  renderTiles();
+  renderActions();
+  document.getElementById('chart-loading').classList.add('hidden');
+  document.getElementById('perfChart').classList.remove('hidden');
+}
+
+function setMetric(m) {
+  currentMetric = m;
+  document.querySelectorAll('.metric-btn').forEach(b => {
+    b.classList.remove('bg-green-700','text-white','border-green-700');
+    b.classList.add('text-gray-600','border-gray-300');
+  });
+  const active = document.getElementById('btn-' + m);
+  active.classList.add('bg-green-700','text-white','border-green-700');
+  active.classList.remove('text-gray-600','border-gray-300');
+  if (allData) renderChart();
+}
+
+function renderChart() {
+  const metrics = allData.metrics || [];
+  const labels = metrics.map(d => d.date);
+  const values = metrics.map(d => d[currentMetric]);
+  const color  = CHART_COLORS[currentMetric];
+
+  if (chart) chart.destroy();
+  chart = new Chart(document.getElementById('perfChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: METRIC_LABELS[currentMetric],
+        data: values,
+        borderColor: color,
+        backgroundColor: color + '18',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 2,
+        pointHoverRadius: 5,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { mode: 'index', intersect: false }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 11 } } },
+        y: { beginAtZero: true, ticks: { font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+function renderTiles() {
+  const m = allData.metrics || [];
+  const totalLeads = m.reduce((s, d) => s + d.leads, 0);
+  const totalSpend = m.reduce((s, d) => s + d.spend, 0);
+  const avgCpl     = totalLeads > 0 ? (totalSpend / totalLeads).toFixed(2) : '—';
+  document.getElementById('tile-leads').textContent = totalLeads.toLocaleString();
+  document.getElementById('tile-spend').textContent = '$' + totalSpend.toLocaleString(undefined, {maximumFractionDigits: 0});
+  document.getElementById('tile-cpl').textContent   = avgCpl !== '—' ? '$' + avgCpl : '—';
+}
+
+function renderActions() {
+  const el = document.getElementById('actions-list');
+  const decisions = allData.decisions || [];
+  if (!decisions.length) {
+    el.innerHTML = '<p class="text-gray-400">No AI actions applied in the last 90 days.</p>';
+    return;
+  }
+  el.innerHTML = decisions.map(d => `
+    <div class="flex items-start gap-3 py-2 border-b border-gray-100 last:border-0">
+      <span class="mt-0.5 w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mt-1.5"></span>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="font-medium text-gray-800">${d.type.replace(/_/g,' ')}</span>
+          <span class="text-xs text-gray-400">${d.date}</span>
+          <span class="text-xs px-2 py-0.5 rounded-full ${d.status === 'auto_executed' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}">${d.status.replace(/_/g,' ')}</span>
+        </div>
+        ${d.reason ? `<p class="text-xs text-gray-500 mt-0.5 truncate">${d.reason}</p>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+loadData();
+</script>
+{% endblock %}

@@ -551,6 +551,14 @@ function renderResults(data) {
   // Show results
   document.getElementById('results').classList.remove('hidden');
   document.getElementById('results').scrollIntoView({behavior:'smooth', block:'start'});
+
+  if (window.RevForgeTracker) {
+    RevForgeTracker.logToolUse('website-audit', {trade: trade, area: area || ''}, {waste_low: waste.low, waste_high: waste.high}, trade, area || '');
+    if (!sessionStorage.getItem('rf_cap_audit')) {
+      sessionStorage.setItem('rf_cap_audit', '1');
+      setTimeout(function() { if (window.rfShowEmailModal) rfShowEmailModal('website-audit', waste.low + '–' + waste.high + '% wasted spend for ' + tradeLabel, trade); }, 1800);
+    }
+  }
 }
 
 function renderSeasonalChart(indices, currentMonth) {
@@ -621,4 +629,6 @@ function escHtml(str) {
             .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
 }
 </script>
+{% include 'components/email_capture_modal.html' %}
+<script src="/static/js/rf-tracking.js"></script>
 {% endblock %}

@@ -420,6 +420,14 @@
     fixesEl.innerHTML = fixes.map(function(f) {
       return '<li class="flex items-start gap-2"><i class="fa-solid fa-check-circle mt-0.5 flex-shrink-0" style="color:#1A5C35;"></i><div><strong class="block text-xs mb-0.5">' + f.label + '</strong>' + f.fix + '</div></li>';
     }).join('');
+
+    if (window.RevForgeTracker) {
+      RevForgeTracker.logToolUse('wasted-spend-estimator', {spend: spend, age: age}, {waste_rate: wasteRate, monthly_waste: Math.round(monthlyWaste)}, '', '');
+      if (!sessionStorage.getItem('rf_cap_waste')) {
+        sessionStorage.setItem('rf_cap_waste', '1');
+        setTimeout(function() { if (window.rfShowEmailModal) rfShowEmailModal('wasted-spend-estimator', wasteRate + '% waste rate, $' + Math.round(monthlyWaste) + '/mo wasted', ''); }, 1800);
+      }
+    }
   }
 
   document.getElementById('spend-slider').addEventListener('input', function() {
@@ -431,4 +439,6 @@
   calculate();
 })();
 </script>
+{% include 'components/email_capture_modal.html' %}
+<script src="/static/js/rf-tracking.js"></script>
 {% endblock %}

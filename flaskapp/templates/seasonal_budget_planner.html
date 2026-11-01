@@ -396,6 +396,15 @@
         '<td class="px-4 py-2.5 text-xs text-gray-400 hidden sm:table-cell">' + getReasons(currentTrade, currentClimate, i) + '</td>' +
       '</tr>';
     }).join('');
+
+    if (window.RevForgeTracker) {
+      const peakBudget = Math.round(Math.max.apply(null, currentBudgets));
+      RevForgeTracker.logToolUse('seasonal-budget-planner', {trade: currentTrade, climate: currentClimate, annual: currentAnnual}, {peak_budget: peakBudget}, currentTrade, '');
+      if (!sessionStorage.getItem('rf_cap_seasonal')) {
+        sessionStorage.setItem('rf_cap_seasonal', '1');
+        setTimeout(function() { if (window.rfShowEmailModal) rfShowEmailModal('seasonal-budget-planner', fmtInt(currentAnnual) + ' annual budget, ' + currentTrade + ' ' + currentClimate + ' climate', currentTrade); }, 1800);
+      }
+    }
   }
 
   // CSV download
@@ -433,4 +442,6 @@
   calculate();
 })();
 </script>
+{% include 'components/email_capture_modal.html' %}
+<script src="/static/js/rf-tracking.js"></script>
 {% endblock %}

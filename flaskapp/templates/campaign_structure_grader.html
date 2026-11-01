@@ -689,6 +689,14 @@
     document.getElementById('gradeLabel').textContent = g.label + ' — ' + total + '/100';
     const descs = {A:'Your account structure is well-optimized. Focus on continuous testing.',B:'Good foundation. A few structural improvements could meaningfully lower your CPL.',C:'Functional but leaving money on the table. Fix the action items below.',D:'Significant structural issues are likely driving up your cost per lead.',F:'Your account structure is causing wasted spend. A rebuild will have immediate impact.'};
     document.getElementById('gradeDesc').textContent = descs[g.grade] || '';
+
+    if (window.RevForgeTracker) {
+      RevForgeTracker.logToolUse('campaign-structure-grader', {trade: trade, campaigns: numCampaigns, adGroups: numAdGroups, keywords: numKeywords}, {grade: g.grade, score: total}, trade, '');
+      if (!sessionStorage.getItem('rf_cap_structure')) {
+        sessionStorage.setItem('rf_cap_structure', '1');
+        setTimeout(function() { if (window.rfShowEmailModal) rfShowEmailModal('campaign-structure-grader', 'Grade ' + g.grade + ' (' + total + '/100) for ' + trade, trade); }, 1800);
+      }
+    }
   }
 
   function renderCategories(cats) {
@@ -783,4 +791,6 @@
   window.gradeStructure = gradeStructure;
 })();
 </script>
+{% include 'components/email_capture_modal.html' %}
+<script src="/static/js/rf-tracking.js"></script>
 {% endblock %}

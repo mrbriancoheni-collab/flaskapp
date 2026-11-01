@@ -452,6 +452,14 @@
     ]);
     renderMissing(headlines, descs, trade);
     renderSuggestions(trade, headlines);
+
+    if (window.RevForgeTracker) {
+      RevForgeTracker.logToolUse('ad-copy-analyzer', {trade: trade, headlines: headlines.length, descs: descs.length}, {score: total}, trade, '');
+      if (!sessionStorage.getItem('rf_cap_adcopy')) {
+        sessionStorage.setItem('rf_cap_adcopy', '1');
+        setTimeout(function() { if (window.rfShowEmailModal) rfShowEmailModal('ad-copy-analyzer', 'Ad copy score: ' + total + '/100 for ' + trade, trade); }, 1800);
+      }
+    }
   }
 
   function renderScore(total) {
@@ -566,4 +574,6 @@
   window.analyzeAdCopy = analyzeAdCopy;
 })();
 </script>
+{% include 'components/email_capture_modal.html' %}
+<script src="/static/js/rf-tracking.js"></script>
 {% endblock %}

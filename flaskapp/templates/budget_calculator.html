@@ -349,6 +349,14 @@
 
     // Nicer ROAS text
     document.getElementById('roas-display').textContent = 'you get ' + fmt(roas) + ' back';
+
+    if (window.RevForgeTracker) {
+      RevForgeTracker.logToolUse('budget-calculator', {trade: trade, market: market, leads: leads}, {budget_low: budgetLow, budget_high: budgetHigh, cpl: cpl}, trade, '');
+      if (!sessionStorage.getItem('rf_cap_budget')) {
+        sessionStorage.setItem('rf_cap_budget', '1');
+        setTimeout(function() { if (window.rfShowEmailModal) rfShowEmailModal('budget-calculator', '$' + budgetLow + '–$' + budgetHigh + ' budget, $' + cpl + ' CPL', trade); }, 1800);
+      }
+    }
   }
 
   // Slider display updaters
@@ -371,4 +379,6 @@
   calculate();
 })();
 </script>
+{% include 'components/email_capture_modal.html' %}
+<script src="/static/js/rf-tracking.js"></script>
 {% endblock %}

@@ -426,6 +426,14 @@
         }
       }
     });
+
+    if (window.RevForgeTracker) {
+      RevForgeTracker.logToolUse('quality-score-calculator', {cur_qs: curQS, tgt_qs: tgtQS, cpc: curCPC}, {monthly_savings: Math.round(mthSave)}, '', '');
+      if (!sessionStorage.getItem('rf_cap_qs')) {
+        sessionStorage.setItem('rf_cap_qs', '1');
+        setTimeout(function() { if (window.rfShowEmailModal) rfShowEmailModal('quality-score-calculator', 'QS ' + curQS + '→' + tgtQS + ', saves $' + Math.round(mthSave) + '/mo', ''); }, 1800);
+      }
+    }
   }
 
   document.getElementById('cur-qs-slider').addEventListener('input', function() {
@@ -443,4 +451,6 @@
   calculate();
 })();
 </script>
+{% include 'components/email_capture_modal.html' %}
+<script src="/static/js/rf-tracking.js"></script>
 {% endblock %}

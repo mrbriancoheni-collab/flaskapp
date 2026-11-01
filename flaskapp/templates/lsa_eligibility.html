@@ -585,6 +585,14 @@
       </div>`).join('');
 
     panel.scrollIntoView({behavior:'smooth', block:'start'});
+
+    if (window.RevForgeTracker) {
+      RevForgeTracker.logToolUse('lsa-eligibility', {trade: trade, state: state, licensed: licensed, liability: liability}, {status: title}, trade, state);
+      if (!sessionStorage.getItem('rf_cap_lsa')) {
+        sessionStorage.setItem('rf_cap_lsa', '1');
+        setTimeout(function() { if (window.rfShowEmailModal) rfShowEmailModal('lsa-eligibility', title + ' — ' + trade + ' in ' + state, trade); }, 1800);
+      }
+    }
   }
 
   // Highlight radio options on selection
@@ -600,4 +608,6 @@
   window.checkEligibility = checkEligibility;
 })();
 </script>
+{% include 'components/email_capture_modal.html' %}
+<script src="/static/js/rf-tracking.js"></script>
 {% endblock %}

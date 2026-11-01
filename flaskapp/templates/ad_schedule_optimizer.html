@@ -818,6 +818,16 @@
     });
     html += '</tbody>';
     table.innerHTML = html;
+
+    if (window.RevForgeTracker) {
+      const sav = SAVINGS_BY_TRADE[trade];
+      const savPct = sav[btype] || sav.standard;
+      RevForgeTracker.logToolUse('ad-schedule-optimizer', {trade: trade, btype: btype, region: region}, {savings_pct: savPct}, trade, region);
+      if (!sessionStorage.getItem('rf_cap_schedule')) {
+        sessionStorage.setItem('rf_cap_schedule', '1');
+        setTimeout(function() { if (window.rfShowEmailModal) rfShowEmailModal('ad-schedule-optimizer', savPct + '% savings opportunity, ' + TRADE_LABELS[trade] + ' ' + REGION_LABELS[region], trade); }, 1800);
+      }
+    }
   }
 
   function downloadSchedule() {
@@ -890,4 +900,6 @@
   });
 })();
 </script>
+{% include 'components/email_capture_modal.html' %}
+<script src="/static/js/rf-tracking.js"></script>
 {% endblock %}

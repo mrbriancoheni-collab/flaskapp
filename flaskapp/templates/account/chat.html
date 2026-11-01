@@ -1,0 +1,178 @@
+{% extends "account/base.html" %}
+{% block title %}AI Assistant — RevForge{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-8 flex flex-col h-[calc(100vh-120px)]">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h1 class="text-xl font-bold text-gray-900">AI Assistant</h1>
+      <p class="text-sm text-gray-500">Ask anything about your Google Ads, budget, or leads</p>
+    </div>
+    <button id="btnNew" class="text-sm text-gray-500 hover:text-gray-800 flex items-center gap-1 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition">
+      <i class="fa-solid fa-plus text-xs"></i> New chat
+    </button>
+  </div>
+
+  <!-- Messages -->
+  <div id="messages" class="flex-1 overflow-y-auto space-y-4 mb-4 pr-1">
+
+    <!-- Welcome / starter prompts (hidden after first message) -->
+    <div id="starters" class="py-6">
+      <div class="text-center mb-6">
+        <div class="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+          <i class="fa-solid fa-robot text-emerald-700 text-xl"></i>
+        </div>
+        <p class="text-gray-700 font-medium">How can I help you today?</p>
+        <p class="text-sm text-gray-400">Context-aware advice for your ad account</p>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <button class="starter-btn text-left px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 hover:border-emerald-400 hover:bg-emerald-50 transition">
+          Why is my cost-per-lead going up?
+        </button>
+        <button class="starter-btn text-left px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 hover:border-emerald-400 hover:bg-emerald-50 transition">
+          Which keywords are wasting my budget?
+        </button>
+        <button class="starter-btn text-left px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 hover:border-emerald-400 hover:bg-emerald-50 transition">
+          How should I adjust bids for winter?
+        </button>
+        <button class="starter-btn text-left px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 hover:border-emerald-400 hover:bg-emerald-50 transition">
+          What's a good Quality Score target for HVAC?
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Input bar -->
+  <div class="border border-gray-200 rounded-2xl bg-white shadow-sm overflow-hidden">
+    <textarea
+      id="msgInput"
+      rows="1"
+      placeholder="Ask about your ads, budget, keywords…"
+      class="w-full resize-none px-4 pt-3 pb-1 text-sm text-gray-800 outline-none max-h-40"
+      style="min-height:44px"
+    ></textarea>
+    <div class="flex items-center justify-between px-4 pb-3">
+      <span class="text-xs text-gray-400">Shift+Enter for new line</span>
+      <button id="btnSend" class="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-4 py-2 rounded-xl transition disabled:opacity-40" disabled>
+        <i class="fa-solid fa-paper-plane text-xs"></i> Send
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const messagesEl = document.getElementById('messages');
+const input = document.getElementById('msgInput');
+const btnSend = document.getElementById('btnSend');
+const starters = document.getElementById('starters');
+
+let conversationId = null;
+let history = [];
+
+function autoResize() {
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 160) + 'px';
+}
+
+input.addEventListener('input', () => {
+  autoResize();
+  btnSend.disabled = !input.value.trim();
+});
+
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    if (!btnSend.disabled) send();
+  }
+});
+
+btnSend.addEventListener('click', send);
+
+document.querySelectorAll('.starter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    input.value = btn.textContent.trim();
+    autoResize();
+    btnSend.disabled = false;
+    send();
+  });
+});
+
+document.getElementById('btnNew').addEventListener('click', async () => {
+  await fetch('/account/chat/new', {method:'POST', headers:{'Content-Type':'application/json'}});
+  conversationId = null;
+  history = [];
+  messagesEl.querySelectorAll('.msg-bubble').forEach(el => el.remove());
+  starters.style.display = '';
+});
+
+function addBubble(role, text) {
+  starters.style.display = 'none';
+  const wrap = document.createElement('div');
+  wrap.className = 'msg-bubble flex ' + (role === 'user' ? 'justify-end' : 'justify-start');
+  const bubble = document.createElement('div');
+  bubble.className = role === 'user'
+    ? 'max-w-[80%] bg-emerald-700 text-white rounded-2xl rounded-tr-sm px-4 py-3 text-sm leading-relaxed'
+    : 'max-w-[80%] bg-white border border-gray-200 rounded-2xl rounded-tl-sm px-4 py-3 text-sm leading-relaxed text-gray-800 shadow-sm';
+  bubble.textContent = text;
+  wrap.appendChild(bubble);
+  messagesEl.appendChild(wrap);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  return bubble;
+}
+
+function addTyping() {
+  const wrap = document.createElement('div');
+  wrap.className = 'msg-bubble flex justify-start';
+  wrap.id = 'typing';
+  wrap.innerHTML = `<div class="bg-white border border-gray-200 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+    <span class="flex gap-1 items-center">
+      <span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay:0ms"></span>
+      <span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay:150ms"></span>
+      <span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay:300ms"></span>
+    </span>
+  </div>`;
+  messagesEl.appendChild(wrap);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+async function send() {
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  autoResize();
+  btnSend.disabled = true;
+
+  addBubble('user', msg);
+  addTyping();
+
+  try {
+    const res = await fetch('/account/chat/send', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({message: msg, conversation_id: conversationId, history}),
+    });
+    const data = await res.json();
+    document.getElementById('typing')?.remove();
+
+    if (data.ok) {
+      conversationId = data.conversation_id;
+      history.push({role:'user', content:msg});
+      history.push({role:'assistant', content:data.reply});
+      if (history.length > 20) history = history.slice(-20);
+      addBubble('assistant', data.reply);
+    } else {
+      addBubble('assistant', data.error || 'Something went wrong — please try again.');
+    }
+  } catch (e) {
+    document.getElementById('typing')?.remove();
+    addBubble('assistant', 'Connection error — please try again.');
+  }
+
+  btnSend.disabled = false;
+  input.focus();
+}
+</script>
+{% endblock %}

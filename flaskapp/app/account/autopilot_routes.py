@@ -52,9 +52,9 @@ def _get_settings(aid: int) -> dict:
 def _upsert_setting(conn, aid: int, key: str, value: str) -> None:
     conn.execute(
         text("""
-            INSERT INTO account_settings (account_id, key, value)
+            INSERT INTO account_settings (account_id, `key`, value)
             VALUES (:aid, :key, :val)
-            ON CONFLICT (account_id, key) DO UPDATE SET value = EXCLUDED.value
+            ON DUPLICATE KEY UPDATE value = VALUES(value)
         """),
         {"aid": aid, "key": key, "val": value},
     )
@@ -152,10 +152,10 @@ def autopilot_save():
                             INSERT INTO agent_configurations
                               (account_id, agent_id, agent_type, enabled, auto_execute_threshold)
                             VALUES (:aid, :agent_id, :agent_type, :enabled, :threshold)
-                            ON CONFLICT (agent_id, account_id) DO UPDATE
-                              SET enabled = EXCLUDED.enabled,
-                                  auto_execute_threshold = EXCLUDED.auto_execute_threshold,
-                                  updated_at = NOW()
+                            ON DUPLICATE KEY UPDATE
+                              enabled = VALUES(enabled),
+                              auto_execute_threshold = VALUES(auto_execute_threshold),
+                              updated_at = NOW()
                         """),
                         {
                             "aid": aid,

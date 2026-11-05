@@ -91,3 +91,12 @@ function revforge_body_classes( $classes ) {
     return $classes;
 }
 add_filter( 'body_class', 'revforge_body_classes' );
+
+// Reading time estimate
+if ( ! function_exists( 'get_the_reading_time_estimate' ) ) {
+    function get_the_reading_time_estimate() {
+        $words = str_word_count( strip_tags( get_the_content() ) );
+        $mins  = max( 1, (int) ceil( $words / 200 ) );
+        return $mins . ' min read';
+    }
+}

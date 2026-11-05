@@ -1,0 +1,299 @@
+{% extends 'base_app.html' %}
+{% block title %}Browse Billboard Screens – RevForge{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-7xl">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-5">
+    <div>
+      <h1 class="text-2xl font-semibold text-gray-900 flex items-center gap-2">
+        <i class="fa-solid fa-map-pin" style="color:#1A5C35;"></i>
+        Browse Screens
+      </h1>
+      <p class="text-sm text-gray-500 mt-0.5">{{ locations|length }} screen{{ 's' if locations|length != 1 else '' }} available{% if filters.city %} in {{ filters.city }}{% endif %}</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <span id="sel-count" class="hidden text-xs font-semibold px-2.5 py-1 rounded-full bg-green-100 text-green-800">0 selected</span>
+      <button onclick="openSidebar()"
+              id="sel-btn" class="hidden items-center gap-2 px-4 py-2.5 rounded-lg font-semibold text-sm text-white transition"
+              style="background:#1A5C35;">
+        <i class="fa-solid fa-layer-group"></i> Build Campaign →
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <form method="GET" class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-5 flex flex-wrap gap-3 items-end">
+    <div>
+      <label class="block text-xs font-semibold text-gray-600 mb-1">City</label>
+      <select name="city" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600">
+        <option value="">All Cities</option>
+        {% for c in cities %}
+          <option value="{{ c.city }}" {% if filters.city == c.city %}selected{% endif %}>{{ c.city }}, {{ c.state }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs font-semibold text-gray-600 mb-1">Screen Type</label>
+      <select name="screen_type" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600">
+        <option value="">All Types</option>
+        <option value="digital_billboard" {% if filters.screen_type == 'digital_billboard' %}selected{% endif %}>Digital Billboard</option>
+        <option value="static_billboard" {% if filters.screen_type == 'static_billboard' %}selected{% endif %}>Static Billboard</option>
+        <option value="street_level" {% if filters.screen_type == 'street_level' %}selected{% endif %}>Street Level</option>
+        <option value="transit" {% if filters.screen_type == 'transit' %}selected{% endif %}>Transit</option>
+        <option value="wallscape" {% if filters.screen_type == 'wallscape' %}selected{% endif %}>Wallscape</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs font-semibold text-gray-600 mb-1">Max CPP ($/play)</label>
+      <input type="number" name="max_cpp" step="0.10" min="0.50" max="3.00" placeholder="3.00"
+             value="{{ filters.max_cpp or '' }}"
+             class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 w-28">
+    </div>
+    <button type="submit" class="px-4 py-2 rounded-lg text-sm font-semibold text-white transition" style="background:#1A5C35;">
+      <i class="fa-solid fa-filter mr-1"></i>Filter
+    </button>
+    {% if filters.city or filters.screen_type or filters.max_cpp %}
+    <a href="{{ url_for('account_bp.billboard_locations') }}" class="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 transition">
+      Clear
+    </a>
+    {% endif %}
+  </form>
+
+  <!-- Main layout: grid + sidebar -->
+  <div class="relative">
+
+    <!-- Screen grid -->
+    <div id="screen-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 transition-all">
+      {% if not locations %}
+        <div class="col-span-3 bg-white rounded-xl border border-dashed border-gray-300 p-12 text-center">
+          <i class="fa-solid fa-map-pin text-3xl text-gray-300 mb-3 block"></i>
+          <p class="text-gray-500 font-medium">No screens match your filters.</p>
+          <a href="{{ url_for('account_bp.billboard_locations') }}" class="text-sm text-green-700 mt-2 block hover:underline">Clear filters</a>
+        </div>
+      {% endif %}
+      {% for loc in locations %}
+      {% set ph_colors = {'green': '#1A5C35', 'blue': '#1E5FA8', 'amber': '#D97706', 'slate': '#475569'} %}
+      {% set bg = ph_colors.get(loc.image_placeholder, '#475569') %}
+      {% set type_labels = {
+        'digital_billboard': 'Digital Billboard',
+        'static_billboard': 'Static Billboard',
+        'street_level': 'Street Level',
+        'transit': 'Transit',
+        'wallscape': 'Wallscape'
+      } %}
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden screen-card"
+           data-id="{{ loc.id }}"
+           data-name="{{ loc.name }}"
+           data-city="{{ loc.city }}, {{ loc.state }}"
+           data-cpp="{{ loc.cpp }}"
+           data-ppd="{{ loc.plays_per_day }}">
+        <!-- Color preview header -->
+        <div class="h-24 flex items-center justify-center relative" style="background:{{ bg }};">
+          <div class="text-center px-4">
+            <p class="text-white font-black text-lg leading-tight tracking-tight drop-shadow">{{ loc.city }}</p>
+            <p class="text-white/70 text-xs mt-0.5">{{ loc.size }} · {{ type_labels.get(loc.screen_type, loc.screen_type) }}</p>
+          </div>
+          <span class="absolute top-2 right-2 text-xs font-bold px-2 py-0.5 rounded-full bg-white/20 text-white">
+            {{ loc.facing or 'All' }}
+          </span>
+        </div>
+        <!-- Card body -->
+        <div class="p-4">
+          <div class="flex items-start justify-between gap-2 mb-2">
+            <div>
+              <h3 class="font-semibold text-gray-900 text-sm leading-tight">{{ loc.name }}</h3>
+              <p class="text-xs text-gray-500 mt-0.5">{{ loc.city }}, {{ loc.state }}</p>
+            </div>
+            <span class="flex-shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">{{ loc.size }}</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 mt-3 mb-3">
+            <div>
+              <p class="text-xs text-gray-500">Daily Traffic</p>
+              <p class="text-sm font-semibold text-gray-800">{{ "{:,}".format(loc.traffic_daily) }}</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">CPP</p>
+              <p class="text-sm font-semibold text-gray-800">${{ "%.2f"|format(loc.cpp) }}</p>
+            </div>
+            {% if loc.plays_per_day > 1 %}
+            <div>
+              <p class="text-xs text-gray-500">Plays/Day</p>
+              <p class="text-sm font-semibold text-gray-800">{{ "{:,}".format(loc.plays_per_day) }}</p>
+            </div>
+            {% endif %}
+            <div>
+              <p class="text-xs text-gray-500">Weekly Impr.</p>
+              <p class="text-sm font-semibold text-gray-800">{{ "{:,.0f}".format(loc.impressions_weekly) }}</p>
+            </div>
+          </div>
+
+          <button onclick="toggleSelect(this)"
+                  class="add-btn w-full py-2 rounded-lg text-sm font-semibold transition border-2 border-transparent"
+                  style="background:#f0faf3; color:#1A5C35;">
+            <i class="fa-solid fa-plus mr-1"></i> Add to Campaign
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Selection sidebar -->
+    <div id="sel-sidebar"
+         class="hidden fixed inset-y-0 right-0 w-80 bg-white border-l border-gray-200 shadow-xl z-40 flex flex-col overflow-hidden">
+      <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+        <h3 class="font-semibold text-gray-900 text-sm">Selected Screens</h3>
+        <button onclick="closeSidebar()" class="text-gray-400 hover:text-gray-700 p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div id="sel-list" class="flex-1 overflow-y-auto p-4 space-y-2"></div>
+
+      <div class="p-4 border-t border-gray-100 space-y-3">
+        <div class="flex items-center gap-2">
+          <label class="text-sm font-medium text-gray-700 flex-shrink-0">Flight (days)</label>
+          <input type="number" id="flight-days" min="7" max="365" value="30"
+                 oninput="updateEstimate()"
+                 class="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-600">
+        </div>
+        <div id="est-box" class="bg-gray-50 rounded-lg p-3 hidden">
+          <div class="flex justify-between text-sm mb-1">
+            <span class="text-gray-500">Est. Plays</span>
+            <span id="est-plays" class="font-semibold text-gray-900">—</span>
+          </div>
+          <div class="flex justify-between text-sm mb-1">
+            <span class="text-gray-500">Est. Impressions</span>
+            <span id="est-impr" class="font-semibold text-gray-900">—</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500 font-semibold">Est. Total Cost</span>
+            <span id="est-cost" class="font-bold text-gray-900">—</span>
+          </div>
+        </div>
+        <button onclick="proceedToBuilder()"
+                class="w-full py-2.5 rounded-lg font-bold text-white text-sm flex items-center justify-center gap-2"
+                style="background:#1A5C35;">
+          <i class="fa-solid fa-arrow-right"></i> Build Campaign
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const selectedScreens = {};
+let estimateTimer = null;
+
+function toggleSelect(btn) {
+  const card = btn.closest('.screen-card');
+  const id = card.dataset.id;
+  if (selectedScreens[id]) {
+    delete selectedScreens[id];
+    btn.innerHTML = '<i class="fa-solid fa-plus mr-1"></i> Add to Campaign';
+    btn.style.background = '#f0faf3';
+    btn.style.color = '#1A5C35';
+    btn.style.borderColor = 'transparent';
+  } else {
+    selectedScreens[id] = {
+      id, name: card.dataset.name, city: card.dataset.city,
+      cpp: parseFloat(card.dataset.cpp), ppd: parseInt(card.dataset.ppd)
+    };
+    btn.innerHTML = '<i class="fa-solid fa-check mr-1"></i> Selected';
+    btn.style.background = '#1A5C35';
+    btn.style.color = '#fff';
+    btn.style.borderColor = '#1A5C35';
+  }
+  updateSelUI();
+}
+
+function updateSelUI() {
+  const count = Object.keys(selectedScreens).length;
+  const countEl = document.getElementById('sel-count');
+  const btnEl = document.getElementById('sel-btn');
+  if (count > 0) {
+    countEl.textContent = count + ' selected';
+    countEl.classList.remove('hidden');
+    btnEl.classList.remove('hidden');
+    btnEl.classList.add('flex');
+  } else {
+    countEl.classList.add('hidden');
+    btnEl.classList.add('hidden');
+    btnEl.classList.remove('flex');
+  }
+  renderSidebarList();
+  updateEstimate();
+}
+
+function renderSidebarList() {
+  const el = document.getElementById('sel-list');
+  const screens = Object.values(selectedScreens);
+  if (!screens.length) { el.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">No screens selected</p>'; return; }
+  el.innerHTML = screens.map(s =>
+    `<div class="flex items-start justify-between gap-2 bg-gray-50 rounded-lg p-2.5">
+      <div>
+        <p class="text-xs font-semibold text-gray-800 leading-tight">${s.name}</p>
+        <p class="text-xs text-gray-500">${s.city} · $${s.cpp.toFixed(2)}/play</p>
+      </div>
+      <button onclick="removeScreen('${s.id}')" class="text-gray-400 hover:text-red-500 flex-shrink-0 mt-0.5"><i class="fa-solid fa-xmark text-xs"></i></button>
+    </div>`
+  ).join('');
+}
+
+function removeScreen(id) {
+  if (!selectedScreens[id]) return;
+  delete selectedScreens[id];
+  // Un-highlight card button
+  document.querySelectorAll('.screen-card').forEach(card => {
+    if (card.dataset.id === id) {
+      const btn = card.querySelector('.add-btn');
+      btn.innerHTML = '<i class="fa-solid fa-plus mr-1"></i> Add to Campaign';
+      btn.style.background = '#f0faf3';
+      btn.style.color = '#1A5C35';
+      btn.style.borderColor = 'transparent';
+    }
+  });
+  updateSelUI();
+}
+
+function openSidebar() {
+  document.getElementById('sel-sidebar').classList.remove('hidden');
+}
+function closeSidebar() {
+  document.getElementById('sel-sidebar').classList.add('hidden');
+}
+
+function updateEstimate() {
+  clearTimeout(estimateTimer);
+  const ids = Object.keys(selectedScreens);
+  if (!ids.length) { document.getElementById('est-box').classList.add('hidden'); return; }
+  const days = parseInt(document.getElementById('flight-days').value) || 30;
+  estimateTimer = setTimeout(() => {
+    fetch('/account/billboard/estimate', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content},
+      body: JSON.stringify({location_ids: ids.map(Number), days})
+    }).then(r => r.json()).then(j => {
+      if (!j.ok) return;
+      const e = j.estimate;
+      document.getElementById('est-plays').textContent = e.total_plays.toLocaleString();
+      document.getElementById('est-impr').textContent = e.total_impressions.toLocaleString();
+      document.getElementById('est-cost').textContent = '$' + e.total_cost.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0});
+      document.getElementById('est-box').classList.remove('hidden');
+    }).catch(() => {});
+  }, 400);
+}
+
+function proceedToBuilder() {
+  const ids = Object.keys(selectedScreens);
+  const days = parseInt(document.getElementById('flight-days').value) || 30;
+  try {
+    sessionStorage.setItem('rf_bb_selected', JSON.stringify({ids, days, screens: Object.values(selectedScreens)}));
+  } catch(e) {}
+  window.location.href = '{{ url_for("account_bp.billboard_new_campaign") }}';
+}
+</script>
+{% endblock %}

@@ -197,6 +197,6 @@ INSERT IGNORE INTO billboard_locations (name, address_area, city, state, zip, la
 ('I-40 & Meridian Ave Digital', 'West OKC I-40', 'Oklahoma City', 'OK', '73108', 35.4610, -97.5720, 'digital_billboard', '14x48', 2, 'E', 56000, 235200, 2.00, 960, 'Oklahoma City', 1, 'blue'),
 ('I-35 & SE 59th St', 'South OKC', 'Oklahoma City', 'OK', '73129', 35.4010, -97.4790, 'digital_billboard', '14x48', 2, 'N', 44000, 184800, 1.80, 864, 'Oklahoma City', 1, 'slate'),
 ('Classen Blvd & NW 23rd St', 'Midtown OKC', 'Oklahoma City', 'OK', '73106', 35.4830, -97.5280, 'digital_billboard', '10x30', 1, 'S', 28000, 117600, 1.45, 696, 'Oklahoma City', 1, 'green'),
-('Penn & Memorial Rd', 'North OKC Suburban', 'Oklahoma City', 'OK', '73120', 35.5820, -97.5490, 'street_level', '8x20', 1, 'E', 12000, 33600, 0.72, 288, 'Oklahoma City', 'OK', 'amber'),
+('Penn & Memorial Rd', 'North OKC Suburban', 'Oklahoma City', 'OK', '73120', 35.5820, -97.5490, 'street_level', '8x20', 1, 'E', 12000, 33600, 0.72, 288, 'Oklahoma City', 1, 'amber'),
 ('I-44 & Portland Ave', 'Northwest OKC', 'Oklahoma City', 'OK', '73112', 35.5000, -97.5720, 'digital_billboard', '10x30', 1, 'W', 36000, 151200, 1.60, 768, 'Oklahoma City', 1, 'blue'),
 ('Broadway & Park Ave Transit', 'Downtown OKC', 'Oklahoma City', 'OK', '73102', 35.4676, -97.5164, 'transit', '12x25', 1, 'N', 18000, 50400, 1.00, 480, 'Oklahoma City', 1, 'slate');

@@ -291,7 +291,7 @@ function proceedToBuilder() {
   const ids = Object.keys(selectedScreens);
   const days = parseInt(document.getElementById('flight-days').value) || 30;
   try {
-    sessionStorage.setItem('rf_bb_selected', JSON.stringify({ids, days, screens: Object.values(selectedScreens)}));
+    sessionStorage.setItem('rf_billboard_screens', JSON.stringify(Object.values(selectedScreens)));
   } catch(e) {}
   window.location.href = '{{ url_for("account_bp.billboard_new_campaign") }}';
 }

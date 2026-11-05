@@ -610,7 +610,8 @@ def create_app():
         import app.account.chat_routes                 # noqa: F401
         import app.account.proactive_card_routes       # noqa: F401
         import app.account.rsa_generator_routes        # noqa: F401
-        app.logger.info("Extra account routes registered (attribution, capacity, phone, actions, autopilot, trade_profile, timeline, chat, proactive, rsa_generator)")
+        import app.account.billboard_routes            # noqa: F401
+        app.logger.info("Extra account routes registered (attribution, capacity, phone, actions, autopilot, trade_profile, timeline, chat, proactive, rsa_generator, billboard)")
     except Exception:
         app.logger.exception("Failed to import extra account route modules")
 

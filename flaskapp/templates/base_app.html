@@ -182,6 +182,8 @@
     {% set SECTION = 'integrations' %}
   {% elif bp == 'multiloc_bp' or path.startswith('/account/locations') %}
     {% set SECTION = 'locations' %}
+  {% elif path.startswith('/account/billboard') %}
+    {% set SECTION = 'billboard' %}
   {% elif 'account_bp.' in epn or path.startswith('/account') %}
     {% set SECTION = 'account' %}
   {% endif %}
@@ -427,6 +429,11 @@
       {% if has_endpoint('account_bp.rsa_generator') %}
       <a href="{{ url_for('account_bp.rsa_generator') }}" class="block px-3 py-3 rounded nav-link min-h-12 {% if SECTION=='rsa_generator' %}font-semibold text-green-700{% endif %}">
         <i class="fa-solid fa-wand-magic-sparkles text-purple-500"></i><span>Ad Copy AI</span>
+      </a>
+      {% endif %}
+      {% if has_endpoint('account_bp.billboard_dashboard') %}
+      <a href="{{ url_for('account_bp.billboard_dashboard') }}" class="block px-3 py-3 rounded nav-link min-h-12 {% if SECTION=='billboard' %}font-semibold text-green-700{% endif %}">
+        <i class="fa-solid fa-rectangle-ad text-amber-500"></i><span>Billboard Ads</span>
       </a>
       {% endif %}
       {% endif %}
@@ -1144,6 +1151,23 @@
         {% if has_endpoint('multiloc_bp.overlap') %}
         <a class="secondary-link {% if epn=='multiloc_bp.overlap' %}active{% endif %}" href="/account/locations/overlap">
           <i class="fa-solid fa-code-fork"></i><span>Keyword Overlap</span>
+        </a>
+        {% endif %}
+      {% elif SECTION == 'billboard' %}
+        <div class="sidebar-label"><i class="fa-solid fa-rectangle-ad"></i>Billboard Ads</div>
+        {% if has_endpoint('account_bp.billboard_dashboard') %}
+        <a class="secondary-link {% if epn=='account_bp.billboard_dashboard' %}active{% endif %}" href="{{ url_for('account_bp.billboard_dashboard') }}">
+          <i class="fa-solid fa-gauge"></i><span>Dashboard</span>
+        </a>
+        {% endif %}
+        {% if has_endpoint('account_bp.billboard_locations') %}
+        <a class="secondary-link {% if epn=='account_bp.billboard_locations' %}active{% endif %}" href="{{ url_for('account_bp.billboard_locations') }}">
+          <i class="fa-solid fa-map-location-dot"></i><span>Browse Screens</span>
+        </a>
+        {% endif %}
+        {% if has_endpoint('account_bp.billboard_new_campaign') %}
+        <a class="secondary-link {% if epn=='account_bp.billboard_new_campaign' %}active{% endif %}" href="{{ url_for('account_bp.billboard_new_campaign') }}">
+          <i class="fa-solid fa-plus"></i><span>New Campaign</span>
         </a>
         {% endif %}
       {% elif SECTION == 'account' %}

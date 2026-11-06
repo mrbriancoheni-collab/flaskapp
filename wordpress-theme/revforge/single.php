@@ -9,6 +9,8 @@ get_header(); ?>
 
         <article id="post-<?php the_ID(); ?>" <?php post_class( 'single-post' ); ?>>
 
+            <?php revforge_breadcrumbs(); ?>
+
             <div class="single-post__hero">
                 <?php
                 $categories = get_the_category();
@@ -22,7 +24,8 @@ get_header(); ?>
                     </div>
                 <?php endif; ?>
 
-                <h1 class="single-post__title"><?php the_title(); ?></h1>
+                <!-- speakable: AEO voice-search signal for the headline -->
+                <h1 class="single-post__title speakable"><?php echo esc_html( get_the_title() ); ?></h1>
 
                 <div class="single-post__meta">
                     <span class="single-post__date"><?php echo get_the_date( 'F j, Y' ); ?></span>
@@ -31,10 +34,10 @@ get_header(); ?>
                     <span class="single-post__sep">·</span>
                     <span class="single-post__read-time">
                         <?php
-                        $content = get_post_field( 'post_content', get_the_ID() );
+                        $content    = get_post_field( 'post_content', get_the_ID() );
                         $word_count = str_word_count( strip_tags( $content ) );
-                        $minutes = max( 1, ceil( $word_count / 200 ) );
-                        echo $minutes . ' min read';
+                        $minutes    = max( 1, (int) ceil( $word_count / 200 ) );
+                        echo esc_html( $minutes . ' min read' );
                         ?>
                     </span>
                 </div>
@@ -62,6 +65,8 @@ get_header(); ?>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
+
+            <?php revforge_post_adjacent_links(); ?>
 
             <div class="single-post__nav">
                 <a href="<?php echo esc_url( home_url( '/blog' ) ); ?>" class="btn btn-outline">&larr; Back to Blog</a>

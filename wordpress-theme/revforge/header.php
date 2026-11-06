@@ -4,10 +4,27 @@
     <meta charset="<?php bloginfo( 'charset' ); ?>">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="profile" href="https://gmpg.org/xfn/11">
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="<?php echo esc_url( get_template_directory_uri() ); ?>/assets/img/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="<?php echo esc_url( get_template_directory_uri() ); ?>/assets/img/favicon-16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="<?php echo esc_url( get_template_directory_uri() ); ?>/assets/img/apple-touch-icon.png">
+    <link rel="manifest" href="<?php echo esc_url( get_template_directory_uri() ); ?>/assets/img/site.webmanifest">
+    <meta name="theme-color" content="#1A5C35">
+
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="//www.google-analytics.com">
+    <link rel="dns-prefetch" href="//www.googletagmanager.com">
+
     <?php wp_head(); ?>
 </head>
 <body <?php body_class(); ?>>
 <?php wp_body_open(); ?>
+
+<!-- Skip to content (accessibility) -->
+<a class="skip-to-content" href="#main"><?php esc_html_e( 'Skip to content', 'revforge' ); ?></a>
 
 <header class="site-header" id="site-header">
     <div class="header-inner container">

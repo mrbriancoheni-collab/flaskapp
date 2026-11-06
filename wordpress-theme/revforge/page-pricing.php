@@ -2,6 +2,33 @@
 /**
  * Template Name: Pricing Page
  */
+
+// FAQ schema items for JSON-LD (picked up by inc/seo.php)
+add_filter( 'revforge_faq_schema_items', function() {
+    return [
+        [
+            'question' => 'Do I need a Google Ads account to get started?',
+            'answer'   => 'Yes — RevForge connects to your existing Google Ads account via secure OAuth. If you don\'t have one yet, you can create a free Google Ads account at ads.google.com and connect it during onboarding.',
+        ],
+        [
+            'question' => 'What happens after my 14-day free trial?',
+            'answer'   => 'After 14 days you\'ll be prompted to choose a plan. We won\'t charge you automatically — no credit card is required to start. If you decide not to continue, your data is kept for 30 days.',
+        ],
+        [
+            'question' => 'Can I manage multiple client accounts as an agency?',
+            'answer'   => 'Absolutely. The Agency plan supports unlimited Google Ads accounts, white-label PDF reports with your branding, and a client-facing dashboard you can share read-only access to.',
+        ],
+        [
+            'question' => 'How does the Billboard Ads module work?',
+            'answer'   => 'The Billboard Ads module lets you plan, build, and manage digital out-of-home campaigns entirely within RevForge. Browse screens by city, estimate reach and impressions, generate AI billboard copy, upload your creative, and track campaign performance.',
+        ],
+        [
+            'question' => 'Does RevForge actually make changes to my Google Ads campaigns?',
+            'answer'   => 'Only with your permission. By default, RevForge surfaces recommendations in an Action Queue for you to approve with one click. If you enable Autopilot, high-confidence changes can execute automatically — but you set the thresholds and can turn it off at any time.',
+        ],
+    ];
+} );
+
 get_header(); ?>
 
 <main id="main">

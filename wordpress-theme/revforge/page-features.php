@@ -2,6 +2,33 @@
 /**
  * Template Name: Features Page
  */
+
+// HowTo schema steps for JSON-LD (picked up by inc/seo.php)
+add_filter( 'revforge_howto_schema_steps', function() {
+    return [
+        [
+            'name' => 'Connect your Google Ads account',
+            'text' => 'Sign up for RevForge and connect your Google Ads account via secure OAuth. RevForge imports your campaigns, ad groups, and keywords automatically.',
+        ],
+        [
+            'name' => 'Review AI recommendations in the Action Queue',
+            'text' => 'RevForge\'s AI analyzes your account and surfaces bid adjustments, negative keywords, and budget optimizations. Approve actions with one click.',
+        ],
+        [
+            'name' => 'Generate high-quality ad copy with the RSA Generator',
+            'text' => 'Enter your trade, city, and selling points. RevForge generates Google-compliant headlines and descriptions in seconds, with quality scoring tips.',
+        ],
+        [
+            'name' => 'Optionally plan billboard campaigns',
+            'text' => 'Use the Billboard Ads module to browse 28,000+ digital screen locations by city, estimate reach and CPM, and generate AI billboard copy to complement your Google Ads.',
+        ],
+        [
+            'name' => 'Monitor leads and cost-per-lead',
+            'text' => 'The Lead Tracking dashboard shows exactly which keywords, ads, and campaigns generate phone calls and form submissions, so you know your true cost per job booked.',
+        ],
+    ];
+} );
+
 get_header(); ?>
 
 <main id="main">

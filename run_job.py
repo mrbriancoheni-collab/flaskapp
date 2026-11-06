@@ -8,47 +8,47 @@ Usage:
 
 Example crontab entries (crontab -e):
     # Email queue — every 5 minutes
-    */5 * * * * cd /home/fieldsprout/flaskapp && python run_job.py process_email_queue >> logs/cron.log 2>&1
+    */5 * * * * cd /home/revforge/flaskapp && python run_job.py process_email_queue >> logs/cron.log 2>&1
 
     # Tactical agents — every 2 hours
-    0 */2 * * * cd /home/fieldsprout/flaskapp && python run_job.py run_tactical_agents >> logs/cron.log 2>&1
+    0 */2 * * * cd /home/revforge/flaskapp && python run_job.py run_tactical_agents >> logs/cron.log 2>&1
 
     # Facebook Ads tactical agents — every 4 hours
-    0 */4 * * * cd /home/fieldsprout/flaskapp && python run_job.py run_fb_tactical >> logs/cron.log 2>&1
+    0 */4 * * * cd /home/revforge/flaskapp && python run_job.py run_fb_tactical >> logs/cron.log 2>&1
 
     # Operational agents + auto-executor — every 4 hours
-    0 */4 * * * cd /home/fieldsprout/flaskapp && python run_job.py run_operational_agents >> logs/cron.log 2>&1
+    0 */4 * * * cd /home/revforge/flaskapp && python run_job.py run_operational_agents >> logs/cron.log 2>&1
 
     # Facebook Ads operational agents — every 6 hours
-    0 */6 * * * cd /home/fieldsprout/flaskapp && python run_job.py run_fb_operational >> logs/cron.log 2>&1
-    30 */4 * * * cd /home/fieldsprout/flaskapp && python run_job.py run_google_ads_auto_executor >> logs/cron.log 2>&1
+    0 */6 * * * cd /home/revforge/flaskapp && python run_job.py run_fb_operational >> logs/cron.log 2>&1
+    30 */4 * * * cd /home/revforge/flaskapp && python run_job.py run_google_ads_auto_executor >> logs/cron.log 2>&1
 
     # Offline conversion upload — every 4 hours
-    15 */4 * * * cd /home/fieldsprout/flaskapp && python run_job.py upload_offline_conversions_all_accounts >> logs/cron.log 2>&1
+    15 */4 * * * cd /home/revforge/flaskapp && python run_job.py upload_offline_conversions_all_accounts >> logs/cron.log 2>&1
 
     # Daily jobs (all UTC)
-    30 3 * * * cd /home/fieldsprout/flaskapp && python run_job.py sync_fb_all_accounts >> logs/cron.log 2>&1
-    0  4 * * * cd /home/fieldsprout/flaskapp && python run_job.py sync_structure_all_accounts >> logs/cron.log 2>&1
-    30 4 * * * cd /home/fieldsprout/flaskapp && python run_job.py sync_call_view_all_accounts >> logs/cron.log 2>&1
-    0  5 * * * cd /home/fieldsprout/flaskapp && python run_job.py sync_dayparting_all_accounts >> logs/cron.log 2>&1
-    30 5 * * * cd /home/fieldsprout/flaskapp && python run_job.py sync_auction_insights_all_accounts >> logs/cron.log 2>&1
-    0  6 * * * cd /home/fieldsprout/flaskapp && python run_job.py sync_rsa_assets_all_accounts >> logs/cron.log 2>&1
-    0  7 * * * cd /home/fieldsprout/flaskapp && python run_job.py run_negative_keyword_agents >> logs/cron.log 2>&1
-    0  7 * * * cd /home/fieldsprout/flaskapp && python run_job.py sync_skimmer_all_accounts >> logs/cron.log 2>&1
-    30 7 * * * cd /home/fieldsprout/flaskapp && python run_job.py run_overlap_detection_all_groups >> logs/cron.log 2>&1
-    0  2 * * * cd /home/fieldsprout/flaskapp && python run_job.py run_wp_operational >> logs/cron.log 2>&1
-    0  8 * * * cd /home/fieldsprout/flaskapp && python run_job.py run_lead_automation_daily >> logs/cron.log 2>&1
-    0  9 * * * cd /home/fieldsprout/flaskapp && python run_job.py generate_google_ads_insights_daily >> logs/cron.log 2>&1
-    0 12 * * * cd /home/fieldsprout/flaskapp && python run_job.py send_to_all_unsent_today >> logs/cron.log 2>&1
+    30 3 * * * cd /home/revforge/flaskapp && python run_job.py sync_fb_all_accounts >> logs/cron.log 2>&1
+    0  4 * * * cd /home/revforge/flaskapp && python run_job.py sync_structure_all_accounts >> logs/cron.log 2>&1
+    30 4 * * * cd /home/revforge/flaskapp && python run_job.py sync_call_view_all_accounts >> logs/cron.log 2>&1
+    0  5 * * * cd /home/revforge/flaskapp && python run_job.py sync_dayparting_all_accounts >> logs/cron.log 2>&1
+    30 5 * * * cd /home/revforge/flaskapp && python run_job.py sync_auction_insights_all_accounts >> logs/cron.log 2>&1
+    0  6 * * * cd /home/revforge/flaskapp && python run_job.py sync_rsa_assets_all_accounts >> logs/cron.log 2>&1
+    0  7 * * * cd /home/revforge/flaskapp && python run_job.py run_negative_keyword_agents >> logs/cron.log 2>&1
+    0  7 * * * cd /home/revforge/flaskapp && python run_job.py sync_skimmer_all_accounts >> logs/cron.log 2>&1
+    30 7 * * * cd /home/revforge/flaskapp && python run_job.py run_overlap_detection_all_groups >> logs/cron.log 2>&1
+    0  2 * * * cd /home/revforge/flaskapp && python run_job.py run_wp_operational >> logs/cron.log 2>&1
+    0  8 * * * cd /home/revforge/flaskapp && python run_job.py run_lead_automation_daily >> logs/cron.log 2>&1
+    0  9 * * * cd /home/revforge/flaskapp && python run_job.py generate_google_ads_insights_daily >> logs/cron.log 2>&1
+    0 12 * * * cd /home/revforge/flaskapp && python run_job.py send_to_all_unsent_today >> logs/cron.log 2>&1
 
     # Weekly jobs
-    0 2 * * 0 cd /home/fieldsprout/flaskapp && python run_job.py cleanup_expired_invites >> logs/cron.log 2>&1
-    0 3 * * 0 cd /home/fieldsprout/flaskapp && python run_job.py cleanup_old_audit_logs >> logs/cron.log 2>&1
-    0 8 * * 1 cd /home/fieldsprout/flaskapp && python run_job.py generate_google_ads_insights_weekly >> logs/cron.log 2>&1
-    0 5 * * 1 cd /home/fieldsprout/flaskapp && python run_job.py run_strategic_orchestrator >> logs/cron.log 2>&1
-    0 6 * * 1 cd /home/fieldsprout/flaskapp && python run_job.py run_strategic_agents >> logs/cron.log 2>&1
-    30 6 * * 1 cd /home/fieldsprout/flaskapp && python run_job.py snapshot_keyword_rankings >> logs/cron.log 2>&1
-    0 13 * * 1 cd /home/fieldsprout/flaskapp && python run_job.py send_weekly_digest_all_accounts >> logs/cron.log 2>&1
+    0 2 * * 0 cd /home/revforge/flaskapp && python run_job.py cleanup_expired_invites >> logs/cron.log 2>&1
+    0 3 * * 0 cd /home/revforge/flaskapp && python run_job.py cleanup_old_audit_logs >> logs/cron.log 2>&1
+    0 8 * * 1 cd /home/revforge/flaskapp && python run_job.py generate_google_ads_insights_weekly >> logs/cron.log 2>&1
+    0 5 * * 1 cd /home/revforge/flaskapp && python run_job.py run_strategic_orchestrator >> logs/cron.log 2>&1
+    0 6 * * 1 cd /home/revforge/flaskapp && python run_job.py run_strategic_agents >> logs/cron.log 2>&1
+    30 6 * * 1 cd /home/revforge/flaskapp && python run_job.py snapshot_keyword_rankings >> logs/cron.log 2>&1
+    0 13 * * 1 cd /home/revforge/flaskapp && python run_job.py send_weekly_digest_all_accounts >> logs/cron.log 2>&1
 
 To enable this mode, set DISABLE_SCHEDULER=1 in your Passenger environment
 variables (via cPanel > Software > Setup Python App > Environment Variables,

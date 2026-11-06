@@ -122,7 +122,7 @@ def mark_pending_as_sent():
 
 def main():
     """Main execution."""
-    print_header("FieldSprout Alert Spam Fix")
+    print_header("RevForge Alert Spam Fix")
     print("This script will:")
     print("  1. Remove duplicate active alerts")
     print("  2. Resolve stale alerts (>72 hours old)")
@@ -156,7 +156,7 @@ def main():
         print("  2. Critical alerts still create notifications (but throttled)")
         print("  3. Duplicates are automatically prevented")
         print("\nTo customize settings per user:")
-        print("  - Visit: https://fieldsprout.io/account/settings")
+        print("  - Visit: https://getrevforge.io/account/settings")
         print("  - Adjust alert preferences and digest time")
 
 if __name__ == '__main__':

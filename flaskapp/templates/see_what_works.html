@@ -1,9 +1,9 @@
 {% extends "base_public.html" %}
 {% set SECTION = 'solutions' %}
-{% block title %}See What Works — Home Service Ad Analytics &amp; Attribution | FieldSprout{% endblock %}
-{% block meta_description %}FieldSprout shows home service businesses exactly which ads, keywords, ZIPs, and channels generate real booked jobs — not just clicks and impressions. Full attribution, owner-ready reports.{% endblock %}
-{% block og_title %}See What Works — Ad Attribution for Home Services | FieldSprout{% endblock %}
-{% block og_description %}Stop guessing which ads make you money. FieldSprout tracks every click through to booked job, showing exactly where your marketing budget should go — and where to cut.{% endblock %}
+{% block title %}See What Works — Home Service Ad Analytics &amp; Attribution | RevForge{% endblock %}
+{% block meta_description %}RevForge shows trade businesses exactly which ads, keywords, ZIPs, and channels generate real booked jobs — not just clicks and impressions. Full attribution, owner-ready reports.{% endblock %}
+{% block og_title %}See What Works — Ad Attribution for Home Services | RevForge{% endblock %}
+{% block og_description %}Stop guessing which ads make you money. RevForge tracks every click through to booked job, showing exactly where your marketing budget should go — and where to cut.{% endblock %}
 
 {% block head_extra %}
 <script type="application/ld+json">
@@ -12,11 +12,11 @@
   "@graph": [
     {
       "@type": "WebPage",
-      "@id": "https://fieldsprout.io/see-what-works#webpage",
-      "name": "Google Ads Analytics for Home Service Businesses | FieldSprout",
-      "description": "See exactly which campaigns, keywords, and ads drive phone calls. FieldSprout translates Google Ads data into plain-English insights you can act on.",
-      "url": "https://fieldsprout.io/see-what-works",
-      "isPartOf": {"@id": "https://fieldsprout.io/#website"}
+      "@id": "https://getrevforge.io/see-what-works#webpage",
+      "name": "Google Ads Analytics for Trade Businesses | RevForge",
+      "description": "See exactly which campaigns, keywords, and ads drive phone calls. RevForge translates Google Ads data into plain-English insights you can act on.",
+      "url": "https://getrevforge.io/see-what-works",
+      "isPartOf": {"@id": "https://getrevforge.io/#website"}
     },
     {
       "@type": "FAQPage",
@@ -24,17 +24,17 @@
         {
           "@type": "Question",
           "name": "How do I know which Google Ads are actually driving calls?",
-          "acceptedAnswer": {"@type": "Answer", "text": "FieldSprout connects call tracking to your campaigns so you can see exactly which keywords and ads generated phone calls, not just clicks."}
+          "acceptedAnswer": {"@type": "Answer", "text": "RevForge connects call tracking to your campaigns so you can see exactly which keywords and ads generated phone calls, not just clicks."}
         },
         {
           "@type": "Question",
           "name": "Can I see performance by campaign, ad group, and keyword?",
-          "acceptedAnswer": {"@type": "Answer", "text": "Yes. FieldSprout's analytics dashboard breaks down cost, clicks, calls, and conversion rate at every level — campaign, ad group, keyword, and even individual ad copy."}
+          "acceptedAnswer": {"@type": "Answer", "text": "Yes. RevForge's analytics dashboard breaks down cost, clicks, calls, and conversion rate at every level — campaign, ad group, keyword, and even individual ad copy."}
         },
         {
           "@type": "Question",
           "name": "How often is my performance data updated?",
-          "acceptedAnswer": {"@type": "Answer", "text": "FieldSprout syncs with Google Ads daily and surfaces weekly summary insights so you always have a current picture of what's working and what's wasting money."}
+          "acceptedAnswer": {"@type": "Answer", "text": "RevForge syncs with Google Ads daily and surfaces weekly summary insights so you always have a current picture of what's working and what's wasting money."}
         }
       ]
     }
@@ -55,7 +55,7 @@
       Know Exactly Which Ads<br>Are Making You Money
     </h1>
     <p class="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
-      Clicks and impressions don't pay bills — booked jobs do. FieldSprout tracks your full
+      Clicks and impressions don't pay bills — booked jobs do. RevForge tracks your full
       marketing pipeline from first click to signed job, across every channel, so you
       always know where to invest and where to cut.
     </p>
@@ -74,7 +74,7 @@
 <section class="py-16 bg-white">
   <div class="container-lg">
     <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">From ad spend to revenue — every step tracked</h2>
-    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Most marketing dashboards stop at the click or the form fill. FieldSprout connects the full chain — so you see the ROI of every campaign, down to the dollar.</p>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Most marketing dashboards stop at the click or the form fill. RevForge connects the full chain — so you see the ROI of every campaign, down to the dollar.</p>
     <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
       {% for icon, color, title, desc in [
         ('fa-magnifying-glass', 'indigo', 'Campaign-level attribution', 'See which campaigns, ad groups, and keywords generate actual booked jobs — not just impressions or form fills. Stop funding losers.'),
@@ -103,8 +103,8 @@
       <div class="md:w-1/2 mb-8 md:mb-0">
         <h2 class="text-3xl font-bold text-gray-900 mb-4">One dashboard. Every channel. No spreadsheets.</h2>
         <p class="text-gray-600 mb-6">
-          Most home service owners manage their marketing by logging into 4–5 different platforms
-          and trying to piece together what's working. FieldSprout pulls everything into one
+          Most trade contractors manage their marketing by logging into 4–5 different platforms
+          and trying to piece together what's working. RevForge pulls everything into one
           dashboard — Google Ads, GLSA, Facebook, GBP — so you have one source of truth.
         </p>
         <ul class="space-y-3 text-gray-700 mb-8">
@@ -178,7 +178,7 @@
     <div class="grid md:grid-cols-3 gap-6">
       {% for quote, name, co, result in [
         ('"I used to spend 3 hours every Monday pulling numbers from Google Ads, GLSA, and Facebook. Now I get one email on Monday morning with everything I need. Changed my week."', 'Allen K.', 'K&T HVAC', '3 hrs saved every week'),
-        ("\"FieldSprout's attribution showed us that a $500/mo Facebook campaign was driving 28% of our revenue. We'd been about to cut it because 'Facebook doesn't work for plumbing.'\"", "Pete O.", "Reliable Plumbing", "28% of revenue attributed to Facebook"),
+        ("\"RevForge's attribution showed us that a $500/mo Facebook campaign was driving 28% of our revenue. We'd been about to cut it because 'Facebook doesn't work for plumbing.'\"", "Pete O.", "Reliable Plumbing", "28% of revenue attributed to Facebook"),
         ('"Knowing CSR booking rates by person was a game changer. One of our reps was converting 71% of GLSA calls. Another was at 34%. Now we coach the second to copy the first."', 'Lisa M.', 'Pro Electric Services', 'CSR coaching with real data'),
       ] %}
       <div class="bg-white rounded-2xl p-6 border">

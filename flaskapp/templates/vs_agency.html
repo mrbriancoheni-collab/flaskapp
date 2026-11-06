@@ -1,22 +1,22 @@
 {% extends "base_public.html" %}
-{% block title %}FieldSprout vs. Traditional Marketing Agency — AI vs. Monthly Retainer | FieldSprout{% endblock %}
-{% block meta_description %}Compare FieldSprout's AI-powered Google Ads optimization to a traditional marketing agency. See why home service businesses get better results at a fraction of the cost.{% endblock %}
-{% block og_title %}FieldSprout vs. Agency — AI Optimization vs. Monthly Retainer{% endblock %}
-{% block og_description %}Why pay $2,000–$5,000/month in retainer fees when AI can optimize your Google Ads 24/7 at a fraction of the cost — with more transparency and faster results?{% endblock %}
+{% block title %}RevForge vs. Marketing Agency — Stop Paying $2,500/Month to Not Know If It's Working{% endblock %}
+{% block meta_description %}You pay your agency $2,500/month. They sent a report. You still don't know which campaigns booked jobs. RevForge shows you exactly what's working — and optimizes it every 24 hours.{% endblock %}
+{% block og_title %}RevForge vs. Agency — Know what's working. Pay a fraction of the cost.{% endblock %}
+{% block og_description %}Agencies charge $2,000–$5,000/month, make changes once a month, and send PDF reports you can't act on. RevForge optimizes your Google Ads every 24 hours with full transparency — no retainer, no contract.{% endblock %}
 
 {% block head_extra %}
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "WebPage",
-  "name": "FieldSprout vs. Marketing Agency",
-  "description": "Compare AI-powered Google Ads optimization to traditional marketing agency retainers for home service businesses.",
-  "url": "https://fieldsprout.io/vs-agency",
+  "name": "RevForge vs. Marketing Agency",
+  "description": "RevForge vs. a traditional agency — problem-first comparison for trade contractors who are paying retainer fees and can't tell what's working.",
+  "url": "https://getrevforge.io/vs-agency",
   "breadcrumb": {
     "@type": "BreadcrumbList",
     "itemListElement": [
-      {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://fieldsprout.io"},
-      {"@type": "ListItem", "position": 2, "name": "FieldSprout vs. Agency", "item": "https://fieldsprout.io/vs-agency"}
+      {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://getrevforge.io"},
+      {"@type": "ListItem", "position": 2, "name": "RevForge vs. Agency", "item": "https://getrevforge.io/vs-agency"}
     ]
   }
 }
@@ -29,34 +29,34 @@
   "mainEntity": [
     {
       "@type": "Question",
-      "name": "How is FieldSprout different from a marketing agency?",
+      "name": "What about my existing agency relationship?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Agencies rely on human account managers with limited time and bandwidth. FieldSprout uses autonomous AI agents that optimize your campaigns 24/7 — adjusting bids, keywords, and ad copy continuously without waiting for a monthly check-in. The result is faster optimization cycles, lower cost per lead, and full transparency into every change made."
+        "text": "You don't have to fire your agency to try RevForge. Connect your Google Ads account to RevForge and run them in parallel for 30 days. You'll see exactly what RevForge is doing, what it's finding, and what your cost per lead looks like. Compare that to your agency's next monthly report. Most contractors make the decision themselves after the first month."
       }
     },
     {
       "@type": "Question",
-      "name": "How much does a marketing agency charge vs. FieldSprout?",
+      "name": "Do I need to fire my agency to use RevForge?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Traditional marketing agencies charge $2,000–$5,000/month in management fees, often plus a percentage of ad spend (10–15%). FieldSprout charges a flat $250/month (or $200/month annually) regardless of ad spend volume — covering all marketing channels including Google Ads, Meta Ads, SEO, reputation, and lead follow-up."
+        "text": "No. RevForge connects directly to your Google Ads account. Your agency can keep running campaigns while RevForge audits the same account, flags waste, and makes its own optimizations. You can run both simultaneously, compare results, and decide — no contract, no commitment. Most people find they don't need the agency once they see what RevForge surfaces."
       }
     },
     {
       "@type": "Question",
-      "name": "Can AI really replace a marketing agency for a trade business?",
+      "name": "What if I want to keep my agency for creative work?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "For most trade businesses, yes. FieldSprout handles the core services that consume 80% of a typical agency retainer: Google Ads management, keyword optimization, reputation management, and local SEO. The remaining 20% — brand strategy, creative direction, custom content — still benefits from human input. FieldSprout replaces the operational management layer, not strategic advisory."
+        "text": "That's a reasonable split. Agencies are genuinely useful for video production, brand work, custom content creation, and multi-channel strategy. RevForge replaces the operational management layer — keyword optimization, bid management, Quality Score work, negative keyword pruning, scheduling. If your agency is doing real strategic creative work, keep them for that. Let RevForge run the day-to-day account management that most agencies charge $1,500–$3,000/month for."
       }
     },
     {
       "@type": "Question",
-      "name": "What happens if I'm not satisfied with FieldSprout?",
+      "name": "How is RevForge different from a marketing agency?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Cancel anytime — no contracts, no cancellation fees. Unlike agencies with 3–6 month retainer commitments, FieldSprout is month-to-month. You retain full ownership and access to all your ad accounts and data regardless."
+        "text": "Agencies rely on human account managers with limited time — your account gets 30–60 minutes of attention per month. RevForge's AI agents optimize your campaigns every 24 hours, log every change with a rationale, and connect ad spend to actual booked jobs. You see every decision made. There are no monthly reports to schedule, no 90-day onboarding ramps, and no cancellation fees."
       }
     }
   ]
@@ -66,41 +66,91 @@
 
 {% block content %}
 
-<!-- Hero -->
-<section class="bg-gradient-to-br from-indigo-50 via-white to-purple-50 pt-20 pb-16">
+<!-- Hero — Problem First -->
+<section class="bg-gradient-to-br from-slate-900 to-slate-800 pt-20 pb-16 text-white">
   <div class="container-lg text-center">
-    <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-100 text-indigo-800 rounded-full text-sm font-semibold mb-6">
-      <i class="fa-solid fa-scale-balanced"></i> Head-to-Head Comparison
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 text-gray-300 rounded-full text-sm font-semibold mb-6">
+      <i class="fa-solid fa-scale-balanced"></i> RevForge vs. Your Agency
     </div>
-    <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-tight">
-      FieldSprout vs. Your Marketing Agency
+    <h1 class="text-4xl md:text-5xl font-extrabold mb-5 leading-tight max-w-3xl mx-auto">
+      You pay your agency $2,500/month. They sent a report last Tuesday.<br>
+      <span class="text-amber-400">You still don't know if it's working.</span>
     </h1>
-    <p class="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
-      Traditional agencies charge $2,000–$5,000/month to manage your ads — and make changes
-      once or twice a month. FieldSprout's AI agents optimize 24/7 and costs a fraction of the price.
-      Here's the full comparison.
+    <p class="text-xl text-slate-300 max-w-2xl mx-auto mb-4">
+      Imagine knowing exactly which campaign booked which jobs — with changes happening every day instead of once a month.
+    </p>
+    <p class="text-slate-400 max-w-xl mx-auto mb-10 text-base">
+      That's the difference. Not a feature list. Not a price comparison. Actually knowing what your ad spend is doing.
     </p>
     <div class="flex flex-col sm:flex-row gap-4 justify-center">
       {% if has_endpoint('ads_grader_bp.index') %}
       <a href="{{ url_for('ads_grader_bp.strength_test') }}" class="btn btn-primary btn-lg">Grade My Ads for Free</a>
       {% endif %}
-      <a href="/pricing" class="btn btn-secondary btn-lg">See Pricing</a>
+      <a href="/pricing" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">See Pricing</a>
+    </div>
+    <p class="text-slate-500 text-sm mt-4">No credit card · No contract · See results in 60 seconds</p>
+  </div>
+</section>
+
+<!-- The Real Cost of an Agency -->
+<section class="py-16 bg-white">
+  <div class="container-lg">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">The real cost of your agency</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">It's not just the retainer. It's the 90-day ramp. The monthly report cycle. And the opacity that makes it impossible to know what you're actually paying for.</p>
+    <div class="grid md:grid-cols-3 gap-6">
+      <div class="bg-red-50 border border-red-100 rounded-2xl p-6">
+        <div class="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center mb-4">
+          <i class="fa-solid fa-clock text-red-500 text-lg"></i>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-3 text-lg">Time cost</h3>
+        <ul class="space-y-2 text-sm text-gray-600">
+          <li class="flex items-start gap-2"><i class="fa-solid fa-xmark text-red-400 mt-0.5 flex-shrink-0"></i>90-day "ramp period" before real work starts</li>
+          <li class="flex items-start gap-2"><i class="fa-solid fa-xmark text-red-400 mt-0.5 flex-shrink-0"></i>Monthly reporting cycles — changes you needed 3 weeks ago</li>
+          <li class="flex items-start gap-2"><i class="fa-solid fa-xmark text-red-400 mt-0.5 flex-shrink-0"></i>30-minute calls to explain what they did (but not why)</li>
+          <li class="flex items-start gap-2"><i class="fa-solid fa-xmark text-red-400 mt-0.5 flex-shrink-0"></i>Storm season missed while waiting for next check-in</li>
+        </ul>
+      </div>
+      <div class="bg-orange-50 border border-orange-100 rounded-2xl p-6">
+        <div class="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center mb-4">
+          <i class="fa-solid fa-dollar-sign text-orange-500 text-lg"></i>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-3 text-lg">Money cost</h3>
+        <ul class="space-y-2 text-sm text-gray-600">
+          <li class="flex items-start gap-2"><i class="fa-solid fa-xmark text-orange-400 mt-0.5 flex-shrink-0"></i>$2,000–$5,000/month in management fees</li>
+          <li class="flex items-start gap-2"><i class="fa-solid fa-xmark text-orange-400 mt-0.5 flex-shrink-0"></i>10–15% of ad spend on top, every month</li>
+          <li class="flex items-start gap-2"><i class="fa-solid fa-xmark text-orange-400 mt-0.5 flex-shrink-0"></i>No refund when campaigns underperform</li>
+          <li class="flex items-start gap-2"><i class="fa-solid fa-xmark text-orange-400 mt-0.5 flex-shrink-0"></i>$1,200–$1,800/month still wasted on bad keywords</li>
+        </ul>
+      </div>
+      <div class="bg-yellow-50 border border-yellow-100 rounded-2xl p-6">
+        <div class="w-12 h-12 bg-yellow-100 rounded-2xl flex items-center justify-center mb-4">
+          <i class="fa-solid fa-eye-slash text-yellow-600 text-lg"></i>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-3 text-lg">Opacity cost</h3>
+        <ul class="space-y-2 text-sm text-gray-600">
+          <li class="flex items-start gap-2"><i class="fa-solid fa-xmark text-yellow-600 mt-0.5 flex-shrink-0"></i>You don't own the insights — they live in their system</li>
+          <li class="flex items-start gap-2"><i class="fa-solid fa-xmark text-yellow-600 mt-0.5 flex-shrink-0"></i>You can't see the full account without asking</li>
+          <li class="flex items-start gap-2"><i class="fa-solid fa-xmark text-yellow-600 mt-0.5 flex-shrink-0"></i>Changes are logged nowhere you can find</li>
+          <li class="flex items-start gap-2"><i class="fa-solid fa-xmark text-yellow-600 mt-0.5 flex-shrink-0"></i>Reports show clicks and impressions — not booked jobs</li>
+        </ul>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- Comparison Table -->
-<section class="py-16 bg-white">
+<!-- Side-by-Side Comparison -->
+<section class="py-16 bg-gray-50">
   <div class="container-lg">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-12">The comparison trade contractors actually care about</h2>
     <div class="overflow-x-auto">
       <table class="w-full text-left border-separate border-spacing-0 rounded-2xl overflow-hidden shadow-soft border border-gray-200">
         <thead>
           <tr>
-            <th class="py-4 px-6 bg-gray-50 text-gray-600 font-semibold text-sm w-1/3 border-b border-gray-200">Feature</th>
-            <th class="py-4 px-6 bg-indigo-600 text-white font-bold text-sm text-center w-1/3 border-b border-indigo-700">
+            <th class="py-4 px-6 bg-gray-50 text-gray-600 font-semibold text-sm w-1/3 border-b border-gray-200">What matters</th>
+            <th class="py-4 px-6 bg-green-700 text-white font-bold text-sm text-center w-1/3 border-b border-green-800">
               <div class="flex flex-col items-center gap-1">
-                <span class="text-xs font-normal text-indigo-200 uppercase tracking-wide">AI-Powered</span>
-                FieldSprout
+                <span class="text-xs font-normal text-green-200 uppercase tracking-wide">AI-Powered</span>
+                RevForge
               </div>
             </th>
             <th class="py-4 px-6 bg-gray-50 text-gray-600 font-semibold text-sm text-center w-1/3 border-b border-gray-200">
@@ -109,26 +159,20 @@
           </tr>
         </thead>
         <tbody>
-          {% for feature, fieldsprout, agency, fs_good in [
-            ('Monthly cost', 'From $200/mo (annual) · $250/mo', '$2,000–$5,000/mo + ad spend %', True),
-            ('Optimization frequency', 'Every 24 hours', 'Once or twice a month', True),
-            ('Setup time', '60 seconds — connect your account', '2–4 week onboarding', True),
-            ('Transparency', 'Full dashboard — see every change made', 'Monthly PDF report, limited detail', True),
-            ('Contract required', 'No — cancel anytime', 'Typically 6–12 month contracts', True),
-            ('Negative keyword updates', 'Continuous, AI-driven', 'Quarterly at best', True),
-            ('Quality Score optimization', 'Built-in, automatic', 'Manual, infrequent', True),
-            ('Industry-specific knowledge', 'HVAC, plumbing, electrical, roofing', 'Generalist or limited trades depth', True),
-            ('After-hours optimization', '24/7 — always on', 'Only during business hours', True),
-            ('Seasonal campaign adjustments', 'Automatic based on demand signals', 'Manual, often late', True),
-            ('AI action log', 'Every change logged with rationale', 'Changes rarely explained', True),
-            ('Human strategy oversight', 'Your team reviews AI recommendations', '✓ Account manager (shared across clients)', False),
-            ('Creative ad copy writing', 'AI-assisted with your input', '✓ Copywriter included', False),
-            ('Landing page design', 'Recommendations only', '✓ Some agencies include design', False),
+          {% for feature, revforge, agency, rf_wins in [
+            ('Monthly cost', 'From $200/mo (annual) · $250/mo', '$2,000–$5,000/mo + % of ad spend', True),
+            ('Optimization frequency', 'Every 24 hours — AI never stops', 'Once or twice a month', True),
+            ('Setup time', '15 minutes — connect and go', '2–4 week onboarding ramp', True),
+            ('Transparency', 'Full action log — every change with rationale', 'Monthly PDF report, limited detail', True),
+            ('Revenue attribution', 'Which campaign booked which job', 'Clicks and impressions — rarely job revenue', True),
+            ('Contract', 'No contract — cancel anytime', '6–12 month retainer commitment', True),
+            ('Seasonal response time', 'Same day — AI detects demand spikes', '3–5 days to get a change made', True),
+            ('Response time', '24-hour AI cycle, alerts in real time', 'Email your account manager and wait', True),
           ] %}
           <tr class="border-b border-gray-100 hover:bg-gray-50 transition">
             <td class="py-4 px-6 text-sm text-gray-700 font-medium">{{ feature }}</td>
             <td class="py-4 px-6 text-sm text-center">
-              <span class="{{ 'text-green-700 font-semibold' if fs_good else 'text-gray-600' }}">{{ fieldsprout }}</span>
+              <span class="{{ 'text-green-700 font-semibold' if rf_wins else 'text-gray-600' }}">{{ revforge }}</span>
             </td>
             <td class="py-4 px-6 text-sm text-center text-gray-600">{{ agency }}</td>
           </tr>
@@ -139,14 +183,66 @@
   </div>
 </section>
 
-<!-- The Math Section -->
-<section class="py-16 bg-indigo-50">
+<!-- What Trade Owners Actually Say About Agencies -->
+<section class="py-16 bg-white">
   <div class="container-lg">
-    <h2 class="text-3xl font-bold text-gray-900 text-center mb-4">The real cost comparison</h2>
-    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">For a typical HVAC company spending $4,000/month in Google Ads, here's what each option costs over 12 months.</p>
-    <div class="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">What trade business owners say about their agencies</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">These aren't edge cases. They're what comes up in every conversation with a trade owner who's been running an agency retainer for more than 6 months.</p>
+    <div class="grid md:grid-cols-3 gap-6">
+      <div class="bg-gray-50 rounded-2xl p-6 border-l-4 border-red-400">
+        <div class="text-red-600 font-bold text-sm mb-3">HVAC Owner, 8 trucks</div>
+        <p class="text-gray-700 italic mb-4">"My agency built 1 campaign in 6 months and called it good. I had no negative keywords, no scheduling, and I was paying for clicks at 3am. When I asked why, they sent me a new report."</p>
+        <div class="text-sm font-semibold text-gray-900">— Mike, HVAC Owner</div>
+        <div class="text-xs text-gray-500">Name changed · Representative of typical feedback</div>
+      </div>
+      <div class="bg-gray-50 rounded-2xl p-6 border-l-4 border-orange-400">
+        <div class="text-orange-600 font-bold text-sm mb-3">Plumbing Company Owner</div>
+        <p class="text-gray-700 italic mb-4">"They optimized my ads in January. I found out in March — in the monthly report. By then it was too late to know if the changes actually did anything. That's just how it works, they said."</p>
+        <div class="text-sm font-semibold text-gray-900">— Jennifer, Plumbing Co.</div>
+        <div class="text-xs text-gray-500">Name changed · Representative of typical feedback</div>
+      </div>
+      <div class="bg-gray-50 rounded-2xl p-6 border-l-4 border-yellow-400">
+        <div class="text-yellow-700 font-bold text-sm mb-3">Roofing Company Owner</div>
+        <p class="text-gray-700 italic mb-4">"When I asked about cost per booked job, they sent me more clicks data. I asked again. They sent a breakdown by campaign. I asked again. They got defensive. I still don't know the number."</p>
+        <div class="text-sm font-semibold text-gray-900">— Dave, Roofing</div>
+        <div class="text-xs text-gray-500">Name changed · Representative of typical feedback</div>
+      </div>
+    </div>
+  </div>
+</section>
 
-      <!-- Agency Cost -->
+<!-- What Agencies Charge For — Made Automatic -->
+<section class="py-16 bg-green-50">
+  <div class="container-lg">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">RevForge makes what agencies charge for, automatic</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">The core work that makes up 80% of any agency retainer — AI handles it, every day, without a timesheet.</p>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for icon, color, title, desc in [
+        ('fa-magnifying-glass', 'green', 'Keyword optimization — daily', 'Adds trade-specific negative keywords, pauses low performers, and expands into converting terms. Every day. Not once a quarter.'),
+        ('fa-chart-line', 'blue', 'Bid management — continuous', 'Adjusts bids based on time of day, day of week, device, and location — factors agencies set once and forget.'),
+        ('fa-star-half-stroke', 'amber', 'Quality Score improvement', 'Fixes ad-keyword-landing page alignment systematically. Higher QS = lower CPC. Every point gained saves real money.'),
+        ('fa-calendar-check', 'purple', 'Scheduling — business hours + seasons', 'Stops ads running at 2am. Ramps budget before your busy season. Pulls back when you can\'t take more calls.'),
+        ('fa-file-invoice-dollar', 'red', 'Revenue attribution', 'Connects campaign clicks to booked jobs in your CRM. Shows you cost per booked job — not cost per click.'),
+        ('fa-shield-check', 'gray', 'Change log with rationale', 'Every optimization is logged: what changed, when, and why. You see every action. Nothing is a black box.'),
+      ] %}
+      <div class="bg-white rounded-2xl border border-gray-100 p-6 hover:shadow-soft transition">
+        <div class="w-10 h-10 rounded-xl bg-{{ color }}-100 flex items-center justify-center mb-4">
+          <i class="fa-solid {{ icon }} text-{{ color }}-600"></i>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-2">{{ title }}</h3>
+        <p class="text-sm text-gray-600">{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- The Math -->
+<section class="py-16 bg-white">
+  <div class="container-lg">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-4">What this actually costs — side by side</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">For a typical HVAC company spending $4,000/month on Google Ads, here's the full 12-month picture.</p>
+    <div class="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
       <div class="bg-white rounded-2xl border border-gray-200 p-8">
         <div class="text-center mb-6">
           <div class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">Traditional Agency</div>
@@ -161,151 +257,123 @@
           <li class="flex justify-between"><span class="font-medium">Total annual cost (fees + waste)</span><span class="font-semibold text-red-600">$52,800</span></li>
         </ul>
       </div>
-
-      <!-- FieldSprout Cost -->
-      <div class="bg-indigo-600 rounded-2xl border border-indigo-700 p-8 text-white">
+      <div class="bg-green-700 rounded-2xl border border-green-800 p-8 text-white">
         <div class="text-center mb-6">
-          <div class="text-sm font-semibold text-indigo-200 uppercase tracking-wide mb-1">FieldSprout</div>
+          <div class="text-sm font-semibold text-green-200 uppercase tracking-wide mb-1">RevForge</div>
           <div class="text-4xl font-extrabold">$2,400</div>
-          <div class="text-sm text-indigo-200">per year in platform fees (annual plan)</div>
+          <div class="text-sm text-green-200">per year in platform fees (annual plan)</div>
         </div>
-        <ul class="space-y-3 text-sm text-indigo-100">
+        <ul class="space-y-3 text-sm text-green-100">
           <li class="flex justify-between"><span>Monthly platform fee</span><span class="font-semibold text-white">$200/mo (annual)</span></li>
           <li class="flex justify-between"><span>Optimization frequency</span><span class="font-semibold text-white">Every 24 hours</span></li>
           <li class="flex justify-between"><span>Your ad budget managed</span><span class="font-semibold text-white">$4,000/mo</span></li>
-          <li class="flex justify-between border-t border-indigo-500 pt-3 mt-3"><span class="font-medium">Est. wasted spend remaining</span><span class="font-semibold text-green-300">~$240/mo</span></li>
+          <li class="flex justify-between border-t border-green-600 pt-3 mt-3"><span class="font-medium">Est. wasted spend remaining</span><span class="font-semibold text-green-300">~$240/mo</span></li>
           <li class="flex justify-between"><span class="font-medium">Total annual cost (fees + waste)</span><span class="font-bold text-green-300">$5,280</span></li>
         </ul>
         <div class="mt-6 p-3 bg-green-500 rounded-xl text-center">
           <div class="text-white font-bold">You save ~$47,520/year</div>
         </div>
       </div>
-
     </div>
     <p class="text-xs text-gray-400 text-center mt-6">Estimates based on industry averages. Actual savings vary by account, spend level, and current optimization state.</p>
   </div>
 </section>
 
-<!-- Why Agencies Fall Short -->
-<section class="py-16 bg-white">
-  <div class="container-lg">
-    <h2 class="text-3xl font-bold text-gray-900 text-center mb-4">Why agencies struggle with home service ads</h2>
-    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Agencies aren't bad at marketing — they're just not built for the speed and specificity that home service Google Ads requires.</p>
-    <div class="grid md:grid-cols-2 gap-8">
-      <div class="space-y-6">
-        <div class="flex gap-4">
-          <div class="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
-            <i class="fa-solid fa-users text-red-500"></i>
-          </div>
-          <div>
-            <h3 class="font-bold text-gray-900 mb-1">One account manager, 30+ clients</h3>
-            <p class="text-sm text-gray-600">Your account gets 30–60 minutes of attention per month. Optimization happens when it's convenient, not when opportunity arises.</p>
-          </div>
-        </div>
-        <div class="flex gap-4">
-          <div class="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center flex-shrink-0">
-            <i class="fa-solid fa-clock text-orange-500"></i>
-          </div>
-          <div>
-            <h3 class="font-bold text-gray-900 mb-1">Storm hits Tuesday — they update bids Friday</h3>
-            <p class="text-sm text-gray-600">The 72-hour window after a hailstorm is critical for roofers and restoration companies. Agencies miss it. FieldSprout doesn't.</p>
-          </div>
-        </div>
-        <div class="flex gap-4">
-          <div class="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center flex-shrink-0">
-            <i class="fa-solid fa-eye-slash text-yellow-600"></i>
-          </div>
-          <div>
-            <h3 class="font-bold text-gray-900 mb-1">Black-box reporting</h3>
-            <p class="text-sm text-gray-600">Monthly PDFs show impressions and clicks — but not which campaigns actually generated jobs. You're guessing at ROI.</p>
-          </div>
-        </div>
-      </div>
-      <div class="space-y-6">
-        <div class="flex gap-4">
-          <div class="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center flex-shrink-0">
-            <i class="fa-solid fa-hand-holding-dollar text-purple-500"></i>
-          </div>
-          <div>
-            <h3 class="font-bold text-gray-900 mb-1">Retainer incentives don't align with yours</h3>
-            <p class="text-sm text-gray-600">Agencies earn the same whether your CPL is $80 or $200. FieldSprout only succeeds when you get better results.</p>
-          </div>
-        </div>
-        <div class="flex gap-4">
-          <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
-            <i class="fa-solid fa-industry text-blue-500"></i>
-          </div>
-          <div>
-            <h3 class="font-bold text-gray-900 mb-1">Generalist knowledge, not trade-specific</h3>
-            <p class="text-sm text-gray-600">Most agencies serve e-commerce, SaaS, and home services with the same playbook. Our AI is built exclusively for trades businesses.</p>
-          </div>
-        </div>
-        <div class="flex gap-4">
-          <div class="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
-            <i class="fa-solid fa-file-contract text-gray-500"></i>
-          </div>
-          <div>
-            <h3 class="font-bold text-gray-900 mb-1">Locked into long contracts</h3>
-            <p class="text-sm text-gray-600">6–12 month agency contracts mean you're stuck even if results disappoint. FieldSprout is month-to-month — no commitment needed.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- When Agency is Right -->
+<!-- The Switch Plan -->
 <section class="py-16 bg-gray-50">
-  <div class="container-lg max-w-3xl mx-auto text-center">
-    <h2 class="text-2xl font-bold text-gray-900 mb-4">When does a traditional agency make sense?</h2>
-    <p class="text-gray-600 mb-8">We'll be honest: agencies have their place. Here's when you might still want one alongside (or instead of) FieldSprout.</p>
-    <div class="grid sm:grid-cols-3 gap-6 text-left">
-      <div class="bg-white rounded-xl border p-5">
-        <i class="fa-solid fa-camera text-indigo-500 mb-3 text-xl"></i>
-        <h3 class="font-semibold text-gray-900 mb-2">Full creative production</h3>
-        <p class="text-sm text-gray-600">Video ads, professional photography, brand identity work — agencies have creative teams. FieldSprout focuses on paid search optimization, not production.</p>
+  <div class="container-lg max-w-3xl mx-auto">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">Switch in 15 minutes. No contract.</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">You can start RevForge while your agency keeps running. See what 24-hour optimization finds in your first week.</p>
+    <div class="space-y-4">
+      <div class="bg-white rounded-2xl border border-gray-200 p-6 flex items-start gap-5">
+        <div class="w-10 h-10 rounded-full bg-green-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <span class="text-white font-bold text-sm">1</span>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900 mb-1">Connect your Google Ads account</div>
+          <div class="text-sm text-gray-600">One OAuth click. RevForge reads your account — no changes made yet. You see your account grade, wasted spend estimate, and first action plan in 60 seconds.</div>
+        </div>
       </div>
-      <div class="bg-white rounded-xl border p-5">
-        <i class="fa-solid fa-sitemap text-indigo-500 mb-3 text-xl"></i>
-        <h3 class="font-semibold text-gray-900 mb-2">Multi-channel strategy</h3>
-        <p class="text-sm text-gray-600">If you need coordinated TV, radio, billboards, and digital — an agency coordinates all channels. FieldSprout specializes in Google and Facebook paid ads.</p>
+      <div class="bg-white rounded-2xl border border-gray-200 p-6 flex items-start gap-5">
+        <div class="w-10 h-10 rounded-full bg-green-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <span class="text-white font-bold text-sm">2</span>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900 mb-1">Review what RevForge finds</div>
+          <div class="text-sm text-gray-600">Your AI action log shows every issue found — off-hours ads, low Quality Scores, missing negative keywords, wasted spend. Compare this to your last agency report.</div>
+        </div>
       </div>
-      <div class="bg-white rounded-xl border p-5">
-        <i class="fa-solid fa-city text-indigo-500 mb-3 text-xl"></i>
-        <h3 class="font-semibold text-gray-900 mb-2">Enterprise complexity</h3>
-        <p class="text-sm text-gray-600">50+ locations with custom franchise agreements, complex attribution, and dedicated account teams. Some agencies specialize here — FieldSprout handles up to ~20 locations well.</p>
+      <div class="bg-white rounded-2xl border border-gray-200 p-6 flex items-start gap-5">
+        <div class="w-10 h-10 rounded-full bg-green-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <span class="text-white font-bold text-sm">3</span>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900 mb-1">Let it run for 14 days — then decide</div>
+          <div class="text-sm text-gray-600">Watch your cost per lead. Read the daily action logs. See which campaigns are actually booking jobs. If RevForge isn't obviously better in two weeks, cancel. No fee, no hard feelings.</div>
+        </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- Testimonials -->
+<!-- FAQ -->
 <section class="py-16 bg-white">
-  <div class="container-md">
-    <h2 class="text-2xl font-bold text-gray-900 text-center mb-10">What home service owners say after switching</h2>
-    <div class="grid md:grid-cols-3 gap-6">
-      {% for quote, name, co, result in [
-        ('"Our agency charged us $3,200/month and made changes twice in 6 months. FieldSprout made 48 improvements in the first week. Night and day."', 'Dave R.', 'Premier HVAC', 'Switched from $3,200/mo agency'),
-        ('"I had no idea what my agency was actually doing. Now I see every single change and why. The transparency alone is worth switching."', 'Lisa G.', 'Greenway Plumbing', 'Full visibility, finally'),
-        ('"We cut $2,800/month in agency fees and our leads went up 22%. I wish I had done this 2 years earlier."', 'Frank O.', 'Shield Roofing', '$2,800/mo in fees eliminated'),
+  <div class="container-lg max-w-3xl mx-auto">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-12">Your questions about switching</h2>
+    <div class="space-y-3">
+      {% for q, a in [
+        ('What about my agency relationship?', "You don't have to end anything to try RevForge. Connect your account and run both for 30 days. Read what RevForge's action logs say. Compare to your agency's next report. Most trade owners make the decision on their own after that month."),
+        ('Do I need to fire my agency?', "No. RevForge connects to your Google Ads account directly — your agency can keep their access. You'll see two sets of changes happening in the same account. In practice, most people find they don't need the agency once they see what RevForge surfaces in week one."),
+        ('What if I want to keep my agency for creative work?', "That's a smart split. Agencies are useful for video production, brand campaigns, and custom creative. RevForge replaces the operational layer — keyword optimization, bid management, Quality Score work, scheduling, attribution. Keep your agency for strategy and creative. Use RevForge for the daily execution they're not doing anyway."),
+        ('Can I get my account history back if I cancel?', "Yes. You own your Google Ads account — everything in it, including the optimization history RevForge built. You keep full access regardless of whether you stay with RevForge. Nothing is locked in our system."),
       ] %}
-      <div class="bg-gray-50 rounded-2xl p-6 border">
-        <div class="text-green-600 font-bold text-sm mb-3">{{ result }}</div>
-        <p class="text-gray-700 italic mb-4">{{ quote }}</p>
-        <div class="text-sm font-semibold text-gray-900">{{ name }}</div>
-        <div class="text-xs text-gray-500">{{ co }}</div>
+      <div class="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
+        <button class="w-full text-left px-6 py-4 flex justify-between items-center gap-4 hover:bg-gray-100 transition"
+                onclick="this.parentElement.querySelector('.faq-answer').classList.toggle('hidden'); this.querySelector('i').classList.toggle('rotate-180')">
+          <span class="font-semibold text-gray-900">{{ q }}</span>
+          <i class="fa-solid fa-chevron-down text-gray-400 flex-shrink-0 transition-transform duration-200"></i>
+        </button>
+        <div class="faq-answer hidden px-6 pb-4 text-sm text-gray-600 leading-relaxed">{{ a }}</div>
       </div>
       {% endfor %}
     </div>
   </div>
 </section>
 
+<!-- When Agency Is Right -->
+<section class="py-12 bg-gray-50">
+  <div class="container-lg max-w-3xl mx-auto text-center">
+    <h2 class="text-2xl font-bold text-gray-900 mb-4">To be fair: when does an agency still make sense?</h2>
+    <p class="text-gray-600 mb-8">We'll be direct. There are cases where an agency adds genuine value RevForge doesn't replace.</p>
+    <div class="grid sm:grid-cols-3 gap-6 text-left">
+      <div class="bg-white rounded-xl border p-5">
+        <i class="fa-solid fa-camera text-gray-400 mb-3 text-xl"></i>
+        <h3 class="font-semibold text-gray-900 mb-2">Full creative production</h3>
+        <p class="text-sm text-gray-600">Video ads, professional photography, brand identity work. Agencies have creative teams. RevForge focuses on paid search performance, not content production.</p>
+      </div>
+      <div class="bg-white rounded-xl border p-5">
+        <i class="fa-solid fa-sitemap text-gray-400 mb-3 text-xl"></i>
+        <h3 class="font-semibold text-gray-900 mb-2">Multi-channel coordination</h3>
+        <p class="text-sm text-gray-600">If you need coordinated TV, radio, billboards, and digital under one strategy — an agency handles that. RevForge specializes in Google and Meta paid ads.</p>
+      </div>
+      <div class="bg-white rounded-xl border p-5">
+        <i class="fa-solid fa-city text-gray-400 mb-3 text-xl"></i>
+        <h3 class="font-semibold text-gray-900 mb-2">Enterprise complexity</h3>
+        <p class="text-sm text-gray-600">50+ locations, custom franchise agreements, dedicated account teams. Some agencies specialize here. RevForge handles up to ~20 locations well.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- CTA -->
-<section class="py-20 bg-gradient-to-br from-indigo-600 to-purple-700 text-white">
+<section class="py-20 bg-gradient-to-br from-green-700 to-green-900 text-white">
   <div class="container-md text-center">
-    <h2 class="text-3xl md:text-4xl font-extrabold mb-4">Ready to see what AI can do for your Google Ads?</h2>
-    <p class="text-indigo-200 text-lg mb-8 max-w-xl mx-auto">
-      Grade your current account for free — you'll see exactly where budget is being wasted and get your first action plan in 60 seconds. No agency contract required.
+    <h2 class="text-3xl md:text-4xl font-extrabold mb-4">Try RevForge free for 14 days while your agency keeps running.</h2>
+    <p class="text-green-200 text-lg mb-2 max-w-xl mx-auto">
+      Compare the results.
+    </p>
+    <p class="text-green-300 text-base mb-8 max-w-xl mx-auto">
+      Grade your account in 60 seconds. See exactly what's being wasted. Let AI optimize while your agency sends next month's report.
     </p>
     <div class="flex flex-col sm:flex-row gap-4 justify-center">
       {% if has_endpoint('ads_grader_bp.index') %}
@@ -313,7 +381,7 @@
       {% endif %}
       <a href="/pricing" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">View Pricing</a>
     </div>
-    <p class="text-indigo-300 text-sm mt-4">No credit card · No contract · Cancel anytime</p>
+    <p class="text-green-400 text-sm mt-4">No credit card · No contract · Cancel anytime</p>
   </div>
 </section>
 

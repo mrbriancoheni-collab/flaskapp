@@ -86,7 +86,7 @@ def scan_broken_links(
       }
     """
     session = requests.Session()
-    session.headers["User-Agent"] = "FieldSprout-LinkScanner/1.0"
+    session.headers["User-Agent"] = "RevForge-LinkScanner/1.0"
 
     result_posts = []
     total_links = 0

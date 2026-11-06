@@ -1,0 +1,322 @@
+{% extends "base_public.html" %}
+{% block title %}Cleaning Service Marketing Platform — AI Ads & Lead Generation | RevForge{% endblock %}
+{% block meta_description %}RevForge targets homeowners and property managers searching for recurring cleaning — not one-time jobs. Build a route, not a treadmill. Average CPL: $35–$60.{% endblock %}
+{% block og_title %}Google Ads for Cleaning Services — AI That Builds Your Recurring Client Base | RevForge{% endblock %}
+{% block og_description %}Cleaning clients cancel. RevForge targets homeowners searching for recurring cleaning service — biweekly, monthly, move-out — so you acquire clients worth keeping, not one-time jobs you can't grow on.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://getrevforge.io"},
+    {"@type": "ListItem", "position": 2, "name": "Industries", "item": "https://getrevforge.io/industries"},
+    {"@type": "ListItem", "position": 3, "name": "Cleaning Services", "item": "https://getrevforge.io/industries/cleaning"}
+  ]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "serviceType": "Google Ads Management for Cleaning Services",
+  "provider": {"@type": "Organization", "name": "RevForge", "url": "https://getrevforge.io"},
+  "areaServed": {"@type": "Country", "name": "United States"},
+  "description": "AI-powered Google Ads optimization for residential and commercial cleaning services — targets recurring-service intent, reduces churn-prone one-time job leads, and lowers cost per booked recurring client.",
+  "offers": {"@type": "Offer", "price": "99", "priceCurrency": "USD", "priceSpecification": {"@type": "UnitPriceSpecification", "unitText": "MONTH"}}
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is the average cost per lead for cleaning services on Google Ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Cleaning service leads on Google Ads typically cost $35–$60 per lead for recurring cleaning intent keywords. One-time cleaning keywords (move-out, deep clean, post-construction) often cost $55–$90 per lead due to higher competition. RevForge-managed cleaning accounts targeting recurring-service intent average $42 per lead. Local Services Ads for cleaning often deliver leads at $28–$45."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do cleaning companies get more recurring clients from Google Ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The keyword strategy is everything. 'Weekly house cleaning service' and 'biweekly cleaning near me' attract buyers who want ongoing service. 'One-time deep clean' attracts buyers who will never become recurring clients. RevForge separates these into different campaigns with different bids, tracking recurring client acquisition specifically — not just leads."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Should cleaning services target property managers in Google Ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes — property managers and real estate agents who need recurring or turn-clean service are high lifetime-value clients. RevForge sets up separate campaigns targeting commercial cleaning intent and property management search terms alongside residential campaigns, with different landing pages and offer messaging for each audience."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I compete with cleaning franchises on Google Ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Franchises bid on broad brand terms and rely on name recognition. Independent cleaning companies win on local trust signals, specific service keywords (neighborhood-level targeting, specific services like eco-friendly or pet-safe cleaning), and Quality Score. RevForge improves QS so independent cleaners pay less per click than franchise competitors running generic campaigns."
+      }
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<section class="bg-gradient-to-br from-cyan-50 via-white to-blue-50 pt-20 pb-16">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-3/5 mb-10 md:mb-0">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-cyan-100 text-cyan-800 rounded-full text-sm font-semibold mb-6">
+          <i class="fa-solid fa-spray-can-sparkles"></i> AI Marketing for Cleaning Services
+        </div>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-tight">
+          Cleaning clients cancel.<br>The ones you want are<br><span class="text-cyan-700">searching on Google.</span><br>You're not showing up.
+        </h1>
+        <p class="text-xl text-gray-600 mb-8">
+          RevForge targets homeowners and property managers searching for recurring cleaning — not one-time jobs — so you build a route, not a treadmill. Because a business built on repeats is a business you can grow.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4">
+          {% if has_endpoint('ads_grader_bp.index') %}
+          <a href="{{ url_for('ads_grader_bp.strength_test') }}" class="btn btn-primary btn-lg">Grade My Cleaning Ads — Free</a>
+          {% endif %}
+          <a href="/pricing" class="btn btn-secondary btn-lg">See Plans &amp; Pricing</a>
+        </div>
+        <p class="text-sm text-gray-500 mt-4">No credit card · 60-second setup · Cancel anytime</p>
+      </div>
+      <div class="md:w-2/5">
+        <div class="bg-white rounded-2xl shadow-card border p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-4">Typical Cleaning Account — Before vs. After RevForge</div>
+          <div class="space-y-4">
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Cost per Lead</span>
+                <span class="text-green-600 font-bold">$71 → $42</span>
+              </div>
+              <div class="w-full bg-red-100 rounded-full h-2 mb-0.5">
+                <div class="bg-red-400 h-2 rounded-full" style="width:100%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:59%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Recurring Lead %</span>
+                <span class="text-green-600 font-bold">22% → 61%</span>
+              </div>
+              <div class="w-full bg-red-100 rounded-full h-2 mb-0.5">
+                <div class="bg-red-400 h-2 rounded-full" style="width:22%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:61%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Wasted Spend / Month</span>
+                <span class="text-green-600 font-bold">$890 → $140</span>
+              </div>
+              <div class="w-full bg-red-100 rounded-full h-2 mb-0.5">
+                <div class="bg-red-400 h-2 rounded-full" style="width:100%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:16%"></div>
+              </div>
+            </div>
+          </div>
+          <p class="text-xs text-gray-400 mt-4 text-center">Anonymized averages across cleaning accounts on RevForge</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Quick Steps -->
+<section class="py-12 bg-white border-b border-gray-100">
+  <div class="container-lg">
+    <div class="flex flex-col md:flex-row items-start gap-0 max-w-4xl mx-auto divide-y md:divide-y-0 md:divide-x divide-gray-100">
+      <div class="flex-1 flex items-start gap-4 py-6 md:py-0 md:px-8 first:md:pl-0">
+        <div class="w-10 h-10 rounded-full bg-cyan-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <span class="text-cyan-700 font-bold text-sm">1</span>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900">Connect in 15 min</div>
+          <div class="text-sm text-gray-500 mt-1">RevForge audits every keyword for recurring vs. one-time intent — and flags which campaigns are filling your schedule with churn-prone clients.</div>
+        </div>
+      </div>
+      <div class="flex-1 flex items-start gap-4 py-6 md:py-0 md:px-8">
+        <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <span class="text-blue-700 font-bold text-sm">2</span>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900">Recurring intent campaigns activated</div>
+          <div class="text-sm text-gray-500 mt-1">AI separates biweekly/monthly service searches from one-time jobs. Different bid strategies for each — you spend more to acquire a recurring client worth $1,800/year than a one-time job worth $180.</div>
+        </div>
+      </div>
+      <div class="flex-1 flex items-start gap-4 py-6 md:py-0 md:px-8">
+        <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <span class="text-green-700 font-bold text-sm">3</span>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900">Route grows, churn stops mattering</div>
+          <div class="text-sm text-gray-500 mt-1">When your acquisition pipeline runs constantly, a client cancellation doesn't crater your revenue. RevForge keeps new recurring leads flowing so your route stays full.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Problems We Solve -->
+<section class="py-16 bg-white">
+  <div class="container-lg">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">The cleaning Google Ads problems we fix</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Cleaning accounts have specific patterns that generic Google Ads management doesn't account for — especially around client lifetime value and recurring vs. one-time intent.</p>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for icon, color, title, desc in [
+        ('fa-rotate', 'red', 'High churn killing your growth', 'You acquire 10 clients, 4 cancel within 90 days. If your ads are targeting one-time move-out searches, this ratio never improves. RevForge tracks which keywords produce recurring clients — not just leads.'),
+        ('fa-hand-holding-dollar', 'orange', 'One-time vs. recurring budget split wrong', 'Most cleaning accounts put equal budget on biweekly cleaning keywords and one-time deep clean keywords. A recurring client is worth 8–12x a one-time job. Your bids should reflect that. Ours do.'),
+        ('fa-dollar-sign', 'yellow', 'Competing on price in a price-driven market', 'Broad cleaning searches attract people comparing 5 quotes on price. Specific service keywords (biweekly cleaning, recurring maid service, scheduled house cleaning) attract people who want reliability over the cheapest option.'),
+        ('fa-receipt', 'blue', 'Low average ticket suppressing ROAS', 'A $120 one-time clean has thin margins after acquisition cost. A $150/month recurring client pays back acquisition cost in 1–2 months and then generates profit indefinitely. RevForge optimizes for recurring client value, not lead volume.'),
+        ('fa-building', 'purple', 'Missing the property manager market', 'Property managers, AirBnb hosts, and real estate agents need reliable recurring cleaning with zero hassle. These are high-value accounts that most cleaning companies\' ads never reach because they\'re running residential-only campaigns.'),
+        ('fa-calendar-xmark', 'gray', 'Ads running when you\'re fully booked', 'If your schedule fills on Thursday, you\'re wasting Friday–Sunday budget on leads you can\'t take. RevForge applies capacity-aware scheduling to pause ads when you\'re booked out — and ramp them when you have openings.'),
+      ] %}
+      <div class="p-6 rounded-2xl border border-gray-100 hover:border-{{ color }}-200 hover:shadow-soft transition">
+        <div class="w-10 h-10 rounded-xl bg-{{ color }}-100 flex items-center justify-center mb-4">
+          <i class="fa-solid {{ icon }} text-{{ color }}-600"></i>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-2">{{ title }}</h3>
+        <p class="text-sm text-gray-600">{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- Seasonal Intelligence -->
+<section class="py-16 bg-cyan-50">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-1/2 mb-8 md:mb-0">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">Cleaning seasonal intelligence built in</h2>
+        <p class="text-gray-600 mb-6">
+          Cleaning demand follows real estate, holidays, and spring fever. RevForge adjusts automatically — ramping before spring cleaning season, capturing post-holiday surge, targeting move-in/move-out demand when it peaks.
+        </p>
+        <ul class="space-y-3 text-gray-700">
+          <li class="flex items-start gap-3"><i class="fa-solid fa-sun text-yellow-400 mt-0.5"></i>Spring cleaning surge — March/April campaigns ramped in February</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-house-chimney text-orange-400 mt-0.5"></i>Move season (May–July) — move-in/out campaigns peak with real estate activity</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-champagne-glasses text-purple-400 mt-0.5"></i>Holiday prep (October–November) — deep clean before-guests campaigns</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-calendar-check text-green-500 mt-0.5"></i>New Year recurring starts — January is highest recurring signup month</li>
+        </ul>
+      </div>
+      <div class="md:w-1/2">
+        <div class="bg-white rounded-2xl border shadow-soft p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-4">Cleaning Search Volume Index by Month</div>
+          <div class="flex items-end gap-1 h-28">
+            {% for month, h, hot in [
+              ('J',70,'bg-blue-400'), ('F',55,''), ('M',85,'bg-cyan-400'), ('A',100,'bg-cyan-500'),
+              ('M',95,'bg-cyan-500'), ('J',90,'bg-cyan-400'), ('J',80,''), ('A',75,''),
+              ('S',65,''), ('O',80,'bg-purple-400'), ('N',75,'bg-purple-300'), ('D',55,''),
+            ] %}
+            <div class="flex-1 flex flex-col items-center gap-1">
+              <div class="w-full rounded-t {{ hot if hot else 'bg-gray-200' }} transition" style="height:{{ h }}%;"></div>
+              <span class="text-xs text-gray-400">{{ month }}</span>
+            </div>
+            {% endfor %}
+          </div>
+          <p class="text-xs text-gray-400 mt-2 text-center">RevForge auto-adjusts recurring vs. one-time campaign budgets seasonally</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Social Proof -->
+<section class="py-16 bg-white">
+  <div class="container-md">
+    <div class="grid md:grid-cols-3 gap-6">
+      {% for quote, name, co, result in [
+        ('"I was spending $1,400/month to get move-out cleaning calls. RevForge showed me only 18% of my budget was going to recurring intent searches. That changed everything."', 'Maria L.', 'Clean Slate Residential', '61% of leads now recurring'),
+        ('"Adding property manager campaigns doubled our average client value. I didn\'t even know RevForge could target that segment differently."', 'Derek P.', 'Apex Cleaning Services', '2x average client LTV'),
+        ('"I went from $79 per lead to $44 in six weeks. The AI figured out we were wasting budget on move-out searches during spring when recurring demand was highest."', 'Susan K.', 'Fresh Start Cleaning Co.', '44% lower CPL'),
+      ] %}
+      <div class="bg-gray-50 rounded-2xl p-6 border">
+        <div class="text-green-600 font-bold text-sm mb-3">{{ result }}</div>
+        <p class="text-gray-700 italic mb-4">{{ quote }}</p>
+        <div class="text-sm font-semibold text-gray-900">{{ name }}</div>
+        <div class="text-xs text-gray-500">{{ co }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+
+<!-- Free Tools CTA -->
+<section class="py-14 bg-gray-50 border-t border-gray-100">
+  <div class="container-lg text-center">
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-100 text-emerald-800 rounded-full text-sm font-semibold mb-4">
+      <i class="fa-solid fa-wrench"></i> Free Tools for Cleaning Companies
+    </div>
+    <h2 class="text-2xl md:text-3xl font-extrabold text-gray-900 mb-3">
+      Not ready to connect? Start here — free.
+    </h2>
+    <p class="text-gray-600 max-w-xl mx-auto mb-8">
+      Three tools built for cleaning companies. No account required.
+    </p>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 text-left max-w-4xl mx-auto mb-8">
+      <a href="/free-tools/budget-calculator" class="block p-5 bg-white rounded-xl border border-gray-200 hover:border-emerald-400 hover:shadow-md transition group">
+        <div class="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center mb-3">
+          <i class="fa-solid fa-calculator text-emerald-700 text-sm"></i>
+        </div>
+        <div class="font-bold text-gray-900 mb-1 group-hover:text-emerald-700 text-sm">Budget Calculator</div>
+        <p class="text-xs text-gray-500 leading-relaxed">Calculate the right Google Ads budget to hit your monthly recurring cleaning contract goal.</p>
+      </a>
+      <a href="/free-tools/campaign-structure-grader" class="block p-5 bg-white rounded-xl border border-gray-200 hover:border-emerald-400 hover:shadow-md transition group">
+        <div class="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center mb-3">
+          <i class="fa-solid fa-sitemap text-blue-700 text-sm"></i>
+        </div>
+        <div class="font-bold text-gray-900 mb-1 group-hover:text-emerald-700 text-sm">Campaign Structure Grader</div>
+        <p class="text-xs text-gray-500 leading-relaxed">Grade your Google Ads account structure and get a prioritized list of fixes to lower your CPL.</p>
+      </a>
+      <a href="/free-tools/negative-keywords" class="block p-5 bg-white rounded-xl border border-gray-200 hover:border-emerald-400 hover:shadow-md transition group">
+        <div class="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center mb-3">
+          <i class="fa-solid fa-ban text-red-600 text-sm"></i>
+        </div>
+        <div class="font-bold text-gray-900 mb-1 group-hover:text-emerald-700 text-sm">Negative Keywords Generator</div>
+        <p class="text-xs text-gray-500 leading-relaxed">Stop paying for window cleaning, car wash, and pool cleaning searches that won't convert to house cleaning.</p>
+      </a>
+    </div>
+    <a href="/free-tools" class="text-sm text-emerald-700 hover:text-emerald-900 font-medium">
+      See all 12 free tools &rarr;
+    </a>
+  </div>
+</section>
+<!-- CTA -->
+<section class="py-20 bg-gradient-to-br from-cyan-600 to-blue-700 text-white">
+  <div class="container-md text-center">
+    <h2 class="text-3xl md:text-4xl font-extrabold mb-4">Get your free Cleaning Ads Grade now</h2>
+    <p class="text-cyan-100 text-lg mb-8 max-w-xl mx-auto">
+      See exactly which campaigns are attracting recurring clients — and which are filling your calendar with one-time jobs that never come back. Takes 60 seconds.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      {% if has_endpoint('ads_grader_bp.index') %}
+      <a href="{{ url_for('ads_grader_bp.strength_test') }}" class="btn btn-secondary btn-lg">Grade My Account — Free</a>
+      {% endif %}
+      <a href="/pricing" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">View Plans</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

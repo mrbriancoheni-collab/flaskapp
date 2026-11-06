@@ -1,0 +1,322 @@
+{% extends "base_public.html" %}
+{% block title %}House Painting Marketing Platform — AI Ads & Lead Generation | RevForge{% endblock %}
+{% block meta_description %}RevForge fills your painting calendar in the off-season. AI Google Ads that target homeowners planning renovations — not just emergency calls. Cut CPL from $95 to $62 in 30 days.{% endblock %}
+{% block og_title %}Google Ads for House Painters — AI That Fills Your Calendar Year-Round | RevForge{% endblock %}
+{% block og_description %}Referrals dry up in winter. RevForge targets homeowners planning interior and exterior paint projects — so your calendar stays full even in January. Average CPL: $55–$90.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://getrevforge.io"},
+    {"@type": "ListItem", "position": 2, "name": "Industries", "item": "https://getrevforge.io/industries"},
+    {"@type": "ListItem", "position": 3, "name": "House Painting", "item": "https://getrevforge.io/industries/painting"}
+  ]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "serviceType": "Google Ads Management for House Painting Companies",
+  "provider": {"@type": "Organization", "name": "RevForge", "url": "https://getrevforge.io"},
+  "areaServed": {"@type": "Country", "name": "United States"},
+  "description": "AI-powered Google Ads optimization for residential and commercial painting companies — reduces seasonal gaps, lowers cost per lead, and books exterior and interior paint jobs year-round.",
+  "offers": {"@type": "Offer", "price": "99", "priceCurrency": "USD", "priceSpecification": {"@type": "UnitPriceSpecification", "unitText": "MONTH"}}
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is the average cost per lead for house painters on Google Ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "House painting leads on Google Ads typically cost $55–$90 per lead depending on market competition, whether you target exterior vs. interior, and campaign optimization. RevForge-managed painting accounts average $62 per lead after AI optimization. Local Services Ads for painters often deliver leads at $35–$55."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do painting companies get leads in winter?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Interior painting is a year-round category — homeowners don't stop renovating in winter, they stop doing outdoor projects. RevForge shifts your campaign mix automatically: exterior painting keywords pull back in October, interior renovation keywords ramp up. Targeting homeowners planning spring exterior work in January and February also books future jobs before your competitors know the season is coming."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How can painting companies compete with bigger competitors on Google?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Large painting franchises bid on broad terms. Independent painters win on specificity: neighborhood-level targeting, service-specific keywords (cabinet painting, deck staining, interior trim), and Quality Score. RevForge improves Quality Score so you pay less per click than competitors running generic campaigns — making your budget go further even against better-funded competitors."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What Google Ads keywords work best for house painters?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "High-converting painting keywords include 'exterior house painting near me', 'interior painter cost', 'cabinet painting estimate', 'deck staining service', and 'house painter free quote'. Negative keywords matter just as much — 'DIY', 'how to paint', 'paint brushes', 'paint colors' and 'painter salary' all drain budget without converting. RevForge adds 150+ painting-specific negative keywords at account connection."
+      }
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<section class="bg-gradient-to-br from-yellow-50 via-white to-orange-50 pt-20 pb-16">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-3/5 mb-10 md:mb-0">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-yellow-100 text-yellow-800 rounded-full text-sm font-semibold mb-6">
+          <i class="fa-solid fa-paint-roller"></i> AI Marketing for Painting Companies
+        </div>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-tight">
+          You win on referrals.<br>But referrals dry up<br><span class="text-yellow-700">in winter.</span>
+        </h1>
+        <p class="text-xl text-gray-600 mb-8">
+          RevForge fills your painting calendar in the off-season — Google Ads that target homeowners planning renovations, not just emergency calls. Interior painting is year-round. Your ads should be too.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4">
+          {% if has_endpoint('ads_grader_bp.index') %}
+          <a href="{{ url_for('ads_grader_bp.strength_test') }}" class="btn btn-primary btn-lg">Grade My Painting Ads — Free</a>
+          {% endif %}
+          <a href="/pricing" class="btn btn-secondary btn-lg">See Plans &amp; Pricing</a>
+        </div>
+        <p class="text-sm text-gray-500 mt-4">No credit card · 60-second setup · Cancel anytime</p>
+      </div>
+      <div class="md:w-2/5">
+        <div class="bg-white rounded-2xl shadow-card border p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-4">Typical Painting Account — Before vs. After RevForge</div>
+          <div class="space-y-4">
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Cost per Lead</span>
+                <span class="text-green-600 font-bold">$95 → $62</span>
+              </div>
+              <div class="w-full bg-red-100 rounded-full h-2 mb-0.5">
+                <div class="bg-red-400 h-2 rounded-full" style="width:100%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:65%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Off-Season Leads / Month</span>
+                <span class="text-green-600 font-bold">4 → 18</span>
+              </div>
+              <div class="w-full bg-red-100 rounded-full h-2 mb-0.5">
+                <div class="bg-red-400 h-2 rounded-full" style="width:22%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:100%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Quality Score Avg</span>
+                <span class="text-green-600 font-bold">3.8 → 7.1</span>
+              </div>
+              <div class="w-full bg-gray-100 rounded-full h-2 mb-0.5">
+                <div class="bg-gray-400 h-2 rounded-full" style="width:38%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:71%"></div>
+              </div>
+            </div>
+          </div>
+          <p class="text-xs text-gray-400 mt-4 text-center">Anonymized averages across painting accounts on RevForge</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Quick Steps -->
+<section class="py-12 bg-white border-b border-gray-100">
+  <div class="container-lg">
+    <div class="flex flex-col md:flex-row items-start gap-0 max-w-4xl mx-auto divide-y md:divide-y-0 md:divide-x divide-gray-100">
+      <div class="flex-1 flex items-start gap-4 py-6 md:py-0 md:px-8 first:md:pl-0">
+        <div class="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <span class="text-yellow-700 font-bold text-sm">1</span>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900">Connect in 15 min</div>
+          <div class="text-sm text-gray-500 mt-1">Link your Google Ads. RevForge finds painting-specific keyword waste and seasonal gaps immediately.</div>
+        </div>
+      </div>
+      <div class="flex-1 flex items-start gap-4 py-6 md:py-0 md:px-8">
+        <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <span class="text-orange-700 font-bold text-sm">2</span>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900">Interior campaign activated</div>
+          <div class="text-sm text-gray-500 mt-1">AI adds interior renovation keywords and shifts budget seasonally — so you're not dark in November through February.</div>
+        </div>
+      </div>
+      <div class="flex-1 flex items-start gap-4 py-6 md:py-0 md:px-8">
+        <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <span class="text-green-700 font-bold text-sm">3</span>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900">Year-round calendar</div>
+          <div class="text-sm text-gray-500 mt-1">Average painting accounts go from 4 off-season leads to 18+. CPL drops to $55–$75 in competitive markets.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Problems We Solve -->
+<section class="py-16 bg-white">
+  <div class="container-lg">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">The painting Google Ads problems we fix</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Painting accounts have unique patterns — seasonal collapse, price shoppers, low repeat rates — that generic Google Ads management doesn't understand.</p>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for icon, color, title, desc in [
+        ('fa-snowflake', 'blue', 'Winter revenue collapse', 'Most painting companies see leads drop 60–70% November–February. Interior painting demand never stops — but most accounts don\'t have interior-specific campaigns running in winter.'),
+        ('fa-rotate', 'gray', 'Low repeat purchase rate', 'Homeowners paint every 8–12 years. You can\'t rely on repeat business. RevForge focuses budget on new homeowners, recent movers, and renovation planners — the highest-probability new clients.'),
+        ('fa-trophy', 'orange', 'Competing on price instead of quality', 'Broad keywords attract price shoppers. RevForge tightens targeting to decision-ready homeowners who search for quality painting (not just "cheapest painter near me") — higher average job value, fewer tire-kickers.'),
+        ('fa-user-secret', 'red', 'Competitors bidding on your brand name', 'If you have any brand recognition, competitors are probably bidding on your business name. RevForge detects this and adds brand protection campaigns so you don\'t pay to compete for your own name.'),
+        ('fa-calendar-days', 'purple', 'Missing spring/fall exterior booking window', 'The 3-week windows before spring exterior season and fall preparation are your highest-converting periods. Campaigns need to ramp 3–4 weeks before homeowners start calling — most accounts miss this entirely.'),
+        ('fa-person-digging', 'amber', 'DIY searchers eating your budget', '"How to paint a house," "paint calculator," "best exterior paint brand" — these searches get clicks from people who will never hire you. Without painting-specific negative keywords, up to 40% of budget goes here.'),
+      ] %}
+      <div class="p-6 rounded-2xl border border-gray-100 hover:border-{{ color }}-200 hover:shadow-soft transition">
+        <div class="w-10 h-10 rounded-xl bg-{{ color }}-100 flex items-center justify-center mb-4">
+          <i class="fa-solid {{ icon }} text-{{ color }}-600"></i>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-2">{{ title }}</h3>
+        <p class="text-sm text-gray-600">{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- Seasonal Intelligence -->
+<section class="py-16 bg-yellow-50">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-1/2 mb-8 md:mb-0">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">Painting seasonal intelligence built in</h2>
+        <p class="text-gray-600 mb-6">
+          Exterior painting is heavily seasonal. Interior painting is not. RevForge manages both at once — switching your campaign emphasis automatically as the year shifts, so you're never losing money in the wrong channel.
+        </p>
+        <ul class="space-y-3 text-gray-700">
+          <li class="flex items-start gap-3"><i class="fa-solid fa-sun text-yellow-500 mt-0.5"></i>Spring exterior campaigns boosted in March — before competitors wake up</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-leaf text-orange-500 mt-0.5"></i>Fall prep campaigns (deck staining, trim painting) activated in September</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-house text-blue-500 mt-0.5"></i>Interior renovation campaigns run year-round — especially in winter</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-calendar-check text-green-500 mt-0.5"></i>Spring booking campaigns start in January — book April/May jobs now</li>
+        </ul>
+      </div>
+      <div class="md:w-1/2">
+        <div class="bg-white rounded-2xl border shadow-soft p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-4">Painting Search Volume Index by Month</div>
+          <div class="flex items-end gap-1 h-28">
+            {% for month, h, hot in [
+              ('J',25,''), ('F',28,''), ('M',60,'bg-yellow-400'), ('A',90,'bg-yellow-500'),
+              ('M',100,'bg-orange-500'), ('J',95,'bg-orange-400'), ('J',85,''), ('A',75,''),
+              ('S',80,'bg-amber-400'), ('O',65,'bg-amber-300'), ('N',35,''), ('D',22,''),
+            ] %}
+            <div class="flex-1 flex flex-col items-center gap-1">
+              <div class="w-full rounded-t {{ hot if hot else 'bg-gray-200' }} transition" style="height:{{ h }}%;"></div>
+              <span class="text-xs text-gray-400">{{ month }}</span>
+            </div>
+            {% endfor %}
+          </div>
+          <p class="text-xs text-gray-400 mt-2 text-center">RevForge auto-adjusts exterior vs. interior budget allocations monthly</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Social Proof -->
+<section class="py-16 bg-white">
+  <div class="container-md">
+    <div class="grid md:grid-cols-3 gap-6">
+      {% for quote, name, co, result in [
+        ('"Winter used to mean zero work. Now I have interior jobs booked 3 weeks out in January. I didn\'t know Google Ads could do that."', 'Carlos M.', 'Pro Finish Painting', '18 leads in January'),
+        ('"The AI found that 38% of our clicks were from people searching for paint brands and DIY tutorials. Fixed it in a week."', 'Rachel T.', 'Apex Residential Painting', '38% wasted spend recovered'),
+        ('"My cost per lead dropped from $102 to $67. Same budget, more calls. The seasonal switching does exactly what I needed."', 'Steve B.', 'Landmark Painters', '34% lower CPL'),
+      ] %}
+      <div class="bg-gray-50 rounded-2xl p-6 border">
+        <div class="text-green-600 font-bold text-sm mb-3">{{ result }}</div>
+        <p class="text-gray-700 italic mb-4">{{ quote }}</p>
+        <div class="text-sm font-semibold text-gray-900">{{ name }}</div>
+        <div class="text-xs text-gray-500">{{ co }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+
+<!-- Free Tools CTA -->
+<section class="py-14 bg-gray-50 border-t border-gray-100">
+  <div class="container-lg text-center">
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-100 text-emerald-800 rounded-full text-sm font-semibold mb-4">
+      <i class="fa-solid fa-wrench"></i> Free Tools for Painting Contractors
+    </div>
+    <h2 class="text-2xl md:text-3xl font-extrabold text-gray-900 mb-3">
+      Not ready to connect? Start here — free.
+    </h2>
+    <p class="text-gray-600 max-w-xl mx-auto mb-8">
+      Three tools built for painting contractors. No account required.
+    </p>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 text-left max-w-4xl mx-auto mb-8">
+      <a href="/free-tools/seasonal-budget-planner" class="block p-5 bg-white rounded-xl border border-gray-200 hover:border-emerald-400 hover:shadow-md transition group">
+        <div class="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center mb-3">
+          <i class="fa-solid fa-chart-bar text-amber-700 text-sm"></i>
+        </div>
+        <div class="font-bold text-gray-900 mb-1 group-hover:text-emerald-700 text-sm">Seasonal Budget Planner</div>
+        <p class="text-xs text-gray-500 leading-relaxed">Plan your painting budget around spring and summer exterior peaks so you're ready when customers search.</p>
+      </a>
+      <a href="/free-tools/ad-copy-analyzer" class="block p-5 bg-white rounded-xl border border-gray-200 hover:border-emerald-400 hover:shadow-md transition group">
+        <div class="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center mb-3">
+          <i class="fa-solid fa-pencil text-emerald-700 text-sm"></i>
+        </div>
+        <div class="font-bold text-gray-900 mb-1 group-hover:text-emerald-700 text-sm">Ad Copy Analyzer</div>
+        <p class="text-xs text-gray-500 leading-relaxed">Score your painting ad headlines and descriptions — see how well they communicate quality and speed.</p>
+      </a>
+      <a href="/free-tools/budget-calculator" class="block p-5 bg-white rounded-xl border border-gray-200 hover:border-emerald-400 hover:shadow-md transition group">
+        <div class="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center mb-3">
+          <i class="fa-solid fa-calculator text-blue-700 text-sm"></i>
+        </div>
+        <div class="font-bold text-gray-900 mb-1 group-hover:text-emerald-700 text-sm">Budget Calculator</div>
+        <p class="text-xs text-gray-500 leading-relaxed">Calculate how much you should be spending on Google Ads to hit your painting lead goal.</p>
+      </a>
+    </div>
+    <a href="/free-tools" class="text-sm text-emerald-700 hover:text-emerald-900 font-medium">
+      See all 12 free tools &rarr;
+    </a>
+  </div>
+</section>
+<!-- CTA -->
+<section class="py-20 bg-gradient-to-br from-yellow-500 to-orange-600 text-white">
+  <div class="container-md text-center">
+    <h2 class="text-3xl md:text-4xl font-extrabold mb-4">Get your free Painting Ads Grade now</h2>
+    <p class="text-yellow-100 text-lg mb-8 max-w-xl mx-auto">
+      See exactly where your painting Google Ads budget is being wasted — and get a seasonal action plan to fill your calendar year-round. Takes 60 seconds.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      {% if has_endpoint('ads_grader_bp.index') %}
+      <a href="{{ url_for('ads_grader_bp.strength_test') }}" class="btn btn-secondary btn-lg">Grade My Account — Free</a>
+      {% endif %}
+      <a href="/pricing" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">View Plans</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

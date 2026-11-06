@@ -169,7 +169,7 @@ def _send_alert_email(alert: Alert) -> bool:
                     {severity_emoji} Google Ads Alert
                 </h1>
                 <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 14px;">
-                    FieldSprout Monitoring
+                    RevForge Monitoring
                 </p>
             </div>
 
@@ -210,7 +210,7 @@ def _send_alert_email(alert: Alert) -> bool:
                 <!-- Action Button -->
                 {f'''
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="https://fieldsprout.io{alert.action_url}"
+                    <a href="https://getrevforge.io{alert.action_url}"
                        style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
                         {alert.action_text}
                     </a>
@@ -223,7 +223,7 @@ def _send_alert_email(alert: Alert) -> bool:
                         You're receiving this alert because you have monitoring enabled for your Google Ads accounts.
                     </p>
                     <p style="margin: 0;">
-                        <a href="https://fieldsprout.io/account/settings" style="color: #667eea; text-decoration: none;">
+                        <a href="https://getrevforge.io/account/settings" style="color: #667eea; text-decoration: none;">
                             Manage alert settings
                         </a>
                     </p>
@@ -245,11 +245,11 @@ Account: {account.business_name if account else 'N/A'}
 Alert Type: {alert.alert_type.replace('_', ' ').title()}
 Detected: {alert.created_at.strftime('%Y-%m-%d %H:%M UTC')}
 
-{f"Take Action: https://fieldsprout.io{alert.action_url}" if alert.action_url else ''}
+{f"Take Action: https://getrevforge.io{alert.action_url}" if alert.action_url else ''}
 
 ---
 You're receiving this alert because you have monitoring enabled for your Google Ads accounts.
-Manage settings: https://fieldsprout.io/account/settings
+Manage settings: https://getrevforge.io/account/settings
         """
 
         # Send email

@@ -1,0 +1,329 @@
+{% extends "base_app.html" %}
+{% block title %}Revenue Attribution · RevForge{% endblock %}
+
+{% block content %}
+{# ── Sample-data defaults ──────────────────────────────────────────────────── #}
+{% if not metrics %}
+  {% set is_sample = true %}
+  {% set metrics = {
+    "total_spend": 4820.00,
+    "total_leads": 61,
+    "total_booked_jobs": 22,
+    "cost_per_lead": 79.02,
+    "cost_per_booked_job": 219.09,
+    "booking_rate_pct": 36.1
+  } %}
+  {% set by_campaign = [
+    {"campaign_name": "HVAC – Emergency Repair", "spend": 1950.00, "leads": 28, "booked_jobs": 14, "cpl": 69.64, "cpbj": 139.29, "roas_if_available": 8.4},
+    {"campaign_name": "AC Installation – Summer", "spend": 1410.00, "leads": 19, "booked_jobs": 6,  "cpl": 74.21, "cpbj": 235.00, "roas_if_available": 3.2},
+    {"campaign_name": "Furnace Tune-Up – Fall",  "spend": 870.00,  "leads": 10, "booked_jobs": 2,  "cpl": 87.00, "cpbj": 435.00, "roas_if_available": 1.1},
+    {"campaign_name": "Brand – Generic HVAC",    "spend": 590.00,  "leads": 4,  "booked_jobs": 0,  "cpl": 147.50,"cpbj": None,   "roas_if_available": None}
+  ] %}
+{% else %}
+  {% set is_sample = false %}
+{% endif %}
+
+{% set BENCHMARK_CPBJ = 250 %}
+
+<div class="max-w-6xl mx-auto px-4 py-8 space-y-6">
+
+  {# ── Sample-data banner ────────────────────────────────────────────────────── #}
+  {% if is_sample %}
+  <div class="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-5 py-4 text-sm text-blue-800">
+    <i class="fa-solid fa-flask text-blue-500 mt-0.5 shrink-0"></i>
+    <span><strong>Sample data</strong> — Connect your ad accounts to see real numbers. Values below are based on a typical HVAC business.</span>
+  </div>
+  {% endif %}
+
+  {# ── CRM-not-connected banner ──────────────────────────────────────────────── #}
+  {% if not crm_connected %}
+  <div class="flex items-start gap-4 bg-amber-50 border-2 border-amber-300 rounded-xl px-5 py-4">
+    <div class="w-10 h-10 rounded-lg bg-amber-400 flex items-center justify-center shrink-0">
+      <i class="fa-solid fa-plug text-white"></i>
+    </div>
+    <div class="flex-1">
+      <p class="font-semibold text-amber-900">Connect your CRM to see true cost per booked job.</p>
+      <p class="text-sm text-amber-800 mt-0.5">Right now showing estimated data based on industry booking rates. With a CRM connection, RevForge can match ads to actual completed jobs.</p>
+    </div>
+    <a href="/solutions/crm-sync"
+       class="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-colors">
+      <i class="fa-solid fa-arrow-right"></i> Connect CRM
+    </a>
+  </div>
+  {% endif %}
+
+  {# ── Page header ───────────────────────────────────────────────────────────── #}
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Revenue Attribution</h1>
+      <p class="text-sm text-gray-500 mt-0.5">{{ date_range or "Last 30 days" }} · True cost from ad click to booked job</p>
+    </div>
+    <div class="flex items-center gap-2 bg-white border rounded-xl px-3 py-2 shadow-sm text-sm">
+      <span class="text-gray-500 text-xs font-semibold uppercase tracking-wide mr-1">Range:</span>
+      {% for label, days in [("7d","7"),("30d","30"),("90d","90")] %}
+      <button onclick="setRange('{{ days }}')" id="range-btn-{{ days }}"
+              class="range-btn px-3 py-1.5 rounded-lg font-semibold transition-colors
+                     {% if (days == '30' and (date_range == 'Last 30 days' or not date_range)) or (days == '7' and date_range == 'Last 7 days') or (days == '90' and date_range == 'Last 90 days') %}
+                       bg-green-700 text-white
+                     {% else %}
+                       text-gray-600 hover:bg-gray-100
+                     {% endif %}">
+        {{ label }}
+      </button>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# ── KPI row ───────────────────────────────────────────────────────────────── #}
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+
+    {# Total Spend #}
+    <div class="bg-white rounded-2xl border shadow-sm p-5">
+      <div class="flex items-center gap-2 mb-3">
+        <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+          <i class="fa-solid fa-dollar-sign text-blue-600 text-sm"></i>
+        </div>
+        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Ad Spend</span>
+      </div>
+      <div class="text-3xl font-bold text-gray-900">${{ "%.0f"|format(metrics.total_spend) }}</div>
+      <div class="text-xs text-gray-400 mt-1">{{ date_range or "Last 30 days" }}</div>
+    </div>
+
+    {# Cost Per Lead — green if < $100, red if > $150 #}
+    {% set cpl_val = metrics.cost_per_lead %}
+    {% if cpl_val < 100 %}{% set cpl_color = "text-green-700" %}{% elif cpl_val > 150 %}{% set cpl_color = "text-red-600" %}{% else %}{% set cpl_color = "text-gray-900" %}{% endif %}
+    <div class="bg-white rounded-2xl border shadow-sm p-5">
+      <div class="flex items-center gap-2 mb-3">
+        <div class="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
+          <i class="fa-solid fa-user-plus text-green-700 text-sm"></i>
+        </div>
+        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Cost Per Lead</span>
+      </div>
+      <div class="text-3xl font-bold {{ cpl_color }}">${{ "%.0f"|format(cpl_val) }}</div>
+      <div class="text-xs text-gray-400 mt-1">Benchmark &lt; $100</div>
+    </div>
+
+    {# Cost Per Booked Job — the headline metric #}
+    {% set cpbj_val = metrics.cost_per_booked_job %}
+    {% if cpbj_val < BENCHMARK_CPBJ %}
+      {% set cpbj_color = "text-green-700" %}
+      {% set cpbj_badge = "below-bench" %}
+    {% elif cpbj_val > BENCHMARK_CPBJ * 2 %}
+      {% set cpbj_color = "text-red-600" %}
+      {% set cpbj_badge = "above-bench" %}
+    {% else %}
+      {% set cpbj_color = "text-amber-600" %}
+      {% set cpbj_badge = "near-bench" %}
+    {% endif %}
+    <div class="bg-white rounded-2xl border-2
+                {% if cpbj_badge == 'below-bench' %}border-green-300{% elif cpbj_badge == 'above-bench' %}border-red-300{% else %}border-amber-300{% endif %}
+                shadow-sm p-5 relative overflow-hidden">
+      <div class="absolute top-0 right-0 px-2 py-1 text-xs font-bold rounded-bl-xl
+                  {% if cpbj_badge == 'below-bench' %}bg-green-600 text-white{% elif cpbj_badge == 'above-bench' %}bg-red-600 text-white{% else %}bg-amber-500 text-white{% endif %}">
+        {% if cpbj_badge == 'below-bench' %}Under benchmark{% elif cpbj_badge == 'above-bench' %}Over 2x benchmark{% else %}Near benchmark{% endif %}
+      </div>
+      <div class="flex items-center gap-2 mb-3">
+        <div class="w-8 h-8 rounded-lg
+                    {% if cpbj_badge == 'below-bench' %}bg-green-50{% elif cpbj_badge == 'above-bench' %}bg-red-50{% else %}bg-amber-50{% endif %}
+                    flex items-center justify-center">
+          <i class="fa-solid fa-briefcase
+                    {% if cpbj_badge == 'below-bench' %}text-green-700{% elif cpbj_badge == 'above-bench' %}text-red-600{% else %}text-amber-600{% endif %}
+                    text-sm"></i>
+        </div>
+        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Cost / Booked Job</span>
+      </div>
+      <div class="text-3xl font-bold {{ cpbj_color }}">${{ "%.0f"|format(cpbj_val) }}</div>
+      <div class="text-xs text-gray-400 mt-1">Benchmark ≤ ${{ BENCHMARK_CPBJ }}</div>
+    </div>
+
+    {# Booking Rate #}
+    {% set br = metrics.booking_rate_pct %}
+    {% set br_color = "text-green-700" if br >= 30 else ("text-red-600" if br < 20 else "text-amber-600") %}
+    <div class="bg-white rounded-2xl border shadow-sm p-5">
+      <div class="flex items-center gap-2 mb-3">
+        <div class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+          <i class="fa-solid fa-calendar-check text-indigo-600 text-sm"></i>
+        </div>
+        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Booking Rate</span>
+      </div>
+      <div class="text-3xl font-bold {{ br_color }}">{{ "%.1f"|format(br) }}%</div>
+      <div class="text-xs text-gray-400 mt-1">{{ metrics.total_leads }} leads → {{ metrics.total_booked_jobs }} jobs</div>
+    </div>
+
+  </div>
+
+  {# ── Chart ─────────────────────────────────────────────────────────────────── #}
+  <div class="bg-white rounded-2xl border shadow-sm p-6">
+    <h2 class="text-base font-semibold text-gray-800 mb-4">Spend vs. Booked Jobs by Campaign</h2>
+    <div class="relative" style="height:240px;">
+      <canvas id="campaignChart"></canvas>
+    </div>
+  </div>
+
+  {# ── Campaign breakdown table ──────────────────────────────────────────────── #}
+  <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b flex items-center justify-between">
+      <h2 class="text-base font-semibold text-gray-800">Campaign Breakdown</h2>
+      <span class="text-xs text-gray-400">Sorted by Cost/Booked Job (best first)</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm mobile-card-table">
+        <thead>
+          <tr class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            <th class="px-6 py-3 text-left">Campaign</th>
+            <th class="px-6 py-3 text-right">Spend</th>
+            <th class="px-6 py-3 text-right">Leads</th>
+            <th class="px-6 py-3 text-right">Booked Jobs</th>
+            <th class="px-6 py-3 text-right">CPL</th>
+            <th class="px-6 py-3 text-right">Cost / Booked Job</th>
+            <th class="px-6 py-3 text-right">vs Benchmark</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% set sorted_campaigns = by_campaign | sort(attribute='cpbj') %}
+          {% for c in sorted_campaigns %}
+          {% set cpbj = c.cpbj %}
+          {% if cpbj is not none %}
+            {% if cpbj < BENCHMARK_CPBJ %}
+              {% set row_cpbj_class = "text-green-700 font-bold" %}
+              {% set vs_bench = (cpbj / BENCHMARK_CPBJ - 1) * 100 %}
+              {% set vs_class = "text-green-700" %}
+              {% set vs_icon = "fa-arrow-down" %}
+              {% set pause_badge = false %}
+            {% elif cpbj > BENCHMARK_CPBJ * 2 %}
+              {% set row_cpbj_class = "text-red-600 font-bold" %}
+              {% set vs_bench = (cpbj / BENCHMARK_CPBJ - 1) * 100 %}
+              {% set vs_class = "text-red-600" %}
+              {% set vs_icon = "fa-arrow-up" %}
+              {% set pause_badge = true %}
+            {% else %}
+              {% set row_cpbj_class = "text-amber-700 font-semibold" %}
+              {% set vs_bench = (cpbj / BENCHMARK_CPBJ - 1) * 100 %}
+              {% set vs_class = "text-amber-600" %}
+              {% set vs_icon = "fa-arrow-up" %}
+              {% set pause_badge = false %}
+            {% endif %}
+          {% else %}
+            {% set row_cpbj_class = "text-gray-400 italic" %}
+            {% set vs_bench = none %}
+            {% set vs_class = "text-gray-400" %}
+            {% set vs_icon = "" %}
+            {% set pause_badge = true %}
+          {% endif %}
+          <tr class="hover:bg-gray-50 transition-colors">
+            <td class="px-6 py-4 text-gray-900 font-medium" data-label="Campaign">
+              {{ c.campaign_name }}
+              {% if pause_badge %}
+              <span class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 border border-red-200 text-xs text-red-600 font-semibold">
+                <i class="fa-solid fa-pause text-xs"></i> Consider pausing
+              </span>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4 text-right text-gray-700" data-label="Spend">${{ "%.0f"|format(c.spend) }}</td>
+            <td class="px-6 py-4 text-right text-gray-700" data-label="Leads">{{ c.leads }}</td>
+            <td class="px-6 py-4 text-right text-gray-700" data-label="Booked Jobs">{{ c.booked_jobs }}</td>
+            <td class="px-6 py-4 text-right text-gray-600" data-label="CPL">${{ "%.0f"|format(c.cpl) }}</td>
+            <td class="px-6 py-4 text-right {{ row_cpbj_class }}" data-label="Cost/Booked Job">
+              {% if cpbj is not none %}${{ "%.0f"|format(cpbj) }}{% else %}—{% endif %}
+            </td>
+            <td class="px-6 py-4 text-right {{ vs_class }}" data-label="vs Benchmark">
+              {% if vs_bench is not none %}
+                <span class="inline-flex items-center gap-1">
+                  <i class="fa-solid {{ vs_icon }} text-xs"></i>
+                  {{ "%.0f"|format(vs_bench | abs) }}%
+                  {{ "better" if cpbj < BENCHMARK_CPBJ else "over" }}
+                </span>
+              {% else %}
+                <span class="text-gray-400">No jobs booked</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+{# ── Chart.js script ───────────────────────────────────────────────────────── #}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" crossorigin="anonymous"></script>
+<script nonce="{{ g.csp_nonce }}">
+(function () {
+  var labels = {{ by_campaign | map(attribute='campaign_name') | list | tojson }};
+  var spends = {{ by_campaign | map(attribute='spend') | list | tojson }};
+  var jobs   = {{ by_campaign | map(attribute='booked_jobs') | list | tojson }};
+
+  var ctx = document.getElementById('campaignChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Ad Spend ($)',
+          data: spends,
+          backgroundColor: 'rgba(30, 95, 168, 0.75)',
+          borderRadius: 6,
+          yAxisID: 'ySpend',
+        },
+        {
+          label: 'Booked Jobs',
+          data: jobs,
+          backgroundColor: 'rgba(26, 92, 53, 0.80)',
+          borderRadius: 6,
+          yAxisID: 'yJobs',
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { font: { size: 12 } } },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              if (ctx.datasetIndex === 0) return ' $' + ctx.parsed.y.toLocaleString();
+              return ' ' + ctx.parsed.y + ' jobs';
+            }
+          }
+        }
+      },
+      scales: {
+        ySpend: {
+          type: 'linear',
+          position: 'left',
+          ticks: {
+            callback: function(v) { return '$' + v.toLocaleString(); },
+            font: { size: 11 }
+          },
+          grid: { color: 'rgba(0,0,0,0.05)' }
+        },
+        yJobs: {
+          type: 'linear',
+          position: 'right',
+          ticks: { font: { size: 11 } },
+          grid: { drawOnChartArea: false }
+        }
+      }
+    }
+  });
+})();
+
+function setRange(days) {
+  document.querySelectorAll('.range-btn').forEach(function(b) {
+    b.classList.remove('bg-green-700','text-white');
+    b.classList.add('text-gray-600','hover:bg-gray-100');
+  });
+  var active = document.getElementById('range-btn-' + days);
+  if (active) {
+    active.classList.add('bg-green-700','text-white');
+    active.classList.remove('text-gray-600','hover:bg-gray-100');
+  }
+  var url = new URL(window.location);
+  url.searchParams.set('days', days);
+  window.location.href = url.toString();
+}
+</script>
+{% endblock %}

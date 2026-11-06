@@ -1,7 +1,7 @@
 # Email Configuration Guide
 
 ## Overview
-FieldSprout's email system requires SMTP configuration to send emails for:
+RevForge's email system requires SMTP configuration to send emails for:
 - Email verification
 - Password reset
 - Test emails from admin panel
@@ -22,8 +22,8 @@ MAIL_USERNAME_DAVID=your-email@gmail.com      # SMTP username (usually your emai
 MAIL_PASSWORD_DAVID=your-app-password         # SMTP password or app-specific password
 
 # Email Sender
-MAIL_DEFAULT_SENDER=noreply@fieldsprout.com   # From address for emails
-MAIL_FROM=noreply@fieldsprout.com             # Alternative from address
+MAIL_DEFAULT_SENDER=noreply@getrevforge.io   # From address for emails
+MAIL_FROM=noreply@getrevforge.io             # Alternative from address
 ```
 
 ## Gmail Setup Example
@@ -136,4 +136,4 @@ If emails still aren't working after following this guide:
 1. Check application logs for error messages
 2. Verify environment variables are loaded: `env | grep MAIL_`
 3. Test SMTP connection manually using telnet or openssl
-4. Contact support at cs@fieldsprout.io
+4. Contact support at cs@getrevforge.io

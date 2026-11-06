@@ -1,14 +1,14 @@
-// FieldSprout Service Worker
+// RevForge Service Worker
 // Version 1.0
 
-const CACHE_NAME = 'fieldsprout-v1';
+const CACHE_NAME = 'revforge-v1';
 const urlsToCache = [
   '/',
   '/static/css/style.css',
   '/static/js/app_shell.js',
-  '/static/brand/logos/fieldsprout-wordmark.svg',
-  '/static/brand/icons/fieldsprout-icon-32.png',
-  '/static/brand/icons/fieldsprout-icon-16.png',
+  '/static/brand/logos/revforge-wordmark.svg',
+  '/static/brand/icons/revforge-icon-32.png',
+  '/static/brand/icons/revforge-icon-16.png',
 ];
 
 // Install event - cache static assets

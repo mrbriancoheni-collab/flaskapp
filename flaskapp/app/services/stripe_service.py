@@ -587,10 +587,10 @@ def _notify_new_paying_customer(user_id: int, invoice: Dict[str, Any]):
                     <tr>
                         <td style="padding: 30px 40px; text-align: center; background-color: #f9fafb; border-radius: 0 0 8px 8px;">
                             <p style="margin: 0 0 10px 0; font-size: 14px; color: #6b7280;">
-                                This is an automated notification from FieldSprout.
+                                This is an automated notification from RevForge.
                             </p>
                             <p style="margin: 0; font-size: 12px; color: #9ca3af;">
-                                © 2025 FieldSprout. All rights reserved.
+                                © 2025 RevForge. All rights reserved.
                             </p>
                         </td>
                     </tr>
@@ -612,10 +612,10 @@ Payment Amount: ${amount_dollars:.2f} {currency}
 Invoice ID: {invoice.get('id', 'N/A')}
 Account Created: {user.created_at.strftime('%B %d, %Y at %I:%M %p') if user.created_at else 'N/A'}
 
-This is an automated notification from FieldSprout.
+This is an automated notification from RevForge.
         """
 
-        raw = current_app.config.get("ADMIN_NOTIFICATION_EMAILS", "hi@fieldsprout.io,mrbriancoheni@gmail.com")
+        raw = current_app.config.get("ADMIN_NOTIFICATION_EMAILS", "hi@getrevforge.io,mrbriancoheni@gmail.com")
         notification_emails = [e.strip() for e in raw.split(",") if e.strip()]
 
         for email in notification_emails:
@@ -836,14 +836,14 @@ def handle_invoice_payment_failed(event_data: Dict[str, Any]):
                 amount_dollars = invoice["amount_due"] / 100
                 send_email(
                     to_email=user.email,
-                    subject="Action required: your FieldSprout payment failed",
+                    subject="Action required: your RevForge payment failed",
                     html_body=(
                         f"<p>Hi {user.name or 'there'},</p>"
                         f"<p>We were unable to process your payment of "
                         f"<strong>${amount_dollars:.2f}</strong> "
                         f"(invoice <code>{invoice['id']}</code>).</p>"
                         f"<p>Please update your payment method to keep your account active:</p>"
-                        f'<p><a href="https://fieldsprout.io/account/billing" '
+                        f'<p><a href="https://getrevforge.io/account/billing" '
                         f'style="background:#4f46e5;color:#fff;padding:10px 20px;'
                         f'border-radius:6px;text-decoration:none;font-weight:600;">'
                         f"Update Payment Method</a></p>"
@@ -1029,12 +1029,12 @@ def handle_checkout_session_completed(event_data: Dict[str, Any]):
         try:
             from app.services.email_service import send_email
 
-            subject = f"🎉 New FieldSprout Customer: {customer_name}"
+            subject = f"🎉 New RevForge Customer: {customer_name}"
 
             body_html = f"""
             <h2>New Stripe Payment Setup Completed</h2>
 
-            <p>A customer has successfully set up payment on FieldSprout!</p>
+            <p>A customer has successfully set up payment on RevForge!</p>
 
             <h3>Customer Details:</h3>
             <ul>
@@ -1059,7 +1059,7 @@ def handle_checkout_session_completed(event_data: Dict[str, Any]):
                 <li><strong>Mode:</strong> {session.get("mode")}</li>
             </ul>
 
-            <p><em>This is an automated notification from FieldSprout</em></p>
+            <p><em>This is an automated notification from RevForge</em></p>
             """
 
             body_text = f"""
@@ -1082,7 +1082,7 @@ def handle_checkout_session_completed(event_data: Dict[str, Any]):
             - Payment Status: {session.get("payment_status")}
             - Mode: {session.get("mode")}
 
-            This is an automated notification from FieldSprout
+            This is an automated notification from RevForge
             """
 
             send_email(

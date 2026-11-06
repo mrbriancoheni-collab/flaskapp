@@ -1727,7 +1727,7 @@ def send_weekly_digest_all_accounts(app: Flask):
                         text=text_parts,
                         week_start=_friendly(digest["week_start"]),
                         week_end=_friendly(digest["week_end"]),
-                        dashboard_url=f"{current_app.config.get('BASE_URL', 'https://app.fieldsprout.com')}/account/google/ads/?tab=cockpit",
+                        dashboard_url=f"{current_app.config.get('BASE_URL', 'https://app.getrevforge.io')}/account/google/ads/?tab=cockpit",
                         current_year=datetime.utcnow().year,
                     )
 

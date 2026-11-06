@@ -34,11 +34,11 @@ These emails are from **cPanel's HTTP Availability Monitoring**, not your Flask 
 If you can't find the setting:
 
 **Email your hosting provider:**
-> Subject: Disable HTTP monitoring alerts for fieldsprout.io
+> Subject: Disable HTTP monitoring alerts for getrevforge.io
 >
 > Hello,
 >
-> Please disable the HTTP availability monitoring alerts for my domain fieldsprout.io.
+> Please disable the HTTP availability monitoring alerts for my domain getrevforge.io.
 > I'm receiving "Site Alert" emails every 5 minutes that I no longer need.
 >
 > Thank you!
@@ -51,7 +51,7 @@ Before disabling, make sure your site isn't actually down!
 
 **Run this on production:**
 ```bash
-cd /home/fieldsprout/flaskapp
+cd /home/revforge/flaskapp
 ./check_site_status.sh
 ```
 
@@ -89,15 +89,15 @@ If `check_site_status.sh` shows your site is down:
 
 **Restart Gunicorn:**
 ```bash
-cd /home/fieldsprout/flaskapp
+cd /home/revforge/flaskapp
 ./stop_gunicorn.sh
 ./start_gunicorn.sh
 ```
 
 **Check Logs:**
 ```bash
-tail -100 /home/fieldsprout/flaskapp/logs/gunicorn_error.log
-tail -100 /home/fieldsprout/flaskapp/logs/gunicorn_access.log
+tail -100 /home/revforge/flaskapp/logs/gunicorn_error.log
+tail -100 /home/revforge/flaskapp/logs/gunicorn_access.log
 ```
 
 ---

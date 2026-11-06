@@ -1,6 +1,6 @@
 # app/services/agent_cadence.py
 """
-Adaptive Cadence Engine for FieldSprout AI agents.
+Adaptive Cadence Engine for RevForge AI agents.
 
 Agent run frequency adapts to the previous run's return: when an account is
 quiet (no decisions / no opportunities / low volatility) the interval backs off

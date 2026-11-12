@@ -160,6 +160,7 @@ def generate_recommendations(account_id: int) -> Dict[str, Any]:
               AND ac.account_id = :aid
               AND gs.date >= (CURRENT_DATE - INTERVAL 30 DAY)
               AND k.status = 'enabled'
+              AND (ac.campaign_type IS NULL OR ac.campaign_type NOT IN ('PERFORMANCE_MAX', 'SHOPPING'))
             GROUP BY gs.entity_id, k.text, k.match_type, ag.id, ac.id, ac.name
             HAVING total_cost_micros >= :min_micros AND total_conversions = 0
             ORDER BY total_cost_micros DESC
@@ -235,6 +236,7 @@ def generate_recommendations(account_id: int) -> Dict[str, Any]:
                   AND ac.account_id = :aid
                   AND gs.date >= (CURRENT_DATE - INTERVAL 30 DAY)
                   AND k.status = 'enabled'
+                  AND (ac.campaign_type IS NULL OR ac.campaign_type NOT IN ('PERFORMANCE_MAX', 'SHOPPING'))
                 GROUP BY gs.entity_id, k.text, k.match_type, ag.id, ac.name
                 HAVING total_conversions > 0
                    AND (total_cost_micros / 1000000.0) / total_conversions > :cpa_limit
@@ -429,6 +431,7 @@ def generate_recommendations(account_id: int) -> Dict[str, Any]:
               AND gs.quality_score <= :qs_thresh
               AND gs.date >= (CURRENT_DATE - INTERVAL 14 DAY)
               AND k.status = 'enabled'
+              AND (ac.campaign_type IS NULL OR ac.campaign_type NOT IN ('PERFORMANCE_MAX', 'SHOPPING'))
             GROUP BY gs.entity_id, k.text, k.match_type, gs.landing_page_exp,
                      gs.ad_relevance, gs.expected_ctr, ac.name, ac.id
             HAVING total_impr >= :min_impr
@@ -597,6 +600,7 @@ def generate_recommendations(account_id: int) -> Dict[str, Any]:
             WHERE ac.account_id = :aid
               AND k.status = 'enabled'
               AND k.match_type = 'broad'
+              AND (ac.campaign_type IS NULL OR ac.campaign_type NOT IN ('PERFORMANCE_MAX', 'SHOPPING'))
             GROUP BY k.id, k.text, ag.id, ac.name
             ORDER BY total_cost_micros DESC
             LIMIT 50
@@ -685,6 +689,179 @@ def generate_recommendations(account_id: int) -> Dict[str, Any]:
         db.session.rollback()
         summary["errors"].append(f"Broad match pass: {exc}")
         logger.exception("Broad match analysis failed for account %s", account_id)
+
+    # ── 6. Shopping campaign CVR rule ───────────────────────────────────────
+    # Recommend scaling when CVR > 2% and flag when CVR drops > 15% WoW.
+    # Only applies to SHOPPING campaigns (which have no traditional keywords).
+    try:
+        from app.services.google_ads_type_benchmarks import SHOPPING_CVR_DROP_THRESHOLD
+        shop_rows = db.session.execute(text("""
+            SELECT gs.entity_id AS camp_local_id,
+                   ac.name AS camp_name,
+                   SUM(CASE WHEN gs.date >= (CURRENT_DATE - INTERVAL 7 DAY)
+                            THEN gs.conversions ELSE 0 END)       AS conv_this_week,
+                   SUM(CASE WHEN gs.date >= (CURRENT_DATE - INTERVAL 7 DAY)
+                            THEN gs.clicks ELSE 0 END)            AS clicks_this_week,
+                   SUM(CASE WHEN gs.date >= (CURRENT_DATE - INTERVAL 14 DAY)
+                             AND gs.date <  (CURRENT_DATE - INTERVAL 7 DAY)
+                            THEN gs.conversions ELSE 0 END)       AS conv_prior_week,
+                   SUM(CASE WHEN gs.date >= (CURRENT_DATE - INTERVAL 14 DAY)
+                             AND gs.date <  (CURRENT_DATE - INTERVAL 7 DAY)
+                            THEN gs.clicks ELSE 0 END)            AS clicks_prior_week
+            FROM gads_stats_daily gs
+            JOIN ads_campaigns ac ON ac.id = gs.entity_id
+            WHERE gs.entity_type = 'campaign'
+              AND ac.account_id = :aid
+              AND ac.campaign_type = 'SHOPPING'
+              AND gs.date >= (CURRENT_DATE - INTERVAL 14 DAY)
+            GROUP BY gs.entity_id, ac.name
+        """), {"aid": account_id}).mappings().all()
+
+        SHOPPING_TARGET_CVR = 0.0286   # 2.86% median from 2026 report
+
+        for r in shop_rows:
+            conv_w = float(r["conv_this_week"] or 0)
+            clk_w  = int(r["clicks_this_week"] or 0)
+            conv_p = float(r["conv_prior_week"] or 0)
+            clk_p  = int(r["clicks_prior_week"] or 0)
+            if clk_w < 50:
+                continue
+
+            cvr_w = conv_w / clk_w if clk_w > 0 else 0.0
+            cvr_p = conv_p / clk_p if clk_p > 0 else None
+
+            if cvr_p is not None and cvr_p > 0:
+                wow_drop = (cvr_p - cvr_w) / cvr_p
+                if wow_drop >= SHOPPING_CVR_DROP_THRESHOLD:
+                    action = {
+                        "type": "investigate_shopping_cvr",
+                        "campaign_id": r["camp_local_id"],
+                        "campaign_name": r["camp_name"],
+                        "cvr_this_week": round(cvr_w * 100, 2),
+                        "cvr_prior_week": round(cvr_p * 100, 2),
+                        "wow_drop_pct": round(wow_drop * 100, 1),
+                    }
+                    _save(OptimizerRecommendation(
+                        account_id=account_id,
+                        scope_type="campaign",
+                        scope_id=r["camp_local_id"],
+                        category="shopping_cvr",
+                        title=(
+                            f'Shopping CVR dropped {round(wow_drop*100,1)}% week-over-week — '
+                            f'"{r["camp_name"]}"'
+                        ),
+                        details=(
+                            f'Shopping campaign "{r["camp_name"]}" conversion rate fell from '
+                            f'{round(cvr_p*100, 2)}% to {round(cvr_w*100, 2)}% week-over-week. '
+                            f'Check for product feed issues, landing page changes, or bid strategy drift. '
+                            f'Shopping benchmarks: target CVR 2.86%, iROAS 2.1×.'
+                        ),
+                        expected_impact="Recover Shopping CVR to benchmark 2.86%",
+                        severity=2,
+                        suggested_action_json=json.dumps(action),
+                    ))
+            elif cvr_w > SHOPPING_TARGET_CVR:
+                action = {
+                    "type": "scale_shopping_campaign",
+                    "campaign_id": r["camp_local_id"],
+                    "campaign_name": r["camp_name"],
+                    "cvr_this_week": round(cvr_w * 100, 2),
+                    "target_cvr": round(SHOPPING_TARGET_CVR * 100, 2),
+                }
+                _save(OptimizerRecommendation(
+                    account_id=account_id,
+                    scope_type="campaign",
+                    scope_id=r["camp_local_id"],
+                    category="shopping_cvr",
+                    title=(
+                        f'Shopping "{r["camp_name"]}" CVR {round(cvr_w*100,2)}% — '
+                        f'above 2.86% benchmark, consider scaling budget'
+                    ),
+                    details=(
+                        f'Shopping campaign "{r["camp_name"]}" is converting at '
+                        f'{round(cvr_w*100, 2)}%, above the 2.86% industry benchmark. '
+                        f'This is a strong signal to scale — increase budget or expand '
+                        f'product listing targets while CVR is high.'
+                    ),
+                    expected_impact="Scale high-performing Shopping campaign",
+                    severity=3,
+                    suggested_action_json=json.dumps(action),
+                ))
+    except Exception as exc:
+        db.session.rollback()
+        summary["errors"].append(f"Shopping CVR pass: {exc}")
+        logger.exception("Shopping CVR analysis failed for account %s", account_id)
+
+    # ── 7. Upper-funnel CPM threshold (Display / Video / Demand Gen) ─────────
+    # For reach-focused campaigns, judge by CPM rather than CPA/CVR.
+    # Flag when CPM > 2× the type benchmark (from CAMPAIGN_TYPE_BENCHMARKS).
+    try:
+        from app.services.google_ads_type_benchmarks import CAMPAIGN_TYPE_BENCHMARKS, CPM_ALERT_MULTIPLIER
+        uf_rows = db.session.execute(text("""
+            SELECT gs.entity_id AS camp_local_id,
+                   ac.name AS camp_name,
+                   ac.campaign_type,
+                   SUM(gs.impressions)  AS total_impr,
+                   SUM(gs.cost_micros)  AS total_cost_micros,
+                   SUM(gs.clicks)       AS total_clicks
+            FROM gads_stats_daily gs
+            JOIN ads_campaigns ac ON ac.id = gs.entity_id
+            WHERE gs.entity_type = 'campaign'
+              AND ac.account_id = :aid
+              AND ac.campaign_type IN ('DISPLAY', 'VIDEO', 'DEMAND_GEN')
+              AND gs.date >= (CURRENT_DATE - INTERVAL 14 DAY)
+            GROUP BY gs.entity_id, ac.name, ac.campaign_type
+            HAVING total_impr >= 1000
+        """), {"aid": account_id}).mappings().all()
+
+        for r in uf_rows:
+            ct = r["campaign_type"]
+            impr = int(r["total_impr"] or 0)
+            cost = (r["total_cost_micros"] or 0) / 1_000_000
+            if impr == 0:
+                continue
+            cpm = cost / impr * 1000
+            bm = CAMPAIGN_TYPE_BENCHMARKS.get(ct, {})
+            target_cpm = bm.get("target_cpm")
+            if not target_cpm:
+                continue
+
+            if cpm > target_cpm * CPM_ALERT_MULTIPLIER:
+                overpay_pct = round((cpm - target_cpm) / target_cpm * 100, 0)
+                action = {
+                    "type": "review_upper_funnel_cpm",
+                    "campaign_id": r["camp_local_id"],
+                    "campaign_name": r["camp_name"],
+                    "campaign_type": ct,
+                    "actual_cpm": round(cpm, 2),
+                    "target_cpm": target_cpm,
+                    "impressions": impr,
+                    "spend": round(cost, 2),
+                }
+                _save(OptimizerRecommendation(
+                    account_id=account_id,
+                    scope_type="campaign",
+                    scope_id=r["camp_local_id"],
+                    category="upper_funnel_cpm",
+                    title=(
+                        f'{ct.title()} campaign "{r["camp_name"]}" CPM ${cpm:.2f} — '
+                        f'{overpay_pct:.0f}% above benchmark ${target_cpm:.2f}'
+                    ),
+                    details=(
+                        f'{ct.title()} campaign "{r["camp_name"]}" is paying ${cpm:.2f} CPM '
+                        f'vs the ${target_cpm:.2f} benchmark for this format ({overpay_pct:.0f}% over). '
+                        f'Review audience targeting, ad frequency cap, and bidding strategy. '
+                        f'Note: for upper-funnel campaigns, success is measured by CPM and reach, '
+                        f'not by CPA — ensure conversion actions are not over-optimising this campaign.'
+                    ),
+                    expected_impact=f"Reduce CPM toward ${target_cpm:.2f} benchmark",
+                    severity=2,
+                    suggested_action_json=json.dumps(action),
+                ))
+    except Exception as exc:
+        db.session.rollback()
+        summary["errors"].append(f"Upper-funnel CPM pass: {exc}")
+        logger.exception("Upper-funnel CPM analysis failed for account %s", account_id)
 
     # ── Commit all recommendations ──────────────────────────────────────────
     try:

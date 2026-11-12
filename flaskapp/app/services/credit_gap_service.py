@@ -38,13 +38,14 @@ def _fetch_ad_spend(db, aid: int, start: date, end: date) -> Tuple[float, List[D
         rows = db.session.execute(text("""
             SELECT ac.id AS campaign_id,
                    ac.name AS campaign_name,
+                   ac.campaign_type,
                    COALESCE(SUM(gs.cost_micros), 0) / 1000000.0 AS spend,
                    COALESCE(SUM(gs.conversions), 0)              AS conversions
             FROM gads_stats_daily gs
             JOIN ads_campaigns ac ON ac.id = gs.entity_id AND ac.account_id = :aid
             WHERE gs.entity_type = 'campaign'
               AND gs.date >= :s AND gs.date <= :e
-            GROUP BY ac.id, ac.name
+            GROUP BY ac.id, ac.name, ac.campaign_type
             ORDER BY spend DESC
         """), {"aid": aid, "s": str(start), "e": str(end)}).mappings().all()
 
@@ -53,6 +54,7 @@ def _fetch_ad_spend(db, aid: int, start: date, end: date) -> Tuple[float, List[D
             campaigns.append({
                 "campaign_id":   r["campaign_id"],
                 "campaign_name": r["campaign_name"] or "Unknown",
+                "campaign_type": r["campaign_type"],
                 "spend":         sp,
                 "conversions":   float(r["conversions"] or 0),
             })
@@ -230,11 +232,19 @@ def build_credit_gap(
 
     roas = round(st_revenue / total_spend, 2) if total_spend > 0 else None
 
+    # Halo estimate: dominant campaign type (by spend) benchmark
+    halo_estimate_pct: Optional[float] = None
+    if campaigns:
+        from app.services.google_ads_type_benchmarks import get_halo_pct
+        dom_type = campaigns[0].get("campaign_type")  # already sorted desc by spend
+        halo_estimate_pct = get_halo_pct(dom_type)
+
     return {
         "ad_spend":              round(total_spend, 2),
         "st_revenue":            st_revenue,
         "revenue_gap":           revenue_gap,
         "roas":                  roas,
+        "halo_estimate_pct":     halo_estimate_pct,
         "new_cust_rev":          new_cust_rev,
         "repeat_cust_rev":       repeat_cust_rev,
         "new_cust_pct":          new_cust_pct,

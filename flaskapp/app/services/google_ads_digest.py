@@ -75,6 +75,94 @@ def _week_totals(account_id: int, start: date, end: date) -> Optional[Dict[str, 
     }
 
 
+def _week_totals_by_type(account_id: int, start: date, end: date) -> List[Dict[str, Any]]:
+    """Per campaign_type totals for [start, end). Returns list sorted by spend desc."""
+    from app import db
+    try:
+        rows = db.session.execute(text("""
+            SELECT COALESCE(ac.campaign_type, 'UNKNOWN') AS campaign_type,
+                   COUNT(DISTINCT ac.id)                 AS campaign_count,
+                   SUM(gs.cost_micros)/1000000.0         AS spend,
+                   SUM(gs.clicks)                        AS clicks,
+                   SUM(gs.conversions)                   AS leads
+            FROM gads_stats_daily gs
+            JOIN ads_campaigns ac ON ac.id = gs.entity_id AND ac.account_id = :aid
+            WHERE gs.entity_type = 'campaign'
+              AND gs.date >= :start AND gs.date < :end
+            GROUP BY COALESCE(ac.campaign_type, 'UNKNOWN')
+            ORDER BY spend DESC
+        """), {"aid": account_id, "start": start, "end": end}).mappings().all()
+
+        from app.services.google_ads_type_benchmarks import get_halo_pct
+        result = []
+        for r in rows:
+            spend = round(float(r["spend"] or 0), 2)
+            leads = round(float(r["leads"] or 0), 1)
+            ct = r["campaign_type"]
+            result.append({
+                "campaign_type":    ct,
+                "campaign_count":   int(r["campaign_count"] or 0),
+                "spend":            spend,
+                "clicks":           int(r["clicks"] or 0),
+                "leads":            leads,
+                "cost_per_lead":    round(spend / leads, 2) if leads > 0 else None,
+                "halo_pct":         get_halo_pct(ct),
+            })
+        return result
+    except Exception:
+        db.session.rollback()
+        return []
+
+
+def _new_customer_pct(account_id: int, start: date, end: date) -> Optional[float]:
+    """
+    Returns % of ServiceTitan revenue in the period that came from new customers.
+    Returns None if ServiceTitan data is not available.
+    """
+    from app import db
+    try:
+        job_rows = db.session.execute(text("""
+            SELECT j.st_customer_id,
+                   COALESCE(j.total_amount, 0) AS revenue
+            FROM servicetitan_jobs j
+            WHERE j.account_id = :aid
+              AND j.job_status IN ('Completed', 'completed', 'Done', 'done')
+              AND j.completed_date >= :s AND j.completed_date < :e
+        """), {"aid": account_id, "s": start, "e": end}).mappings().all()
+
+        if not job_rows:
+            return None
+
+        cust_ids = list({r["st_customer_id"] for r in job_rows if r["st_customer_id"]})
+        if not cust_ids:
+            return None
+
+        placeholders = ",".join([f":c{i}" for i in range(len(cust_ids))])
+        params = {"aid": account_id, "s": str(start)}
+        params.update({f"c{i}": cid for i, cid in enumerate(cust_ids)})
+        repeat_rows = db.session.execute(text(f"""
+            SELECT DISTINCT st_customer_id
+            FROM servicetitan_jobs
+            WHERE account_id = :aid
+              AND st_customer_id IN ({placeholders})
+              AND job_status IN ('Completed', 'completed', 'Done', 'done')
+              AND completed_date < :s
+        """), params).fetchall()
+        repeat_set = {r[0] for r in repeat_rows}
+
+        total_rev = new_rev = 0.0
+        for r in job_rows:
+            rev = float(r["revenue"] or 0)
+            total_rev += rev
+            if r["st_customer_id"] not in repeat_set:
+                new_rev += rev
+
+        return round(new_rev / total_rev * 100, 1) if total_rev > 0 else None
+    except Exception:
+        db.session.rollback()
+        return None
+
+
 def _pct_change(current: Optional[float], prior: Optional[float]) -> Optional[float]:
     if current is None or prior is None or prior <= 0:
         return None
@@ -198,6 +286,14 @@ def generate_weekly_digest(account_id: int) -> Dict[str, Any]:
     }
 
     top_keyword, biggest_waster = _top_and_waster(account_id, week_start, today)
+    by_type = _week_totals_by_type(account_id, week_start, today)
+    new_cust_pct = _new_customer_pct(account_id, week_start, today)
+
+    # Dominant-type halo estimate: use the type with the most spend
+    halo_estimate_pct = None
+    if by_type:
+        dom = by_type[0]
+        halo_estimate_pct = dom.get("halo_pct")
 
     digest = {
         "account_id": account_id,
@@ -207,6 +303,9 @@ def generate_weekly_digest(account_id: int) -> Dict[str, Any]:
         "this_week": this_week,
         "prior_week": prior_week,
         "deltas": deltas,
+        "by_type": by_type,
+        "new_customer_pct": new_cust_pct,
+        "halo_estimate_pct": halo_estimate_pct,
         "agent": _agent_activity(
             account_id,
             datetime.combine(week_start, datetime.min.time()),
@@ -367,6 +466,45 @@ def render_digest_text(digest: Dict[str, Any]) -> Dict[str, Any]:
             summary_lines.append(
                 f"You spent {_money(abs(spend_diff))} {direction} than the week before."
             )
+
+    # New-customer percentage from ServiceTitan
+    new_cust_pct = digest.get("new_customer_pct")
+    if new_cust_pct is not None:
+        if new_cust_pct >= 50:
+            summary_lines.append(
+                f"{new_cust_pct:.0f}% of this week's ServiceTitan revenue came from new customers — "
+                "your ads are driving healthy new business growth."
+            )
+        elif new_cust_pct >= 25:
+            summary_lines.append(
+                f"{new_cust_pct:.0f}% of this week's ServiceTitan revenue was from new customers. "
+                "Your repeat customer base is strong — keep an eye on new-customer campaigns to maintain flow."
+            )
+        else:
+            summary_lines.append(
+                f"Only {new_cust_pct:.0f}% of this week's ServiceTitan revenue was from new customers. "
+                "Your business is leaning toward repeat customers — consider increasing new-customer campaign budget."
+            )
+
+    # Halo estimate note for upper-funnel campaigns
+    halo_pct = digest.get("halo_estimate_pct")
+    if halo_pct:
+        summary_lines.append(
+            f"Note: {halo_pct:.0f}% of the value from your dominant campaign type may show up "
+            f"off-platform (search, direct, organic) rather than in last-click conversions. "
+            f"Your true ROAS is likely higher than reported."
+        )
+
+    # Campaign type breakdown (top 3 types by spend)
+    by_type = digest.get("by_type") or []
+    if len(by_type) > 1:
+        type_parts = []
+        for t in by_type[:3]:
+            ct = t.get("campaign_type", "UNKNOWN")
+            sp = _money(t.get("spend"))
+            lds = _leads_int(t.get("leads"))
+            type_parts.append(f"{ct}: {sp}" + (f", {lds} leads" if lds > 0 else ""))
+        summary_lines.append("By campaign type — " + " · ".join(type_parts) + ".")
 
     top_kw = digest.get("top_keyword")
     if top_kw and _leads_int(top_kw.get("leads")) > 0:

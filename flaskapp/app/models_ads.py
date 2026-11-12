@@ -24,7 +24,13 @@ class AdsCampaign(db.Model):
     objective = db.Column(db.String(50), nullable=True)  # e.g., "LEADS", "SALES"
     status = db.Column(db.String(20), nullable=False, default="enabled")  # enabled|paused|removed|draft
     daily_budget_cents = db.Column(db.Integer, nullable=False, default=0)
+    # Period-budget support (2026 open-beta campaign-level budgets)
+    period_budget_cents = db.Column(db.BigInteger, nullable=True)
+    period_budget_start = db.Column(db.Date, nullable=True)
+    period_budget_end   = db.Column(db.Date, nullable=True)
     network = db.Column(db.String(40), nullable=True)  # "SEARCH" | "DISPLAY" | "PMax" etc.
+    # advertising_channel_type from Google Ads API (SEARCH/PERFORMANCE_MAX/SHOPPING/…)
+    campaign_type = db.Column(db.String(32), nullable=True)
     language = db.Column(db.String(10), nullable=True, default="en")
     geo_targets = db.Column(db.Text, nullable=True)  # JSON list of geo codes or names
 
@@ -36,6 +42,8 @@ class AdsCampaign(db.Model):
     # manual_cpc | target_cpa | target_roas | maximize_conversions | maximize_conversion_value | enhanced_cpc
     target_cpa_micros = db.Column(db.BigInteger, nullable=True)   # e.g. 5000000 = $5 CPA
     target_roas = db.Column(db.Float, nullable=True)              # e.g. 4.0 = 400% ROAS
+    # Multiplier: last-click ROAS × this = estimated true ROAS (1.0 = no adjustment)
+    attribution_ratio = db.Column(db.Float, nullable=False, default=1.0)
 
     # External IDs (optional)
     google_customer_id = db.Column(db.String(32), nullable=True, index=True)
@@ -71,10 +79,15 @@ class AdsCampaign(db.Model):
             "target_cpa_micros": "BIGINT NULL",
             "target_roas":       "FLOAT NULL",
             "budget_group_id":   "INT NULL",
-            "objective":         "VARCHAR(50) NULL",
-            "network":           "VARCHAR(40) NULL",
-            "start_date":        "DATE NULL",
-            "end_date":          "DATE NULL",
+            "objective":          "VARCHAR(50) NULL",
+            "network":            "VARCHAR(40) NULL",
+            "campaign_type":      "VARCHAR(32) NULL",
+            "period_budget_cents": "BIGINT NULL",
+            "period_budget_start": "DATE NULL",
+            "period_budget_end":   "DATE NULL",
+            "attribution_ratio":   "FLOAT NOT NULL DEFAULT 1.0",
+            "start_date":          "DATE NULL",
+            "end_date":            "DATE NULL",
         }
         try:
             existing = {c["name"] for c in inspect(db.engine).get_columns("ads_campaigns")}
@@ -869,3 +882,29 @@ class DaypartBidAdjustment(db.Model):
 
     def __repr__(self):
         return f"<DaypartBidAdjustment campaign_id={self.campaign_id} dow={self.day_of_week} hour={self.hour}>"
+
+
+# ---------------------------------------------------------------------------
+# Campaign Mix Snapshots — weekly type distribution per account (enhancement 10)
+# ---------------------------------------------------------------------------
+
+class GadsCampaignMixSnapshot(db.Model):
+    __tablename__ = "gads_campaign_mix_snapshots"
+
+    id             = db.Column(db.Integer, primary_key=True)
+    account_id     = db.Column(db.Integer, nullable=False, index=True)
+    week_start     = db.Column(db.Date, nullable=False)
+    campaign_type  = db.Column(db.String(32), nullable=False)
+    campaign_count = db.Column(db.Integer, nullable=False, default=0)
+    spend          = db.Column(db.Numeric(12, 4), nullable=False, default=0)
+    spend_pct      = db.Column(db.Numeric(5, 2), nullable=False, default=0)
+    conversions    = db.Column(db.Numeric(10, 2), nullable=False, default=0)
+    created_at     = db.Column(db.DateTime, default=utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("account_id", "week_start", "campaign_type", name="uq_mix"),
+        {"extend_existing": True},
+    )
+
+    def __repr__(self):
+        return f"<GadsCampaignMixSnapshot account={self.account_id} week={self.week_start} type={self.campaign_type}>"

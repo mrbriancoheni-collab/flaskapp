@@ -2,7 +2,9 @@
 """
 Revenue Attribution dashboard — true cost per booked job.
 
-Route: GET /account/revenue-attribution
+Routes:
+  GET /account/revenue-attribution           — spend vs leads vs booked jobs
+  GET /account/revenue-attribution/credit-gap — ST revenue vs ad spend, new/repeat split
 """
 from __future__ import annotations
 
@@ -155,4 +157,44 @@ def revenue_attribution():
         by_campaign=by_campaign,
         crm_connected=crm_connected,
         date_range=date_range,
+    )
+
+
+# ── Credit Gap view (Item 4) ───────────────────────────────────────────────────
+
+@account_bp.route("/revenue-attribution/credit-gap", methods=["GET"], endpoint="credit_gap")
+@login_required
+def credit_gap():
+    """
+    Credit Gap view: ad-platform spend vs ServiceTitan booked revenue.
+
+    Shows:
+    - Total ST revenue vs Google Ads spend (overall gap)
+    - New vs repeat customer revenue split
+    - Retention-leaning label when new-customer revenue < 35% of total
+    - Unmatched job share (ST jobs with no traceable ad source)
+    - Per-campaign gap breakdown with largest-gap campaign flagged
+    """
+    from app.services.credit_gap_service import build_credit_gap, NEW_CUSTOMER_PCT_THRESHOLD
+
+    aid  = current_account_id()
+    days = int(request.args.get("days", 30))
+    if days not in (7, 30, 90):
+        days = 30
+
+    start, end  = _date_range_from_days(days)
+    date_range  = _label_for_days(days)
+    gap_data    = None
+
+    if aid:
+        try:
+            gap_data = build_credit_gap(db, aid, start, end)
+        except Exception:
+            logger.warning("credit_gap build failed for account %d", aid)
+
+    return render_template(
+        "account/credit_gap.html",
+        gap=gap_data,
+        date_range=date_range,
+        new_customer_threshold=NEW_CUSTOMER_PCT_THRESHOLD,
     )

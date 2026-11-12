@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional
 
@@ -459,4 +460,259 @@ def render_digest_text(digest: Dict[str, Any]) -> Dict[str, Any]:
         "agent_lines": agent_lines,
         "next_steps": next_steps,
         "triage_lines": triage_lines,
+    }
+
+
+# ── Structured digest with number check (Item 2) ─────────────────────────────
+
+def _confidence_score(digest: Dict[str, Any]) -> float:
+    """
+    0.0–1.0 reflecting how much data backs this digest.
+
+    1.0 = current-week data + prior week + keyword detail + agent activity
+    0.75 = current-week + prior week
+    0.50 = current-week only (first week)
+    0.25 = no ad data at all
+    """
+    if not digest.get("has_data"):
+        return 0.25
+    score = 0.50
+    if digest.get("prior_week"):
+        score += 0.25
+    if digest.get("top_keyword") or digest.get("biggest_waster"):
+        score += 0.15
+    agent = digest.get("agent") or {}
+    if int(agent.get("total_actions") or 0) > 0:
+        score += 0.10
+    return min(1.0, round(score, 2))
+
+
+def _extract_cited_numbers(text: str) -> List[str]:
+    """Return dollar amounts and plain integers (≥10) found in text."""
+    return re.findall(r'\$[\d,]+(?:\.\d+)?|\b\d{2,}(?:,\d{3})*(?:\.\d+)?\b', text)
+
+
+def _build_evidence(digest: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """
+    Return a flat list of {metric, value, label} dicts.
+    Every number that render_digest_text *could* mention must have an entry here.
+    """
+    evidence: List[Dict[str, Any]] = []
+
+    def _ev(metric: str, value, label: str):
+        if value is None:
+            return
+        try:
+            f = float(value)
+        except (TypeError, ValueError):
+            return
+        if f == 0:
+            return
+        evidence.append({"metric": metric, "value": round(f, 2), "label": label})
+
+    tw = digest.get("this_week") or {}
+    pw = digest.get("prior_week") or {}
+
+    _ev("spend",         tw.get("spend"),         _money(tw.get("spend")))
+    _ev("leads",         tw.get("leads"),          str(_leads_int(tw.get("leads"))))
+    _ev("clicks",        tw.get("clicks"),         str(int(tw.get("clicks") or 0)))
+    _ev("cost_per_lead", tw.get("cost_per_lead"),  _money(tw.get("cost_per_lead")))
+
+    if pw:
+        _ev("prior_spend",   pw.get("spend"),         _money(pw.get("spend")))
+        _ev("prior_leads",   pw.get("leads"),          str(_leads_int(pw.get("leads"))))
+        _ev("prior_cpl",     pw.get("cost_per_lead"),  _money(pw.get("cost_per_lead")))
+
+        # Derived differences
+        for key, label_fn in (
+            ("spend",         lambda d: _money(abs(d))),
+            ("leads",         lambda d: str(int(round(abs(d))))),
+            ("cost_per_lead", lambda d: _money(abs(d))),
+        ):
+            tw_val = tw.get(key)
+            pw_val = pw.get(key)
+            if tw_val is not None and pw_val is not None:
+                try:
+                    diff = float(tw_val) - float(pw_val)
+                    if abs(diff) >= 1:
+                        _ev(f"delta_{key}", abs(diff), label_fn(diff))
+                except (TypeError, ValueError):
+                    pass
+
+    # Delta percentages (absolute rounded)
+    for k, v in (digest.get("deltas") or {}).items():
+        if v is not None:
+            try:
+                pct = round(abs(float(v)))
+                if pct >= 1:
+                    _ev(f"pct_{k}", pct, f"{pct}%")
+            except (TypeError, ValueError):
+                pass
+
+    # Agent
+    agent = digest.get("agent") or {}
+    actions = agent.get("actions") or {}
+    for action_type, count in actions.items():
+        _ev(f"agent_{action_type}", count, str(count))
+    _ev("agent_total",    agent.get("total_actions"),           str(agent.get("total_actions") or 0))
+    _ev("agent_savings",  agent.get("estimated_monthly_savings"), _money(agent.get("estimated_monthly_savings")))
+
+    # Computed agent sums render_digest_text uses
+    junk = (actions.get("negative_keyword_added") or 0) + (actions.get("search_term_blocked") or 0)
+    _ev("agent_junk",    junk, str(junk))
+    ads_p = (actions.get("ad_paused") or 0) + (actions.get("campaign_paused") or 0)
+    _ev("agent_ads_paused", ads_p, str(ads_p))
+    counted = junk + (actions.get("keyword_paused") or 0) + ads_p + (actions.get("bid_adjusted") or 0) + (actions.get("budget_reallocated") or 0)
+    other = max(0, int(agent.get("total_actions") or 0) - counted)
+    _ev("agent_other", other, str(other))
+
+    # Keywords
+    for kw_key in ("top_keyword", "biggest_waster"):
+        kw = digest.get(kw_key) or {}
+        prefix = kw_key
+        _ev(f"{prefix}_leads",  kw.get("leads"),   str(_leads_int(kw.get("leads"))))
+        _ev(f"{prefix}_spend",  kw.get("spend"),   _money(kw.get("spend")))
+        _ev(f"{prefix}_cpl",    kw.get("cost_per_lead"), _money(kw.get("cost_per_lead")))
+        _ev(f"{prefix}_clicks", kw.get("clicks"),  str(int(kw.get("clicks") or 0)))
+
+    # Campaign triage
+    triage = digest.get("campaign_triage") or {}
+    _ev("triage_needs_action", triage.get("needs_action"), str(triage.get("needs_action") or 0))
+    _ev("triage_total",        triage.get("total"),        str(triage.get("total") or 0))
+
+    return evidence
+
+
+def _number_check(text: str, evidence: List[Dict[str, Any]]) -> tuple:
+    """
+    Return (passed: bool, ungrounded: list[str]).
+
+    Every number ≥10 found in `text` must match a value in evidence (after
+    stripping $ and commas).  Numbers < 10 are skipped — they're trivially
+    small counts derivable from any arithmetic.
+    """
+    cited = _extract_cited_numbers(text)
+    evidence_values = set(
+        str(int(round(e["value"]))).replace(",", "")
+        for e in evidence
+        if e.get("value") is not None
+    )
+    # Also add comma-formatted and dollar variants
+    for e in evidence:
+        try:
+            v = float(e["value"])
+            evidence_values.add(str(int(round(abs(v)))))
+            evidence_values.add(f"{int(round(abs(v))):,}".replace(",", ""))
+        except (TypeError, ValueError):
+            pass
+
+    ungrounded = []
+    for raw in cited:
+        clean = raw.replace("$", "").replace(",", "")
+        try:
+            val = float(clean)
+        except ValueError:
+            continue
+        if val < 10:
+            continue
+        whole = str(int(round(val)))
+        if whole not in evidence_values:
+            ungrounded.append(raw)
+
+    return (len(ungrounded) == 0), ungrounded
+
+
+def _pick_highlight_and_action(digest: Dict[str, Any], text: Dict[str, Any]) -> tuple:
+    """
+    Choose the single most important insight and a concrete recommended action.
+    Returns (highlight: str, recommended_action: str).
+    """
+    tw = digest.get("this_week") or {}
+    pw = digest.get("prior_week") or {}
+
+    spend = float(tw.get("spend") or 0)
+    leads = _leads_int(tw.get("leads"))
+    cpl = tw.get("cost_per_lead")
+    deltas = digest.get("deltas") or {}
+    cpl_pct = deltas.get("cpl_pct")
+    lead_pct = deltas.get("leads_pct")
+
+    if spend <= 0 and leads == 0:
+        highlight = "Your ads didn't run last week — no spend recorded."
+        action = "Check that your campaigns are active and have remaining budget."
+    elif pw is None:
+        highlight = text.get("headline", "")
+        action = "This is your first full week of data. Next week will show trends."
+    elif leads > 0 and cpl_pct is not None and cpl_pct <= -10:
+        highlight = text.get("headline", "")
+        action = f"Cost per lead improved {abs(cpl_pct):.0f}% — keep the current keyword mix."
+    elif leads > 0 and cpl_pct is not None and cpl_pct >= 20:
+        prior_cpl = pw.get("cost_per_lead")
+        highlight = text.get("headline", "")
+        action = (
+            f"Cost per lead rose {cpl_pct:.0f}% week-over-week. "
+            "Review search terms and pause any zero-conversion keywords."
+        )
+    elif lead_pct is not None and lead_pct <= -20:
+        highlight = text.get("headline", "")
+        prior_leads = _leads_int(pw.get("leads"))
+        action = (
+            f"Lead volume dropped from {prior_leads} to {leads}. "
+            "Check impression share and budget pacing."
+        )
+    elif lead_pct is not None and lead_pct >= 20:
+        highlight = text.get("headline", "")
+        action = "Lead volume is up — consider increasing budget on the top-performing campaigns."
+    else:
+        highlight = text.get("headline", "")
+        action = "; ".join(text.get("next_steps") or []) or "No urgent actions this week."
+
+    return highlight, action
+
+
+def render_digest_structured(digest: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Return a structured digest with number-grounding check.
+
+    Shape:
+        {
+          "highlight":          str,   # single most important insight sentence
+          "evidence":           list,  # [{metric, value, label}] — numbers cited
+          "recommended_action": str,
+          "confidence":         float, # 0.0–1.0
+          "number_check_passed": bool,
+          "blocked":            bool,  # True when number_check fails
+          "blocking_reason":    str|None,
+          "render_text":        dict,  # backward-compat render_digest_text output
+        }
+
+    If blocked=True the caller must NOT send this digest without human review.
+    """
+    text = render_digest_text(digest)
+    evidence = _build_evidence(digest)
+    confidence = _confidence_score(digest)
+    highlight, action = _pick_highlight_and_action(digest, text)
+
+    combined = f"{highlight} {action}"
+    passed, ungrounded = _number_check(combined, evidence)
+
+    blocked = not passed
+    blocking_reason = None
+    if blocked:
+        blocking_reason = f"Invented number(s) in digest text: {ungrounded}"
+        logger.warning(
+            "Digest number check FAILED for account %s — blocking send. Ungrounded: %s",
+            digest.get("account_id"),
+            ungrounded,
+        )
+
+    return {
+        "highlight": highlight,
+        "evidence": evidence,
+        "recommended_action": action,
+        "confidence": confidence,
+        "number_check_passed": passed,
+        "blocked": blocked,
+        "blocking_reason": blocking_reason,
+        "render_text": text,
     }

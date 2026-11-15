@@ -1,0 +1,207 @@
+{% extends "base_app.html" %}
+{% block title %}Your Campaign Structure — RevForge{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-12">
+  <div class="max-w-3xl mx-auto px-4">
+
+    <!-- Header -->
+    <div class="text-center mb-10">
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-100 text-emerald-800 rounded-full text-sm font-semibold mb-4">
+        <i class="fa-solid fa-check"></i> Account configured
+      </div>
+      <h1 class="text-3xl font-extrabold text-gray-900 mb-3">
+        Here's your suggested campaign structure
+      </h1>
+      <p class="text-gray-600 max-w-xl mx-auto">
+        Based on your business profile, here's how we'd structure your Google Ads campaigns.
+        Connect your account to launch these automatically.
+      </p>
+    </div>
+
+    <!-- Campaign preview cards -->
+    <div class="space-y-4 mb-10" id="campaign-cards">
+
+      <!-- Campaign 1 -->
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+        <div class="flex items-center gap-3 px-5 py-3 bg-emerald-50 border-b border-emerald-100">
+          <i class="fa-solid fa-bullhorn text-emerald-700"></i>
+          <span class="font-bold text-gray-900 text-sm">Campaign 1: Core Services</span>
+          <span class="ml-auto text-xs text-emerald-700 font-medium" id="c1-budget">~60% of budget</span>
+        </div>
+        <div class="p-5 space-y-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="c1-adgroups">
+            <!-- filled by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Campaign 2 -->
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+        <div class="flex items-center gap-3 px-5 py-3 bg-blue-50 border-b border-blue-100">
+          <i class="fa-solid fa-clock text-blue-700"></i>
+          <span class="font-bold text-gray-900 text-sm">Campaign 2: Emergency / High-Intent</span>
+          <span class="ml-auto text-xs text-blue-700 font-medium">~25% of budget</span>
+        </div>
+        <div class="p-5 space-y-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="c2-adgroups">
+            <!-- filled by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Campaign 3 -->
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+        <div class="flex items-center gap-3 px-5 py-3 bg-amber-50 border-b border-amber-100">
+          <i class="fa-solid fa-map-pin text-amber-700"></i>
+          <span class="font-bold text-gray-900 text-sm">Campaign 3: Brand + Local</span>
+          <span class="ml-auto text-xs text-amber-700 font-medium">~15% of budget</span>
+        </div>
+        <div class="p-5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="c3-adgroups">
+            <!-- filled by JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="bg-emerald-700 rounded-2xl p-8 text-center text-white">
+      <h2 class="text-2xl font-extrabold mb-2">Ready to launch these campaigns?</h2>
+      <p class="text-emerald-100 mb-6 max-w-md mx-auto">
+        Connect your Google Ads account and RevForge will apply these optimizations automatically.
+        First improvements show up within 48 hours.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center">
+        {% if has_endpoint('account_bp.connect') %}
+        <a href="{{ url_for('account_bp.connect', provider='ads') }}" class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-emerald-800 font-bold rounded-lg hover:bg-emerald-50 transition">
+          <i class="fa-brands fa-google"></i> Connect Google Ads
+        </a>
+        {% else %}
+        <a href="/account/connect/ads" class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-emerald-800 font-bold rounded-lg hover:bg-emerald-50 transition">
+          <i class="fa-brands fa-google"></i> Connect Google Ads
+        </a>
+        {% endif %}
+        <form method="post" action="{{ url_for('onboarding_bp.onboarding_preview_skip') }}" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-500 transition border border-emerald-500 w-full sm:w-auto cursor-pointer">
+            Skip for now →
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const TRADE_STRUCTURES = {
+  hvac: {
+    c1: ["Furnace Repair", "AC Repair", "AC Installation", "Heating Installation"],
+    c2: ["Emergency HVAC", "Same Day Repair", "No Heat / No Cool"],
+    c3: ["Brand + Location", "HVAC Near Me"],
+  },
+  plumbing: {
+    c1: ["Drain Cleaning", "Water Heater", "Pipe Repair", "Leak Detection"],
+    c2: ["Emergency Plumber", "24-Hour Plumbing", "Burst Pipe"],
+    c3: ["Brand + Location", "Plumber Near Me"],
+  },
+  electrical: {
+    c1: ["Panel Upgrade", "Outlet Installation", "Wiring Repair", "EV Charger"],
+    c2: ["Emergency Electrician", "Power Outage", "Electrical Hazard"],
+    c3: ["Brand + Location", "Electrician Near Me"],
+  },
+  roofing: {
+    c1: ["Roof Replacement", "Roof Repair", "Storm Damage", "Gutters"],
+    c2: ["Emergency Roof Repair", "Leak Repair", "Storm Response"],
+    c3: ["Brand + Location", "Roofer Near Me"],
+  },
+  pest_control: {
+    c1: ["Ant Control", "Rodent Control", "Termite Treatment", "Bed Bugs"],
+    c2: ["Emergency Pest Control", "Wasp Nest", "Same Day Service"],
+    c3: ["Brand + Location", "Pest Control Near Me"],
+  },
+  landscaping: {
+    c1: ["Lawn Maintenance", "Landscape Design", "Mulching", "Sprinklers"],
+    c2: ["Spring Cleanup", "Fall Cleanup", "Emergency Tree"],
+    c3: ["Brand + Location", "Landscaper Near Me"],
+  },
+  garage_door: {
+    c1: ["Garage Door Repair", "Spring Replacement", "Opener Repair", "New Door"],
+    c2: ["Emergency Garage Door", "Broken Spring", "Door Won't Open"],
+    c3: ["Brand + Location", "Garage Door Near Me"],
+  },
+  pool_service: {
+    c1: ["Pool Cleaning", "Pool Opening", "Pool Closing", "Pool Repair"],
+    c2: ["Green Pool", "Emergency Pool", "Pool Leak"],
+    c3: ["Brand + Location", "Pool Service Near Me"],
+  },
+  solar: {
+    c1: ["Solar Installation", "Solar Panels", "Battery Storage", "Solar Quote"],
+    c2: ["Solar Savings", "Solar Incentives", "Federal Tax Credit"],
+    c3: ["Brand + Location", "Solar Company Near Me"],
+  },
+  painting: {
+    c1: ["Interior Painting", "Exterior Painting", "Cabinet Painting", "Commercial"],
+    c2: ["Deck Staining", "Pressure Washing", "Color Consultation"],
+    c3: ["Brand + Location", "Painter Near Me"],
+  },
+  cleaning: {
+    c1: ["House Cleaning", "Deep Clean", "Move-In / Move-Out", "Recurring Service"],
+    c2: ["Same Day Cleaning", "Post-Construction", "Airbnb Cleaning"],
+    c3: ["Brand + Location", "House Cleaner Near Me"],
+  },
+  general_contracting: {
+    c1: ["Kitchen Remodel", "Bathroom Remodel", "Home Addition", "Basement Finish"],
+    c2: ["Storm Damage Repair", "Emergency Repairs", "Insurance Work"],
+    c3: ["Brand + Location", "General Contractor Near Me"],
+  },
+  flooring: {
+    c1: ["Hardwood Flooring", "LVP Installation", "Tile Installation", "Carpet"],
+    c2: ["Floor Repair", "Refinishing", "Water Damage Floors"],
+    c3: ["Brand + Location", "Flooring Contractor Near Me"],
+  },
+  default: {
+    c1: ["Core Service 1", "Core Service 2", "Core Service 3", "Core Service 4"],
+    c2: ["Emergency Service", "Same Day", "Urgent Requests"],
+    c3: ["Brand + Location", "Service Near Me"],
+  }
+};
+
+function buildAdGroupCard(name) {
+  return `<div class="flex items-start gap-2 p-3 bg-gray-50 rounded-lg border border-gray-100">
+    <i class="fa-solid fa-layer-group text-gray-400 mt-0.5 text-xs flex-shrink-0"></i>
+    <span class="text-sm text-gray-700 font-medium">${name}</span>
+  </div>`;
+}
+
+function renderStructure() {
+  let trade = 'default';
+
+  // 1. Server-side trade from account_settings (most reliable)
+  const serverTrade = "{{ trade | lower | replace(' ', '_') }}";
+  if (serverTrade && TRADE_STRUCTURES[serverTrade]) trade = serverTrade;
+
+  // 2. sessionStorage fallback (set during onboarding wizard)
+  if (trade === 'default') {
+    try {
+      const stored = sessionStorage.getItem('rf_detected_trade');
+      if (stored && TRADE_STRUCTURES[stored]) trade = stored;
+    } catch(e) {}
+  }
+
+  // 3. URL param ?trade=hvac
+  const params = new URLSearchParams(window.location.search);
+  const paramTrade = params.get('trade');
+  if (paramTrade && TRADE_STRUCTURES[paramTrade]) trade = paramTrade;
+
+  const s = TRADE_STRUCTURES[trade] || TRADE_STRUCTURES.default;
+
+  document.getElementById('c1-adgroups').innerHTML = s.c1.map(buildAdGroupCard).join('');
+  document.getElementById('c2-adgroups').innerHTML = s.c2.map(buildAdGroupCard).join('');
+  document.getElementById('c3-adgroups').innerHTML = s.c3.map(buildAdGroupCard).join('');
+}
+
+document.addEventListener('DOMContentLoaded', renderStructure);
+</script>
+{% endblock %}

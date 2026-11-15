@@ -20,7 +20,7 @@ def test_mailgun_connection(recipient_email):
 
     # Get configuration from environment
     api_key = os.getenv('MAILGUN_API_KEY')
-    domain = os.getenv('MAILGUN_DOMAIN', 'fieldsprout.io')
+    domain = os.getenv('MAILGUN_DOMAIN', 'getrevforge.io')
 
     print("=" * 70)
     print("Mailgun Email Test")
@@ -45,15 +45,15 @@ def test_mailgun_connection(recipient_email):
     print(f"URL: {url}")
 
     data = {
-        "from": f"FieldSprout Test <postmaster@{domain}>",
+        "from": f"RevForge Test <postmaster@{domain}>",
         "to": recipient_email,
-        "subject": f"Test Email from FieldSprout - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        "subject": f"Test Email from RevForge - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
         "text": f"This is a test email.\n\nRecipient: {recipient_email}\nTime: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
         "html": f"""
         <html>
         <body style="font-family: Arial, sans-serif; padding: 20px;">
             <h2 style="color: #7c3aed;">✅ Test Email Successful!</h2>
-            <p>This is a test email from FieldSprout.</p>
+            <p>This is a test email from RevForge.</p>
             <p><strong>Recipient:</strong> {recipient_email}<br>
             <strong>Domain:</strong> {domain}<br>
             <strong>Time:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>

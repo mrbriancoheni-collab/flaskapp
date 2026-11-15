@@ -1,0 +1,323 @@
+{% extends "base_public.html" %}
+{% block title %}General Contractor Marketing Platform — AI Ads & Lead Generation | RevForge{% endblock %}
+{% block meta_description %}GC leads are the highest-value clicks on Google — $8–15 per click. RevForge makes every click count by targeting project-ready homeowners. Cut CPL from $182 to $114 in 30 days.{% endblock %}
+{% block og_title %}Google Ads for General Contractors — AI That Finds Pre-Qualified Leads | RevForge{% endblock %}
+{% block og_description %}General contracting keywords cost $8–15 per click. Someone else is getting those leads. RevForge targets project-ready homeowners — not browsers comparing estimates — so your high-CPC budget converts.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://getrevforge.io"},
+    {"@type": "ListItem", "position": 2, "name": "Industries", "item": "https://getrevforge.io/industries"},
+    {"@type": "ListItem", "position": 3, "name": "General Contracting", "item": "https://getrevforge.io/industries/general-contracting"}
+  ]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "serviceType": "Google Ads Management for General Contractors",
+  "provider": {"@type": "Organization", "name": "RevForge", "url": "https://getrevforge.io"},
+  "areaServed": {"@type": "Country", "name": "United States"},
+  "description": "AI-powered Google Ads optimization for general contractors — maximizes high-CPC budget efficiency, targets project-ready buyers, and lowers cost per qualified lead from $180+ to under $120.",
+  "offers": {"@type": "Offer", "price": "99", "priceCurrency": "USD", "priceSpecification": {"@type": "UnitPriceSpecification", "unitText": "MONTH"}}
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is the average cost per lead for general contractors on Google Ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "General contracting leads on Google Ads cost $90–$180 per lead depending on project type (kitchen remodel vs. general construction) and market. Click costs are $8–$15, among the highest in home services. RevForge-managed GC accounts average $114 per lead after optimization, down from a typical starting point of $182. The high CPC makes keyword precision and Quality Score improvements especially valuable."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do general contractors get better quality leads from Google Ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Lead quality for GCs is a keyword problem. Homeowners in the research phase (cost guides, DIY comparisons, contractor licensing requirements) generate clicks but never book. RevForge separates research-intent keywords from project-ready keywords — 'licensed GC near me', 'get a contractor estimate', 'home addition contractor' — and bids aggressively on decision-stage searches while filtering out browsers."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How long does it take for GC Google Ads to generate leads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "General contracting has a longer consideration window than service trades — homeowners may click an ad in March and call in June. RevForge accounts for this with longer attribution windows and retargeting campaigns that keep you visible throughout the 60–120 day decision process. First leads typically come within 2–4 weeks; quality lead flow stabilizes in 60–90 days."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do GC companies protect against competitors bidding on their brand?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Brand protection campaigns are especially important for established GCs with local name recognition. RevForge monitors for competitor bid activity on your brand terms and activates low-cost defensive campaigns automatically. This ensures homeowners who already know your name find you first — not a competitor running an ad on your business name."
+      }
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<section class="bg-gradient-to-br from-slate-50 via-white to-blue-50 pt-20 pb-16">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-3/5 mb-10 md:mb-0">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-slate-100 text-slate-800 rounded-full text-sm font-semibold mb-6">
+          <i class="fa-solid fa-helmet-safety"></i> AI Marketing for General Contractors
+        </div>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-tight">
+          GC leads are the highest-value clicks on Google.<br>
+          <span class="text-blue-700">Someone else is getting them.</span>
+        </h1>
+        <p class="text-xl text-gray-600 mb-8">
+          General contracting keywords cost $8–$15 per click. RevForge makes every click count by targeting project-ready homeowners — not browsers comparing estimates — so your high-CPC budget converts into booked jobs, not wasted spend.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4">
+          {% if has_endpoint('ads_grader_bp.index') %}
+          <a href="{{ url_for('ads_grader_bp.strength_test') }}" class="btn btn-primary btn-lg">Grade My GC Ads — Free</a>
+          {% endif %}
+          <a href="/pricing" class="btn btn-secondary btn-lg">See Plans &amp; Pricing</a>
+        </div>
+        <p class="text-sm text-gray-500 mt-4">No credit card · 60-second setup · Cancel anytime</p>
+      </div>
+      <div class="md:w-2/5">
+        <div class="bg-white rounded-2xl shadow-card border p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-4">Typical GC Account — Before vs. After RevForge</div>
+          <div class="space-y-4">
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Cost per Lead</span>
+                <span class="text-green-600 font-bold">$182 → $114</span>
+              </div>
+              <div class="w-full bg-red-100 rounded-full h-2 mb-0.5">
+                <div class="bg-red-400 h-2 rounded-full" style="width:100%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:63%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Wasted Spend / Month</span>
+                <span class="text-green-600 font-bold">$1,640 → $280</span>
+              </div>
+              <div class="w-full bg-red-100 rounded-full h-2 mb-0.5">
+                <div class="bg-red-400 h-2 rounded-full" style="width:100%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:17%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Quality Score Avg</span>
+                <span class="text-green-600 font-bold">3.9 → 7.2</span>
+              </div>
+              <div class="w-full bg-gray-100 rounded-full h-2 mb-0.5">
+                <div class="bg-gray-400 h-2 rounded-full" style="width:39%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:72%"></div>
+              </div>
+            </div>
+          </div>
+          <p class="text-xs text-gray-400 mt-4 text-center">Anonymized averages across GC accounts on RevForge</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Quick Steps -->
+<section class="py-12 bg-white border-b border-gray-100">
+  <div class="container-lg">
+    <div class="flex flex-col md:flex-row items-start gap-0 max-w-4xl mx-auto divide-y md:divide-y-0 md:divide-x divide-gray-100">
+      <div class="flex-1 flex items-start gap-4 py-6 md:py-0 md:px-8 first:md:pl-0">
+        <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <span class="text-slate-700 font-bold text-sm">1</span>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900">Connect in 15 min</div>
+          <div class="text-sm text-gray-500 mt-1">RevForge audits every keyword for research vs. buying intent — and flags which campaigns are spending $12/click on homeowners who will never call.</div>
+        </div>
+      </div>
+      <div class="flex-1 flex items-start gap-4 py-6 md:py-0 md:px-8">
+        <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <span class="text-blue-700 font-bold text-sm">2</span>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900">Project-ready targeting activated</div>
+          <div class="text-sm text-gray-500 mt-1">Separate campaigns for decision-stage searches. Research-phase keywords moved to low bids or excluded. Quality Score work begins immediately on highest-CPC terms.</div>
+        </div>
+      </div>
+      <div class="flex-1 flex items-start gap-4 py-6 md:py-0 md:px-8">
+        <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <span class="text-green-700 font-bold text-sm">3</span>
+        </div>
+        <div>
+          <div class="font-bold text-gray-900">CPL drops below $130 in 30 days</div>
+          <div class="text-sm text-gray-500 mt-1">At $8–$15 CPC, a 20% Quality Score improvement saves $100–$200/month per 100 clicks. GC accounts see outsized returns from QS work compared to lower-CPC trades.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Problems We Solve -->
+<section class="py-16 bg-white">
+  <div class="container-lg">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">The GC Google Ads problems we fix</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">At $8–$15 per click, the margin for error is zero. Every wasted click costs twice what it would for a plumber or HVAC tech.</p>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for icon, color, title, desc in [
+        ('fa-dollar-sign', 'red', 'Highest CPC in home services', 'General contracting CPCs are 3–4x the average home service trade. Waste that costs a plumber $8/click costs you $25. RevForge optimizes every bid decision with this reality built in.'),
+        ('fa-hourglass-half', 'orange', 'Long sales cycle burns your budget', 'A GC lead may take 60–120 days from first click to booked contract. Most platforms count conversions in 30 days and misattribute your best jobs. RevForge extends attribution windows and retargets warm leads through the whole decision process.'),
+        ('fa-face-frown', 'yellow', 'Estimate shoppers wasting your time', '"How much does a kitchen remodel cost" is the most-clicked GC keyword on Google. Those searchers are 6–12 months from buying. RevForge bids minimally on research keywords and aggressively on project-ready terms.'),
+        ('fa-user-secret', 'blue', 'Competitors bidding on your brand', 'Established GCs with local reputations are prime targets for competitor brand bidding. RevForge runs protective campaigns on your business name and core branded terms — so homeowners who already know you don\'t get poached mid-search.'),
+        ('fa-magnifying-glass', 'purple', 'Generic keywords, zero relevance', '"Contractor near me" at a $14 CPC has a terrible close rate because it captures every intent level. RevForge separates project-type campaigns (addition, remodel, basement, roofing scope) so ad relevance matches actual search intent.'),
+        ('fa-map-location-dot', 'gray', 'Service area too broad', 'GCs often run state-wide or metro-wide targeting. But you only serve a radius, and travel time matters. Geo-tightening your campaigns reduces waste immediately — and reduces the likelihood of leads you can\'t profitably serve.'),
+      ] %}
+      <div class="p-6 rounded-2xl border border-gray-100 hover:border-{{ color }}-200 hover:shadow-soft transition">
+        <div class="w-10 h-10 rounded-xl bg-{{ color }}-100 flex items-center justify-center mb-4">
+          <i class="fa-solid {{ icon }} text-{{ color }}-600"></i>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-2">{{ title }}</h3>
+        <p class="text-sm text-gray-600">{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- Seasonal Intelligence -->
+<section class="py-16 bg-slate-50">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-1/2 mb-8 md:mb-0">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">GC seasonal intelligence built in</h2>
+        <p class="text-gray-600 mb-6">
+          General contracting demand peaks in spring and early fall when homeowners plan major projects. But at $12/click, advertising in November to homeowners planning spring work still pays off — you book projects months before competitors run their spring campaigns.
+        </p>
+        <ul class="space-y-3 text-gray-700">
+          <li class="flex items-start gap-3"><i class="fa-solid fa-sun text-yellow-400 mt-0.5"></i>Spring build season — campaigns ramped in February for March–May projects</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-house-chimney-crack text-orange-400 mt-0.5"></i>Fall project season — addition and remodel campaigns boosted September–October</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-calendar-plus text-blue-400 mt-0.5"></i>Winter booking — low-CPL early-reservation campaigns run November–January</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-location-dot text-red-400 mt-0.5"></i>Geo-targeting tightened to your actual profitable service radius</li>
+        </ul>
+      </div>
+      <div class="md:w-1/2">
+        <div class="bg-white rounded-2xl border shadow-soft p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-4">GC Project Search Volume Index by Month</div>
+          <div class="flex items-end gap-1 h-28">
+            {% for month, h, hot in [
+              ('J',45,''), ('F',55,''), ('M',80,'bg-blue-400'), ('A',100,'bg-blue-600'),
+              ('M',95,'bg-blue-500'), ('J',85,''), ('J',80,''), ('A',75,''),
+              ('S',90,'bg-slate-500'), ('O',85,'bg-slate-400'), ('N',55,''), ('D',38,''),
+            ] %}
+            <div class="flex-1 flex flex-col items-center gap-1">
+              <div class="w-full rounded-t {{ hot if hot else 'bg-gray-200' }} transition" style="height:{{ h }}%;"></div>
+              <span class="text-xs text-gray-400">{{ month }}</span>
+            </div>
+            {% endfor %}
+          </div>
+          <p class="text-xs text-gray-400 mt-2 text-center">RevForge auto-adjusts bid strategy before each build season peak</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Social Proof -->
+<section class="py-16 bg-white">
+  <div class="container-md">
+    <div class="grid md:grid-cols-3 gap-6">
+      {% for quote, name, co, result in [
+        ('"At $12 per click, I couldn\'t afford a bad month. RevForge cut my wasted spend by $1,400 in the first 30 days. That\'s 100 clicks I was paying for that were going nowhere."', 'Tom H.', 'Premier Home Contracting', '$1,400/mo wasted spend cut'),
+        ('"The quality score work took 6 weeks but my cost per click dropped from $13.80 to $9.20. On 400 clicks a month that\'s $1,840 I keep every month now."', 'Lisa P.', 'Pacific Build Group', '$1,840/mo CPC savings'),
+        ('"I was running one big campaign for everything — additions, remodels, basements. RevForge separated them and now I can actually tell which jobs are worth advertising for."', 'Marcus W.', 'Cornerstone Contracting', 'Clear project-type attribution'),
+      ] %}
+      <div class="bg-gray-50 rounded-2xl p-6 border">
+        <div class="text-green-600 font-bold text-sm mb-3">{{ result }}</div>
+        <p class="text-gray-700 italic mb-4">{{ quote }}</p>
+        <div class="text-sm font-semibold text-gray-900">{{ name }}</div>
+        <div class="text-xs text-gray-500">{{ co }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+
+<!-- Free Tools CTA -->
+<section class="py-14 bg-gray-50 border-t border-gray-100">
+  <div class="container-lg text-center">
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-100 text-emerald-800 rounded-full text-sm font-semibold mb-4">
+      <i class="fa-solid fa-wrench"></i> Free Tools for General Contractors
+    </div>
+    <h2 class="text-2xl md:text-3xl font-extrabold text-gray-900 mb-3">
+      Not ready to connect? Start here — free.
+    </h2>
+    <p class="text-gray-600 max-w-xl mx-auto mb-8">
+      Three tools built for general contractors. No account required.
+    </p>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 text-left max-w-4xl mx-auto mb-8">
+      <a href="/free-tools/quality-score-calculator" class="block p-5 bg-white rounded-xl border border-gray-200 hover:border-emerald-400 hover:shadow-md transition group">
+        <div class="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center mb-3">
+          <i class="fa-solid fa-star text-amber-700 text-sm"></i>
+        </div>
+        <div class="font-bold text-gray-900 mb-1 group-hover:text-emerald-700 text-sm">Quality Score Calculator</div>
+        <p class="text-xs text-gray-500 leading-relaxed">GC clicks are expensive — see how improving your Quality Score reduces your CPC and total monthly spend.</p>
+      </a>
+      <a href="/free-tools/campaign-structure-grader" class="block p-5 bg-white rounded-xl border border-gray-200 hover:border-emerald-400 hover:shadow-md transition group">
+        <div class="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center mb-3">
+          <i class="fa-solid fa-sitemap text-emerald-700 text-sm"></i>
+        </div>
+        <div class="font-bold text-gray-900 mb-1 group-hover:text-emerald-700 text-sm">Campaign Structure Grader</div>
+        <p class="text-xs text-gray-500 leading-relaxed">Grade your Google Ads structure and get specific fixes to separate high-value commercial from residential leads.</p>
+      </a>
+      <a href="/free-tools/wasted-spend-estimator" class="block p-5 bg-white rounded-xl border border-gray-200 hover:border-emerald-400 hover:shadow-md transition group">
+        <div class="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center mb-3">
+          <i class="fa-solid fa-fire-flame-simple text-red-600 text-sm"></i>
+        </div>
+        <div class="font-bold text-gray-900 mb-1 group-hover:text-emerald-700 text-sm">Wasted Spend Estimator</div>
+        <p class="text-xs text-gray-500 leading-relaxed">Estimate how much of your GC ad budget is being wasted on clicks that never convert to project inquiries.</p>
+      </a>
+    </div>
+    <a href="/free-tools" class="text-sm text-emerald-700 hover:text-emerald-900 font-medium">
+      See all 12 free tools &rarr;
+    </a>
+  </div>
+</section>
+<!-- CTA -->
+<section class="py-20 bg-gradient-to-br from-slate-700 to-blue-800 text-white">
+  <div class="container-md text-center">
+    <h2 class="text-3xl md:text-4xl font-extrabold mb-4">See where your $8–$15 clicks are going</h2>
+    <p class="text-slate-300 text-lg mb-8 max-w-xl mx-auto">
+      At GC-level CPCs, a 25% improvement in conversion rate is worth $3,000–$6,000/year. Grade your account in 60 seconds and see your exact waste estimate.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      {% if has_endpoint('ads_grader_bp.index') %}
+      <a href="{{ url_for('ads_grader_bp.strength_test') }}" class="btn btn-secondary btn-lg">Grade My Account — Free</a>
+      {% endif %}
+      <a href="/pricing" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">View Plans</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

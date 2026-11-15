@@ -33,10 +33,10 @@ def test_smtp_verbose():
     if not user or not pwd:
         print("\n❌ CREDENTIALS NOT SET")
         print("\nYou need to set these environment variables:")
-        print("  export MAIL_USERNAME_DAVID='postmaster@mg.fieldsprout.io'")
+        print("  export MAIL_USERNAME_DAVID='postmaster@mg.getrevforge.io'")
         print("  export MAIL_PASSWORD_DAVID='your-smtp-password-from-mailgun'")
         print("\n⚠️  IMPORTANT: Don't use the API key! You need the SMTP password.")
-        print("   Get it from: https://app.mailgun.com/app/sending/domains/mg.fieldsprout.io")
+        print("   Get it from: https://app.mailgun.com/app/sending/domains/mg.getrevforge.io")
         return False
 
     # Check if password looks like an API key (common mistake)
@@ -45,7 +45,7 @@ def test_smtp_verbose():
         print("   API Key format: xxxxxxxx-xxxxxxxx-xxxxxxxx (56 chars)")
         print("   SMTP password format: Usually different")
         print("\n   You need the SMTP PASSWORD, not the API key!")
-        print("   Get SMTP password from: https://app.mailgun.com/app/sending/domains/mg.fieldsprout.io")
+        print("   Get SMTP password from: https://app.mailgun.com/app/sending/domains/mg.getrevforge.io")
         print("   Look for 'SMTP Credentials' section → 'Reset Password'\n")
 
     # Auto-correct port/SSL mismatch
@@ -118,10 +118,10 @@ def test_smtp_verbose():
         print(f"\nError: {e}")
         print("\n🔍 This means:")
         print("   1. Wrong username or password")
-        print("   2. Username should be: postmaster@mg.fieldsprout.io")
+        print("   2. Username should be: postmaster@mg.getrevforge.io")
         print("   3. Password should be SMTP password (not API key)")
         print("\n📋 To fix:")
-        print("   1. Go to: https://app.mailgun.com/app/sending/domains/mg.fieldsprout.io")
+        print("   1. Go to: https://app.mailgun.com/app/sending/domains/mg.getrevforge.io")
         print("   2. Find 'SMTP Credentials' section")
         print("   3. Click 'Reset Password' to generate new SMTP password")
         print("   4. Use that password (not the API key!)")
@@ -142,7 +142,7 @@ def test_smtp_verbose():
         print("\n   Mailgun API Key:    f160ce6d************ (56 chars)")
         print("   SMTP Password:      Different format from API key")
         print("\n   Get SMTP password from:")
-        print("   https://app.mailgun.com/app/sending/domains/mg.fieldsprout.io\n")
+        print("   https://app.mailgun.com/app/sending/domains/mg.getrevforge.io\n")
         return False
 
     except smtplib.SMTPException as e:

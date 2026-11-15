@@ -136,7 +136,14 @@ def _upsert_stats(
     row.expected_ctr    = expected_ctr
 
 
-def _get_or_create_campaign(session, account_id: int, google_cid: int, name: str, status: str) -> int:
+def _get_or_create_campaign(
+    session,
+    account_id: int,
+    google_cid: int,
+    name: str,
+    status: str,
+    campaign_type: Optional[str] = None,
+) -> int:
     """Return local AdsCampaign.id, creating or updating a row as needed."""
     from app.models_ads import AdsCampaign
     camp = AdsCampaign.query.filter_by(
@@ -157,6 +164,7 @@ def _get_or_create_campaign(session, account_id: int, google_cid: int, name: str
             status=status.lower() if status else "enabled",
             google_campaign_id=str(google_cid),
             daily_budget_cents=0,
+            campaign_type=campaign_type,
         )
         session.add(camp)
         session.flush()
@@ -165,6 +173,8 @@ def _get_or_create_campaign(session, account_id: int, google_cid: int, name: str
             camp.name = name
         if status:
             camp.status = status.lower()
+        if campaign_type:
+            camp.campaign_type = campaign_type
     return camp.id
 
 
@@ -282,7 +292,13 @@ def sync_structure(account_id: int) -> Dict[str, Any]:
             gid = _int(c.get("id"))
             if not gid:
                 continue
-            _get_or_create_campaign(db.session, account_id, gid, c.get("name", ""), c.get("status", "ENABLED"))
+            # advertisingChannelType is the camelCase key from the API response
+            raw_type = c.get("advertisingChannelType") or c.get("advertising_channel_type")
+            ct = str(raw_type).upper() if raw_type else None
+            _get_or_create_campaign(
+                db.session, account_id, gid, c.get("name", ""), c.get("status", "ENABLED"),
+                campaign_type=ct,
+            )
             summary["campaigns"] += 1
         db.session.commit()
     except Exception as exc:
@@ -525,7 +541,9 @@ def sync_account(account_id: int, days: int = 30) -> Dict[str, Any]:
 
             name = camp.get("name", "")
             status = camp.get("status", "ENABLED")
-            local_id = _get_or_create_campaign(db.session, account_id, google_cid, name, status)
+            raw_type = camp.get("advertisingChannelType") or camp.get("advertising_channel_type")
+            ct = str(raw_type).upper() if raw_type else None
+            local_id = _get_or_create_campaign(db.session, account_id, google_cid, name, status, campaign_type=ct)
 
             _upsert_stats(
                 db.session, account_id, "campaign", google_cid, local_id, date_obj,

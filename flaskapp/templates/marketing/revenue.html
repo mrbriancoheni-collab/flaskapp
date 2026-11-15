@@ -1,5 +1,5 @@
 {% extends "base_app.html" %}
-{% block title %}Revenue & LTV Dashboard — FieldSprout{% endblock %}
+{% block title %}Revenue & LTV Dashboard — RevForge{% endblock %}
 {% block content %}
 <div class="px-4 py-6 max-w-7xl mx-auto">
 
@@ -21,7 +21,7 @@
     <i class="fa-solid fa-wrench text-amber-500 flex-shrink-0 mt-0.5 text-lg"></i>
     <div class="flex-1">
       <h3 class="font-semibold text-amber-900">Connect ServiceTitan to unlock revenue data</h3>
-      <p class="text-amber-700 text-sm mt-1 mb-3">FieldSprout pulls job revenue, average ticket size, and repeat customer data directly from ServiceTitan — giving you true LTV and ROAS across every channel.</p>
+      <p class="text-amber-700 text-sm mt-1 mb-3">RevForge pulls job revenue, average ticket size, and repeat customer data directly from ServiceTitan — giving you true LTV and ROAS across every channel.</p>
       <a href="{{ url_for('marketing_bp.aggregators') }}"
          class="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700">
         <i class="fa-solid fa-plug"></i> Connect ServiceTitan
@@ -73,7 +73,7 @@
       </div>
       {% endfor %}
 {% set active_nav = 'revenue' %}
-{% block title %}Revenue & LTV — FieldSprout{% endblock %}
+{% block title %}Revenue & LTV — RevForge{% endblock %}
 
 {% block content %}
 {% include "marketing/_nav.html" %}

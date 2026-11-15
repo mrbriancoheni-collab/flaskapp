@@ -1,0 +1,634 @@
+{% extends "base_public.html" %}
+{% block title %}Free Google Ads Audit — RevForge{% endblock %}
+{% block meta_description %}Get your complete Google Ads audit in 60 seconds. Enter your website URL to see estimated wasted spend, Quality Score gaps, LSA eligibility, and seasonal opportunities — no login required.{% endblock %}
+
+{% block head_extra %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" integrity="sha512-ZwR1/gSZM3ai6vCdI+LVF1zSq/5HznD3oD+sCoJrzXJ+yKywFFd2hObB746i5MD6ESNGPGMPNfq4YfuPjb4g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://getrevforge.io"},
+    {"@type": "ListItem", "position": 2, "name": "Free Tools", "item": "https://getrevforge.io/free-tools"},
+    {"@type": "ListItem", "position": 3, "name": "Complete Audit", "item": "https://getrevforge.io/free-tools/audit"}
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "RevForge Complete Google Ads Audit",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Web",
+  "description": "Free Google Ads audit for trade contractors. Enter your website URL to get estimated wasted spend, Quality Score opportunity, LSA eligibility, seasonal timing, and campaign structure grade in 60 seconds.",
+  "url": "https://getrevforge.io/free-tools/audit",
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<section class="bg-gradient-to-br from-emerald-50 via-white to-teal-50 pt-20 pb-16">
+  <div class="container-lg text-center">
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-100 text-emerald-800 rounded-full text-sm font-semibold mb-6">
+      <i class="fa-solid fa-magnifying-glass-chart"></i> Free Audit — No Account Required
+    </div>
+    <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-tight">
+      Get your complete Google Ads audit<br class="hidden md:block"> in 60 seconds
+    </h1>
+    <p class="text-xl text-gray-600 max-w-2xl mx-auto mb-10">
+      Enter your website URL. We'll detect your business type and show you estimated wasted spend,
+      Quality Score gaps, LSA eligibility, and seasonal opportunities — no login, no credit card.
+    </p>
+
+    <!-- URL input card -->
+    <div class="max-w-xl mx-auto bg-white rounded-2xl shadow-lg border border-gray-100 p-6" id="url-card">
+      <div id="url-form-section">
+        <div class="flex gap-3">
+          <input
+            type="url"
+            id="website-url"
+            placeholder="https://yourcompany.com"
+            class="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            onkeydown="if(event.key==='Enter') runAudit()"
+          >
+          <button
+            onclick="runAudit()"
+            id="analyze-btn"
+            class="px-6 py-3 bg-emerald-700 text-white font-bold rounded-lg hover:bg-emerald-800 transition whitespace-nowrap flex items-center gap-2"
+          >
+            <span id="btn-text">Run My Audit</span>
+            <span id="btn-spinner" class="hidden"><i class="fa-solid fa-circle-notch fa-spin"></i></span>
+          </button>
+        </div>
+        <p class="text-xs text-gray-400 mt-3">No website? <button onclick="showManualForm()" class="text-emerald-700 underline">Enter your trade manually →</button></p>
+      </div>
+
+      <!-- Manual fallback -->
+      <div id="manual-form" class="hidden mt-4 border-t border-gray-100 pt-4 text-left">
+        <p class="text-sm font-semibold text-gray-700 mb-3">Tell us about your business:</p>
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Your Trade</label>
+            <select id="manual-trade" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="">Select trade…</option>
+              <option value="hvac">HVAC</option>
+              <option value="plumbing">Plumbing</option>
+              <option value="electrical">Electrical</option>
+              <option value="roofing">Roofing</option>
+              <option value="pest_control">Pest Control</option>
+              <option value="landscaping">Landscaping</option>
+              <option value="garage_door">Garage Door</option>
+              <option value="pool_service">Pool Service</option>
+              <option value="solar">Solar</option>
+              <option value="painting">Painting</option>
+              <option value="cleaning">Cleaning</option>
+              <option value="general_contracting">General Contracting</option>
+              <option value="flooring">Flooring</option>
+              <option value="concrete">Concrete</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Service Area</label>
+            <input id="manual-location" type="text" placeholder="Denver, CO" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+        </div>
+        <button onclick="runManualAudit()" class="w-full py-2.5 bg-emerald-700 text-white font-bold rounded-lg hover:bg-emerald-800 transition text-sm">
+          Show My Audit →
+        </button>
+      </div>
+    </div>
+
+    <p class="text-sm text-gray-400 mt-4">Used by 2,400+ trade contractors</p>
+  </div>
+</section>
+
+<!-- Results (hidden until analysis) -->
+<section id="results" class="hidden py-16 bg-gray-50">
+  <div class="container-lg">
+
+    <!-- Detected business banner -->
+    <div class="flex items-center gap-3 bg-white rounded-xl border border-gray-200 px-5 py-4 mb-8 max-w-2xl mx-auto">
+      <i class="fa-solid fa-building text-emerald-600 text-lg"></i>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm text-gray-500">Analyzing results for:</p>
+        <p class="font-bold text-gray-900 truncate" id="detected-label">—</p>
+      </div>
+      <button onclick="resetAudit()" class="text-xs text-emerald-700 hover:underline flex-shrink-0">Change →</button>
+    </div>
+
+    <!-- 6-panel grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-12">
+
+      <!-- Panel 1: Wasted Spend -->
+      <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
+            <i class="fa-solid fa-fire-flame-simple text-red-600"></i>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Wasted Spend</p>
+            <p class="text-xl font-extrabold text-red-600" id="waste-score">—</p>
+          </div>
+        </div>
+        <p class="text-sm text-gray-600 mb-3" id="waste-desc">Estimating…</p>
+        <div class="w-full bg-gray-100 rounded-full h-2 mb-3">
+          <div class="bg-red-500 h-2 rounded-full transition-all duration-700" id="waste-bar" style="width:0%"></div>
+        </div>
+        <p class="text-xs text-emerald-700 font-medium">Connect Google Ads for your exact number →</p>
+      </div>
+
+      <!-- Panel 2: Quality Score -->
+      <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+            <i class="fa-solid fa-star text-amber-600"></i>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Quality Score Gap</p>
+            <p class="text-xl font-extrabold text-amber-600" id="qs-score">—</p>
+          </div>
+        </div>
+        <p class="text-sm text-gray-600 mb-3" id="qs-desc">Estimating…</p>
+        <div class="flex items-center gap-2 text-xs text-gray-500">
+          <span>Industry avg QS:</span>
+          <span class="font-bold text-gray-700" id="qs-avg">—</span>
+          <span>→ RevForge avg:</span>
+          <span class="font-bold text-emerald-700">7.4</span>
+        </div>
+        <p class="text-xs text-emerald-700 font-medium mt-3">See your actual Quality Score →</p>
+      </div>
+
+      <!-- Panel 3: LSA Eligibility -->
+      <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+            <i class="fa-solid fa-shield-check text-blue-600"></i>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">LSA Eligibility</p>
+            <p class="text-xl font-extrabold" id="lsa-score">—</p>
+          </div>
+        </div>
+        <p class="text-sm text-gray-600 mb-3" id="lsa-desc">Checking…</p>
+        <p class="text-xs text-gray-500" id="lsa-cpl">—</p>
+        <p class="text-xs text-emerald-700 font-medium mt-3">Verify your eligibility →</p>
+      </div>
+
+      <!-- Panel 4: Seasonal Timing -->
+      <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+            <i class="fa-solid fa-calendar text-emerald-600"></i>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Seasonal Timing</p>
+            <p class="text-xl font-extrabold" id="seasonal-score">—</p>
+          </div>
+        </div>
+        <p class="text-sm text-gray-600 mb-2" id="seasonal-desc">Calculating…</p>
+        <div style="height:60px" class="mb-2">
+          <canvas id="seasonal-chart"></canvas>
+        </div>
+        <p class="text-xs text-emerald-700 font-medium">See your monthly budget plan →</p>
+      </div>
+
+      <!-- Panel 5: Ad Copy -->
+      <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+            <i class="fa-solid fa-pencil text-purple-600"></i>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Ad Copy Grade</p>
+            <p class="text-xl font-extrabold text-gray-400">Unknown</p>
+          </div>
+        </div>
+        <p class="text-sm text-gray-600 mb-3">Can't see your live ads without connecting Google Ads. Common mistakes we find:</p>
+        <ul class="text-xs text-gray-500 space-y-1.5 mb-3" id="copy-issues">
+          <li class="flex items-start gap-1.5"><i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5 flex-shrink-0"></i> <span>Missing urgency or time-bound offer</span></li>
+          <li class="flex items-start gap-1.5"><i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5 flex-shrink-0"></i> <span>No service-area mention in headline</span></li>
+          <li class="flex items-start gap-1.5"><i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5 flex-shrink-0"></i> <span>Generic CTA instead of trade-specific action</span></li>
+        </ul>
+        <p class="text-xs text-emerald-700 font-medium">Grade your actual ad copy →</p>
+      </div>
+
+      <!-- Panel 6: Campaign Structure -->
+      <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-lg bg-teal-100 flex items-center justify-center flex-shrink-0">
+            <i class="fa-solid fa-sitemap text-teal-600"></i>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Campaign Structure</p>
+            <p class="text-xl font-extrabold text-gray-400">Unknown</p>
+          </div>
+        </div>
+        <p class="text-sm text-gray-600 mb-3">Without Google Ads access we can't see your structure. Most trade accounts have:</p>
+        <ul class="text-xs text-gray-500 space-y-1.5 mb-3" id="structure-issues">
+          <li class="flex items-start gap-1.5"><i class="fa-solid fa-circle-xmark text-red-400 mt-0.5 flex-shrink-0"></i> <span id="struct-1">Services mixed in one campaign</span></li>
+          <li class="flex items-start gap-1.5"><i class="fa-solid fa-circle-xmark text-red-400 mt-0.5 flex-shrink-0"></i> <span>No separate emergency/high-intent campaign</span></li>
+          <li class="flex items-start gap-1.5"><i class="fa-solid fa-circle-xmark text-red-400 mt-0.5 flex-shrink-0"></i> <span>Broad match keywords driving irrelevant clicks</span></li>
+        </ul>
+        <p class="text-xs text-emerald-700 font-medium">Grade your campaign structure →</p>
+      </div>
+
+    </div>
+
+    <!-- Main CTA -->
+    <div class="bg-emerald-700 rounded-2xl p-10 text-center text-white max-w-3xl mx-auto">
+      <h2 class="text-2xl md:text-3xl font-extrabold mb-3">Ready for your exact numbers?</h2>
+      <p class="text-emerald-100 max-w-xl mx-auto mb-8">
+        These estimates are based on benchmarks from 2,400+ trade contractor accounts.
+        Connect your Google Ads account to see your actual wasted spend, real Quality Score,
+        and a live action plan.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="/pricing" class="inline-flex items-center justify-center gap-2 px-7 py-3 bg-white text-emerald-800 font-bold rounded-lg hover:bg-emerald-50 transition">
+          <i class="fa-brands fa-google"></i> Connect Google Ads — Free 14-Day Trial
+        </a>
+        <a href="/free-tools" class="inline-flex items-center justify-center px-7 py-3 text-white border border-white/30 font-semibold rounded-lg hover:bg-white/10 transition">
+          Explore individual tools →
+        </a>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="py-16 bg-white">
+  <div class="container-md">
+    <h2 class="text-2xl font-extrabold text-gray-900 mb-8 text-center">Questions</h2>
+    <div class="space-y-3 max-w-2xl mx-auto">
+
+      <details class="bg-gray-50 rounded-xl border border-gray-200 p-5 group">
+        <summary class="font-semibold text-gray-900 cursor-pointer list-none flex items-center justify-between">
+          How accurate are these estimates?
+          <i class="fa-solid fa-chevron-down text-gray-400 text-sm transition-transform group-open:rotate-180"></i>
+        </summary>
+        <p class="mt-3 text-sm text-gray-600 leading-relaxed" id="faq-accuracy">
+          They're based on benchmarks from 2,400+ trade contractor accounts on RevForge.
+          Actual numbers vary ±20% depending on your market, budget, and current account setup.
+          Connect Google Ads for exact data.
+        </p>
+      </details>
+
+      <details class="bg-gray-50 rounded-xl border border-gray-200 p-5 group">
+        <summary class="font-semibold text-gray-900 cursor-pointer list-none flex items-center justify-between">
+          Do I need to create an account?
+          <i class="fa-solid fa-chevron-down text-gray-400 text-sm transition-transform group-open:rotate-180"></i>
+        </summary>
+        <p class="mt-3 text-sm text-gray-600 leading-relaxed">
+          No. This audit is completely free and requires no login.
+          Connecting Google Ads for exact numbers requires a free RevForge account —
+          no credit card needed for the 14-day trial.
+        </p>
+      </details>
+
+      <details class="bg-gray-50 rounded-xl border border-gray-200 p-5 group">
+        <summary class="font-semibold text-gray-900 cursor-pointer list-none flex items-center justify-between">
+          What does RevForge actually do?
+          <i class="fa-solid fa-chevron-down text-gray-400 text-sm transition-transform group-open:rotate-180"></i>
+        </summary>
+        <p class="mt-3 text-sm text-gray-600 leading-relaxed">
+          RevForge connects to your Google Ads account and runs AI-powered optimization on autopilot —
+          pausing wasted spend, improving Quality Scores, refreshing ad copy, and adjusting bids to
+          match when your customers actually call. Most accounts see CPL drop 25–40% in the first 30 days.
+        </p>
+      </details>
+
+    </div>
+  </div>
+</section>
+
+<script>
+// ── Data ─────────────────────────────────────────────────────────────────────
+
+const SEASONAL_INDEX = {
+  hvac:                [40,45,55,65,85,100,95,90,75,60,45,40],
+  plumbing:            [85,80,85,90,95,100,95,90,85,85,80,80],
+  electrical:          [75,75,80,85,90,95,100,95,88,82,78,75],
+  roofing:             [50,55,75,90,100,95,85,80,85,80,60,45],
+  pest_control:        [45,50,65,85,100,95,90,85,70,60,45,40],
+  landscaping:         [30,35,65,90,100,95,80,75,70,60,35,25],
+  garage_door:         [80,80,85,90,95,100,95,90,90,85,80,75],
+  pool_service:        [30,35,55,80,100,95,90,85,70,50,35,25],
+  solar:               [70,75,85,90,95,100,95,90,88,82,72,65],
+  painting:            [40,45,60,80,95,100,90,85,80,70,50,40],
+  cleaning:            [85,80,85,90,88,85,80,80,90,88,85,100],
+  general_contracting: [55,60,75,90,100,95,85,80,80,75,65,55],
+  flooring:            [70,72,80,88,95,100,90,85,88,85,75,72],
+  concrete:            [45,50,70,90,100,95,85,80,82,75,60,45],
+  fencing:             [40,45,70,90,100,95,80,75,72,65,50,38],
+  irrigation:          [35,40,65,85,100,95,80,70,65,55,40,30],
+  lawn_care:           [30,35,70,90,100,95,82,78,72,62,38,28],
+  restoration:         [80,78,80,82,85,85,85,85,85,85,80,80],
+  windows_doors:       [60,62,72,85,95,100,90,85,88,82,68,58],
+  other:               [75,75,80,85,90,95,95,90,85,82,78,75]
+};
+
+const CPL_BENCHMARKS = {
+  hvac:{low:85,high:150,qs_avg:"5.1"},
+  plumbing:{low:65,high:120,qs_avg:"5.3"},
+  electrical:{low:70,high:130,qs_avg:"5.0"},
+  roofing:{low:90,high:180,qs_avg:"4.9"},
+  pest_control:{low:40,high:80,qs_avg:"5.5"},
+  landscaping:{low:45,high:90,qs_avg:"5.2"},
+  garage_door:{low:50,high:95,qs_avg:"5.4"},
+  pool_service:{low:60,high:110,qs_avg:"5.1"},
+  solar:{low:150,high:350,qs_avg:"4.7"},
+  painting:{low:55,high:100,qs_avg:"5.3"},
+  cleaning:{low:35,high:70,qs_avg:"5.6"},
+  general_contracting:{low:120,high:250,qs_avg:"4.8"},
+  flooring:{low:65,high:125,qs_avg:"5.0"},
+  concrete:{low:70,high:140,qs_avg:"4.9"},
+  fencing:{low:55,high:110,qs_avg:"5.1"},
+  irrigation:{low:50,high:100,qs_avg:"5.2"},
+  lawn_care:{low:38,high:80,qs_avg:"5.4"},
+  restoration:{low:90,high:180,qs_avg:"4.8"},
+  windows_doors:{low:75,high:145,qs_avg:"5.0"},
+  other:{low:80,high:160,qs_avg:"5.0"}
+};
+
+const LSA_ELIGIBLE = new Set(['hvac','plumbing','electrical','roofing','pest_control',
+  'landscaping','garage_door','pool_service','painting','cleaning',
+  'general_contracting','flooring','windows_doors','concrete','fencing',
+  'irrigation','lawn_care','restoration']);
+
+const LSA_CPL = {
+  hvac:{low:35,high:90}, plumbing:{low:30,high:75}, electrical:{low:30,high:80},
+  roofing:{low:35,high:100}, pest_control:{low:20,high:55}, landscaping:{low:25,high:65},
+  garage_door:{low:20,high:55}, pool_service:{low:25,high:65}, painting:{low:25,high:65},
+  cleaning:{low:18,high:45}, general_contracting:{low:45,high:120}, flooring:{low:30,high:75},
+  restoration:{low:40,high:100}, windows_doors:{low:35,high:90}, other:{low:30,high:80}
+};
+
+const WASTE_RANGES = {
+  hvac:{low:25,high:42}, plumbing:{low:22,high:38}, electrical:{low:23,high:40},
+  roofing:{low:28,high:45}, pest_control:{low:20,high:38}, landscaping:{low:22,high:40},
+  garage_door:{low:20,high:36}, pool_service:{low:22,high:38}, solar:{low:30,high:50},
+  painting:{low:22,high:40}, cleaning:{low:20,high:36}, general_contracting:{low:28,high:48},
+  flooring:{low:22,high:40}, concrete:{low:25,high:42}, fencing:{low:22,high:40},
+  other:{low:25,high:42}
+};
+
+const COPY_ISSUES = {
+  hvac:["Missing emergency framing for heat/cool calls","No service-area mention in headline","Generic 'Call Now' instead of 'Get Same-Day HVAC Repair'"],
+  plumbing:["Missing '24/7' or 'emergency' for high-intent searches","No pricing anchor (Free estimates, etc.)","Weak differentiation from other plumbers in market"],
+  electrical:["No license or insurance mention (trust signal)","Missing local area keyword in headline","Generic CTA instead of 'Schedule Electrical Inspection'"],
+  roofing:["No storm-damage angle for seasonal campaigns","Missing social proof (reviews, years in business)","Generic CTA instead of 'Get Free Roof Inspection'"],
+  default:["Missing urgency or time-bound offer","No service-area mention in headline","Generic CTA instead of trade-specific action"]
+};
+
+const STRUCT_ISSUES = {
+  hvac:"HVAC repair + installation mixed in one campaign",
+  plumbing:"Emergency plumbing mixed with routine service keywords",
+  electrical:"Residential + commercial in same ad group",
+  roofing:"Repair + replacement bidding against each other",
+  default:"Services mixed in one campaign without segmentation"
+};
+
+const TRADE_LABELS = {
+  hvac:"HVAC",plumbing:"Plumbing",electrical:"Electrical / Electrician",
+  roofing:"Roofing",pest_control:"Pest Control",landscaping:"Landscaping",
+  garage_door:"Garage Door",pool_service:"Pool Service",solar:"Solar",
+  painting:"Painting",cleaning:"Cleaning",general_contracting:"General Contracting",
+  flooring:"Flooring",concrete:"Concrete",fencing:"Fencing",
+  irrigation:"Irrigation",lawn_care:"Lawn Care",restoration:"Restoration",
+  windows_doors:"Windows & Doors",other:"Trade Contractor"
+};
+
+// ── State ─────────────────────────────────────────────────────────────────────
+
+let seasonalChart = null;
+
+// ── URL Analysis ──────────────────────────────────────────────────────────────
+
+async function runAudit() {
+  const url = document.getElementById('website-url').value.trim();
+  if (!url) { showError('Enter your website URL first.'); return; }
+  if (!/^https?:\/\//i.test(url)) {
+    showError('Please include https:// at the start of your URL.');
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const resp = await fetch('/api/audit/analyze', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({url})
+    });
+    const json = await resp.json();
+
+    if (json.success && json.data) {
+      renderResults(json.data);
+    } else if (json.success && !json.data) {
+      // Fallback: show manual form
+      setLoading(false);
+      showManualForm();
+      showError("Couldn't analyze that URL. Fill in your trade manually below.");
+    } else {
+      setLoading(false);
+      showManualForm();
+      showError(json.error || "Couldn't analyze that URL. Try entering your trade manually.");
+    }
+  } catch (e) {
+    setLoading(false);
+    showManualForm();
+    showError("Network error. Try entering your trade manually below.");
+  }
+}
+
+function runManualAudit() {
+  const trade = document.getElementById('manual-trade').value;
+  const location = document.getElementById('manual-location').value.trim();
+  if (!trade) { showError('Select your trade first.'); return; }
+  renderResults({
+    business_name: null,
+    trade,
+    service_area: location || null,
+    services: [],
+    usps: []
+  });
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────────
+
+function renderResults(data) {
+  setLoading(false);
+
+  const trade = (data.trade || 'other').replace(/ /g,'_').toLowerCase();
+  const name = data.business_name;
+  const area = data.service_area;
+
+  // Detected label
+  const tradeLabel = TRADE_LABELS[trade] || 'Trade Contractor';
+  const parts = [];
+  if (name) parts.push(`<strong>${escHtml(name)}</strong>`);
+  parts.push(tradeLabel + ' contractor');
+  if (area) parts.push(escHtml(area));
+  document.getElementById('detected-label').innerHTML = parts.join(' — ');
+
+  // Panel 1: Waste
+  const waste = WASTE_RANGES[trade] || WASTE_RANGES.other;
+  document.getElementById('waste-score').textContent = `${waste.low}–${waste.high}% wasted`;
+  document.getElementById('waste-desc').textContent =
+    `Based on typical ${tradeLabel} accounts without conversion tracking + negative keyword gaps.`;
+  const wasteAvg = Math.round((waste.low + waste.high) / 2);
+  document.getElementById('waste-bar').style.width = wasteAvg + '%';
+
+  // Panel 2: QS
+  const cpl = CPL_BENCHMARKS[trade] || CPL_BENCHMARKS.other;
+  const qsAvg = cpl.qs_avg;
+  document.getElementById('qs-score').textContent = parseFloat(qsAvg) < 5.2 ? 'High opportunity' : 'Medium opportunity';
+  document.getElementById('qs-avg').textContent = qsAvg;
+  const cpcSavings = Math.round(((cpl.low + cpl.high) / 2) * 0.12);
+  document.getElementById('qs-desc').textContent =
+    `For ${tradeLabel}, avg QS is ${qsAvg}. Every 1-point improvement saves ~$${cpcSavings}/mo at your CPL range.`;
+
+  // Panel 3: LSA
+  const lsaEl = document.getElementById('lsa-score');
+  const lsaDesc = document.getElementById('lsa-desc');
+  const lsaCpl = document.getElementById('lsa-cpl');
+  if (LSA_ELIGIBLE.has(trade)) {
+    lsaEl.textContent = 'Likely Eligible';
+    lsaEl.className = 'text-xl font-extrabold text-blue-600';
+    const lsaRange = LSA_CPL[trade] || LSA_CPL.other;
+    lsaDesc.textContent =
+      `${tradeLabel} qualifies for Local Services Ads in most U.S. states. LSA leads skip the click — customers call you directly.`;
+    lsaCpl.textContent = `Typical LSA CPL for ${tradeLabel}: $${lsaRange.low}–$${lsaRange.high} (vs $${cpl.low}–$${cpl.high} for search ads).`;
+  } else if (trade === 'solar') {
+    lsaEl.textContent = 'Check Required';
+    lsaEl.className = 'text-xl font-extrabold text-amber-600';
+    lsaDesc.textContent = 'Solar LSA availability varies by state and installer certification.';
+    lsaCpl.textContent = 'Verify eligibility at ads.google.com/local-services-ads';
+  } else {
+    lsaEl.textContent = 'Not Eligible';
+    lsaEl.className = 'text-xl font-extrabold text-gray-500';
+    lsaDesc.textContent = 'This trade type isn\'t currently supported by Google Local Services Ads.';
+    lsaCpl.textContent = 'Focus on Search campaigns with tight geo-targeting.';
+  }
+
+  // Panel 4: Seasonal
+  const currentMonth = new Date().getMonth(); // 0 = Jan
+  const indices = SEASONAL_INDEX[trade] || SEASONAL_INDEX.other;
+  const maxIdx = Math.max(...indices);
+  const currentIdx = indices[currentMonth];
+  const ratio = currentIdx / maxIdx;
+  let seasonLabel, seasonClass;
+  if (ratio >= 0.88) { seasonLabel = 'Peak Season'; seasonClass = 'text-emerald-600'; }
+  else if (ratio >= 0.65) { seasonLabel = 'Shoulder Season'; seasonClass = 'text-amber-600'; }
+  else { seasonLabel = 'Off-Season'; seasonClass = 'text-gray-500'; }
+  const seasonEl = document.getElementById('seasonal-score');
+  seasonEl.textContent = seasonLabel;
+  seasonEl.className = `text-xl font-extrabold ${seasonClass}`;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('seasonal-desc').textContent =
+    `${months[currentMonth]} search volume for ${tradeLabel} is ~${currentIdx}% of peak. ${
+      ratio < 0.65 ? 'Consider reducing budget until demand picks up.' :
+      ratio >= 0.88 ? 'Maximize budget now — this is your high-value window.' :
+      'Steady demand — maintain consistent spend.'
+    }`;
+  renderSeasonalChart(indices, currentMonth);
+
+  // Panel 5: Ad copy issues
+  const issues = COPY_ISSUES[trade] || COPY_ISSUES.default;
+  document.getElementById('copy-issues').innerHTML = issues.map(i =>
+    `<li class="flex items-start gap-1.5"><i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5 flex-shrink-0"></i> <span>${escHtml(i)}</span></li>`
+  ).join('');
+
+  // Panel 6: Structure issues
+  document.getElementById('struct-1').textContent = STRUCT_ISSUES[trade] || STRUCT_ISSUES.default;
+
+  // Show results
+  document.getElementById('results').classList.remove('hidden');
+  document.getElementById('results').scrollIntoView({behavior:'smooth', block:'start'});
+
+  if (window.RevForgeTracker) {
+    RevForgeTracker.logToolUse('website-audit', {trade: trade, area: area || ''}, {waste_low: waste.low, waste_high: waste.high}, trade, area || '');
+    if (!sessionStorage.getItem('rf_cap_audit')) {
+      sessionStorage.setItem('rf_cap_audit', '1');
+      setTimeout(function() { if (window.rfShowEmailModal) rfShowEmailModal('website-audit', waste.low + '–' + waste.high + '% wasted spend for ' + tradeLabel, trade); }, 1800);
+    }
+  }
+}
+
+function renderSeasonalChart(indices, currentMonth) {
+  const canvas = document.getElementById('seasonal-chart');
+  if (!canvas) return;
+  if (seasonalChart) { seasonalChart.destroy(); seasonalChart = null; }
+
+  const colors = indices.map((_, i) =>
+    i === currentMonth ? '#1A5C35' : '#e5e7eb'
+  );
+
+  seasonalChart = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: ['J','F','M','A','M','J','J','A','S','O','N','D'],
+      datasets: [{
+        data: indices,
+        backgroundColor: colors,
+        borderRadius: 2,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {legend:{display:false}, tooltip:{enabled:false}},
+      scales: {
+        x: {display:false},
+        y: {display:false, min:0, max:110}
+      }
+    }
+  });
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function setLoading(on) {
+  document.getElementById('btn-text').textContent = on ? 'Analyzing…' : 'Run My Audit';
+  document.getElementById('btn-spinner').classList.toggle('hidden', !on);
+  document.getElementById('analyze-btn').disabled = on;
+}
+
+function showError(msg) {
+  let el = document.getElementById('audit-error');
+  if (!el) {
+    el = document.createElement('p');
+    el.id = 'audit-error';
+    el.className = 'text-sm text-red-600 mt-2';
+    document.getElementById('url-card').appendChild(el);
+  }
+  el.textContent = msg;
+  setTimeout(() => { if (el) el.textContent = ''; }, 5000);
+}
+
+function showManualForm() {
+  document.getElementById('manual-form').classList.remove('hidden');
+}
+
+function resetAudit() {
+  document.getElementById('results').classList.add('hidden');
+  document.getElementById('website-url').value = '';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function escHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+            .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+</script>
+{% include 'components/email_capture_modal.html' %}
+<script src="/static/js/rf-tracking.js"></script>
+{% endblock %}

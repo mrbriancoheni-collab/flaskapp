@@ -14,7 +14,7 @@ import sys
 import os
 
 # Add the flaskapp directory to the path
-sys.path.insert(0, '/home/fieldsprout/flaskapp')
+sys.path.insert(0, '/home/revforge/flaskapp')
 
 from app import create_app, db
 from app.models_alerts import Alert, AlertSettings
@@ -71,7 +71,7 @@ def disable_alert_emails():
         print("SUCCESS: All alert emails have been disabled!")
         print("=" * 60)
         print("\nTo re-enable alerts later:")
-        print("  1. Go to https://fieldsprout.io/account/settings")
+        print("  1. Go to https://getrevforge.io/account/settings")
         print("  2. Enable 'Email Notifications' under Alert Settings")
         print()
 

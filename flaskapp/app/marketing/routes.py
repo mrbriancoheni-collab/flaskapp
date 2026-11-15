@@ -812,7 +812,7 @@ def pricing_intelligence():
                     for j in top_types
                 )
                 prompt = (
-                    f"You are a pricing strategist for home service businesses. "
+                    f"You are a pricing strategist for trade businesses. "
                     f"Analyze this company's job data from the last 12 months:\n\n{lines}\n\n"
                     f"In 2–3 concise paragraphs:\n"
                     f"1. Identify 1–2 specific pricing opportunities (where they're likely leaving money on the table)\n"

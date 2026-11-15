@@ -1,0 +1,75 @@
+{# Email capture modal — slide-up sheet after free tool calculation #}
+<div id="rf-email-modal" class="fixed inset-0 z-50 hidden" aria-modal="true" role="dialog">
+  <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="rfCloseEmailModal()"></div>
+  <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl p-6"
+       style="max-width:480px;margin:0 auto;">
+    <button onclick="rfCloseEmailModal()"
+            class="absolute top-3 right-4 text-gray-400 hover:text-gray-600 text-2xl leading-none"
+            aria-label="Close">&times;</button>
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+        <i class="fa-solid fa-envelope text-green-700"></i>
+      </div>
+      <div>
+        <h3 class="font-bold text-gray-900 text-base">Email me my results</h3>
+        <p class="text-xs text-gray-500">We'll send a copy + trade-specific tips to improve.</p>
+      </div>
+    </div>
+    <form id="rf-email-form" onsubmit="rfSubmitEmail(event)" class="flex gap-2">
+      <input type="email" id="rf-email-input" placeholder="your@email.com" required
+             autocomplete="email"
+             class="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+      <button type="submit" id="rf-email-btn"
+              class="bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition whitespace-nowrap">
+        Send it
+      </button>
+    </form>
+    <p class="text-xs text-gray-400 mt-2 text-center">No spam. Unsubscribe anytime.</p>
+  </div>
+</div>
+
+<script>
+  (function() {
+    window._rfEmailTool    = '';
+    window._rfEmailSummary = '';
+    window._rfEmailTrade   = '';
+
+    window.rfShowEmailModal = function(toolName, summary, trade) {
+      window._rfEmailTool    = toolName || '';
+      window._rfEmailSummary = summary  || '';
+      window._rfEmailTrade   = trade    || '';
+      const m = document.getElementById('rf-email-modal');
+      if (m) m.classList.remove('hidden');
+    };
+
+    window.rfCloseEmailModal = function() {
+      const m = document.getElementById('rf-email-modal');
+      if (m) m.classList.add('hidden');
+    };
+
+    window.rfSubmitEmail = function(e) {
+      e.preventDefault();
+      const email = (document.getElementById('rf-email-input').value || '').trim();
+      if (!email) return;
+      const btn = document.getElementById('rf-email-btn');
+      btn.textContent = 'Sending…';
+      btn.disabled = true;
+      fetch('/api/capture-email', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          email,
+          tool_name:      window._rfEmailTool,
+          result_summary: window._rfEmailSummary,
+          detected_trade: window._rfEmailTrade,
+        }),
+      }).then(function() {
+        btn.textContent = 'Sent! ✓';
+        setTimeout(window.rfCloseEmailModal, 1400);
+      }).catch(function() {
+        btn.textContent = 'Send it';
+        btn.disabled = false;
+      });
+    };
+  })();
+</script>

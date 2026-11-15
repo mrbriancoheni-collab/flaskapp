@@ -1,0 +1,137 @@
+{% extends 'base_app.html' %}
+{% block title %}Autopilot Settings – RevForge{% endblock %}
+{% block content %}
+<div class="w-full max-w-2xl">
+
+  <div class="mb-6">
+    <h1 class="text-2xl font-semibold text-gray-900">Autopilot Settings</h1>
+    <p class="text-sm text-gray-500 mt-1">Control what RevForge applies to your campaigns automatically.</p>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="mb-4 px-4 py-3 rounded-lg text-sm {% if cat == 'error' %}bg-red-50 text-red-700 border border-red-200{% else %}bg-green-50 text-green-700 border border-green-200{% endif %}">
+        {{ msg }}
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <form method="post" action="{{ url_for('account_bp.autopilot_save') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <!-- Master toggle -->
+    <div class="bg-white border rounded-xl p-6 mb-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-base font-semibold text-gray-900">Enable Autopilot</h2>
+          <p class="text-sm text-gray-500 mt-0.5">Let RevForge apply low-risk improvements automatically.</p>
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" name="autopilot_enabled" id="autopilot_toggle"
+                 class="sr-only peer" {% if autopilot_enabled %}checked{% endif %}>
+          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 rounded-full peer
+                      peer-checked:after:translate-x-full peer-checked:after:border-white
+                      after:content-[''] after:absolute after:top-[2px] after:left-[2px]
+                      after:bg-white after:border-gray-300 after:border after:rounded-full
+                      after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Automation risk levels -->
+    <div class="bg-white border rounded-xl p-6 mb-4">
+      <h2 class="text-base font-semibold text-gray-900 mb-1">Auto-Execute Risk Level</h2>
+      <p class="text-sm text-gray-500 mb-4">Higher levels allow RevForge to act without asking you first.</p>
+      <div class="space-y-3">
+        <label class="flex items-start gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:border-green-400 transition has-[:checked]:border-green-500 has-[:checked]:bg-green-50">
+          <input type="checkbox" name="auto_execute_low" id="auto_low"
+                 class="mt-0.5 accent-green-600" {% if auto_low %}checked{% endif %}>
+          <div>
+            <span class="text-sm font-medium text-gray-900">Low risk</span>
+            <p class="text-xs text-gray-500">Pause keywords with zero conversions, fix bid floors. Safe, small-impact changes.</p>
+          </div>
+        </label>
+        <label class="flex items-start gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:border-amber-400 transition has-[:checked]:border-amber-500 has-[:checked]:bg-amber-50">
+          <input type="checkbox" name="auto_execute_medium" id="auto_medium"
+                 class="mt-0.5 accent-amber-600" {% if auto_medium %}checked{% endif %}>
+          <div>
+            <span class="text-sm font-medium text-gray-900">Medium risk</span>
+            <p class="text-xs text-gray-500">Budget reallocation, ad schedule adjustments. Requires low risk to be enabled.</p>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Optimization goal -->
+    <div class="bg-white border rounded-xl p-6 mb-4">
+      <h2 class="text-base font-semibold text-gray-900 mb-1">Optimization Goal</h2>
+      <p class="text-sm text-gray-500 mb-4">What should RevForge prioritize when making decisions?</p>
+      <div class="grid grid-cols-2 gap-3">
+        {% for val, label, desc in [
+          ('lower_cpl', 'Lower CPL', 'Reduce cost per lead'),
+          ('more_leads', 'More Leads', 'Maximize lead volume'),
+          ('stop_waste', 'Stop Waste', 'Cut wasted spend fast'),
+          ('improve_quality', 'Better Quality', 'Higher-intent leads only'),
+        ] %}
+        <label class="flex flex-col gap-1 p-3 rounded-lg border border-gray-200 cursor-pointer hover:border-green-400 transition has-[:checked]:border-green-500 has-[:checked]:bg-green-50">
+          <input type="radio" name="goal" value="{{ val }}"
+                 class="sr-only" {% if goal == val %}checked{% endif %}>
+          <span class="text-sm font-medium text-gray-900">{{ label }}</span>
+          <span class="text-xs text-gray-500">{{ desc }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Budget change limit -->
+    <div class="bg-white border rounded-xl p-6 mb-6">
+      <h2 class="text-base font-semibold text-gray-900 mb-1">Max Budget Change</h2>
+      <p class="text-sm text-gray-500 mb-4">Limit how much RevForge can adjust daily budgets per campaign automatically (0–$500/day).</p>
+      <div class="flex items-center gap-3">
+        <span class="text-sm text-gray-700">$</span>
+        <input type="range" name="budget_change_limit" id="budget_slider"
+               min="0" max="500" step="25"
+               value="{{ budget_limit }}"
+               class="flex-1 accent-green-600"
+               oninput="document.getElementById('budget_val').textContent = this.value">
+        <span id="budget_val" class="text-sm font-semibold text-gray-800 w-12 text-right">{{ budget_limit }}</span>
+        <span class="text-sm text-gray-500">/day</span>
+      </div>
+    </div>
+
+    <button type="submit"
+            class="w-full py-3 bg-green-700 text-white rounded-xl text-sm font-semibold hover:bg-green-800 transition">
+      Save Autopilot Settings
+    </button>
+  </form>
+</div>
+
+<script>
+  // Keep medium risk checkbox disabled if low risk isn't checked
+  const lowCb = document.getElementById('auto_low');
+  const medCb = document.getElementById('auto_medium');
+  function syncMedium() {
+    if (!lowCb.checked) {
+      medCb.checked = false;
+      medCb.disabled = true;
+      medCb.closest('label').classList.add('opacity-50', 'cursor-not-allowed');
+    } else {
+      medCb.disabled = false;
+      medCb.closest('label').classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+  }
+  lowCb.addEventListener('change', syncMedium);
+  syncMedium();
+
+  // Goal radio — highlight selected card
+  document.querySelectorAll('input[name="goal"]').forEach(r => {
+    r.addEventListener('change', () => {
+      document.querySelectorAll('input[name="goal"]').forEach(x => {
+        x.closest('label').classList.toggle('border-green-500', x.checked);
+        x.closest('label').classList.toggle('bg-green-50', x.checked);
+        x.closest('label').classList.toggle('border-gray-200', !x.checked);
+      });
+    });
+  });
+</script>
+{% endblock %}

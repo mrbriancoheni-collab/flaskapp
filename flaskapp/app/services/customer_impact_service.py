@@ -2,7 +2,7 @@
 Customer Impact Service
 
 Calculates and tracks savings and additional leads generated for each customer
-compared to their pre-FieldSprout baseline performance.
+compared to their pre-RevForge baseline performance.
 """
 from __future__ import annotations
 import datetime as dt

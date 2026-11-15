@@ -1,24 +1,24 @@
 {% extends "base_public.html" %}
 {% set SECTION = 'products' %}
-{% block title %}Review Management for Home Services — More 5-Star Reviews | FieldSprout{% endblock %}
-{% block meta_description %}FieldSprout automates review requests, responds to every review with AI-crafted replies, and protects your reputation — so you rank higher and win more jobs from online reviews.{% endblock %}
-{% block og_title %}Review Management for Home Service Businesses — FieldSprout{% endblock %}
-{% block og_description %}Stop leaving 5-star reviews on the table. FieldSprout sends automated review requests after every job, responds instantly with on-brand replies, and shields your reputation from unfair reviews.{% endblock %}
+{% block title %}Review Management for Home Services — More 5-Star Reviews | RevForge{% endblock %}
+{% block meta_description %}RevForge automates review requests, responds to every review with AI-crafted replies, and protects your reputation — so you rank higher and win more jobs from online reviews.{% endblock %}
+{% block og_title %}Review Management for Trade Businesses — RevForge{% endblock %}
+{% block og_description %}Stop leaving 5-star reviews on the table. RevForge sends automated review requests after every job, responds instantly with on-brand replies, and shields your reputation from unfair reviews.{% endblock %}
 
 {% block head_extra %}
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "WebPage",
-  "name": "Review Management for Home Service Businesses",
+  "name": "Review Management for Trade Businesses",
   "description": "Automated review requests, AI-powered review responses, and reputation management built for HVAC, plumbing, electrical, and roofing companies.",
-  "url": "https://fieldsprout.io/products/reviews",
+  "url": "https://getrevforge.io/products/reviews",
   "breadcrumb": {
     "@type": "BreadcrumbList",
     "itemListElement": [
-      {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://fieldsprout.io"},
-      {"@type": "ListItem", "position": 2, "name": "Products", "item": "https://fieldsprout.io/products/ads"},
-      {"@type": "ListItem", "position": 3, "name": "Reviews", "item": "https://fieldsprout.io/products/reviews"}
+      {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://getrevforge.io"},
+      {"@type": "ListItem", "position": 2, "name": "Products", "item": "https://getrevforge.io/products/ads"},
+      {"@type": "ListItem", "position": 3, "name": "Reviews", "item": "https://getrevforge.io/products/reviews"}
     ]
   }
 }
@@ -39,7 +39,7 @@
           Turn Every Completed Job Into<br>a 5-Star Review — Automatically
         </h1>
         <p class="text-xl text-gray-600 mb-8">
-          88% of consumers trust online reviews as much as personal recommendations. FieldSprout
+          88% of consumers trust online reviews as much as personal recommendations. RevForge
           sends review requests at the perfect moment after every job, responds to every review
           with AI-crafted replies, and alerts you to reputation risks before they escalate.
         </p>
@@ -55,7 +55,7 @@
       </div>
       <div class="md:w-2/5">
         <div class="bg-white rounded-2xl shadow-card border p-6">
-          <div class="text-sm font-semibold text-gray-500 mb-5">Review Performance — Before vs. After FieldSprout</div>
+          <div class="text-sm font-semibold text-gray-500 mb-5">Review Performance — Before vs. After RevForge</div>
           <div class="space-y-4">
             {% for label, before, after, pct in [
               ('Monthly New Reviews', '3/mo', '28/mo', 100),
@@ -77,7 +77,7 @@
             </div>
             {% endfor %}
           </div>
-          <p class="text-xs text-gray-400 mt-4 text-center">Averages across home service accounts on FieldSprout</p>
+          <p class="text-xs text-gray-400 mt-4 text-center">Averages across home service accounts on RevForge</p>
         </div>
       </div>
     </div>
@@ -87,13 +87,13 @@
 <!-- How It Works -->
 <section class="py-16 bg-white">
   <div class="container-lg">
-    <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">How FieldSprout builds your review profile on autopilot</h2>
-    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Most home service companies have 10x more happy customers than reviews. The gap isn't satisfaction — it's asking. FieldSprout handles the asking automatically.</p>
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">How RevForge builds your review profile on autopilot</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Most trade contractors have 10x more happy customers than reviews. The gap isn't satisfaction — it's asking. RevForge handles the asking automatically.</p>
     <div class="grid md:grid-cols-3 gap-8 mb-16">
       {% for step, icon, color, title, desc in [
-        ('1', 'fa-wrench', 'blue', 'Job completed', 'Your tech marks the job complete in your CRM. FieldSprout detects the signal and queues a review request for the optimal send window.'),
+        ('1', 'fa-wrench', 'blue', 'Job completed', 'Your tech marks the job complete in your CRM. RevForge detects the signal and queues a review request for the optimal send window.'),
         ('2', 'fa-paper-plane', 'yellow', 'Request sent at peak moment', 'SMS and/or email sent 1–4 hours after completion — when satisfaction is highest. One tap takes the customer to their preferred platform.'),
-        ('3', 'fa-star', 'green', 'Review posted & responded to', 'New review appears on Google, Yelp, or Facebook. FieldSprout responds within minutes with a personalized, on-brand reply.'),
+        ('3', 'fa-star', 'green', 'Review posted & responded to', 'New review appears on Google, Yelp, or Facebook. RevForge responds within minutes with a personalized, on-brand reply.'),
       ] %}
       <div class="text-center">
         <div class="w-16 h-16 rounded-2xl bg-{{ color }}-100 flex items-center justify-center mx-auto mb-4">
@@ -156,8 +156,8 @@
   <div class="container-md">
     <div class="grid md:grid-cols-3 gap-6">
       {% for quote, name, co, result in [
-        ('"We went from 11 Google reviews to 187 in 4 months. We were doing great work but never asking. FieldSprout fixed that completely."', 'James T.', 'CoolBreeze HVAC', '11 → 187 reviews in 4 months'),
-        ('"A customer posted a 2-star review on a Saturday night. FieldSprout flagged it, drafted a response, and I approved it from my phone in 5 minutes. The customer updated to 4 stars."', 'Lynn P.', 'Harbor Plumbing', '2-star updated to 4-star'),
+        ('"We went from 11 Google reviews to 187 in 4 months. We were doing great work but never asking. RevForge fixed that completely."', 'James T.', 'CoolBreeze HVAC', '11 → 187 reviews in 4 months'),
+        ('"A customer posted a 2-star review on a Saturday night. RevForge flagged it, drafted a response, and I approved it from my phone in 5 minutes. The customer updated to 4 stars."', 'Lynn P.', 'Harbor Plumbing', '2-star updated to 4-star'),
         ('"Our Google rating went from 3.8 to 4.7 in six months. We didn\'t change anything except asking for reviews. The response templates are also fantastic."', 'Steve A.', 'Ace Electric', '3.8 → 4.7 star rating'),
       ] %}
       <div class="bg-gray-50 rounded-2xl p-6 border">
@@ -176,7 +176,7 @@
   <div class="container-md text-center">
     <h2 class="text-3xl md:text-4xl font-extrabold mb-4">Start collecting reviews from every job</h2>
     <p class="text-yellow-100 text-lg mb-8 max-w-xl mx-auto">
-      Connect your CRM and FieldSprout starts sending review requests automatically. Most accounts triple their monthly review count within 60 days.
+      Connect your CRM and RevForge starts sending review requests automatically. Most accounts triple their monthly review count within 60 days.
     </p>
     <div class="flex flex-col sm:flex-row gap-4 justify-center">
       {% if has_endpoint('auth_bp.register') %}

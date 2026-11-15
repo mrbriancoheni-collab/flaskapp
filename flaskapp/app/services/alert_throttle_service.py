@@ -376,7 +376,7 @@ def send_daily_digest(user_id: int) -> bool:
     # Add footer
     html_body += f"""
             <div style="text-align: center; margin-top: 30px;">
-                <a href="https://fieldsprout.io/account/google/ads/decision-screen"
+                <a href="https://getrevforge.io/account/google/ads/decision-screen"
                    style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
                     View Dashboard
                 </a>
@@ -387,7 +387,7 @@ def send_daily_digest(user_id: int) -> bool:
                     You're receiving this daily digest because you have alert notifications enabled.
                 </p>
                 <p style="margin: 0;">
-                    <a href="https://fieldsprout.io/account/settings" style="color: #667eea; text-decoration: none;">
+                    <a href="https://getrevforge.io/account/settings" style="color: #667eea; text-decoration: none;">
                         Manage alert settings
                     </a>
                 </p>
@@ -420,8 +420,8 @@ Daily Google Ads Report - {datetime.utcnow().strftime('%B %d, %Y')}
         for alert in info_alerts:
             text_body += f"- {alert.title}\n  {alert.description}\n\n"
 
-    text_body += "\nView Dashboard: https://fieldsprout.io/account/google/ads/decision-screen\n"
-    text_body += "Manage Settings: https://fieldsprout.io/account/settings\n"
+    text_body += "\nView Dashboard: https://getrevforge.io/account/google/ads/decision-screen\n"
+    text_body += "Manage Settings: https://getrevforge.io/account/settings\n"
 
     # Send email
     success = send_email(

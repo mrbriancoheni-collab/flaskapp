@@ -223,8 +223,44 @@ def _format_sms_digest(data: Dict[str, Any], business_name: str = "Your business
     return "\n".join(lines)
 
 
+def _daily_structured_digest(data: dict) -> dict:
+    """
+    Build a minimal structured-digest envelope for the daily SMS digest so it
+    can pass through SafeDigestSender.check().  The daily digest is template-
+    formatted (no LLM), so number_check_passed is always True.
+    """
+    has_data = data.get("leads_yesterday", 0) > 0 or data.get("revenue_yesterday", 0) > 0
+    confidence = 0.80 if has_data else 0.65
+
+    pacing = data.get("pacing_alerts") or []
+    if pacing:
+        top = pacing[0]
+        action = f"{top['channel']} is at {top['pace_pct']}% of budget pace — review spend."
+    elif data.get("missed_calls", 0) > 0:
+        action = f"{data['missed_calls']} missed call(s) yesterday — check coverage."
+    else:
+        action = "No urgent actions today."
+
+    return {
+        "highlight": _format_sms_digest(data),
+        "evidence": [],   # template-generated; number check not needed
+        "recommended_action": action,
+        "confidence": confidence,
+        "number_check_passed": True,
+        "blocked": False,
+        "blocking_reason": None,
+        "render_text": {},
+    }
+
+
 def _send_digest_to_account(aid: int) -> bool:
-    """Send the daily digest to an account via SMS and/or email."""
+    """
+    Send the daily digest to an account via SMS and/or email.
+
+    All sends go through SafeDigestSender.check() — the safety gate that
+    enforces idempotency, circuit breaker, AI spend cap, and approval gate.
+    STOP/UNSTOP handling lives in app/sms/utils.py and is not modified here.
+    """
     try:
         settings = db.session.execute(text("""
             SELECT daily_digest_enabled, daily_digest_channel, daily_digest_phone,
@@ -249,7 +285,34 @@ def _send_digest_to_account(aid: int) -> bool:
 
         data = _build_digest(aid)
         today = date.today()
-        today_str = today.isoformat()
+
+        # ── Safety gate ────────────────────────────────────────────────────────
+        try:
+            from app.services.digest_send_safety import SafeDigestSender
+            structured = _daily_structured_digest(data)
+            safety = SafeDigestSender(aid, channel)
+            check = safety.check(structured, today)
+            if not check.allowed:
+                log.info(
+                    "Digest blocked for account %d: %s (approval_id=%s)",
+                    aid, check.reason, check.approval_id,
+                )
+                safety.record_outcome(
+                    success=False,
+                    digest_date=today,
+                    channel=channel,
+                    recipient=phone or email or "",
+                    blocked_reason=check.reason,
+                    confidence=structured["confidence"],
+                )
+                return False
+        except Exception:
+            # Safety layer failure must not stop the send — log and proceed.
+            log.exception("Safety gate error for account %d — proceeding anyway", aid)
+            safety = None
+        # ──────────────────────────────────────────────────────────────────────
+
+        send_success = False
 
         # Send SMS
         if channel in ("sms", "both") and phone:
@@ -258,25 +321,39 @@ def _send_digest_to_account(aid: int) -> bool:
             tok = os.getenv("TWILIO_AUTH_TOKEN")
             from_num = os.getenv("TWILIO_FROM_NUMBER")
             body = _format_sms_digest(data, biz_name)
-            if sid and tok and from_num:
-                url = f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json"
-                req.post(url, data={"From": from_num, "To": phone, "Body": body},
-                         auth=(sid, tok), timeout=10)
-                log.info("Digest SMS sent to account %d (%s)", aid, phone)
-            else:
-                log.info("Simulated digest SMS to %s:\n%s", phone, body)
+            try:
+                if sid and tok and from_num:
+                    url = f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json"
+                    req.post(url, data={"From": from_num, "To": phone, "Body": body},
+                             auth=(sid, tok), timeout=10)
+                    log.info("Digest SMS sent to account %d (%s)", aid, phone)
+                else:
+                    log.info("Simulated digest SMS to %s:\n%s", phone, body)
+                send_success = True
+            except Exception:
+                log.exception("SMS send failed for account %d", aid)
 
-            # Log send
+        if safety is not None:
+            safety.record_outcome(
+                success=send_success,
+                digest_date=today,
+                channel=channel,
+                recipient=phone or email or "",
+                confidence=structured["confidence"] if "structured" in dir() else None,
+            )
+        elif send_success:
+            # Fallback: minimal log entry if safety layer errored above
             try:
                 db.session.execute(text("""
-                    INSERT IGNORE INTO digest_send_log (account_id, digest_date, channel, recipient)
-                    VALUES (:a, :dt, 'sms', :r)
-                """), {"a": aid, "dt": today_str, "r": phone})
+                    INSERT IGNORE INTO digest_send_log
+                        (account_id, digest_date, channel, recipient)
+                    VALUES (:a, :dt, :ch, :r)
+                """), {"a": aid, "dt": str(today), "ch": channel, "r": phone or ""})
                 db.session.commit()
             except Exception:
                 pass
 
-        return True
+        return send_success
     except Exception:
         log.exception("Failed to send digest to account %d", aid)
         return False

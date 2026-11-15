@@ -1,0 +1,150 @@
+{% extends "base_app.html" %}
+{% block title %}Performance Timeline · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Performance Timeline</h1>
+      <p class="text-sm text-gray-500 mt-0.5">Cost per lead over the last 90 days.</p>
+    </div>
+    <a href="{{ url_for('account_bp.dashboard') }}"
+       class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm text-gray-600 hover:bg-gray-50 transition">
+      <i class="fa-solid fa-arrow-left text-xs"></i> Dashboard
+    </a>
+  </div>
+
+  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+    {% if rows %}
+    <canvas id="cplChart" height="80"></canvas>
+    {% else %}
+    <div class="flex flex-col items-center justify-center py-16 text-center text-gray-400">
+      <i class="fa-solid fa-chart-line text-4xl mb-3 text-gray-200"></i>
+      <p class="font-medium">No performance data yet.</p>
+      <p class="text-sm mt-1">Connect your Google Ads account to start tracking CPL.</p>
+      <a href="{{ url_for('account_bp.dashboard') }}"
+         class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition">
+        Connect Now
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if rows %}
+  <div class="grid grid-cols-3 gap-4">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 text-center">
+      <div class="text-2xl font-bold text-gray-900" id="avgCpl">—</div>
+      <div class="text-xs text-gray-500 mt-1">Avg CPL (90d)</div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 text-center">
+      <div class="text-2xl font-bold text-gray-900" id="bestCpl">—</div>
+      <div class="text-xs text-gray-500 mt-1">Best CPL</div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 text-center">
+      <div class="text-2xl font-bold text-gray-900" id="totalSpend">—</div>
+      <div class="text-xs text-gray-500 mt-1">Total Spend</div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if rows %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" crossorigin="anonymous"></script>
+<script>
+  const RAW = {{ rows | tojson }};
+  const acctCreated = {{ (account_created | string | tojson) if account_created else 'null' }};
+
+  const labels = RAW.map(r => r.date);
+  const cpls   = RAW.map(r => r.cpl);
+  const spends = RAW.map(r => r.spend);
+
+  // Summary stats
+  const validCpls = cpls.filter(v => v !== null);
+  if (validCpls.length) {
+    const avg  = validCpls.reduce((a,b) => a+b, 0) / validCpls.length;
+    const best = Math.min(...validCpls);
+    document.getElementById('avgCpl').textContent   = '$' + avg.toFixed(0);
+    document.getElementById('bestCpl').textContent  = '$' + best.toFixed(0);
+  }
+  const totalSpend = spends.reduce((a,b) => a+b, 0);
+  document.getElementById('totalSpend').textContent = '$' + totalSpend.toFixed(0);
+
+  // "Started RevForge" annotation index
+  let startIdx = null;
+  if (acctCreated) {
+    const startDate = acctCreated.slice(0, 10);
+    startIdx = labels.findIndex(l => l >= startDate);
+  }
+
+  const ctx = document.getElementById('cplChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Cost per Lead ($)',
+        data: cpls,
+        borderColor: '#1A5C35',
+        backgroundColor: 'rgba(26,92,53,0.08)',
+        borderWidth: 2,
+        tension: 0.3,
+        fill: true,
+        spanGaps: true,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ctx.parsed.y !== null ? `$${ctx.parsed.y.toFixed(2)} CPL` : 'No data'
+          }
+        },
+        annotation: startIdx !== null ? {
+          annotations: {
+            startLine: {
+              type: 'line',
+              xMin: startIdx,
+              xMax: startIdx,
+              borderColor: '#D97706',
+              borderWidth: 2,
+              borderDash: [4,3],
+              label: {
+                display: true,
+                content: 'Started RevForge',
+                position: 'start',
+                color: '#D97706',
+                font: { size: 11 },
+              }
+            }
+          }
+        } : {},
+      },
+      scales: {
+        y: {
+          beginAtZero: false,
+          ticks: {
+            callback: v => '$' + v
+          },
+          grid: { color: 'rgba(0,0,0,0.05)' }
+        },
+        x: {
+          ticks: {
+            maxTicksLimit: 10,
+            maxRotation: 0,
+          },
+          grid: { display: false }
+        }
+      }
+    }
+  });
+</script>
+{% endif %}
+{% endblock %}

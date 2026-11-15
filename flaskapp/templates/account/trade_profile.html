@@ -1,0 +1,132 @@
+{% extends 'base_app.html' %}
+{% block title %}Trade Profile – RevForge{% endblock %}
+{% block content %}
+<div class="w-full max-w-2xl">
+
+  <div class="mb-6">
+    <h1 class="text-2xl font-semibold text-gray-900">Trade Profile</h1>
+    <p class="text-sm text-gray-500 mt-1">These details help RevForge's AI make better decisions for your business.</p>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="mb-4 px-4 py-3 rounded-lg text-sm {% if cat == 'error' %}bg-red-50 text-red-700 border border-red-200{% else %}bg-green-50 text-green-700 border border-green-200{% endif %}">
+        {{ msg }}
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <form method="post" action="{{ url_for('account_bp.trade_profile_save') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <!-- Business basics -->
+    <div class="bg-white border rounded-xl p-6 mb-4">
+      <h2 class="text-base font-semibold text-gray-900 mb-4">Business Details</h2>
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Trade / Industry</label>
+        <select name="trade"
+                class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+          <option value="">— select trade —</option>
+          {% for t in trades %}
+          <option value="{{ t }}" {% if profile.trade == t %}selected{% endif %}>
+            {{ t.replace('_', ' ').title() }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Service Area</label>
+        <input type="text" name="service_area"
+               value="{{ profile.service_area }}"
+               placeholder="e.g. Dallas–Fort Worth, TX"
+               class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Top Services</label>
+        <input type="text" name="business_services"
+               value="{{ profile.business_services }}"
+               placeholder="e.g. AC repair, furnace install, tune-ups"
+               class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+        <p class="text-xs text-gray-400 mt-1">Comma-separated. Used to generate ad copy and keywords.</p>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Business Description</label>
+        <textarea name="business_description" rows="3"
+                  placeholder="Brief description — what makes you different, your USP…"
+                  class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none">{{ profile.business_description }}</textarea>
+      </div>
+    </div>
+
+    <!-- Economics -->
+    <div class="bg-white border rounded-xl p-6 mb-6">
+      <h2 class="text-base font-semibold text-gray-900 mb-1">Economics</h2>
+      <p class="text-sm text-gray-500 mb-4">Help RevForge calculate your true ROI and set smart bid targets.</p>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Avg. Job Value ($)</label>
+          <input type="number" name="avg_ticket" min="0" max="100000"
+                 value="{{ profile.avg_ticket }}"
+                 placeholder="850"
+                 class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Close Rate (%)</label>
+          <input type="number" name="close_rate" min="0" max="100"
+                 value="{{ profile.close_rate }}"
+                 placeholder="35"
+                 class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Monthly Ad Budget ($)</label>
+          <input type="number" name="monthly_budget" min="0" max="500000"
+                 value="{{ profile.monthly_budget }}"
+                 placeholder="3000"
+                 class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Target CPL ($)</label>
+          <input type="number" name="target_cpl" min="0" max="10000"
+                 value="{{ profile.target_cpl }}"
+                 placeholder="65"
+                 class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+        </div>
+      </div>
+
+      {% if profile.avg_ticket and profile.close_rate %}
+      <div class="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800" id="roi-preview">
+        <span class="font-semibold">Max CPL you can afford:</span>
+        <span id="max-cpl">—</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <button type="submit"
+            class="w-full py-3 bg-green-700 text-white rounded-xl text-sm font-semibold hover:bg-green-800 transition">
+      Save Trade Profile
+    </button>
+  </form>
+</div>
+
+<script>
+  function calcROI() {
+    const ticket = parseFloat(document.querySelector('[name=avg_ticket]').value) || 0;
+    const rate = parseFloat(document.querySelector('[name=close_rate]').value) || 0;
+    const el = document.getElementById('max-cpl');
+    if (!el) return;
+    if (ticket > 0 && rate > 0) {
+      const maxCpl = (ticket * (rate / 100) * 0.3).toFixed(0);
+      el.textContent = '$' + maxCpl;
+    } else {
+      el.textContent = '—';
+    }
+  }
+  document.querySelector('[name=avg_ticket]').addEventListener('input', calcROI);
+  document.querySelector('[name=close_rate]').addEventListener('input', calcROI);
+  calcROI();
+</script>
+{% endblock %}

@@ -1,0 +1,129 @@
+{% extends "base_app.html" %}
+{% block title %}Verify Phone · RevForge{% endblock %}
+
+{% block content %}
+<div class="min-h-[60vh] flex items-center justify-center px-4 py-12">
+  <div class="w-full max-w-md">
+
+    {# ── Card ──────────────────────────────────────────────────────────────────── #}
+    <div class="bg-white rounded-2xl border shadow-sm px-8 py-10">
+
+      {# Icon #}
+      <div class="flex justify-center mb-5">
+        <div class="w-16 h-16 rounded-full bg-green-50 border-2 border-green-200 flex items-center justify-center">
+          <i class="fa-solid fa-mobile-screen-button text-green-700 text-2xl"></i>
+        </div>
+      </div>
+
+      <h1 class="text-2xl font-bold text-gray-900 text-center mb-2">Verify your phone number</h1>
+      <p class="text-sm text-gray-500 text-center mb-7">
+        We sent a 6-digit code to
+        <strong class="text-gray-700">••• ••• {{ phone_number }}</strong>
+      </p>
+
+      {# Error #}
+      {% if error %}
+      <div class="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-5 text-sm text-red-700">
+        <i class="fa-solid fa-circle-exclamation shrink-0"></i>
+        <span>{{ error }}</span>
+      </div>
+      {% endif %}
+
+      {# ── Verification form ───────────────────────────────────────────────────── #}
+      <form method="POST" action="{{ url_for('account_bp.phone_verify') }}" id="verify-form" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        {# Six individual digit boxes #}
+        <div class="flex justify-center gap-3 mb-7" id="digit-row" aria-label="Enter your 6-digit code">
+          {% for i in range(6) %}
+          <input type="text" inputmode="numeric" maxlength="1" pattern="[0-9]"
+                 id="digit-{{ i }}" name="digit_{{ i }}"
+                 autocomplete="{{ 'one-time-code' if i == 0 else 'off' }}"
+                 class="digit-input w-12 h-14 text-center text-xl font-bold border-2 border-gray-300
+                        rounded-xl focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-green-600
+                        transition-colors"
+                 aria-label="Digit {{ i + 1 }}">
+          {% endfor %}
+        </div>
+
+        {# Hidden assembled code field for form submission #}
+        <input type="hidden" id="code" name="code">
+
+        <button type="submit" id="verify-btn"
+                class="w-full py-3 bg-green-700 hover:bg-green-800 disabled:bg-gray-300 disabled:cursor-not-allowed
+                       text-white font-bold rounded-xl transition-colors shadow-sm">
+          Verify
+        </button>
+      </form>
+
+      {# ── Secondary actions ─────────────────────────────────────────────────── #}
+      <div class="mt-6 flex flex-col items-center gap-3 text-sm">
+        <form method="POST" action="{{ url_for('account_bp.phone_send_code') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="text-green-700 hover:text-green-800 font-semibold underline underline-offset-2">
+            Resend code
+          </button>
+        </form>
+        <a href="{{ url_for('account_bp.profile') }}" class="text-gray-400 hover:text-gray-600 transition-colors">
+          Use a different number
+        </a>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script nonce="{{ g.csp_nonce }}">
+(function () {
+  var inputs = document.querySelectorAll('.digit-input');
+  var form   = document.getElementById('verify-form');
+  var hidden = document.getElementById('code');
+  var btn    = document.getElementById('verify-btn');
+
+  function updateHidden() {
+    var code = '';
+    inputs.forEach(function(inp) { code += inp.value; });
+    hidden.value = code;
+    btn.disabled = code.length < 6;
+  }
+
+  inputs.forEach(function(inp, idx) {
+    inp.addEventListener('input', function(e) {
+      // Strip non-digits, keep only first char
+      inp.value = inp.value.replace(/\D/g, '').slice(-1);
+      updateHidden();
+      if (inp.value && idx < inputs.length - 1) {
+        inputs[idx + 1].focus();
+      }
+    });
+
+    inp.addEventListener('keydown', function(e) {
+      if (e.key === 'Backspace' && !inp.value && idx > 0) {
+        inputs[idx - 1].focus();
+        inputs[idx - 1].value = '';
+        updateHidden();
+      }
+      // Allow arrow navigation
+      if (e.key === 'ArrowLeft' && idx > 0)              { inputs[idx - 1].focus(); }
+      if (e.key === 'ArrowRight' && idx < inputs.length - 1) { inputs[idx + 1].focus(); }
+    });
+
+    inp.addEventListener('paste', function(e) {
+      e.preventDefault();
+      var pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
+      pasted.split('').forEach(function(ch, i) {
+        if (inputs[idx + i]) inputs[idx + i].value = ch;
+      });
+      var next = Math.min(idx + pasted.length, inputs.length - 1);
+      inputs[next].focus();
+      updateHidden();
+    });
+  });
+
+  // Initial state
+  updateHidden();
+  form.addEventListener('submit', function() { updateHidden(); });
+  if (inputs[0]) inputs[0].focus();
+})();
+</script>
+{% endblock %}

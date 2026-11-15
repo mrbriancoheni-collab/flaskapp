@@ -1,0 +1,316 @@
+{% extends "base_public.html" %}
+{% block title %}CRM Sync for Contractors — Connect Jobber, ServiceTitan & More | RevForge{% endblock %}
+{% block meta_description %}Connect your field service software to RevForge and see which ads are booking real jobs — not just generating leads. Integrates with Jobber, ServiceTitan, HouseCall Pro, and more.{% endblock %}
+{% block og_title %}CRM Sync — See Which Ads Are Booking Jobs, Not Just Leads{% endblock %}
+{% block og_description %}RevForge connects to Jobber, ServiceTitan, and HouseCall Pro to close the loop between your marketing and your job board. Know your true cost per booked job.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {"@type": "ListItem", "position": 1, "name": "Home",      "item": "https://getrevforge.io"},
+    {"@type": "ListItem", "position": 2, "name": "Solutions", "item": "https://getrevforge.io/solutions/crm-sync"},
+    {"@type": "ListItem", "position": 3, "name": "CRM Sync",  "item": "https://getrevforge.io/solutions/crm-sync"}
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "RevForge CRM Sync",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Web",
+  "description": "Connect Jobber, ServiceTitan, HouseCall Pro, and other field service software to RevForge for closed-loop revenue attribution across Google Ads, Meta Ads, and local SEO.",
+  "provider": {"@type": "Organization", "name": "RevForge", "url": "https://getrevforge.io"},
+  "offers": {"@type": "Offer", "price": "99", "priceCurrency": "USD",
+             "priceSpecification": {"@type": "UnitPriceSpecification", "unitText": "MONTH"}}
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How do I connect Jobber to my Google Ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "RevForge connects to Jobber via OAuth and pulls job status data — new requests, scheduled jobs, completed jobs, and invoice amounts — back into your marketing dashboard. This lets you see which Google Ads campaigns are producing booked, paid jobs rather than just web form submissions. Setup takes about 5 minutes and requires no API keys."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can RevForge sync with ServiceTitan?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. RevForge integrates with ServiceTitan to pull booked job data, revenue by job type, and customer source attribution. This closes the loop between your ServiceTitan job board and your Google Ads or Meta campaigns — so you can see cost per booked job, not just cost per lead, for every campaign you run."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is revenue attribution for contractors?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Revenue attribution means connecting a paying customer back to the specific ad, search term, or channel that first brought them to you. Without CRM sync, most contractors only see 'cost per lead' — but a lead that doesn't book is worthless. RevForge's CRM sync lets you see cost per booked job, cost per completed job, and revenue generated per campaign — giving you the data to invest more in what actually fills your schedule."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Which field service software does RevForge integrate with?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "RevForge currently supports or is building integrations with: Jobber, ServiceTitan, HouseCall Pro, Workiz, FieldEdge, and Service Fusion. If your software isn't listed, RevForge can connect via Zapier or a webhook for custom setups. Email support@getrevforge.io to request a specific integration."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can RevForge automatically pause ads when my schedule is full?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes — this is one of the highest-value uses of CRM sync. When Jobber or ServiceTitan shows your schedule is at capacity, RevForge can automatically reduce bids or pause non-emergency campaigns so you stop paying for leads you can't service. When capacity opens up, campaigns resume automatically. This alone saves most contractors $400–$1,200/month in unserviceable lead costs."
+      }
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<section class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-20">
+  <div class="max-w-5xl mx-auto px-4">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-3/5 mb-10 md:mb-0">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-slate-700 border border-slate-600 rounded-full text-sm font-semibold text-slate-300 mb-6">
+          <i class="fa-solid fa-plug"></i> CRM &amp; Field Software Sync
+        </div>
+        <h1 class="text-4xl md:text-5xl font-extrabold mb-5 leading-tight">
+          Know Which Ads Are<br>Booking Jobs — Not<br>Just Generating Leads
+        </h1>
+        <p class="text-xl text-slate-300 mb-8">
+          Connect Jobber, ServiceTitan, or HouseCall Pro to RevForge and finally see your real cost per booked job. Close the loop between your job board and your ad spend.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4">
+          <a href="/pricing" class="px-7 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl transition text-center">
+            Connect My CRM →
+          </a>
+          <a href="#integrations" class="px-7 py-3 border border-slate-500 text-slate-300 hover:border-slate-300 rounded-xl transition text-center text-sm font-semibold">
+            See Supported Integrations
+          </a>
+        </div>
+      </div>
+      <!-- Stat callout -->
+      <div class="md:w-2/5">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 space-y-5">
+          <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Without CRM Sync</div>
+          <div class="flex items-center justify-between py-3 border-b border-slate-700">
+            <span class="text-slate-300 text-sm">What you see</span>
+            <span class="text-amber-400 font-bold">Cost per lead: $112</span>
+          </div>
+          <div class="flex items-center justify-between py-3 border-b border-slate-700">
+            <span class="text-slate-300 text-sm">What you're missing</span>
+            <span class="text-red-400 font-bold">Which leads book</span>
+          </div>
+          <div class="flex items-center justify-between py-3 border-b border-slate-700">
+            <span class="text-slate-300 text-sm">Decision you make</span>
+            <span class="text-slate-400 text-sm">Based on guesses</span>
+          </div>
+          <div class="text-xs font-bold text-green-400 uppercase tracking-wider mt-4 mb-2">With CRM Sync</div>
+          <div class="flex items-center justify-between py-3 border-b border-slate-700">
+            <span class="text-slate-300 text-sm">Campaign A</span>
+            <span class="text-green-400 font-bold">$287 / booked job</span>
+          </div>
+          <div class="flex items-center justify-between py-3 border-b border-slate-700">
+            <span class="text-slate-300 text-sm">Campaign B</span>
+            <span class="text-red-400 font-bold">$1,140 / booked job</span>
+          </div>
+          <div class="flex items-center justify-between py-3">
+            <span class="text-slate-300 text-sm">Your move</span>
+            <span class="text-green-300 text-sm font-semibold">Scale A. Kill B.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- The gap problem -->
+<section class="py-14 bg-white border-b">
+  <div class="max-w-4xl mx-auto px-4 text-center">
+    <h2 class="text-3xl font-extrabold text-gray-900 mb-4">Most contractors are optimizing for the wrong thing</h2>
+    <p class="text-lg text-gray-600 max-w-2xl mx-auto mb-10">
+      Your Google Ads platform counts a "conversion" when someone fills out a form. But you know that only 40–60% of form fills actually turn into booked, paid jobs. You're making $10,000/month budget decisions based on data that's missing half the story.
+    </p>
+    <div class="grid md:grid-cols-3 gap-6 text-left">
+      <div class="bg-red-50 border border-red-100 rounded-xl p-5">
+        <div class="text-2xl font-extrabold text-red-600 mb-2">What Google sees</div>
+        <p class="text-gray-700 text-sm">Form fill, click-to-call, "thank you" page — none of which confirms a job was booked or paid.</p>
+        <div class="mt-4 text-xs font-semibold text-red-500 uppercase tracking-wide">Missing: no-show rate, cancel rate, actual revenue</div>
+      </div>
+      <div class="bg-amber-50 border border-amber-100 rounded-xl p-5">
+        <div class="text-2xl font-extrabold text-amber-600 mb-2">What your CRM knows</div>
+        <p class="text-gray-700 text-sm">Job status, technician assigned, invoice amount, service type, customer lifetime value — everything that matters.</p>
+        <div class="mt-4 text-xs font-semibold text-amber-500 uppercase tracking-wide">Stuck in a silo — not connected to your ads</div>
+      </div>
+      <div class="bg-green-50 border border-green-100 rounded-xl p-5">
+        <div class="text-2xl font-extrabold text-green-700 mb-2">What RevForge shows</div>
+        <p class="text-gray-700 text-sm">Cost per booked job, cost per completed job, revenue per campaign, and which service types are most profitable per channel.</p>
+        <div class="mt-4 text-xs font-semibold text-green-600 uppercase tracking-wide">Full loop closed — ads ↔ job board</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- What syncs -->
+<section class="py-14 bg-gray-50 border-b">
+  <div class="max-w-4xl mx-auto px-4">
+    <div class="text-center mb-10">
+      <h2 class="text-3xl font-extrabold text-gray-900 mb-3">What gets synced</h2>
+      <p class="text-gray-500">Read-only access. Your job data stays in your CRM — RevForge only reads what's needed to close the attribution loop.</p>
+    </div>
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="bg-white rounded-xl border p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+            <i class="fa-solid fa-arrow-right-to-bracket text-green-700"></i>
+          </div>
+          <h3 class="font-bold text-gray-900">Pulled from your CRM</h3>
+        </div>
+        <ul class="space-y-2 text-sm text-gray-700">
+          <li class="flex gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5 flex-shrink-0"></i>New job requests with source (phone, web form, referral)</li>
+          <li class="flex gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5 flex-shrink-0"></i>Job status changes (scheduled → dispatched → completed)</li>
+          <li class="flex gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5 flex-shrink-0"></i>Invoice amounts and service types</li>
+          <li class="flex gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5 flex-shrink-0"></i>Cancellations and no-shows</li>
+          <li class="flex gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5 flex-shrink-0"></i>Technician capacity and schedule availability</li>
+          <li class="flex gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5 flex-shrink-0"></i>Customer repeat / new status</li>
+        </ul>
+      </div>
+      <div class="bg-white rounded-xl border p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+            <i class="fa-solid fa-bolt text-blue-700"></i>
+          </div>
+          <h3 class="font-bold text-gray-900">What RevForge does with it</h3>
+        </div>
+        <ul class="space-y-2 text-sm text-gray-700">
+          <li class="flex gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5 flex-shrink-0"></i>Match booked jobs to ad clicks via phone number + timestamp</li>
+          <li class="flex gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5 flex-shrink-0"></i>Calculate true cost per booked job per campaign</li>
+          <li class="flex gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5 flex-shrink-0"></i>Auto-reduce bids when your schedule hits capacity</li>
+          <li class="flex gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5 flex-shrink-0"></i>Surface highest-revenue service types by channel</li>
+          <li class="flex gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5 flex-shrink-0"></i>Alert when cancellation rate spikes by lead source</li>
+          <li class="flex gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5 flex-shrink-0"></i>Build retargeting audiences from completed customer list</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Supported integrations -->
+<section id="integrations" class="py-14 bg-white border-b">
+  <div class="max-w-4xl mx-auto px-4">
+    <div class="text-center mb-10">
+      <h2 class="text-3xl font-extrabold text-gray-900 mb-3">Supported integrations</h2>
+      <p class="text-gray-500">Connect your field service software in minutes, not days.</p>
+    </div>
+    <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+
+      {% set crms = [
+        ("Jobber", "fa-briefcase", "#16a34a", "Most popular for residential trades. 1-click OAuth connection.", "Available now"),
+        ("ServiceTitan", "fa-gear", "#2563eb", "Full job board and revenue sync for larger HVAC and plumbing operations.", "Available now"),
+        ("HouseCall Pro", "fa-house", "#7c3aed", "Job requests, invoices, and schedule sync for growing service businesses.", "Available now"),
+        ("Workiz", "fa-tools", "#ea580c", "Job tracking and communication sync for field service teams.", "Coming Q1 2025"),
+        ("FieldEdge", "fa-bolt", "#0891b2", "HVAC-focused CRM with deep service history and equipment tracking.", "Coming Q1 2025"),
+        ("Service Fusion", "fa-network-wired", "#64748b", "Multi-location job management and dispatch sync.", "Coming Q2 2025"),
+      ] %}
+
+      {% for name, icon, color, desc, status in crms %}
+      <div class="rounded-xl border p-5 hover:shadow-md transition">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background: {{ color }}20;">
+            <i class="fa-solid {{ icon }}" style="color: {{ color }};"></i>
+          </div>
+          <div>
+            <div class="font-bold text-gray-900 text-sm">{{ name }}</div>
+            <div class="text-xs {% if 'now' in status %}text-green-600 font-semibold{% else %}text-gray-400{% endif %}">{{ status }}</div>
+          </div>
+        </div>
+        <p class="text-xs text-gray-600">{{ desc }}</p>
+      </div>
+      {% endfor %}
+
+    </div>
+    <div class="mt-6 text-center">
+      <p class="text-sm text-gray-500">Don't see your software? <a href="/contact" class="text-green-700 font-semibold hover:underline">Request an integration</a> — we prioritize by user demand.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Capacity-aware ads callout -->
+<section class="py-14 bg-gradient-to-br from-green-800 to-green-900 text-white">
+  <div class="max-w-3xl mx-auto px-4 text-center">
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-green-700 rounded-full text-sm font-semibold text-green-200 mb-5">
+      <i class="fa-solid fa-calendar-check"></i> Capacity-Aware Advertising
+    </div>
+    <h2 class="text-3xl font-extrabold mb-4">Stop paying for leads you can't service</h2>
+    <p class="text-green-100 text-lg mb-8 max-w-xl mx-auto">
+      When your Jobber schedule shows "fully booked for 2 weeks," RevForge automatically reduces bids and shifts budget away from high-volume campaigns. When a slot opens, campaigns ramp back up.
+    </p>
+    <div class="grid sm:grid-cols-3 gap-4 text-left mb-8">
+      <div class="bg-green-700/50 rounded-xl p-4">
+        <div class="text-2xl font-extrabold text-white mb-1">$400–$1,200</div>
+        <div class="text-green-200 text-sm">Avg monthly savings from stopping ads when fully booked</div>
+      </div>
+      <div class="bg-green-700/50 rounded-xl p-4">
+        <div class="text-2xl font-extrabold text-white mb-1">5 min</div>
+        <div class="text-green-200 text-sm">Setup time to connect Jobber or ServiceTitan</div>
+      </div>
+      <div class="bg-green-700/50 rounded-xl p-4">
+        <div class="text-2xl font-extrabold text-white mb-1">Read-only</div>
+        <div class="text-green-200 text-sm">RevForge never writes to your CRM — your data stays yours</div>
+      </div>
+    </div>
+    <a href="/pricing" class="inline-block px-8 py-3 bg-amber-500 hover:bg-amber-400 text-white font-bold rounded-xl transition">
+      Connect My Field Software →
+    </a>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="py-14 bg-gray-50">
+  <div class="max-w-3xl mx-auto px-4">
+    <h2 class="text-3xl font-extrabold text-gray-900 text-center mb-10">Frequently Asked Questions</h2>
+    <div class="space-y-4" id="faqAccordion">
+
+      {% set faqs = [
+        ("How do I connect Jobber to my Google Ads?",
+         "RevForge connects to Jobber via OAuth — you authorize the connection in your RevForge settings, select which job statuses to sync, and RevForge starts pulling booked job data within minutes. From there, every Google Ads campaign gets a \"cost per booked job\" metric alongside the standard cost per lead. No API keys or developer work required."),
+        ("Can RevForge sync with ServiceTitan?",
+         "Yes. RevForge integrates with ServiceTitan to pull booked job data, revenue by service type, and customer source attribution. This gives you cost per booked job and cost per completed job for every campaign — the metrics that actually tell you whether your marketing is profitable."),
+        ("What is revenue attribution for contractors?",
+         "Revenue attribution connects a paying customer back to the specific ad or channel that brought them to you. Without it, you only see \"cost per lead\" — but a lead that doesn't book is worthless. RevForge's CRM sync lets you see the full picture: cost per booked job, revenue per campaign, and which service types are most profitable per channel."),
+        ("Does RevForge write anything to my CRM?",
+         "No. RevForge only reads from your field service software — it never creates, modifies, or deletes records in Jobber, ServiceTitan, or HouseCall Pro. Your job data stays exactly as you left it."),
+        ("Can RevForge pause my ads when I'm fully booked?",
+         "Yes — when your schedule in Jobber or ServiceTitan shows full capacity, RevForge can automatically reduce bids or pause non-emergency campaigns so you stop paying for leads you can't service. Emergency-focused campaigns (AC not working, no heat) can stay live at reduced budgets since those jobs get priority. When capacity opens up, campaigns resume automatically."),
+      ] %}
+
+      {% for q, a in faqs %}
+      <details class="bg-white rounded-xl border p-5 group">
+        <summary class="font-semibold text-gray-900 cursor-pointer list-none flex items-center justify-between">
+          {{ q }}
+          <i class="fa-solid fa-chevron-down text-gray-400 text-sm group-open:rotate-180 transition-transform flex-shrink-0 ml-3"></i>
+        </summary>
+        <p class="mt-3 text-gray-600 text-sm leading-relaxed">{{ a }}</p>
+      </details>
+      {% endfor %}
+
+    </div>
+  </div>
+</section>
+
+{% endblock %}

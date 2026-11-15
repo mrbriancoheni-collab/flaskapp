@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Generate the FieldSprout investor deck as a .pptx file.
+"""Generate the RevForge investor deck as a .pptx file.
 
 Usage: python scripts/build_investor_deck.py [output_path]
-Default output: FieldSprout-Investor-Deck.pptx (repo root)
+Default output: RevForge-Investor-Deck.pptx (repo root)
 """
 import sys
 from pptx import Presentation
@@ -78,7 +78,7 @@ def kicker(s, label, color=PRIMARY):
 
 
 def header(s, title, sub=None):
-    kicker(s, "FieldSprout")
+    kicker(s, "RevForge")
     text(s, Inches(0.9), Inches(0.95), Inches(11.5), Inches(1.0),
          [[(title, 32, INK, True)]])
     if sub:
@@ -88,7 +88,7 @@ def header(s, title, sub=None):
 
 def footer(s, n):
     text(s, Inches(0.9), Inches(7.02), Inches(6), Inches(0.4),
-         [[("FieldSprout  ·  Confidential", 9, MUTED, False)]])
+         [[("RevForge  ·  Confidential", 9, MUTED, False)]])
     text(s, Inches(11.6), Inches(7.02), Inches(0.9), Inches(0.4),
          [[(str(n), 9, MUTED, True)]], align=PP_ALIGN.RIGHT)
 
@@ -102,7 +102,7 @@ rect(s, 0, 0, Inches(0.28), SH, ACCENT)
 # subtle band
 rect(s, 0, Inches(4.9), SW, Inches(0.04), PRIMARY)
 text(s, Inches(1.0), Inches(0.9), Inches(8), Inches(0.5),
-     [[("FieldSprout", 22, WHITE, True)]])
+     [[("RevForge", 22, WHITE, True)]])
 text(s, Inches(1.0), Inches(2.5), Inches(11.2), Inches(2.2),
      [[("The AI Marketing", 52, WHITE, True)],
       [("Command Center for Local Pros", 52, ACCENT, True)]],
@@ -143,7 +143,7 @@ footer(s, 2)
 # 3. OUR SOLUTION
 # =====================================================================
 s = slide()
-header(s, "FieldSprout is the command center that runs it all",
+header(s, "RevForge is the command center that runs it all",
        "Connect your accounts in minutes. AI agents do the rest — continuously.")
 sol = [
     ("Connect", "Link Google Ads, Facebook Ads, and WordPress in under 5 minutes. No setup project, no consultant."),
@@ -282,7 +282,7 @@ footer(s, 7)
 # 8. WHY WE WIN
 # =====================================================================
 s = slide()
-header(s, "Why FieldSprout wins",
+header(s, "Why RevForge wins",
        "Defensibility compounds with every account and every channel.")
 moats = [
     ("Multi-channel by design", "Competitors optimize one channel. Our strategic umbrella moves budget across channels — the owner's whole marketing, not a point tool."),
@@ -335,17 +335,17 @@ text(s, Inches(1.0), Inches(1.4), Inches(11), Inches(1.5),
      [[("Become the command center", 44, WHITE, True)],
       [("for local marketing.", 44, ACCENT, True)]], line_spacing=1.0)
 text(s, Inches(1.02), Inches(3.5), Inches(10.8), Inches(1.4),
-     [[("FieldSprout puts every marketing channel for 32M local service businesses under one", 18, RGBColor(0xCB,0xD5,0xE1), False)],
+     [[("RevForge puts every marketing channel for 32M local service businesses under one", 18, RGBColor(0xCB,0xD5,0xE1), False)],
       [("AI brain — winning the recurring relationship the agencies can't defend.", 18, RGBColor(0xCB,0xD5,0xE1), False)]],
      line_spacing=1.2)
 rect(s, Inches(1.0), Inches(5.3), Inches(4.6), Inches(0.9), ACCENT, shape=MSO_SHAPE.ROUNDED_RECTANGLE)
 text(s, Inches(1.0), Inches(5.35), Inches(4.6), Inches(0.8),
-     [[("Let's talk  ·  fieldsprout.io", 18, INK, True)]],
+     [[("Let's talk  ·  getrevforge.io", 18, INK, True)]],
      align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
 text(s, Inches(1.02), Inches(6.6), Inches(10), Inches(0.5),
-     [[("hello@fieldsprout.io", 14, MUTED, False)]])
+     [[("hello@getrevforge.io", 14, MUTED, False)]])
 
 # ---- save ----
-out = sys.argv[1] if len(sys.argv) > 1 else "FieldSprout-Investor-Deck.pptx"
+out = sys.argv[1] if len(sys.argv) > 1 else "RevForge-Investor-Deck.pptx"
 prs.save(out)
 print("Saved", out, "with", len(prs.slides._sldIdLst), "slides")

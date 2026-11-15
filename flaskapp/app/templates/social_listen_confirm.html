@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Listening - Confirmed</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa; color: #1a1a2e; line-height: 1.6;
+        }
+        .container { max-width: 600px; margin: 60px auto; padding: 0 24px; }
+        .card {
+            background: #fff; border-radius: 10px; padding: 32px;
+            box-shadow: 0 1px 4px rgba(0,0,0,.06); text-align: center;
+        }
+        .icon  { font-size: 48px; margin-bottom: 14px; }
+        h1     { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+        p      { color: #4b5563; margin-bottom: 18px; }
+        .draft-box {
+            background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;
+            padding: 16px; font-size: 14px; line-height: 1.6; white-space: pre-wrap;
+            text-align: left; margin-bottom: 12px;
+        }
+        .copy-btn {
+            background: #e5e7eb; border: none; border-radius: 7px; padding: 8px 18px;
+            font-size: 14px; font-weight: 600; cursor: pointer; color: #374151;
+        }
+        .btn-link {
+            display: inline-block; margin-top: 20px; color: #2563eb;
+            font-size: 14px; text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="card">
+        {% if action == 'approved' %}
+        <div class="icon">✅</div>
+        <h1>Approved!</h1>
+        <p>Your draft is ready to copy and paste.</p>
+        {% if draft_text %}
+        <div class="draft-box" id="draft-text">{{ draft_text }}</div>
+        <button class="copy-btn"
+            onclick="navigator.clipboard.writeText(document.getElementById('draft-text').innerText); this.textContent='Copied!'">
+            Copy to clipboard
+        </button>
+        {% endif %}
+        {% elif action == 'skipped' %}
+        <div class="icon">⏭</div>
+        <h1>Skipped</h1>
+        <p>This opportunity has been skipped.</p>
+        {% endif %}
+
+        <br>
+        <a href="{{ url_for('social_listen_bp.index') }}" class="btn-link">← Back to Dashboard</a>
+    </div>
+</div>
+</body>
+</html>

@@ -672,7 +672,7 @@ I came across {{company_name}} while looking at {{service_type}} businesses runn
 
 Most {{service_type}} companies I talk to are spending $1,500–$5,000/month on Google Ads without a clear picture of which campaigns are actually booking jobs — versus burning money on clicks that never convert.
 
-FieldSprout connects directly to your Google Ads account and shows you:
+RevForge connects directly to your Google Ads account and shows you:
 
 - Which campaigns and keywords are generating real calls and booked jobs
 - Where your budget is being wasted on irrelevant searches
@@ -681,13 +681,13 @@ FieldSprout connects directly to your Google Ads account and shows you:
 We have a lifetime deal running right now: $499 one-time for a single location, no monthly fees. Most clients recover that in wasted ad spend within the first 30 days.
 
 See the deal and connect your account here:
-https://fieldsprout.io/lifetime/499
+https://getrevforge.io/lifetime/499
 
 Worth seeing if it pays for itself in your first month?
 
 Brian
-FieldSprout
-https://fieldsprout.io
+RevForge
+https://getrevforge.io
 
 ---
 Reply "unsubscribe" to opt out.
